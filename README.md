@@ -34,7 +34,8 @@ ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
 ```shell
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
-  # shellcheck disable=SC2016
+# shellcheck disable=SC2016
+if [ -n "$WEB" ]; then
   stdbuf -o0 gunicorn3 \
       -b "0.0.0.0:80" \
       -w 1 \
