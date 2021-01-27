@@ -1,0 +1,109 @@
+
+# Created by https://www.toptal.com/developers/gitignore/api/macos,linux,windows,vscode
+# Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,windows,vscode
+
+### Linux ###
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+### vscode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+### Windows ###
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# End of https://www.toptal.com/developers/gitignore/api/macos,linux,windows,vscode
+group_vars/all.yaml
+group_vars/all_fred.yaml
+group_vars/all_brandon.yaml
+test.yaml
+inventory/temp
+archive/
+roles/archive
+roles/metal-lb/files/metallb.yaml
+roles/metal-lb/files/namespace.yaml
+notes.txt
+Dockerfile.local
+*.db-journal
+rootfs/webapp/static/airframes-acars-decoder
+rootfs/webapp/static/js/Dockerfile.testing
+Dockerfile.testing
+build-acg.sh
+rootfs/webapp/static/images/6months.png
+rootfs/webapp/static/images/12hour.png
+rootfs/webapp/static/images/1hour.png
+rootfs/webapp/static/images/1week.png
+rootfs/webapp/static/images/1year.png
+rootfs/webapp/static/images/24hours.png
+rootfs/webapp/static/images/30days.png
+rootfs/webapp/static/images/6hour.png
+./acars-decoder-typescript.tgz
+acars-decoder-typescript.tgz
