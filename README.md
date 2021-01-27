@@ -2,7 +2,7 @@
 
 In the Dockerfile use the following to get started:
 
-* Uncommend ENV if you need to set any env variables. Format is like this:
+* Uncomment ENV if you need to set any env variables. Format is like this:
 
 ```shell
 ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
