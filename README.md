@@ -49,3 +49,17 @@ fi
 ```
 
 To give an idea of the formatting
+
+To build (in the directory with the dockerfile)
+
+```shell
+docker build -f Dockerfile "${REPO}/${IMAGE}:latest" --compress --push --platform "${PLATFORMS}" .
+```
+
+Replace (or set) the ENV variables for repo to be your dockerhub name, image to be the name for the image, and platforms you want to build for. Most likely `linux/arm/v7` or `linux/arm64`
+
+To push, log in to docker on the command line and then
+
+```shell
+docker push repo/image
+```
