@@ -1,7 +1,6 @@
 FROM debian:stable-slim
 
-# Uncomment this line if you need to set any ENV variables for the container
-# ENV 
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 
     
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
