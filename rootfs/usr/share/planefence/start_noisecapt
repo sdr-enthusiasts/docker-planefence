@@ -1,0 +1,56 @@
+#!/bin/bash
+# START_noisecapt - a Bash shell script to run noisecapt in a loop
+# This script is invoked by the SystemD service that keeps noisecapt up and running
+# 
+# The reasons for using SystemD over CRON are several, and include
+# easy of use and management
+#
+# To start/stop/install noisecapt, do the following:
+#
+# 1 Base enablement of the noisecapt Service from your GitHub cache:
+# 	sudo cp ~/git/noisecapt/service/noisecapt.service /lib/systemd/system/
+# 	sudo systemctl daemon-reload
+# 	sudo systemctl enable noisecapt
+#
+# 2 Manually starting or stopping the service:
+#	sudo systemctl start noisecapt
+#	sudo systemctl stop noisecapt
+#
+# 3 Ensuring that the service is reloaded on reboot / stopping it from reloading on reboot:
+#	sudo systemctl enable noisecapt
+#	sudo systemctl disable noisecapt
+#
+# 4 Checking the status of the noisecapt service:
+#	systemctl status noisecapt
+#
+# 5 Looking at the noisecapt logs:
+#	tail -n100 -f /tmp/noisecapt.log
+#
+# -----------------------------------------------------------------------------------
+# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/noisecapt/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# -----------------------------------------------------------------------------------
+# Feel free to make changes to the variables between these two lines. However, it is
+# STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
+#
+# LOOPTIME is the time between two runs of noisecapt (in seconds)
+# Do not set this to less than about 120 seconds as it will overload your system
+LOOPTIME=0
+#
+# NOISECAPTDIR contains the directory where noisecapt.sh is location 
+NOISECAPTDIR=/usr/share/planefence
+# -----------------------------------------------------------------------------------
+
+while true
+do
+	$NOISECAPTDIR/noisecapt.sh >/tmp/noisecapt.log
+	sleep $LOOPTIME
+done
+
