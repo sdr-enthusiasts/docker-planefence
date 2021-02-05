@@ -16,10 +16,10 @@ RUN set -x && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
     KEPT_PACKAGES+=(wget) && \
-    # logging
+        # logging
     KEPT_PACKAGES+=(gawk) && \
     KEPT_PACKAGES+=(pv) && \
-    # required for S6 overlay
+        # required for S6 overlay
     # curl kept for healthcheck
     # ca-certificates kept for python
     TEMP_PACKAGES+=(gnupg2) && \
@@ -29,7 +29,7 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence:
     #
-    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot git sox) && \
+    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot git sox) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     #
     # Install packages.
