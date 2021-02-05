@@ -1,7 +1,7 @@
 FROM debian:stable-slim
 
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 
-    
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN set -x && \
@@ -40,10 +40,11 @@ RUN set -x && \
         ${TEMP_PACKAGES[@]} \
         && \
     git config --global advice.detachedHead false && \
+    pip install ${KEPT_PIP_PACKAGES[@]}
     #
     # Use normal shell commands to install
     #
-    
+
     #
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
