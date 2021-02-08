@@ -29,7 +29,7 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence:
     #
-    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot git sox) && \
+    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot git lighttpd perl) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     #
     # Install packages.
@@ -40,11 +40,29 @@ RUN set -x && \
         ${TEMP_PACKAGES[@]} \
         && \
     git config --global advice.detachedHead false && \
-    pip install ${KEPT_PIP_PACKAGES[@]}
+    pip install ${KEPT_PIP_PACKAGES[@]} && \
     #
     # Use normal shell commands to install
     #
-
+    # Install dump1090.socket30003
+    mkdir -p /usr/share/socket30003 && \
+    mkdir -p /run/socket30003 && \
+    git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
+    pushd "/git/socket30003" && \
+    ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
+    popd && \
+    #
+    # Install PlaneFence
+    mkdir -p /usr/share/planefence/html && \
+    git clone https://github.com/kx1t/planefence.git /git/planefence && \
+    pushd /git/planefence && \
+    cp scripts/* /usr/share/planefence && \
+    cp jscript/* /usr/share/planefence/html && \
+    cp systemd/start_* /usr/share/planefence && \
+    chmod a+x /usr/share/planefence/*.sh && \
+    chmod a+x /usr/share/planefence/*.py && \
+    chmod a+x /usr/share/planefence/*.pl && \
+    chmod a+x /usr/share/planefence/start_* && \
     #
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
@@ -59,6 +77,7 @@ COPY rootfs/ /
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
+EXPOSE 30003
 
 # Add healthcheck
 HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
