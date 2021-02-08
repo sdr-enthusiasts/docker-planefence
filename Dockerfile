@@ -54,15 +54,18 @@ RUN set -x && \
     #
     # Install PlaneFence
     mkdir -p /usr/share/planefence/html && \
-    git clone https://github.com/kx1t/planefence.git /git/planefence && \
+    mkdir -p /etc/services.d/planefence && \
+    git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
     cp scripts/* /usr/share/planefence && \
     cp jscript/* /usr/share/planefence/html && \
     cp systemd/start_* /usr/share/planefence && \
+    cp systemd/start_planefence /etc/services.d/planefence/run && \
     chmod a+x /usr/share/planefence/*.sh && \
     chmod a+x /usr/share/planefence/*.py && \
     chmod a+x /usr/share/planefence/*.pl && \
     chmod a+x /usr/share/planefence/start_* && \
+    popd && \
     #
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
