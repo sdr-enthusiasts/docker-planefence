@@ -28,7 +28,7 @@ PF_ALTUNIT=feet
 PF_SPEEDUNIT=knotph
 PF_SOCK30003HOST=readsb
 ```
-6. Note that the `docker-compose.yml` file also creates an instance of Mikenye's readsb container. You can edit this if you are already another container, HOWEVER:
+6. Note that the `docker-compose.yml` file also creates an instance of Mikenye's readsb container. You can change this if you are already another using a different instance of readsb (or dump1090[-fa]), HOWEVER:
    
    a) the Planefence container depends on being able to access the SBS output from a dump1090/dump1090-fa/readsb instance. This is easiest done by running
       readsb (or dump1090[-fa]) from the same docker-compose.yml, as this creates an intra-net between the containers
