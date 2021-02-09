@@ -26,7 +26,10 @@ RUN set -x && \
     TEMP_PACKAGES+=(file) && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
-    KEPT_PACKAGES+=(procps) && \
+    # KEPT_PACKAGES+=(procps) && \
+    #
+    # a few KEPT_PACKAGES for debugging - they can be removed in the future
+    KEPT_PACKAGES+=(procps nano aptitude) && \
     #
     # Get prerequisite packages for PlaneFence:
     #
@@ -52,6 +55,7 @@ RUN set -x && \
     git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
     pushd "/git/socket30003" && \
     ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
+    chmod a+x /usr/share/socket30003/*.pl && \
     popd && \
     #
     # Install PlaneFence
