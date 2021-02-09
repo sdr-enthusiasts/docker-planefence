@@ -29,11 +29,15 @@ PF_SPEEDUNIT=knotph
 PF_SOCK30003HOST=readsb
 ```
 6. Note that the `docker-compose.yml` file also creates an instance of Mikenye's readsb container. You can edit this if you are already another container, HOWEVER:
+   
    a) the Planefence container depends on being able to access the SBS output from a dump1090/dump1090-fa/readsb instance. This is easiest done by running
       readsb (or dump1090[-fa]) from the same docker-compose.yml, as this creates an intra-net between the containers
+   
    b) if you replace readsb with another container (inside the same docker-compose.yml), make sure you update the `PF_SOCK30003HOST` variable in `.env` with the container's name.
+   
    c) if you run readsb/dump1090[-fa] elsewhere, you may have to open a port between the docker and the host to get access to this. Also make sure that you put a reachable hostname or IP address in `PF_SOCK30003HOST`. You can open a port by editing docker-compose.yml and putting the following inside the `planefence:` section, at the same indentation level as `restart: always`:
-```       ports:
+```
+   ports:
       - 30003:30003
 ```
 
