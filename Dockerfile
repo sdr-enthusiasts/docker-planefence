@@ -4,6 +4,8 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+COPY rootfs/ /
+
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -62,7 +64,7 @@ RUN set -x && \
     cp systemd/start_* /usr/share/planefence && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
     cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
-    chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \ 
+    chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \
     popd && \
     #
     # install S6 Overlay
@@ -73,8 +75,6 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /git/* /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank
-
-COPY rootfs/ /
 
 ENTRYPOINT [ "/init" ]
 
