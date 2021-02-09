@@ -4,8 +4,6 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-COPY rootfs/ /
-
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -50,6 +48,7 @@ RUN set -x && \
     # Install dump1090.socket30003
     mkdir -p /usr/share/socket30003 && \
     mkdir -p /run/socket30003 && \
+    mkdir -p /etc/services.d/socket30003 && \
     git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
     pushd "/git/socket30003" && \
     ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
@@ -57,6 +56,7 @@ RUN set -x && \
     #
     # Install PlaneFence
     mkdir -p /usr/share/planefence/html && \
+    mkdir -p /etc/services.d/planefence && \
     git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
     cp scripts/* /usr/share/planefence && \
@@ -75,6 +75,9 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /git/* /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank
+
+
+COPY rootfs/ /
 
 ENTRYPOINT [ "/init" ]
 
