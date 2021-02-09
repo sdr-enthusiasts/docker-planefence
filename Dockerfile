@@ -32,7 +32,7 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence:
     #
-    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl) && \
+    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     #
     # Install packages.
