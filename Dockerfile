@@ -29,11 +29,11 @@ RUN set -x && \
     # KEPT_PACKAGES+=(procps) && \
     #
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
-    KEPT_PACKAGES+=(procps nano aptitude) && \
+    KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     #
-    # Get prerequisite packages for PlaneFence:
+    # Get prerequisite packages for PlaneFence and Socket30003:
     #
-    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl) && \
+    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl iputils-ping) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     #
     # Install packages.
