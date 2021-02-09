@@ -1,66 +1,39 @@
-# docker-skeleton
+# docker-planefence
 
-In the Dockerfile use the following to get started:
+Docker container with dump1090.socket30003 and planefence
+Note that at the moment, the only compiled image is created for arm64 (Raspberry Pi 4B / 4 Gb with 64-bits Ubuntu 20.10)
+You can build your own...
 
-* Uncomment ENV if you need to set any env variables. Format is like this:
-
-```shell
-ENV BRANCH_RTLSDR="ed0317e6a58c098874ac58b769cf2e609c18d9a5" \
-    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    FEED="" \
-    STATION_ID_ACARS="" \
-    STATION_ID_VDLM="" \
-    SERIAL_ACARS="" \
-    SERIAL_VDLM="" \
-    FREQS_ACARS="" \
-    FREQS_VDLM="" \
-    ENABLE_ACARS="" \
-    ENABLE_VDLM="" \
-    GAIN_ACARS="-10" \
-    GAIN_VDLM="280" \
-    ENABLE_WEB="true" \
-    QUIET_LOGS="" \
-    DB_SAVEALL="true"
+To get started:
+1. Install docker (`sudo apt-get docker`)
+2. Use GIT to pull this image (`mkdir ~/git && cd ~/git && git clone https://github.com/kx1t/docker-planefence.git && cd docker-planefence`)
+3. Use `docker build -t kx1t/planefence .` to build your image
+4. Create an directory (for example `/opt/planefence`) and put `docker-compose.yml` and `.env` from this repository into that directory:
+   `sudo mkdir -p /opt/planefence && sudo chmod +rwx /opt/planefence && cp docker-compose.yml /opt/planefence && cp .env /opt/planefence`
+5. Edit `/opt/planefence/.env` and fill in all variable. For PlaneFence, you MUST put values with at least the following:
+```FEEDER_ALT_FT=60
+FEEDER_ALT_M=18
+FEEDER_LAT=xx.xxxxx
+FEEDER_LONG=-xx.xxxxx
+FEEDER_TZ=America/New_York
+PF_MAXALT=5000
+PF_MAXDIST=2.0
+PF_NAME="STATION NAME"
+PF_INTERVAL=80
+PF_MAPURL="http://my_station.ip/tar1090"
+PF_TWEET=
+PF_LOG=/tmp/planefence.log
+PF_DISTUNIT=nauticalmile
+PF_ALTUNIT=feet
+PF_SPEEDUNIT=knotph
+PF_SOCK30003HOST=readsb
+```
+6. Note that the `docker-compose.yml` file also creates an instance of Mikenye's readsb container. You can edit this if you are already another container, HOWEVER:
+   a) the Planefence container depends on being able to access the SBS output from a dump1090/dump1090-fa/readsb instance. This is easiest done by running
+      readsb (or dump1090[-fa]) from the same docker-compose.yml, as this creates an intra-net between the containers
+   b) if you replace readsb with another container (inside the same docker-compose.yml), make sure you update the `PF_SOCK30003HOST` variable in `.env` with the container's name.
+   c) if you run readsb/dump1090[-fa] elsewhere, you may have to open a port between the docker and the host to get access to this. Also make sure that you put a reachable hostname or IP address in `PF_SOCK30003HOST`. You can open a port by editing docker-compose.yml and putting the following inside the `planefence:` section, at the same indentation level as `restart: always`:
+```       ports:
+      - 30003:30003
 ```
 
-* Under the run section is where you install packages and set up the system. Follow the format for adding debian packges to the list. `KEPT_PACKAGES` are packages you want installed for the system to run. `TEMP_PACKAGES` are uninstalled after the container is built. They're often needed for compiling stuff. The packages I left in there should be a good start to get S6-Overlay running (which you want) and have a few useful commands in the container.
-
-* For any files you want to exist in the container (say your custom scripts and such) you add those in to the `rootfs` directory. That folder is copied in to the container and follows the Unix file system structure
-
-* in `rootfs/etc/cont-init.d` you can put scripts that will run on container start. This is useful for sanity checking, say to make sure the required ENV variables are set or any required config files are presented/formatted right.
-
-* in `rootfs/etc/service.d` is how you launch programs as services in the container. There is no `systemd` or anything running, so S6 takes care of that for us. Create sub folders for each service, in that folder create a file named `run` with the commands to start the service.
-
-```shell
-#!/usr/bin/with-contenv bash
-#shellcheck shell=bash
-# shellcheck disable=SC2016
-if [ -n "$WEB" ]; then
-  stdbuf -o0 gunicorn3 \
-      -b "0.0.0.0:80" \
-      -w 1 \
-      --no-sendfile \
-      -k eventlet \
-      application:app \
-    2>&1 | stdbuf -o0 sed --unbuffered '/^$/d' | stdbuf -o0 awk '{print "[webapp] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
-else
-  # web server must be disabled. Go to sleep forever
-  sleep 86400
-fi
-```
-
-To give an idea of the formatting
-
-To build (in the directory with the dockerfile)
-
-```shell
-docker build -f Dockerfile "${REPO}/${IMAGE}:latest" --compress --push --platform "${PLATFORMS}" .
-```
-
-Replace (or set) the ENV variables for repo to be your dockerhub name, image to be the name for the image, and platforms you want to build for. Most likely `linux/arm/v7` or `linux/arm64`
-
-To push, log in to docker on the command line and then
-
-```shell
-docker push repo/image
-```
