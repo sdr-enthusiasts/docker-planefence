@@ -55,17 +55,14 @@ RUN set -x && \
     #
     # Install PlaneFence
     mkdir -p /usr/share/planefence/html && \
-    mkdir -p /etc/services.d/planefence && \
     git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
     cp scripts/* /usr/share/planefence && \
     cp jscript/* /usr/share/planefence/html && \
     cp systemd/start_* /usr/share/planefence && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
-    chmod a+x /usr/share/planefence/*.sh && \
-    chmod a+x /usr/share/planefence/*.py && \
-    chmod a+x /usr/share/planefence/*.pl && \
-    chmod a+x /usr/share/planefence/start_* && \
+    cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
+    chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \ 
     popd && \
     #
     # install S6 Overlay
@@ -75,7 +72,7 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
-    rm -rf /git/* /src/* /tmp/* /var/lib/apt/lists/*
+    rm -rf /git/* /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank
 
 COPY rootfs/ /
 
