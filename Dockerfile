@@ -38,7 +38,7 @@ RUN set -x && \
     # Install packages.
     #
     apt-get update && \
-    apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
+    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
