@@ -30,13 +30,13 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence:
     #
-    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox git lighttpd perl) && \
+    KEPT_PACKAGES+=(cron python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     #
     # Install packages.
     #
     apt-get update && \
-    apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends \
+    apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} \
         && \
