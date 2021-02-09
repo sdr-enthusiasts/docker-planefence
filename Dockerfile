@@ -75,7 +75,7 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     rm -rf /git/* /src/* /tmp/* /var/lib/apt/lists/* && \
-    apt-get clean
+    apt-get clean -y
 
 COPY rootfs/ /
 
