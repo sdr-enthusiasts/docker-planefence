@@ -10,24 +10,23 @@ RUN set -x && \
     KEPT_PIP_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
     # Required for building multiple packages.
-    TEMP_PACKAGES+=(build-essential) && \
+    # TEMP_PACKAGES+=(build-essential) && \
     TEMP_PACKAGES+=(pkg-config) && \
-    TEMP_PACKAGES+=(cmake) && \
+    # TEMP_PACKAGES+=(cmake) && \
     TEMP_PACKAGES+=(git) && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
     KEPT_PACKAGES+=(wget) && \
-        # logging
+    # logging
     KEPT_PACKAGES+=(gawk) && \
     KEPT_PACKAGES+=(pv) && \
-        # required for S6 overlay
+    # required for S6 overlay
     # curl kept for healthcheck
     # ca-certificates kept for python
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
-    # KEPT_PACKAGES+=(procps) && \
     #
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano aptitude netcat) && \
@@ -63,6 +62,7 @@ RUN set -x && \
     #
     # Install PlaneFence
     mkdir -p /usr/share/planefence/html && \
+    chown root:root /usr/share/planefence/html && \
     mkdir -p /etc/services.d/planefence && \
     git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
@@ -72,7 +72,7 @@ RUN set -x && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
     cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \
-    ln -s /usr/share/socket30003/socket30003.cfg . && \
+    ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
     popd && \
     #
     # install S6 Overlay
