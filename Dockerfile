@@ -8,6 +8,7 @@ RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
     KEPT_PIP_PACKAGES=() && \
+    KEPT_RUBY_PACKAGES=() && \
     # Required for building multiple packages.
     TEMP_PACKAGES+=(build-essential) && \
     TEMP_PACKAGES+=(pkg-config) && \
@@ -33,8 +34,9 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence and Socket30003:
     #
-    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl iputils-ping) && \
+    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl iputils-ping ruby) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
+    KEPT_RUBY_PACKAGES+=(twurl) && \
     #
     # Install packages.
     #
@@ -45,6 +47,7 @@ RUN set -x && \
         && \
     git config --global advice.detachedHead false && \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
+    gem install twurl && \
     #
     # Use normal shell commands to install
     #
