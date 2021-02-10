@@ -72,6 +72,7 @@ RUN set -x && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
     cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \
+    ln -s /usr/share/socket30003/socket30003.cfg . && \
     popd && \
     #
     # install S6 Overlay
