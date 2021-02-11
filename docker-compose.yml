@@ -2,7 +2,6 @@ version: '3.8'
 
 volumes:
   planefence:
-  planefencehtml:
   readsbpb_rrd:
   readsbpb_autogain:
 
@@ -13,19 +12,23 @@ services:
     container_name: planefence
     hostname: planefence
     restart: always
+    env_file: .env
+    environment:
+      - TZ=${FEEDER_TZ}
     volumes:
       - planefence:/run/planefence
-      - planefencehtml:/usr/share/planefence/html
+      - /opt/planefence/Volumes/html:/usr/share/planefence/html
+
   readsb:
-    image: mikenye/readsb-protobuf:latest
+    image: mikenye/readsb-protobuf:latest 
     tty: true
-    container_name: readsb
-    hostname: readsb
+    container_name: readsb 
+    hostname: readsb 
     restart: always
     devices:
       - /dev/bus/usb
     ports:
-      - 80:8080
+      - 8080:8080
       - 30003:30003
     environment:
       - TZ=${FEEDER_TZ}
