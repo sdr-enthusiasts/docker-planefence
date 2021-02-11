@@ -33,7 +33,7 @@ RUN set -x && \
     #
     # Get prerequisite packages for PlaneFence and Socket30003:
     #
-    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl iputils-ping ruby) && \
+    KEPT_PACKAGES+=(python-pip python-numpy python-pandas python-dateutil jq bc gnuplot-nox lighttpd perl iputils-ping ruby alsa-utils) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     #
