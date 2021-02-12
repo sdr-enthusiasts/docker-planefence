@@ -6,7 +6,7 @@
 # For this to work, add "experimental": "enabled" to ~/.docker/config.json
 #
 
-docker buildx build --platform linux/arm64 --compress --pull --no-cache -t kx1t/planefence:arm64 ."
+docker buildx build --platform linux/arm64 --compress --pull --no-cache -t kx1t/planefence:arm64 .
 docker push kx1t/planefence:arm64
 docker buildx build --platform linux/arm/v7 --compress --pull --no-cache -t kx1t/planefence:armv7 .
 docker push kx1t/planefence:armv7
