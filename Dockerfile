@@ -74,6 +74,7 @@ RUN set -x && \
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run /etc/services.d/socket30003/run && \
     ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
     popd && \
+    ln -s /usr/share/planefence/config_tweeting.sh ~/config_tweeting.sh
     #
     # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
