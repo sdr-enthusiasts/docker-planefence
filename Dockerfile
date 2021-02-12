@@ -67,7 +67,7 @@ RUN set -x && \
     git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
     cp scripts/* /usr/share/planefence && \
-    cp jscript/* /usr/share/planefence/staging && \
+    cp jscript/* /usr/share/planefence/stage && \
     cp systemd/start_* /usr/share/planefence && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
     cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
