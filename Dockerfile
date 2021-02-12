@@ -62,12 +62,12 @@ RUN set -x && \
     #
     # Install PlaneFence
     mkdir -p /usr/share/planefence/html && \
-    chown root:root /usr/share/planefence/html && \
+    mkdir -p /usr/share/planefence/stage && \
     mkdir -p /etc/services.d/planefence && \
     git clone https://github.com/kx1t/planefence4docker.git /git/planefence && \
     pushd /git/planefence && \
     cp scripts/* /usr/share/planefence && \
-    cp jscript/* /usr/share/planefence/html && \
+    cp jscript/* /usr/share/planefence/stage && \
     cp systemd/start_* /usr/share/planefence && \
     cp systemd/start_planefence /etc/services.d/planefence/run && \
     cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
