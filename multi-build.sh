@@ -6,12 +6,8 @@
 # For this to work, add "experimental": "enabled" to ~/.docker/config.json
 #
 
-docker buildx build --platform linux/arm64 --compress --pull --no-cache -t kx1t/planefence:arm64 .
-docker push kx1t/planefence:arm64
-docker buildx build --platform linux/arm/v7 --compress --pull --no-cache -t kx1t/planefence:armv7 .
-docker push kx1t/planefence:armv7
-docker buildx build --platform linux/arm/v6 --compress --pull --no-cache -t kx1t/planefence:armv6 .
-docker push kx1t/planefence:armv6
-
-docker manifest create kx1t/planefence:latest kx1t/planefence:arm64 kx1t/planefence:armv7 kx1t/planefence:armv6
-docker manifest push kx1t/planefence:latest
+docker buildx use mybuilder
+docker buildx inspect --bootstrap
+#remove amd64 for now
+#docker buildx build --platform linux/amd64,linux/arm/v6,linux/arm64,linux/arm/v7 -t kx1t/planefence:latest --push .
+docker buildx build --platform linux/arm/v6,linux/arm64,linux/arm/v7 -t kx1t/planefence:latest --push .
