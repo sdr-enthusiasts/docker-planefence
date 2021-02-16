@@ -1,3 +1,4 @@
+
 FROM debian:stable-slim
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
@@ -72,7 +73,7 @@ RUN set -x && \
     git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
     pushd "/git/socket30003" && \
        ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
-       cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
+       cp /planefence/systemd/start_socket30003 /etc/services.d/socket30003/run && \
        chmod a+x /usr/share/socket30003/*.pl && \
        chmod a+x /etc/services.d/socket30003/run && \
     popd && \
