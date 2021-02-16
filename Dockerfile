@@ -103,8 +103,6 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-*
     # rm -rf /git/*
 
-
-
 COPY rootfs/ /
 
 ENTRYPOINT [ "/init" ]
