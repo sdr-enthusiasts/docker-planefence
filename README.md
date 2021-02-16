@@ -1,8 +1,7 @@
 # docker-planefence
 
 Docker container with dump1090.socket30003 and planefence
-Note that at the moment, the only compiled image is created for arm64 (Raspberry Pi 4B / 4 Gb with 64-bits Ubuntu 20.10)
-You can build your own following the instructions below.
+You can use the prebuilt multi arch images of build yourself.
 
 ## Build your own container
 
