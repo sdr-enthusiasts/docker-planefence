@@ -80,8 +80,8 @@ RUN set -x && \
     mkdir -p /usr/share/planefence/html && \
     mkdir -p /usr/share/planefence/stage && \
     mkdir -p /etc/services.d/planefence && \
-    git clone https://github.com/kx1t/docker-planefence.git /git/docker-planefence && \
-    pushd /git/docker-planefence/planefence && \
+    #git clone https://github.com/kx1t/docker-planefence.git /git/docker-planefence && \
+    pushd /planefence && \
     cp scripts/* /usr/share/planefence && \
     cp jscript/* /usr/share/planefence/stage && \
     cp systemd/start_* /usr/share/planefence && \
