@@ -1,0 +1,44 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="lighttpd"
+APPPATH="/usr/sbin/lighttpd"
+CONFIGPATH="/etc/lighttpd/lighttpd.conf"
+OWNER=www-data
+GROUP=www-data
+
+echo "[$APPNAME][$(date)] Lighttpd started as an s6 service"
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/docker-planefence
+#
+# -----------------------------------------------------------------------------------
+# Feel free to make changes to the variables between these two lines. However, it is
+# STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
+#
+# LOOPTIME is the time between two runs of noisecapt (in seconds)
+# Since Noisecapt.sh already runs forever by itself, noisecapt is the time between a failure of the script, and
+# the system trying to re-start it. This can safely be set to a few seconds.
+#
+# Be sure there is a /var/run/lighttpd, even with tmpfs
+# The directory is defined as volatile and may thus be non-existing
+# after a boot (DPM §9.3.2)
+
+[[ ! -d /var/cache/lighttpd ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd"
+[[ ! -d /var/cache/lighttpd/compress ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/compress"
+[[ ! -d /var/cache/lighttpd/uploads ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/uploads"
+[[ ! -d /var/log/lighttpd ]] &&	install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"
+[[ ! -d /var/run/lighttpd ]] &&	install -d -o $OWNER -g $GROUP -m 0750 "/var/run/lighttpd"
+#
+# -----------------------------------------------------------------------------------
+# Check if lighttpd is OK:
+#
+$APPPATH -tt -f $CONFIGPATH || exit $?
+#
+# -----------------------------------------------------------------------------------
+# Now run ligghttpd for real
+#
+$APPPATH -f $CONFIGPATH -D

@@ -1,0 +1,35 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="noisecapt"
+
+echo "[$APPNAME][$(date)] Socket30003 deployment started"
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/noisecapt/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# -----------------------------------------------------------------------------------
+# Feel free to make changes to the variables between these two lines. However, it is
+# STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
+#
+# LOOPTIME is the time between two runs of noisecapt (in seconds)
+# Since Noisecapt.sh already runs forever by itself, noisecapt is the time between a failure of the script, and
+# the system trying to re-start it. This can safely be set to a few seconds.
+LOOPTIME=30
+#
+# NOISECAPTDIR contains the directory where noisecapt.sh is location
+NOISECAPTDIR=/usr/share/planefence
+# -----------------------------------------------------------------------------------
+
+while true
+do
+	$NOISECAPTDIR/noisecapt.sh >/tmp/noisecapt.log
+	sleep $LOOPTIME
+done

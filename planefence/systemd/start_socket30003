@@ -1,0 +1,58 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="socket30003"
+
+echo "[$APPNAME][$(date)] Socket30003 deployment started"
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/planefence4docker/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+#
+# $LOOPTIME is used to delay a restart after socket30003 exits for any reason, as not to
+# spam the system with restarts:
+LOOPTIME=30
+#
+# set params in socket30003.conf
+sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
+sed -i 's/\(^\s*longitude=\).*/\1'"$FEEDER_LONG"'/' /usr/share/socket30003/socket30003.cfg
+[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
+
+if [[ "x$PF_DISTUNIT" != "x" ]]
+then
+	sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+else
+	sed -i 's/\(^\s*distanceunit=\).*/\1nauticalmile/' /usr/share/socket30003/socket30003.cfg
+fi
+if [[ "x$PF_ALTUNIT" != "x" ]]
+then
+	sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+else
+	sed -i 's/\(^\s*altitudeunit=\).*/\1feet/' /usr/share/socket30003/socket30003.cfg
+fi
+if [[ "x$PF_SPEEDUNIT" != "x" ]]
+then
+	sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
+else
+	sed -i 's/\(^\s*speedunit=\).*/\1knotph/' /usr/share/socket30003/socket30003.cfg
+fi
+
+# -----------------------------------------------------------------------------------
+
+#--------------------------------------------------------------------------------
+# Now start dump1090.socket30003 in a loop that restarts it $LOOPTIME seconds after it exits or crashes:
+echo "[$APPNAME][$(date)] socket30003 starting its initial run now"
+while true
+do
+  echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl)"
+	echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
+	sleep $LOOPTIME
+	echo "[$APPNAME][$(date)] socket30003 restarting now"
+done

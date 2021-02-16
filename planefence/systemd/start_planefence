@@ -1,0 +1,125 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="planefence"
+
+echo "[$APPNAME][$(date)] PlaneFence deployment started"
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/planefence4docker/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
+# as command separator, but use something else instead, for example '|'
+#
+# -----------------------------------------------------------------------------------
+# LOOPTIME is the time between two runs of PlaneFence (in seconds)
+[[ "$PF_INTERVAL" != "" ]] && LOOPTIME=$PF_INTERVAL || LOOPTIME=120
+#
+# PLANEFENCEDIR contains the directory where planefence.sh is location
+PLANEFENCEDIR=/usr/share/planefence
+# -----------------------------------------------------------------------------------
+#
+# Set logging in planefence.conf:
+#
+if [[ "$PF_LOG" == "off" ]]
+then
+	LOGFILE=/dev/null
+	sed -i 's/\(^\s*VERBOSE=\).*/\1'""'/' /usr/share/planefence/planefence.conf
+else
+	[[ "x$PF_LOG" == "x" ]] && LOGFILE="/tmp/planefence.log" || LOGFILE="$PF_LOG"
+fi
+# echo pflog=$PF_LOG and logfile=$LOGFILE
+sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.conf
+#
+# -----------------------------------------------------------------------------------
+#
+# read the environment variables and put them in the planefence.conf file:
+[[ "x$FEEDER_LAT" != "x" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"$FEEDER_LAT"'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; exit 99; }
+[[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"$FEEDER_LONG"'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LONG not defined"; exit 99; }
+[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"$PF_MAXALT"'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"$PF_MAXDIST"'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"$PF_NAME"'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"$PF_TRACKSVC"'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"$PF_MAPURL"'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"$PF_SOCK30003HOST"'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"$PF_SOCK30003HOST"'/' /usr/share/planefence/planeheat.sh
+# -----------------------------------------------------------------------------------
+#
+# same for planeheat.sh
+#
+sed -i 's/\(^\s*LAT=\).*/\1'"$FEEDER_LAT"'/' /usr/share/planefence/planeheat.sh
+sed -i 's/\(^\s*LON=\).*/\1'"$FEEDER_LONG"'/' /usr/share/planefence/planeheat.sh
+[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"$PF_MAXALT"'/' /usr/share/planefence/planeheat.sh
+[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"$PF_MAXDIST"'/' /usr/share/planefence/planeheat.sh
+# -----------------------------------------------------------------------------------
+#
+# .twurlrc can get lost on reboot or redeployment of the container.
+# If there is a copy in the mounted volume, restore it:
+#
+if [[ ! -f ~/.twurlrc ]] && [[ -f /run/planefence/.twurlrc ]]
+then
+	cp /run/planefence/.twurlrc ~/.twurlrc
+fi
+# -----------------------------------------------------------------------------------
+#
+# enable or disable tweeting:
+#
+[[ "x$PF_TWEET" == "xOFF" ]] && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
+if [[ "x$PF_TWEET" == "xON" ]]
+then
+	if [[ ! -f ~/.twurlrc ]]
+	then
+			echo "[$APPNAME][$(date)] Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
+			echo "[$APPNAME][$(date)] Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
+			echo "[$APPNAME][$(date)] Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
+			echo "[$APPNAME][$(date)] For more information on how to sign up for a Twitter Developer Account, see this link:"
+			echo "[$APPNAME][$(date)] https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
+			echo "[$APPNAME][$(date)] PlaneFence will continue to start without Twitter functionality."
+			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
+	else
+			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
+                        [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"$PF_TWATTRIB"'|' /usr/share/planefence/planefence.conf
+        fi
+fi
+# -----------------------------------------------------------------------------------
+#
+# Change the heatmap height and width if they are defined in the .env parameter file:
+[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"$PF_MAPHEIGHT"'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"$PF_MAPWIDTH"'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"$PF_MAPZOOM"'|' /usr/share/planefence/planefence.conf
+#
+# Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
+for i in /usr/share/planefence/html/planefence-??????.html
+do
+	[[ "x$PF_MAPWIDTH" != "x" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' $i
+	[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' $i
+	[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
+done
+
+#
+# -----------------------------------------------------------------------------------
+#
+# Move the jscript files from the staging directory into the html directory.
+# this cannot be done at build time because the directory is exposed and it is
+# overwritten by the host at start of runtime
+cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+#--------------------------------------------------------------------------------
+# Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
+#
+echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..."
+sleep $LOOPTIME
+echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
+while true
+do
+	echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)"
+	echo "[$APPNAME][$(date)] PlaneFence has exited... restarting in $LOOPTIME"
+	sleep $LOOPTIME
+	echo "[$APPNAME][$(date)] PlaneFence restarting now"
+done
