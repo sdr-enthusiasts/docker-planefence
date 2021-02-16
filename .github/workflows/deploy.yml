@@ -12,6 +12,7 @@ on:
   # schedule:
   #   - cron: "0 10 * * *"
 
+
 jobs:
   deploy_dockerhub_multiarch:
     name: Deploy to DockerHub (Multi-Arch)
