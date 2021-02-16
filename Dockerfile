@@ -4,6 +4,11 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Copy needs to be here to prevent github actions from failing.
+# SSL Certs are pre-loaded into the rootfs via a job in github action:
+# See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
+COPY rootfs/ /
+
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -50,12 +55,6 @@ RUN set -x && \
     #
     # Install packages.
     #
-    # first fix the file locations for a few files. This is needed for the amd64 image to build correctly
-    mkdir -p /usr/sbin/ && \
-    ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
-    ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
-    ln -s /bin/tar /usr/sbin/tar && \ 
-    # now go on with the actual install:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
@@ -103,14 +102,7 @@ RUN set -x && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-*
     # rm -rf /git/*
 
-
-
-COPY rootfs/ /
-
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
 EXPOSE 30003
-
-# Add healthcheck
-HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh

@@ -12,10 +12,11 @@ on:
   schedule:
     - cron: "0 10 * * *"
 
+
 jobs:
   deploy_dockerhub_multiarch:
     name: Deploy to DockerHub (Multi-Arch)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     # Set job-wide environment variables
     #  - REPO: repo name on dockerhub
@@ -50,7 +51,7 @@ jobs:
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
-      # Log into docker hub (so we can push images)
+      # # Log into docker hub (so we can push images)
       -
         name: Login to DockerHub
         uses: docker/login-action@v1
@@ -132,7 +133,7 @@ jobs:
 
   deploy_dockerhub_single_arch:
     name: Deploy to DockerHub
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         docker-platform:
@@ -175,7 +176,7 @@ jobs:
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
-      # Log into docker hub (so we can push images)
+      # # Log into docker hub (so we can push images)
       -
         name: Login to DockerHub
         uses: docker/login-action@v1
