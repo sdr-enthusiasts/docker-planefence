@@ -9,8 +9,8 @@ on:
       - main
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
-  # schedule:
-  #   - cron: "0 10 * * *"
+  schedule:
+    - cron: "0 10 * * *"
 
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     env:
       REPO: kx1t
       IMAGE: planefence
-      PUSH: false
+      PUSH: true
     
     steps:
 
@@ -52,12 +52,12 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       # # Log into docker hub (so we can push images)
-      # -
-      #   name: Login to DockerHub
-      #   uses: docker/login-action@v1
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Set up buildx for multi platform builds
       -
@@ -80,9 +80,9 @@ jobs:
       # Get version from "latest"
       -
         name: Get latest image version
-        run: echo VERSION_TAG=TEST >> $GITHUB_ENV
-          # docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest"
-          # echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest" /CONTAINER_VERSION)" >> $GITHUB_ENV
+        run: |
+          docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest"
+          echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest" /CONTAINER_VERSION)" >> $GITHUB_ENV
 
       # Show version from "latest"
       -
@@ -149,7 +149,7 @@ jobs:
     env:
       REPO: kx1t
       IMAGE: planefence
-      PUSH: false
+      PUSH: true
 
     steps:
 
@@ -177,12 +177,12 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       # # Log into docker hub (so we can push images)
-      # -
-      #   name: Login to DockerHub
-      #   uses: docker/login-action@v1
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Set up buildx for multi platform builds
       -
@@ -217,9 +217,9 @@ jobs:
       # Get version from "latest"
       -
         name: Get latest image version
-        run: echo VERSION_TAG=TEST >> $GITHUB_ENV
-          # docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}"
-          # echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}" /CONTAINER_VERSION)" >> $GITHUB_ENV
+        run: |
+          docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}"
+          echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}" /CONTAINER_VERSION)" >> $GITHUB_ENV
 
       # Show version from "latest"
       -
