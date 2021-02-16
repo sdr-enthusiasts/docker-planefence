@@ -71,10 +71,15 @@ These instructions assume that you deployed Mikenye's dockerized containers for 
 
 Planefence can send out a Tweet everytime an aircraft enters the fence. In order to do so, you need to apply for a Twitter Developer Account, create an application on your Twitter Dev account, get some keys, and run a bit of configuration. This is a one-time thing, so even it if sounds complicated, at least it needs to be done only once! Follow these steps:
 1. Go to https://apps.twitter.com/app/new . Sign in with your Twitter account, apply for a developer account, and create a new app. A couple of hints:
+
 -- If you need help, [here](https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/)'s a webpage with an excellent graphical walk-through of what you need to do.
+
 -- Create a new application and provide some answers. Your application will be for "hobbyist" use, it's a "bot", and just provide a description of why you'd like to tweet about planes flying over your house. 
+
 -- Make sure you have a mobile phone number registered with your account. Without it, you can't get "write" (i.e., send Tweets) permissions.  If your carrier is not supported by Twitter and you are unable to add a number, contact Twitter using https://support.twitter.com/forms/platform, selecting the last checkbox. Some users have reported success adding their number using the mobile site, https://mobile.twitter.com/settings, which seems to bypass the carrier check at the moment.
+
 -- Request Read, Write, and Send Direct Messagess access. If you don't, the logs will full up with errors ("Error processing your OAuth request: Read-only application cannot POST").
+
 -- Keep the page with your Consumer API keys open - you will need them in the next step. Copy the Consumer API Key and Consumer API Key Secret somewhere -- it's a hassle if you lose them as you'll have to regenerate them and re-authorize the application.
 
 2. Edit your /opt/planefence/.env file and make sure that PF_TWEET=ON
