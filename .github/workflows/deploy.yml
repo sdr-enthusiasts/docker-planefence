@@ -16,7 +16,7 @@ on:
 jobs:
   deploy_dockerhub_multiarch:
     name: Deploy to DockerHub (Multi-Arch)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     # Set job-wide environment variables
     #  - REPO: repo name on dockerhub
@@ -133,7 +133,7 @@ jobs:
 
   deploy_dockerhub_single_arch:
     name: Deploy to DockerHub
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         docker-platform:
