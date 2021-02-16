@@ -56,10 +56,10 @@ RUN set -x && \
     # Install packages.
     #
     # first fix the file locations for a few files. This is needed for the amd64 image to build correctly
-    mkdir -p /usr/sbin/ && \
-    ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
-    ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
-    ln -s /bin/tar /usr/sbin/tar && \ 
+    # mkdir -p /usr/sbin/ && \
+    # ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split && \
+    # ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb && \
+    # ln -s /bin/tar /usr/sbin/tar && \ 
     # now go on with the actual install:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
