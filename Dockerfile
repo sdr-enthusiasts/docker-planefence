@@ -9,6 +9,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
 COPY rootfs/ /
 
+# Copy the planefence program files in place:
+COPY planefence/ /planefence
+
 RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -100,7 +103,7 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-*
-    # rm -rf /git/*
+    # rm -rf /git/* /planefence/*
 
 ENTRYPOINT [ "/init" ]
 
