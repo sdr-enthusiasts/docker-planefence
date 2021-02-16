@@ -80,7 +80,7 @@ jobs:
       # Get version from "latest"
       -
         name: Get latest image version
-        run: echo TEST >> $GITHUB_ENV
+        run: echo VERSION_TAG=TEST >> $GITHUB_ENV
           # docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest"
           # echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest" /CONTAINER_VERSION)" >> $GITHUB_ENV
 
@@ -217,7 +217,7 @@ jobs:
       # Get version from "latest"
       -
         name: Get latest image version
-        run: echo TEST >> $GITHUB_ENV
+        run: echo VERSION_TAG=TEST >> $GITHUB_ENV
           # docker pull "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}"
           # echo "VERSION_TAG=$(docker run --rm --entrypoint cat "${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}" /CONTAINER_VERSION)" >> $GITHUB_ENV
 
