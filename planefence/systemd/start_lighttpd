@@ -4,10 +4,10 @@
 APPNAME="lighttpd"
 APPPATH="/usr/sbin/lighttpd"
 CONFIGPATH="/etc/lighttpd/lighttpd.conf"
-=www-data
+OWNER=www-data
 GROUP=www-data
 
-echo "[$APPNAME][$(date)] daemon started"
+echo "[$APPNAME][$(date)] Lighttpd started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -26,8 +26,7 @@ echo "[$APPNAME][$(date)] daemon started"
 # Be sure there is a /var/run/lighttpd, even with tmpfs
 # The directory is defined as volatile and may thus be non-existing
 # after a boot (DPM §9.3.2)
-OWNER=www-data
-GROUP=www-data
+
 [[ ! -d /var/cache/lighttpd ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd"
 [[ ! -d /var/cache/lighttpd/compress ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/compress"
 [[ ! -d /var/cache/lighttpd/uploads ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/uploads"
