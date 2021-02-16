@@ -12,8 +12,8 @@ COPY rootfs/ /
 # Copy the planefence program files in place:
 COPY planefence/ /planefence
 
-# define packages needed for installation and general management of the container:
 RUN set -x && \
+# define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
     KEPT_PIP_PACKAGES=() && \
@@ -36,12 +36,10 @@ RUN set -x && \
     TEMP_PACKAGES+=(file) && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
-    #
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
-    KEPT_PACKAGES+=(procps nano aptitude netcat)
+    KEPT_PACKAGES+=(procps nano aptitude netcat) && \
 
 # define packages needed for PlaneFence, including socket30003
-RUN set -x && \
     KEPT_PACKAGES+=(python-pip) && \
     KEPT_PACKAGES+=(python-numpy) && \
     KEPT_PACKAGES+=(python-pandas) && \
@@ -55,10 +53,9 @@ RUN set -x && \
     KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(alsa-utils) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
-    KEPT_RUBY_PACKAGES+=(twurl)
+    KEPT_RUBY_PACKAGES+=(twurl) && \
 
 # Install all these packages:
-RUN set -x && \
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
@@ -66,10 +63,9 @@ RUN set -x && \
         && \
     git config --global advice.detachedHead false && \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
-    gem install twurl
+    gem install twurl && \
 
-# Now install dump1090.socket30003:
-RUN set -x && \
+# Install dump1090.socket30003:
     mkdir -p /usr/share/socket30003 && \
     mkdir -p /run/socket30003 && \
     mkdir -p /etc/services.d/socket30003 && \
@@ -79,11 +75,10 @@ RUN set -x && \
        cp systemd/start_socket30003 /etc/services.d/socket30003/run && \
        chmod a+x /usr/share/socket30003/*.pl && \
        chmod a+x /etc/services.d/socket30003/run && \
-    popd
+    popd && \
 
 # Install Planefence (it was copied in at the top of the script, so this is
 # mainly moving files to the correct location and creating symlinks):
-RUN set -x && \
     mkdir -p /usr/share/planefence/html && \
     mkdir -p /usr/share/planefence/stage && \
     mkdir -p /etc/services.d/planefence && \
@@ -94,24 +89,21 @@ RUN set -x && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
-    popd
+    popd && \
 
 # Configure lighttpd to start and work with planefence:
-RUN set -x && \
     # move the s6 service in place:
     mkdir -p /etc/services.d/lighttpd && \
     cp systemd/start_lighttpd /etc/services.d/lighttpd/run && \
     chmod a+x /etc/services.d/lighttpd/run && \
     # Place and enable the lighty mod:
     cp /planefence/88-planefence.conf /etc/lighttpd/conf-available && \
-    ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled
+    ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 
 # install S6 Overlay
-RUN set -x && \
-    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh
+    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
 
 # Clean up
-RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
