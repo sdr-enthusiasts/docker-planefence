@@ -78,7 +78,7 @@ Planefence can send out a Tweet everytime an aircraft enters the fence. In order
 
 -- Make sure you have a mobile phone number registered with your account. Without it, you can't get "write" (i.e., send Tweets) permissions.  If your carrier is not supported by Twitter and you are unable to add a number, contact Twitter using https://support.twitter.com/forms/platform, selecting the last checkbox. Some users have reported success adding their number using the mobile site, https://mobile.twitter.com/settings, which seems to bypass the carrier check at the moment.
 
--- Request Read, Write, and Send Direct Messagess access. If you don't, the logs will full up with errors ("Error processing your OAuth request: Read-only application cannot POST").
+-- Request Read, Write, and Send Direct Messages access. If you don't, the logs will full up with errors ("Error processing your OAuth request: Read-only application cannot POST").
 
 -- Keep the page with your Consumer API keys open - you will need them in the next step. Copy the Consumer API Key and Consumer API Key Secret somewhere -- it's a hassle if you lose them as you'll have to regenerate them and re-authorize the application.
 
