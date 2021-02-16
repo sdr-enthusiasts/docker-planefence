@@ -9,8 +9,8 @@ on:
       - main
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
-  schedule:
-    - cron: "0 10 * * *"
+  # schedule:
+  #   - cron: "0 10 * * *"
 
 jobs:
   deploy_dockerhub_multiarch:
@@ -23,7 +23,7 @@ jobs:
     env:
       REPO: kx1t
       IMAGE: planefence
-      PUSH: true
+      PUSH: false
     
     steps:
 
@@ -148,7 +148,7 @@ jobs:
     env:
       REPO: kx1t
       IMAGE: planefence
-      PUSH: true
+      PUSH: false
 
     steps:
 
