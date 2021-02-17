@@ -11,7 +11,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY rootfs/ /
 
 # Copy the planefence program files in place:
-COPY planefence/ /planefence
+COPY noisecapt/ /noisecapt
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
@@ -35,26 +35,17 @@ RUN set -x && \
     # ca-certificates kept for python
     TEMP_PACKAGES+=(gnupg2) && \
     TEMP_PACKAGES+=(file) && \
-    KEPT_PACKAGES+=(curl) && \
+    TEMP_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano aptitude netcat) && \
 #
-# define packages needed for PlaneFence, including socket30003
-    KEPT_PACKAGES+=(python-pip) && \
-    KEPT_PACKAGES+=(python-numpy) && \
-    KEPT_PACKAGES+=(python-pandas) && \
-    KEPT_PACKAGES+=(python-dateutil) && \
-    KEPT_PACKAGES+=(jq) && \
+# define packages needed for NoiseCapt
     KEPT_PACKAGES+=(bc) && \
-    KEPT_PACKAGES+=(gnuplot-nox) && \
     KEPT_PACKAGES+=(lighttpd) && \
-    KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
-    KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(alsa-utils) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
-    KEPT_RUBY_PACKAGES+=(twurl) && \
 #
 # Install all these packages:
     apt-get update && \
@@ -66,31 +57,18 @@ RUN set -x && \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl && \
 #
-# Install dump1090.socket30003:
-    mkdir -p /usr/share/socket30003 && \
-    mkdir -p /run/socket30003 && \
-    mkdir -p /etc/services.d/socket30003 && \
-    git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
-    pushd "/git/socket30003" && \
-       ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
-       cp /planefence/services.d/start_socket30003 /etc/services.d/socket30003/run && \
-       chmod a+x /usr/share/socket30003/*.pl && \
-       chmod a+x /etc/services.d/socket30003/run && \
-    popd && \
-#
-# Install Planefence (it was copied in at the top of the script, so this is
+# Install NoiseCapt (it was copied in at the top of the script, so this is
 # mainly moving files to the correct location and creating symlinks):
-    mkdir -p /usr/share/planefence/html && \
-    mkdir -p /usr/share/planefence/stage && \
-    mkdir -p /etc/services.d/planefence && \
-    pushd /planefence && \
+    mkdir -p /usr/share/noisecapt/html && \
+    mkdir -p /usr/share/noisecapt/stage && \
+    mkdir -p /etc/services.d/noisecapt && \
+    mkdir -p /run/noisecapt
+    pushd /noisecapt && \
        cp scripts/* /usr/share/planefence && \
-       cp jscript/* /usr/share/planefence/stage && \
-       cp services.d/start_planefence /etc/services.d/planefence/run && \
-       chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
-       ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
-       ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
-    popd && \
+       cp services.d/start_noisecapt /etc/services.d/noisecapt/run && \
+       cp img/favicon.ico /usr/share/noisecapt/html
+       chmod a+x /usr/share/noisecapt/*.sh /etc/services.d/noisecapt/run && \
+       popd && \
 #
 # Install the cleanup service that ensures that older log files and data get deleted after a user-defined period:
     mkdir -p /etc/services.d/cleanup && \
@@ -107,7 +85,7 @@ RUN set -x && \
        ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 #
 # Do some other stuff
-    echo "alias dir=\'ls -alsv\'" >> /root/.bashrc && \
+    [ -f "/planefence/bash_aliases" ] cat /planefence/bash_aliases >> /root/.bashrc 
 #
 # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
