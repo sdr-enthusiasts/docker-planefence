@@ -36,10 +36,10 @@ CLEANUP ()
     find /usr/share/planefence/plane* -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.log -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
-    tail -n $MAXLOGLINES >/tmp/planefence.log.tmp 2>/dev/null
+    tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
     mv /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
   else
-    echo echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
+    echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
   fi
 }
 #
