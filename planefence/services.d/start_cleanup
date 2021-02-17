@@ -26,13 +26,16 @@ LOOPTIME="1d"
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=5000
-# this function actually cleans out stuff
+
+# this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
 {
   if (( OLDERTHAN > 0 ))
   then
     find /tmp -mindepth 1 -mtime +2 -delete
     find /usr/share/planefence/plane* -mtime +$OLDERTHAN -delete
+    find /run/socket30003/*.log -mtime +$OLDERTHAN -delete
+    find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete
     tail -n $MAXLOGLINES >/tmp/planefence.log.tmp
     mv /tmp/planefence.log.tmp /tmp/planefence.log
   else

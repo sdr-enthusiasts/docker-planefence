@@ -73,7 +73,7 @@ RUN set -x && \
     git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
     pushd "/git/socket30003" && \
        ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
-       cp /planefence/systemd/start_socket30003 /etc/services.d/socket30003/run && \
+       cp /planefence/services.d/start_socket30003 /etc/services.d/socket30003/run && \
        chmod a+x /usr/share/socket30003/*.pl && \
        chmod a+x /etc/services.d/socket30003/run && \
     popd && \
@@ -86,16 +86,21 @@ RUN set -x && \
     pushd /planefence && \
        cp scripts/* /usr/share/planefence && \
        cp jscript/* /usr/share/planefence/stage && \
-       cp systemd/start_planefence /etc/services.d/planefence/run && \
+       cp services.d/start_planefence /etc/services.d/planefence/run && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     popd && \
 #
+# Install the cleanup service that ensures that older log files and data get deleted after a user-defined period:
+    mkdir -p /etc/services.d/cleanup && \
+    cp /planefence/services.d/start_cleanup /etc/services.d/cleanup/run && \
+    chmod a+x /etc/services.d/cleanup/run && \
+#
 # Configure lighttpd to start and work with planefence:
     # move the s6 service in place:
        mkdir -p /etc/services.d/lighttpd && \
-       cp /planefence/systemd/start_lighttpd /etc/services.d/lighttpd/run && \
+       cp /planefence/services.d/start_lighttpd /etc/services.d/lighttpd/run && \
        chmod a+x /etc/services.d/lighttpd/run && \
     # Place and enable the lighty mod:
        cp /planefence/88-planefence.conf /etc/lighttpd/conf-available && \
