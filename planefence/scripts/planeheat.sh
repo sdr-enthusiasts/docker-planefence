@@ -200,7 +200,7 @@ cat <<EOF >"$PLANEHEATHTML"
 <script>
 	var map = L.map('map').setView([$LAT, $LON], $HEATMAPZOOM);
 	var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-	    attribution: '<a href="https://github.com/kx1t/planefence4docker" target="_blank">docker:kx1t/planefence</a> | <a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> | &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+	    attribution: '<a href="https://github.com/kx1t/docker-planefence" target="_blank">docker:kx1t/planefence</a> | <a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> | &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 	    }).addTo(map);
 	addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
 	var heat = L.heatLayer(addressPoints, {minOpacity: 1, radius: 7, maxZoom: 14, blur: 11 }).addTo(map);
