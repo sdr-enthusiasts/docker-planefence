@@ -66,7 +66,7 @@ RUN set -x && \
     pushd /noisecapt && \
        cp scripts/* /usr/share/planefence && \
        cp services.d/start_noisecapt /etc/services.d/noisecapt/run && \
-       cp img/favicon.ico /usr/share/noisecapt/html
+       cp img/favicon.ico /usr/share/noisecapt/html && \
        chmod a+x /usr/share/noisecapt/*.sh /etc/services.d/noisecapt/run && \
        popd && \
 #
