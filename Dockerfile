@@ -85,7 +85,7 @@ RUN set -x && \
        ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 #
 # Do some other stuff
-    [ -f "/planefence/bash_aliases" ] cat /planefence/bash_aliases >> /root/.bashrc
+    [ -f "/planefence/bash_aliases" ] cat /planefence/bash_aliases >> /root/.bashrc && \
 #
 # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
