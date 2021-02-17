@@ -1,1 +1,1 @@
-dir='ls -als'
+alias dir='ls -als'
