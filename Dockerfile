@@ -62,11 +62,11 @@ RUN set -x && \
     mkdir -p /usr/share/noisecapt/html && \
     mkdir -p /usr/share/noisecapt/stage && \
     mkdir -p /etc/services.d/noisecapt && \
-    mkdir -p /run/noisecapt && \
+    mkdir -p /run/noisecapt
     pushd /noisecapt && \
        cp scripts/* /usr/share/planefence && \
        cp services.d/start_noisecapt /etc/services.d/noisecapt/run && \
-       cp img/favicon.ico /usr/share/noisecapt/html && \
+       cp img/favicon.ico /usr/share/noisecapt/html
        chmod a+x /usr/share/noisecapt/*.sh /etc/services.d/noisecapt/run && \
        popd && \
 #
@@ -85,7 +85,7 @@ RUN set -x && \
        ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 #
 # Do some other stuff
-    [ -f "/planefence/bash_aliases" ] cat /planefence/bash_aliases >> /root/.bashrc && \
+    [ -f "/planefence/bash_aliases" ] cat /planefence/bash_aliases >> /root/.bashrc 
 #
 # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
