@@ -108,7 +108,7 @@ RUN set -x && \
 #
 # Do some other stuff
 
-    echo "alias dir=\'ls -alsv\'" >> /root/.bashrc && >>>>>> main
+    echo "alias dir=\'ls -alsv\'" >> /root/.bashrc && \
 #
 # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
