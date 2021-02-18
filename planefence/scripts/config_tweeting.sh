@@ -61,7 +61,7 @@ echo
 twurl authorize --consumer-key $KEY --consumer-secret $SECRET
 unset KEY
 unset SECRET
-cp -f ~/.twurlrc /run/planefence
+cp -f ~/.twurlrc /usr/share/planefence/persist
 echo
 echo Tweeting is now configured. You can switch it ON or OFF by changing the PF_TWEET parameter in \".env\" to \"ON\" or \"OFF\".
 echo We strongly recommend you to BACK UP your twitter configuration file. You can do so by typing:

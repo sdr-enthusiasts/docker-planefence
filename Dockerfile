@@ -82,6 +82,7 @@ RUN set -x && \
 # mainly moving files to the correct location and creating symlinks):
     mkdir -p /usr/share/planefence/html && \
     mkdir -p /usr/share/planefence/stage && \
+    mkdir -p /usr/share/planefence/persist && \
     mkdir -p /etc/services.d/planefence && \
     pushd /planefence && \
        cp scripts/* /usr/share/planefence && \

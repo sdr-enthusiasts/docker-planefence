@@ -12,15 +12,13 @@ services:
     container_name: planefence
     hostname: planefence
     restart: always
-    devices:
-      - /dev/snd:/dev/snd
     ports:
       - 8088:80
     env_file: .env
     environment:
       - TZ=${FEEDER_TZ}
     volumes:
-      - planefence:/run/planefence
+      - planefence:/usr/share/planefence/persist
       - /opt/planefence/Volumes/html:/usr/share/planefence/html
 
   readsb:
