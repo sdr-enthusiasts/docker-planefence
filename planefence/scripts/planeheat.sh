@@ -198,7 +198,7 @@ cat <<EOF >"$PLANEHEATHTML"
 <script src="leaflet-heat.js"></script>
 <script src="planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js"></script>
 <script>
-	var map = L.map('map').setView([$LAT, $LON], $HEATMAPZOOM);
+	var map = L.map('map').setView([parseFloat("$LAT"), parseFloat("$LON")], parseInt("$HEATMAPZOOM"));
 	var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 	    attribution: '<a href="https://github.com/kx1t/docker-planefence" target="_blank">docker:kx1t/planefence</a> | <a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> | &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 	    }).addTo(map);
