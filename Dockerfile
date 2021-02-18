@@ -90,6 +90,7 @@ RUN set -x && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
+       date +"%Y-%m-%d %H:%M:%S %Z" > /root/.buildtime && \
     popd && \
 #
 # Install the cleanup service that ensures that older log files and data get deleted after a user-defined period:

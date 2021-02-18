@@ -204,7 +204,7 @@ cat <<EOF >"$PLANEHEATHTML"
 	    }).addTo(map);
 	addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
 	var heat = L.heatLayer(addressPoints, {minOpacity: 1, radius: 7, maxZoom: 14, blur: 11 }).addTo(map);
-	var circle = L.circle(['$LAT', '$LON'], {
+	var circle = L.circle([ parseFloat("$LAT"), parseFloat("$LON")], {
 	    color: 'blue',
 	    fillColor: '#f03',
 	    fillOpacity: 0.1,
