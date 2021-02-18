@@ -61,7 +61,7 @@ else
 	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run PlaneFence!
 	exit 2
 fi
-
+NOISECAPT=0
 # first get DISTANCE unit:
 DISTUNIT="mi"
 DISTCONV=1
