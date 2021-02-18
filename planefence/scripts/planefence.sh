@@ -126,14 +126,14 @@ LOG ()
 		fi
 	fi
 }
-[[ "x$VERBOSE" != "x" ]] && LOG "-----------------------------------------------------"
+LOG "-----------------------------------------------------"
 # Function to write an HTML table from a CSV file
-[[ "x$VERBOSE" != "x" ]] && LOG "Defining WRITEHTMLTABLE"
+LOG "Defining WRITEHTMLTABLE"
 WRITEHTMLTABLE () {
 	# -----------------------------------------
 	# Next create an HTML table from the CSV file
 	# Usage: WRITEHTMLTABLE INPUTFILE OUTPUTFILE [standalone]
-	[[ "x$VERBOSE" != "x" ]] && LOG "WRITEHTMLTABLE $1 $2 $3"
+	LOG "WRITEHTMLTABLE $1 $2 $3"
 
 	# figure out if there is NOISE data in the CSV file.
         MAXFIELDS=0
@@ -188,9 +188,9 @@ EOF
 		then
 			# there's Twitter info in field 12
 			printf "<th>Tweeted</th>" >> "$2"
-			[[ "x$VERBOSE" != "x" ]] && LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt and Tweeted table headers..."
+			LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt and Tweeted table headers..."
 		else
-			[[ "x$VERBOSE" != "x" ]] && LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
+			LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
 		fi
 
 		if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
@@ -199,7 +199,7 @@ EOF
 		fi
 
 	else
-		[[ "x$VERBOSE" != "x" ]] && LOG "Number of fields in CSV is $MAXFIELDS. Not adding NoiseCapt table headers!"
+		LOG "Number of fields in CSV is $MAXFIELDS. Not adding NoiseCapt table headers!"
 	fi
 
 	printf "</tr>\n" >>"$2"
@@ -266,24 +266,24 @@ EOF
 				# if the timeframe is less than 15 seconds, extend the ENDTIME to 30 seconds
 				(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
 
-				[[ "x$VERBOSE" != "x" ]] && LOG "SpectroFile between $STARTTIME and $ENDTIME"
+				LOG "SpectroFile between $STARTTIME and $ENDTIME"
 
 				# determine the name of a potential spectrogram file
 				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
-				[[ "x$VERBOSE" != "x" ]] && LOG "SPECTROFILE (before copying) is $TMPDIR/$SPECTROFILE"
+				LOG "SPECTROFILE (before copying) is $TMPDIR/$SPECTROFILE"
 
 				if [ "$REMOTENOISE" != "" ]
 				then
 					# The SpectroFile is located on a remote machine. Go get it there
 					scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
 					mv -f "$OUTFILEDIR/$SPECTROFILE".tmp "$OUTFILEDIR/$SPECTROFILE"
-					[[ "x$VERBOSE" != "x" ]] && LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
+					LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
 				fi
 
 				if [ -f "$TMPDIR/$SPECTROFILE" ] && [ ! -f "$OUTFILEDIR/$SPECTROFILE" ]
 				then
 					cp -f "$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE"
-					[[ "x$VERBOSE" != "x" ]] && LOG "Copied SpectroFile from $TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
+					LOG "Copied SpectroFile from $TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
 
 				else
 					[ ! -f "$OUTFILEDIR/$SPECTROFILE" ] && LOG "Didnt (local) copy Spectrofile - doesnt exist at origin"
@@ -293,18 +293,13 @@ EOF
 				# generate noisegraph if it doesnt already exist
 				if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
 				then
-					[[ "x$VERBOSE" != "x" ]] && LOG "Invoking GnuPlot with START=$STARTTIME END=$ENDTIME"
+					LOG "Invoking GnuPlot with START=$STARTTIME END=$ENDTIME"
 					gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
-					[[ "x$VERBOSE" != "x" ]] && LOG "SPECTROFILE=$SPECTROFILE"
+					LOG "SPECTROFILE=$SPECTROFILE"
 				else
-					[[ "x$VERBOSE" != "x" ]] && LOG "Didnt write graph. Reason:"
-					if [ -f "$NOISEGRAPHFILE" ]
-					then
-							[ "x$VERBOSE" != "x" ]] && LOG "$NOISEGRAPHFILE exists"
-						else
-							[ "x$VERBOSE" != "x" ]] && LOG "$NOISEGRAPHFILE doesn't exist"
-					fi
-					[[ "x$VERBOSE" != "x" ]] && LOG "Timediff is $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) "
+					LOG "Didnt write graph. Reason:"
+					[ -f "$NOISEGRAPHFILE" ] && LOG "$NOISEGRAPHFILE exists" || LOG "$NOISEGRAPHFILE doesn't exist"
+					LOG "Timediff is $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) "
 				fi
 
 
@@ -358,7 +353,7 @@ EOF
 			if [ -f "$OUTFILEDIR/$SPECTROFILE" ]
 			then
 				printf "<td><A href=\"%s\" target=\"_new\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2"
-				[[ "x$VERBOSE" != "x" ]] && LOG "SpectroFile exists, added link to table"
+				LOG "SpectroFile exists, added link to table"
 			#else
 				#LOG "SpectroFile doesnt exist, no link added to table"
 			fi
@@ -380,12 +375,12 @@ EOF
 }
 
 # Function to write the PlaneFence history file
-[[ "x$VERBOSE" != "x" ]] && LOG "Defining WRITEHTMLHISTORY"
+LOG "Defining WRITEHTMLHISTORY"
 WRITEHTMLHISTORY () {
 	# -----------------------------------------
 	# Write history file from directory
 	# Usage: WRITEHTMLTABLE PLANEFENCEDIRECTORY OUTPUTFILE [standalone]
-	[[ "x$VERBOSE" != "x" ]] && LOG "WRITEHTMLHISTORY $1 $2 $3"
+	LOG "WRITEHTMLHISTORY $1 $2 $3"
         if [ "$3" == "standalone" ]
         then
                 printf "<html>\n<body>\n" >>"$2"
@@ -422,8 +417,8 @@ EOF
 
 
 # Here we go for real:
-[[ "x$VERBOSE" != "x" ]] && LOG "Initiating PlaneFence"
-[[ "x$VERBOSE" != "x" ]] && LOG "FENCEDATE=$FENCEDATE"
+LOG "Initiating PlaneFence"
+LOG "FENCEDATE=$FENCEDATE"
 # First - if there's any command line argument, we need to do a full run discarding all cached items
 if [ "$1" != "" ]
 then
@@ -457,15 +452,15 @@ rm "$OUTFILETMP" 2>/dev/null
 # Now write the $CURRCOUNT back to the TMP file for use next time PlaneFence is invoked:
 echo "$CURRCOUNT" > "$TMPLINES"
 
-[[ "x$VERBOSE" != "x" ]] && LOG "Current run starts at line $READLINES of $CURRCOUNT"
+LOG "Current run starts at line $READLINES of $CURRCOUNT"
 
 # Now create a temp file with the latest logs
 tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
 
 # First, run planefence.py to create the CSV file:
-[[ "x$VERBOSE" != "x" ]] && LOG "Invoking planefence.py..."
+LOG "Invoking planefence.py..."
 $PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1 | LOG
-[[ "x$VERBOSE" != "x" ]] && LOG "Returned from planefence.py..."
+LOG "Returned from planefence.py..."
 
 # Now we need to combine any double entries. This happens when a plane was in range during two consecutive Planefence runs
 # A real simple solution could have been to use the Linux 'uniq' command, but that won't allow us to easily combine them
@@ -478,15 +473,10 @@ then
 	LASTLINE=$(tail -n 1 "$OUTFILECSV")
 	FIRSTLINE=$(head -n 1 "$OUTFILETMP")
 
-	if [ -f "$OUTFILECSV" ]
-	then
-		[[ "x$VERBOSE" != "x" ]] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines"
-	else
-		[[ "x$VERBOSE" != "x" ]] && LOG "Before: CSV file doesn't exist"
-	fi
-	[[ "x$VERBOSE" != "x" ]] && LOG "Before: Last line of CSV file: $LASTLINE"
-  [[ "x$VERBOSE" != "x" ]] && LOG "Before: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
-  [[ "x$VERBOSE" != "x" ]] && LOG "Before: First line of PF file: $FIRSTLINE"
+	[ -f "$OUTFILECSV" ] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" || LOG "Before: CSV file doesn't exist"
+	LOG "Before: Last line of CSV file: $LASTLINE"
+        LOG "Before: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
+        LOG "Before: First line of PF file: $FIRSTLINE"
 
 	# Convert these into arrays so we can compare:
 	unset $LASTVALUES
@@ -497,10 +487,10 @@ then
 	# Now, if the ICAO of the two lines are the same, then combine and write the files:
 	if [ "${LASTVALUES[0]}" == "${FIRSTVALUES[0]}" ]
 	then
-		[[ "x$VERBOSE" != "x" ]] && LOG "Oldest new plane = newest old plane. Fixing..."
+		LOG "Oldest new plane = newest old plane. Fixing..."
 		# remove the first line form the $OUTFILETMP:
 		tail --lines=+2 "$OUTFILETMP" > "$TMPDIR/pf-tmpfile" && mv "$TMPDIR/pf-tmpfile" "$OUTFILETMP"
-		[[ "x$VERBOSE" != "x" ]] && LOG "Adjusted linecount of New PF file to: $(wc -l $OUTFILETMP |cut -d ' ' -f 1) lines"
+		LOG "Adjusted linecount of New PF file to: $(wc -l $OUTFILETMP |cut -d ' ' -f 1) lines"
 		# write all but the last line of $OUTFILECSV:
 		head --lines=-1 "$OUTFILECSV" > "$TMPDIR/pf-tmpfile" && mv "$TMPDIR/pf-tmpfile" "$OUTFILECSV"
 
@@ -543,55 +533,55 @@ then
 		# print the last line (link):
 		printf "%s\n" "${LASTVALUES[6]}" >> "$OUTFILECSV"
 	else
-		[[ "x$VERBOSE" != "x" ]] && LOG "No match, continuing..."
+		LOG "No match, continuing..."
 	fi
 else
-	[ -f "$OUTFILECSV" ] && { [[ "x$VERBOSE" != "x" ]] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" } || { [[ "x$VERBOSE" != "x" ]] && LOG "Before: CSV file doesn't exist" }
-	[[ "x$VERBOSE" != "x" ]] && LOG "Before: last line of CSV file: $LASTLINE"
-	[[ "x$VERBOSE" != "x" ]] && LOG "No new entries to be processed..."
+	[ -f "$OUTFILECSV" ] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" || LOG "Before: CSV file doesn't exist"
+	LOG "Before: last line of CSV file: $LASTLINE"
+	LOG "No new entries to be processed..."
 fi
 
-[ -f "$OUTFILECSV" ] && { [[ "x$VERBOSE" != "x" ]] && LOG "After: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" }
-[ -f "$OUTFILECSV" ] && { [[ "x$VERBOSE" != "x" ]] && LOG "After: last line of CSV file: $(tail --lines=1 "$OUTFILECSV")" }
+[ -f "$OUTFILECSV" ] && LOG "After: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines"
+[ -f "$OUTFILECSV" ] && LOG "After: last line of CSV file: $(tail --lines=1 "$OUTFILECSV")"
 
 # now we can stitching the CSV file together:
 if [ -f "$OUTFILETMP" ]
 then
-	[[ "x$VERBOSE" != "x" ]] && LOG "After: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
-	[[ "x$VERBOSE" != "x" ]] && LOG "After: last line of PF file: $LASTLINE"
+	LOG "After: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
+	LOG "After: last line of PF file: $LASTLINE"
 	cat $OUTFILETMP >> "$OUTFILECSV"
 	rm $OUTFILETMP
-	[[ "x$VERBOSE" != "x" ]] && LOG "Concatenated $OUTFILETMP to $OUTFILECSV"
+	LOG "Concatenated $OUTFILETMP to $OUTFILECSV"
 else
-	[[ "x$VERBOSE" != "x" ]] && LOG "After: No New PlaneFence file as there were no new aircraft in reach"
+	LOG "After: No New PlaneFence file as there were no new aircraft in reach"
 fi
 
 # Now check if we need to add noise data to the csv file
 if [ "$NOISECAPT" == "1" ]
 then
-	[[ "x$VERBOSE" != "x" ]] && LOG "Invoking noise2fence!"
+	LOG "Invoking noise2fence!"
 	$PLANEFENCEDIR/noise2fence.sh
 else
-	[[ "x$VERBOSE" != "x" ]] && LOG "Info: Noise2Fence not enabled"
+	LOG "Info: Noise2Fence not enabled"
 fi
 
 # And see if we need to invoke PlaneTweet:
 if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
 then
-	[[ "x$VERBOSE" != "x" ]] && LOG "Invoking PlaneTweet!"
+	LOG "Invoking PlaneTweet!"
 	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"
 else
-	[ "$1" != "" ] && { [[ "x$VERBOSE" != "x" ]] && LOG "Info: PlaneTweet not called because we're doing a manual full run" } || { [[ "x$VERBOSE" != "x" ]] && LOG "Info: PlaneTweet not enabled" }
+	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
 # And see if we need to run PLANEHEAT
 if [ -f "$PLANEHEATSCRIPT" ] && [ -f "$OUTFILECSV" ]
 then
-	[[ "x$VERBOSE" != "x" ]] && LOG "Invoking PlaneHeat!"
+	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
-	[[ "x$VERBOSE" != "x" ]] && LOG "Returned from PlaneHeat"
+	LOG "Returned from PlaneHeat"
 else
-	[[ "x$VERBOSE" != "x" ]] && LOG "Skipped PlaneHeat"
+	LOG "Skipped PlaneHeat"
 fi
 
 # Now, let's see if the DISTUNIT and DISPLAYUNIT are the same. If not, we need to convert to DISPLAYUNIT:
@@ -623,7 +613,7 @@ else
 fi
 
 # If $PLANEALERT=true then lets call dictalert to see if the new lines contain any planes of special interest:
-[ "$PLANEALERT" == "true" ] && ( [[ "x$VERBOSE" != "x" ]] && { LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP" ; $PLALERTFILE $INFILETMP } )
+[ "$PLANEALERT" == "true" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP" ; $PLALERTFILE $INFILETMP )
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
@@ -818,7 +808,7 @@ fi
 
 
 WRITEHTMLHISTORY "$OUTFILEDIR" "$OUTFILEHTMTMP"
-[[ "x$VERBOSE" != "x" ]] && LOG "Done writing history"
+LOG "Done writing history"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
@@ -844,4 +834,4 @@ fi
 # That's all
 # This could probably have been done more elegantly. If you have changes to contribute, I'll be happy to consider them for addition
 # to the GIT repository! --Ramon
-[[ "x$VERBOSE" != "x" ]] && LOG "Finishing PlaneFence... sayonara!"
+LOG "Finishing PlaneFence... sayonara!"
