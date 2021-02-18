@@ -42,6 +42,10 @@
         # Let's see if there is a CONF file that overwrites some of the parameters already defined
         [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
         #
+        # Override $TMPDIR -- the reason is that we want the temp files of planeheat
+        # to be in persistent memory so they will survive docker updates
+        TMPDIR=/usr/share/planefence/persist
+        #
         INFILECSV=$OUTFILEBASE-$FENCEDATE.csv
         TMPLINESBASE=dump1090-ph-temp.tmp
         TMPLINES=$TMPDIR/$TMPLINESBASE
