@@ -41,23 +41,23 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # -----------------------------------------------------------------------------------
 #
 # read the environment variables and put them in the planefence.conf file:
-[[ "x$FEEDER_LAT" != "x" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"$FEEDER_LAT"'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; exit 99; }
-[[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"$FEEDER_LONG"'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LONG not defined"; exit 99; }
-[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"$PF_MAXALT"'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"$PF_MAXDIST"'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"$PF_NAME"'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"$PF_TRACKSVC"'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"$PF_MAPURL"'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"$PF_SOCK30003HOST"'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"$PF_SOCK30003HOST"'/' /usr/share/planefence/planeheat.sh
+[[ "x$FEEDER_LAT" != "x" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; exit 99; }
+[[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LONG not defined"; exit 99; }
+[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planeheat.sh
 # -----------------------------------------------------------------------------------
 #
 # same for planeheat.sh
 #
-sed -i 's/\(^\s*LAT=\).*/\1'"$FEEDER_LAT"'/' /usr/share/planefence/planeheat.sh
-sed -i 's/\(^\s*LON=\).*/\1'"$FEEDER_LONG"'/' /usr/share/planefence/planeheat.sh
-[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"$PF_MAXALT"'/' /usr/share/planefence/planeheat.sh
-[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"$PF_MAXDIST"'/' /usr/share/planefence/planeheat.sh
+sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planeheat.sh
+sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planeheat.sh
+[[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planeheat.sh
+[[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planeheat.sh
 # -----------------------------------------------------------------------------------
 #
 
@@ -91,15 +91,15 @@ then
 			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-                        [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"$PF_TWATTRIB"'|' /usr/share/planefence/planefence.conf
+                        [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
         fi
 fi
 # -----------------------------------------------------------------------------------
 #
 # Change the heatmap height and width if they are defined in the .env parameter file:
-[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"$PF_MAPHEIGHT"'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"$PF_MAPWIDTH"'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"$PF_MAPZOOM"'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/planefence/planefence.conf
 #
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
 for i in /usr/share/planefence/html/planefence-??????.html
