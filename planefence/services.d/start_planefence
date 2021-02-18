@@ -68,6 +68,7 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 # so /run/* can be TMPFS. As a result, if .twurlrc is still there, move it to its new location.
 # This one-time action can be obsoleted once all users have moved over.
 [[ -f /run/planefence/.twurlrc ]] && mv -f /run/planefence/.twurlrc /usr/share/planefence/persist
+[[ -f ~/.twurlrc ]] && cp ~/.twurlrc /usr/share/planefence/persist
 #
 # .twurlrc can get lost on reboot or redeployment of the container.
 # If there is a copy in the mounted volume, restore it:

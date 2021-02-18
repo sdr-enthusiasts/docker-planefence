@@ -47,6 +47,7 @@ services:
       - READSB_NET_ENABLE=true
       - READSB_NET_CONNECTOR=dump978,37981,raw_in
       - READSB_NET_SBS_OUTPUT_PORT=30003
+      - READSB_EXTRA_ARGS=--net-beast-reduce-interval 2 --net-sbs-reduce
     volumes:
       - readsbpb_rrd:/run/collectd
       - readsbpb_autogain:/run/autogain
