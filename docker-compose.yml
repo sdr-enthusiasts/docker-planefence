@@ -20,6 +20,9 @@ services:
     volumes:
       - planefence:/usr/share/planefence/persist
       - /opt/planefence/Volumes/html:/usr/share/planefence/html
+    tmpfs:
+      - /run:rw,nosuid,nodev,exec,relatime,size=128M
+      - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
 
   readsb:
     image: mikenye/readsb-protobuf:latest

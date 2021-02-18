@@ -24,6 +24,9 @@ echo "[$APPNAME][$(date)] PlaneFence deployment started"
 #
 # PLANEFENCEDIR contains the directory where planefence.sh is location
 PLANEFENCEDIR=/usr/share/planefence
+#
+# Make sure the /run directory exists
+mkdir -p /run/planefence
 # -----------------------------------------------------------------------------------
 #
 # Set logging in planefence.conf:

@@ -16,6 +16,8 @@ echo "[$APPNAME][$(date)] Socket30003 deployment started"
 # These packages may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 #
+# Make sure the /run directory exists
+mkdir -p /run/socket30003
 # $LOOPTIME is used to delay a restart after socket30003 exits for any reason, as not to
 # spam the system with restarts:
 LOOPTIME=30
