@@ -118,10 +118,8 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-* /.dockerenv
-    # following lines commented out for development purposes
-    # rm -rf /git/* /planefence/*
-
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-* /.dockerenv /git/* /planefence/*
+    
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
