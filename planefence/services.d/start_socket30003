@@ -51,6 +51,7 @@ fi
 echo "[$APPNAME][$(date)] socket30003 starting its initial run now"
 while true
 do
+
 	 # First make sure that $PF_SOCK30003HOST is defined
 	 if [[ "x$PF_SOCK30003HOST" == "x" ]]
 	 then
