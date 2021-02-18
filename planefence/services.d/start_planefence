@@ -118,13 +118,14 @@ sleep $LOOPTIME
 echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
 while true
 do
-	[[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]] && \
-			echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)" || \
-			{ echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
-			  echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
-			}
-	else
-		echo "[$APPNAME][$(date)] PlaneFence has exited... restarting in $LOOPTIME"
+	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
+        then
+	          echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)"
+                  echo "[$APPNAME][$(date)] PlaneFence has exited... restarting in $LOOPTIME"
+        else
+                  echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
+                  echo "[$APPNAME][$(date)] if this continues to happen, check this:"
+                  echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 	fi
 	sleep $LOOPTIME
 	echo "[$APPNAME][$(date)] PlaneFence restarting now"
