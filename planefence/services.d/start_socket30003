@@ -51,8 +51,19 @@ fi
 echo "[$APPNAME][$(date)] socket30003 starting its initial run now"
 while true
 do
-  echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl)"
-	echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
-	sleep $LOOPTIME
-	echo "[$APPNAME][$(date)] socket30003 restarting now"
+
+	 # First make sure that $PF_SOCK30003HOST is defined
+	 if [[ "x$PF_SOCK30003HOST" == "x" ]]
+	 then
+		 echo "[$APPNAME][$(date)] \$PF_SOCK30003HOST is not set in the .env or docker-compose.yml file. Cannot run! Please update and restart the container."
+	 else
+		 # if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
+		 # we do this inside this endless loop so it will show in the logs regularly
+		 [[ $(timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 2>/dev/null && echo $?) ]] && \
+		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl)" || \
+	  	  echo "[$APPNAME][$(date)] We cannot reach $PF_SOCK30003HOST on port 30003. Fix your readsb or dump1090 install to ensure that this port is enabled!"
+	 fi
+	 echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
+	 sleep $LOOPTIME
+	 echo "[$APPNAME][$(date)] socket30003 restarting now"
 done
