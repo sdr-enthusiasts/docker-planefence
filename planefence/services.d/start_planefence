@@ -53,6 +53,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planeheat.sh
+[[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf
 # -----------------------------------------------------------------------------------
 #
 # same for planeheat.sh

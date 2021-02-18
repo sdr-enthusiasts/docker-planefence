@@ -45,12 +45,8 @@ else
 	FENCEDATE=$(date --date="today" '+%y%m%d')
 fi
 
-	[ "$TRACKSERVICE" == "" ] && TRACKSERVICE="flightaware"
+[ "$TRACKSERVICE" != "flightaware" ] && TRACKSERVICE="flightaware"
 
-CURRENT_PID=$$
-PROCESS_NAME=$(basename $0)
-# need to fix this --> systemctl is-active --quiet noisecapt && NOISECAPT=1 || NOISECAPT=0
-NOISECAPT=0
 #
 # -----------------------------------------------------------------------------------
 # Read the parameters from the config file
@@ -61,7 +57,7 @@ else
 	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run PlaneFence!
 	exit 2
 fi
-NOISECAPT=0
+
 # first get DISTANCE unit:
 DISTUNIT="mi"
 DISTCONV=1
@@ -102,6 +98,12 @@ then
                         ALTUNIT="m"
         esac
 fi
+
+# Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
+# and is configured via the $PF_NOISECAPT variable in the .env file.
+# Only if REMOTENOISE contains a URL and this URL is reachable, we collect noise data
+# Note that this doesn't check for the validity of the actual URL, just that we can reach it.
+[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
 
 #
 # Functions

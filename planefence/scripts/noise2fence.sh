@@ -18,35 +18,25 @@
 CSVDIR=/usr/share/planefence/html
 CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
-LOGNAMEBASE=/tmp/noisecapt-
+LOGNAMEBASE=/usr/share/planefence/persist/noisecapt-
 LOGNAMEEXT=".log"
-CSVTMP=/tmp/pf-noise-csv.tmp
-NOISETMP=/tmp/pf-noise-data.tmp
+CSVTMP=/usr/share/planefence/persist/pf-noise-csv.tmp
+NOISETMP=/usr/share/planefence/persist/pf-noise-data.tmp
 LOGFILE=/tmp/noise2fence.log
 VERBOSE=1
-# -----------------------------------------------------------------------------------
-# Additional variables:
-CURRENT_PID=$$
-PROCESS_NAME=$(basename $0)
 VERSION=0.1-docker
 # -----------------------------------------------------------------------------------
-#
-# If you want to read a remote file, please do the following:
-# ON THIS MACHINE, as user 'pi':
-# - if it doesn't already exist, create ~/.ssh and cd into that directory
-# - if ~/.ssh/id_rsa.pub doesn't already exist, then type this command: ssh-keygen -t rsa -C "pi@PIAWARE"
-# - Copy ~/.ssh/id_rsa.pub to the remote machine (replace 10.0.0.161 with the IP or DNS of the remote machine): scp ~/.ssh/id_rsa.pub pi@10.0.0.161:/tmp/id_rsa.pub
-# ON THE REMOTE MACHINE, as user 'pi':
-# - if it doesn't already exist, create ~/.ssh and cd into that directory
-# - Add the file you copied to your authorized keys: cp /tmp/id_rsa.pub >> ~/.ssh/authorized_keys ; rm /tmp/id_rsa.pub
-# - make sure you set the right permissions:
-#   chmod 0700 ~/.ssh
-#   chmod 0600 ~/.ssh/authorized_keys
-# Last, configure the REMOTELOG parameter with the username and IP address of the remote account:
-#
-# If you do NOT want remote access, simply comment out the REMOTELOG line below.
-# REMOTELOG=pi@10.0.0.161
+# Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
+# and is configured via the $PF_NOISECAPT variable in the .env file.
+# Only if REMOTENOISE contains a URL and this URL is reachable, we collect noise data
+# Note that this doesn't check for the validity of the actual URL, just that we can reach it.
+[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
 
+if [ "$NOISECAPT" != "1" ]
+then
+		echo "NoiseCapt exited prematurely because \$REMOTENOISE was not defined or we couldn't reach that URL. \$REMOTENOISE is set to \"$REMOTENOISE\"."
+		exit 1
+fi
 
 # First create an function to write to the log
 LOG ()
@@ -67,15 +57,18 @@ fi
 CSVFILE=$CSVNAMEBASE$NOISEDATE$CSVNAMEEXT
 # CSVFILE=/tmp/noise.csv
 
-if [ "$REMOTELOG" != "" ]
+
+
+if [ "$(wget -q -O - $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
 then
-	scp $REMOTELOG:$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp
-	mv -f $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
-	LOG "Got $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT from $REMOTELOG"
+	echo "Can't reach $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT ... exiting"
+	exit 1
 fi
 
+mv -f $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
+LOG "Got $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT from $REMOTELOG"
+### FINISHED UP TO HERE
 NOISEFILE=$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
-
 
 # make sure there's no stray TMP file around, so we can directly append
 [ -f "$CSVTMP" ] && rm "$CSVTMP"
