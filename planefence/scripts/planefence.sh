@@ -101,9 +101,8 @@ fi
 
 # Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
 # and is configured via the $PF_NOISECAPT variable in the .env file.
-# Only if REMOTENOISE contains a URL and this URL is reachable, we collect noise data
-# Note that this doesn't check for the validity of the actual URL, just that we can reach it.
-[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+# Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
+[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
 
 #
 # Functions
@@ -272,28 +271,9 @@ EOF
 
 				# determine the name of a potential spectrogram file
 				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
-				LOG "SPECTROFILE (before copying) is $TMPDIR/$SPECTROFILE"
+				LOG "SPECTROFILE (before copying) is $SPECTROFILE"
 
-				if [ "$NOISECAPT" == "1" ]
-				then
-					# The SpectroFile is located on a remote machine. Go get it there
-					# scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
-					if [ "$(wget -q -O - $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE.tmp ; echo $?)" == "0" ]
-                                        then
-                                               mv -f "$OUTFILEDIR/$SPECTROFILE".tmp "$OUTFILEDIR/$SPECTROFILE"
-					       LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
-                                        fi
-				fi
-
-				if [ -f "$TMPDIR/$SPECTROFILE" ] && [ ! -f "$OUTFILEDIR/$SPECTROFILE" ]
-				then
-					cp -f "$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE"
-					LOG "Copied SpectroFile from $TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
-
-				else
-					[ ! -f "$OUTFILEDIR/$SPECTROFILE" ] && LOG "Didnt (local) copy Spectrofile - doesnt exist at origin"
-					[ -f "$TMPDIR/$SPECTROFILE" ] && LOG "Didnt (local) copy SpectroFile - already exists at $OUTFILEDIR/$SPECTROFILE"
-				fi
+				[[ "$NOISECAPT" == "1" ]] && wget -q -O $OUTFILEDIR/$SPECTROFILE $REMOTENOISE/$SPECTROFILE
 
 				# generate noisegraph if it doesnt already exist
 				if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
