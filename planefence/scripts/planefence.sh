@@ -277,9 +277,12 @@ EOF
 				if [ "$REMOTENOISE" != "" ]
 				then
 					# The SpectroFile is located on a remote machine. Go get it there
-					scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
-					mv -f "$OUTFILEDIR/$SPECTROFILE".tmp "$OUTFILEDIR/$SPECTROFILE"
-					LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
+					# scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
+					if [ "$(wget -q -O - $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE".tmp ; echo $?)" == "0" ]
+                                        then
+                                               mv -f "$OUTFILEDIR/$SPECTROFILE".tmp "$OUTFILEDIR/$SPECTROFILE"
+					       LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
+                                        fi
 				fi
 
 				if [ -f "$TMPDIR/$SPECTROFILE" ] && [ ! -f "$OUTFILEDIR/$SPECTROFILE" ]
