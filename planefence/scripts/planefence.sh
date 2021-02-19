@@ -274,7 +274,7 @@ EOF
 				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
 				LOG "SPECTROFILE (before copying) is $TMPDIR/$SPECTROFILE"
 
-				if [ "$REMOTENOISE" != "" ]
+				if [ "$NOISECAPT" == "1" ]
 				then
 					# The SpectroFile is located on a remote machine. Go get it there
 					# scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
@@ -604,7 +604,7 @@ fi
 
 # Now let's link to the latest Spectrogram, if one was generated for today:
 
-if [ "$REMOTENOISE" != "" ]
+if [ "$NOISECAPT" == "1" ]
 then
 	# get the latest spectrogram from the remote server
 	wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
