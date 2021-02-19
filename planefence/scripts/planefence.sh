@@ -278,7 +278,7 @@ EOF
 				then
 					# The SpectroFile is located on a remote machine. Go get it there
 					# scp "$REMOTENOISE:$TMPDIR/$SPECTROFILE" "$OUTFILEDIR/$SPECTROFILE".tmp
-					if [ "$(wget -q -O - $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE".tmp ; echo $?)" == "0" ]
+					if [ "$(wget -q -O - $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE.tmp ; echo $?)" == "0" ]
                                         then
                                                mv -f "$OUTFILEDIR/$SPECTROFILE".tmp "$OUTFILEDIR/$SPECTROFILE"
 					       LOG "Copied SpectroFile from remote location $REMOTENOISE:$TMPDIR/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE"
@@ -607,8 +607,9 @@ fi
 if [ "$REMOTENOISE" != "" ]
 then
 	# get the latest spectrogram from the remote server
-	scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
-	mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
+	wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
+        #scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
+	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
 
 elif (( $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
 then

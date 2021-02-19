@@ -15,6 +15,8 @@
 # Feel free to make changes to the variables between these two lines. However, it is
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
+[[ -f "/usr/share/planefence/planefence.conf" ]] && source /usr/share/planefence/planefence.conf
+
 CSVDIR=/usr/share/planefence/html
 CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
