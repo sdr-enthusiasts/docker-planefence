@@ -10,6 +10,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
 COPY rootfs/ /
 
+# Copy the planefence program files in place:
+COPY planefence/ /planefence
+
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
@@ -61,13 +64,7 @@ RUN set -x && \
         && \
     git config --global advice.detachedHead false && \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
-    gem install twurl
-
-# Copy the planefence and plane-alert program files in place:
-COPY planefence/ /planefence
-COPY plane-alert/ /plane-alert
-
-RUN set -x && \
+    gem install twurl && \
 #
 # Install dump1090.socket30003:
     mkdir -p /usr/share/socket30003 && \
@@ -79,13 +76,11 @@ RUN set -x && \
        cp /planefence/services.d/start_socket30003 /etc/services.d/socket30003/run && \
        chmod a+x /usr/share/socket30003/*.pl && \
        chmod a+x /etc/services.d/socket30003/run && \
-    popd
-
-RUN set -x && \
+    popd && \
 #
 # Install Planefence (it was copied in at the top of the script, so this is
 # mainly moving files to the correct location and creating symlinks):
-    mkdir -p /usr/share/planefence/html/plane-alert && \
+    mkdir -p /usr/share/planefence/html && \
     mkdir -p /usr/share/planefence/stage && \
     mkdir -p /usr/share/planefence/persist && \
     mkdir -p /etc/services.d/planefence && \
@@ -100,9 +95,8 @@ RUN set -x && \
     git clone https://github.com/kx1t/docker-planefence /git/docker-planefence && \
     pushd /git/docker-planefence && \
        echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
-    popd
-
-RUN set -x && \
+    popd && \
+       
 #
 # Install the cleanup service that ensures that older log files and data get deleted after a user-defined period:
     mkdir -p /etc/services.d/cleanup && \
@@ -116,18 +110,14 @@ RUN set -x && \
        chmod a+x /etc/services.d/lighttpd/run && \
     # Place and enable the lighty mod:
        cp /planefence/88-planefence.conf /etc/lighttpd/conf-available && \
-       ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled
-
-RUN set -x && \
+       ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 #
 # Install Plane-Alert
     mkdir -p /usr/share/plane-alert/html && \
-    cp -r /plane-alert/* /usr/share/plane-alert && \
+    cp /plane-alert/* /usr/share/plane-alert && \
     chmod a+x /usr/share/plane-alert/*.sh && \
-    cp /plane-alert/88-plane-alert.conf /etc/lighttpd/conf-available && \
-    ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled
-
-RUN set -x && \
+    cp /plane-alert/88-plan3-alert.conf /etc/lighttpd/conf-available && \
+    ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
 #
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
@@ -148,8 +138,7 @@ RUN set -x && \
 	/run/socket30003/install-* \
 	/.dockerenv \
 	/git/* \
-	/planefence \
-	/plane-alert
+	/planefence/*
 
 ENTRYPOINT [ "/init" ]
 

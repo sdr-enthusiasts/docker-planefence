@@ -56,13 +56,14 @@ trap cleanup EXIT
 	[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
 # Switch off planefence if it's running, except when plane-alert.sh was called from within PlaneFence
-	if [ "$(/bin/systemctl is-active planefence 2>/dev/null)" == "active" ] && [ "$(ps -o comm= $PPID)" != "planefence.sh" ]
-	then
-		sudo /bin/systemctl stop planefence
-		PFACTIVE=true
-	else
-		PFACTIVE=false
-	fi
+# note this is commented out because its not needed in a dockerized deployment
+#	if [ "$(/bin/systemctl is-active planefence 2>/dev/null)" == "active" ] && [ "$(ps -o comm= $PPID)" != "planefence.sh" ]
+#	then
+#		sudo /bin/systemctl stop planefence
+#		PFACTIVE=true
+#	else
+#		PFACTIVE=false
+#	fi
 # -----------------------------------------------------------------------------------
 #
 # Now let's start
