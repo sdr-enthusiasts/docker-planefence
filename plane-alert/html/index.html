@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<!--
+# You are taking an interest in this code! Great!
+# I'm not a professional programmer, and your suggestions and contributions
+# are always welcome. Join me at the GitHub link shown below, or via email
+# at kx1t (at) amsat (dot) org.
+#
+# Copyright 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/plane-alert/
+#
+# The package contains parts of, links to, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# Summary of License Terms
+# This program is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see https://www.gnu.org/licenses/.
+-->
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-171737107-1"></script>
+    <script type="text/javascript" src="sort-table.js"></script>
+    <title>Plane-Alert</title>
+    <style>
+        body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
+        a { color: #0077ff; }
+	h1 {text-align: center}
+	h2 {text-align: center}
+	.planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+	.history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
+	.footer{ border: none; margin: 0; padding: 0; font: 10px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+    </style>
+</head>
+
+<body>
+
+<h1>Plane Alert</h1>
+   <h2>This website shows a list of aircraft of interest that were heard by <a href="http://ramonk.net" target="_blank">KX1T</a>'s ADS-B station</h2>
+
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	<article>
+        	<details open>
+                	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
+			<ul>
+				<li>Last update: Wed Jan 27 09:40:07 EST 2021
+				<li>Click <a href="alertlist.txt" target="_blank">here</a> for the list of monitored aircraft
+				<li>Right-click <a href="all-plane-alerts.txt" target="_blank">this link</a> to save a CSV version of the table below.
+				<li>Aircraft are listed in reverse chronological order. Click the header of a column to resort.
+				<li>Note that for each aircraft, only the first observation of the day is listed.
+			</ul>
+		</details>
+	</article>
+</section>
+<table border="1" class="js-sort-table">
+<tr>
+	<th class="js-sort-number">No.</th>
+	<th>Transponder ID</th>
+	<th>Tail</th>
+	<th>Owner</th>
+	<th class="js-sort-date">Date/Time First Seen</th>
+	<th>Time First Seen</th>
+	<th class="js-sort-number">Lat/Lon First Seen</th>
+	<th>Flight No.</th>
+	<th>Flight Map</th>
+</tr>
+<tr>
+    <td>1</td>
+    <td>06A001</td>
+    <td>A7HHK</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A340-211</td>
+    <td>2020/12/09 14:30:14</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.12820&mlon=-70.29385&zoom=8" target="_blank">43.12820N, -70.29385E</a></td>
+    <td>A7HHK</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A001&showTrace=2020-12-09" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>2</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/12/08 00:00:00</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.27563&mlon=-69.65057&zoom=8" target="_blank">41.27563N, -69.65057E</a></td>
+    <td>RJA950</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-08" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>3</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/12/07 23:51:39</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.50659&mlon=-71.05554&zoom=8" target="_blank">40.50659N, -71.05554E</a></td>
+    <td>RJA950</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-07" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>4</td>
+    <td>0A400B</td>
+    <td>7TVPG</td>
+    <td>Government of Algeria</td>
+    <td>Gulfstream Aerospace GV</td>
+    <td>2020/12/07 21:39:57</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.42268&mlon=-71.05725&zoom=8" target="_blank">40.42268N, -71.05725E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=0A400B&showTrace=2020-12-07" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>5</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/12/06 13:33:58</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.05081&mlon=-69.67032&zoom=8" target="_blank">43.05081N, -69.67032E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-06" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>6</td>
+    <td>0A400A</td>
+    <td>7TVPM</td>
+    <td>Government of Algeria</td>
+    <td>Gulfstream Aerospace GIVSP</td>
+    <td>2020/11/25 08:28:19</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.77048&mlon=-68.96705&zoom=8" target="_blank">41.77048N, -68.96705E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=0A400A&showTrace=2020-11-25" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>7</td>
+    <td>706054</td>
+    <td>9KGGC</td>
+    <td>Government of Kuwait</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/11/24 22:45:58</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.49839&mlon=-72.81272&zoom=8" target="_blank">41.49839N, -72.81272E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=706054&showTrace=2020-11-24" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>8</td>
+    <td>4850BE</td>
+    <td>P4-RMA</td>
+    <td>Gen Haftar Libya private lease</td>
+    <td>Mystere Falcon 900</td>
+    <td>2020/11/23 17:37:12</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.74246&mlon=-72.35583&zoom=8" target="_blank">41.74246N, -72.35583E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4850BE&showTrace=2020-11-23" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>9</td>
+    <td>06A001</td>
+    <td>A7HHK</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A340-211</td>
+    <td>2020/11/22 23:36:54</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.68053&mlon=-72.39697&zoom=8" target="_blank">41.68053N, -72.39697E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A001&showTrace=2020-11-22" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>10</td>
+    <td>8960B4</td>
+    <td>A6HRM</td>
+    <td>Dubai Air Wing</td>
+    <td>Boeing 747-422</td>
+    <td>2020/11/18 23:04:40</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.49051&mlon=-72.13336&zoom=8" target="_blank">42.49051N, -72.13336E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=8960B4&showTrace=2020-11-18" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>11</td>
+    <td>60185A</td>
+    <td>EZA007</td>
+    <td>Government of Turkmenistan</td>
+    <td>Boeing 737-NG7GLW</td>
+    <td>2020/11/17 19:05:03</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.55550&mlon=-72.19193&zoom=8" target="_blank">42.55550N, -72.19193E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=60185A&showTrace=2020-11-17" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>12</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/11/02 09:17:40</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.79741&mlon=-71.81097&zoom=8" target="_blank">40.79741N, -71.81097E</a></td>
+    <td>RJA950</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-11-02" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>13</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/10/31 06:02:24</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.27598&mlon=-70.84573&zoom=8" target="_blank">43.27598N, -70.84573E</a></td>
+    <td>RJA950</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-10-31" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>14</td>
+    <td>71002D</td>
+    <td>HZSK1</td>
+    <td>Saudi Private FLITE Charters</td>
+    <td>Gulfstream Aerospace G4SP</td>
+    <td>2020/10/13 14:00:09</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.35875&mlon=-70.99546&zoom=8" target="_blank">42.35875N, -70.99546E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=71002D&showTrace=2020-10-13" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>15</td>
+    <td>71002D</td>
+    <td>HZSK1</td>
+    <td>Saudi Private FLITE Charters</td>
+    <td>Gulfstream Aerospace G4SP</td>
+    <td>2020/10/12 19:12:07</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.06737&mlon=-69.89847&zoom=8" target="_blank">43.06737N, -69.89847E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=71002D&showTrace=2020-10-12" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>16</td>
+    <td>0A400B</td>
+    <td>7TVPG</td>
+    <td>Government of Algeria</td>
+    <td>Gulfstream Aerospace GV</td>
+    <td>2020/09/26 08:09:35</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.72406&mlon=-69.39208&zoom=8" target="_blank">41.72406N, -69.39208E</a></td>
+    <td>Q7TVPG</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=0A400B&showTrace=2020-09-26" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>17</td>
+    <td>06A1E4</td>
+    <td>A7HBJ</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Boeing 747-8KBBBJ</td>
+    <td>2020/09/20 19:49:44</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.86169&mlon=-71.80895&zoom=8" target="_blank">40.86169N, -71.80895E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A1E4&showTrace=2020-09-20" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>18</td>
+    <td>06A05A</td>
+    <td>A7AAH</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A340-313X</td>
+    <td>2020/09/20 12:40:38</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.59488&mlon=-72.23180&zoom=8" target="_blank">41.59488N, -72.23180E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-09-20" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>19</td>
+    <td>06A01C</td>
+    <td>A7HJJ</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A330-202</td>
+    <td>2020/09/19 15:07:07</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.38792&mlon=-69.42910&zoom=8" target="_blank">41.38792N, -69.42910E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-19" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>20</td>
+    <td>06A1E4</td>
+    <td>A7HBJ</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Boeing 747-8KBBBJ</td>
+    <td>2020/09/16 11:46:29</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.27763&mlon=-69.66250&zoom=8" target="_blank">42.27763N, -69.66250E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A1E4&showTrace=2020-09-16" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>21</td>
+    <td>894060</td>
+    <td>A9CBRN</td>
+    <td>Bahrain Amiri Flight</td>
+    <td>Gulfstream Aerospace G550</td>
+    <td>2020/09/15 19:44:07</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.61058&mlon=-72.49616&zoom=8" target="_blank">41.61058N, -72.49616E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=894060&showTrace=2020-09-15" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>22</td>
+    <td>06A01C</td>
+    <td>A7HJJ</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A330-202</td>
+    <td>2020/09/14 21:46:05</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.67319&mlon=-72.43363&zoom=8" target="_blank">41.67319N, -72.43363E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-14" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>23</td>
+    <td>896264</td>
+    <td>A6ALN</td>
+    <td>Abu Dhabi Amiri Flight</td>
+    <td>Boeing 777-2ANER</td>
+    <td>2020/09/13 09:12:39</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.84882&mlon=-69.42621&zoom=8" target="_blank">40.84882N, -69.42621E</a></td>
+    <td>AUH03</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=896264&showTrace=2020-09-13" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>24</td>
+    <td>894060</td>
+    <td>A9CBRN</td>
+    <td>Bahrain Amiri Flight</td>
+    <td>Gulfstream Aerospace G550</td>
+    <td>2020/09/13 17:30:24</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.83383&mlon=-69.49173&zoom=8" target="_blank">42.83383N, -69.49173E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=894060&showTrace=2020-09-13" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>25</td>
+    <td>06A01C</td>
+    <td>A7HJJ</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A330-202</td>
+    <td>2020/09/13 05:15:12</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.25161&mlon=-69.25076&zoom=8" target="_blank">41.25161N, -69.25076E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-13" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>26</td>
+    <td>0A4009</td>
+    <td>7TVPC</td>
+    <td>Government of Algeria</td>
+    <td>Gulfstream Aerospace GIVSP</td>
+    <td>2020/08/05 10:12:14</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.71945&mlon=-72.44769&zoom=8" target="_blank">40.71945N, -72.44769E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=0A4009&showTrace=2020-08-05" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>27</td>
+    <td>0A4005</td>
+    <td>7TVPR</td>
+    <td>Government of Algeria</td>
+    <td>Gulfstream Aerospace GIVSP</td>
+    <td>2020/07/23 09:03:15</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.54010&mlon=-69.21936&zoom=8" target="_blank">40.54010N, -69.21936E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=0A4005&showTrace=2020-07-23" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>28</td>
+    <td>4850BE</td>
+    <td>P4-RMA</td>
+    <td>TBC</td>
+    <td>Mystere Falcon 900</td>
+    <td>2020/07/14 03:32:03</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.03337&mlon=-72.22929&zoom=8" target="_blank">42.03337N, -72.22929E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4850BE&showTrace=2020-07-14" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>29</td>
+    <td>06A0A3</td>
+    <td>A7MED</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus ACJ319-133LR</td>
+    <td>2020/06/25 11:35:22</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.05956&mlon=-67.29741&zoom=8" target="_blank">43.05956N, -67.29741E</a></td>
+    <td>A7MED</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A0A3&showTrace=2020-06-25" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>30</td>
+    <td>06A05A</td>
+    <td>A7AAH</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A340-313X</td>
+    <td>2020/06/12 09:45:17</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.67366&mlon=-72.48686&zoom=8" target="_blank">41.67366N, -72.48686E</a></td>
+    <td>A7AAH</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-06-12" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>31</td>
+    <td>484362</td>
+    <td>P4KAZ</td>
+    <td>Mint Juleps Investments</td>
+    <td>Boeing 737-NG7EJWBBJ</td>
+    <td>2020/06/11 15:46:12</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.27780&mlon=-69.84181&zoom=8" target="_blank">43.27780N, -69.84181E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=484362&showTrace=2020-06-11" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>32</td>
+    <td>06A05A</td>
+    <td>A7AAH</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A340-313X</td>
+    <td>2020/06/11 14:01:39</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.34056&mlon=-69.80796&zoom=8" target="_blank">43.34056N, -69.80796E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-06-11" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>33</td>
+    <td>06A038</td>
+    <td>A7HHM</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A330-202</td>
+    <td>2020/03/27 21:32:55</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=42.67090&mlon=-71.89578&zoom=8" target="_blank">42.67090N, -71.89578E</a></td>
+    <td>QAF3</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A038&showTrace=2020-03-27" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>34</td>
+    <td>896272</td>
+    <td>A6GGP</td>
+    <td>Dubai Air Wing</td>
+    <td>Boeing 747-412F</td>
+    <td>2020/03/26 21:29:41</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=41.77859&mlon=-72.52567&zoom=8" target="_blank">41.77859N, -72.52567E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=896272&showTrace=2020-03-26" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>35</td>
+    <td>06A038</td>
+    <td>A7HHM</td>
+    <td>Qatar Amiri Flight</td>
+    <td>Airbus A330-202</td>
+    <td>2020/03/26 23:12:36</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.64305&mlon=-71.60830&zoom=8" target="_blank">43.64305N, -71.60830E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=06A038&showTrace=2020-03-26" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>36</td>
+    <td>896430</td>
+    <td>A6FZZ</td>
+    <td>Dubai Air Wing</td>
+    <td>Boeing 737-NG8KNWBBJ2</td>
+    <td>2020/03/18 10:28:03</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.11974&mlon=-73.24897&zoom=8" target="_blank">40.11974N, -73.24897E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=896430&showTrace=2020-03-18" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>37</td>
+    <td>896272</td>
+    <td>A6GGP</td>
+    <td>Dubai Air Wing</td>
+    <td>Boeing 747-412F</td>
+    <td>2020/03/17 19:48:15</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=40.21623&mlon=-72.73657&zoom=8" target="_blank">40.21623N, -72.73657E</a></td>
+    <td></td>
+    <td><a href="https://globe.adsbexchange.com/?icao=896272&showTrace=2020-03-17" target="_blank">ADSBExchange link</a></td>
+</tr>
+<tr>
+    <td>38</td>
+    <td>4243E4</td>
+    <td>VQBMZ</td>
+    <td>Government of Jordan</td>
+    <td>Gulfstream Aerospace G650</td>
+    <td>2020/03/14 11:24:35</td>
+    <td><a href="http://www.openstreetmap.org/?mlat=43.83033&mlon=-71.42415&zoom=8" target="_blank">43.83033N, -71.42415E</a></td>
+    <td>RJA954</td>
+    <td><a href="https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-03-14" target="_blank">ADSBExchange link</a></td>
+</tr>
+</table>
+
+<div class="footer">
+<hr/>Plane-alert is part of <a href="https://github.com/kx1t/plane-alert" target="_blank">KX1T's Plane-ALert Open Source Project</a>, available on GitHub.
+<br/>&copy; Copyright 2021 by Ram&oacute;n F. Kolb.
+</div>
+</body>
+</html>

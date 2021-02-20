@@ -1,0 +1,206 @@
+00412D,ZWPF,Air Zimbabwe,Boeing 7672N0ER
+00415C,ZWPE,Air Zimbabwe,
+018019,5ADCN,Government of Libya,
+01801C,5ACAA,Libyan Air Force,Antonov An-74TK-300
+018021,5AONE,Government of Libya,
+030000,TRKSP,Government of Gabon,Gulfstream Aerospace GIVSP
+034002,TJAAW,Government of Cameroon,
+03E003,TRLEX,Government of Gabon,
+03E004,TRKSP,Government of Gabon,
+03E00A,TRKPR,Government of Gabon,
+03E015,TRKGM,Government of Gabon,
+042001,3CONM,Government of Equatorial Guinea,Dassault Falcon 900B
+042003,3CLGE,Guinea Ecuatorial Aire Lines SA,
+04200A,3CEGE,Government of Equatorial Guinea,Boeing 737NG7FBBBJW
+042819,3CLLU,Guinea Ecuatorial Airlines,
+0428DD,3CLLX,Ebony Shine International,Gulfstream Aerospace GV
+062F2E,5UGRN,Government of Niger,Boeing 737NG75UWBBJ
+06A001,A7HHK,Qatar Amiri Flight,Airbus A340211
+06A00F,A7AAG,Government of Qatar,A320-232
+06A014,A7HHJ,Qatar Amiri Flight,Airbus ACJ319133X
+06A01C,A7HJJ,Qatar Amiri Flight,Airbus A330202
+06A021,A7HHH,Qatar Amiri Flight,Airbus A340541
+06A037,A7AAM,Qatar Amiri Flight,
+06A038,A7HHM,Qatar Amiri Flight,Airbus A330202
+06A05A,A7AAH,Qatar Amiri Flight,Airbus A340313X
+06A05B,A7AFE,Qatar Amiri Flight,
+06A0A2,A7HHE,Qatar Amiri Flight,Boeing 7478KBBBJ
+06A0A3,A7MED,Qatar Amiri Flight,Airbus ACJ319133LR
+06A0A4,A7MBK,Qatar Amiri Flight,Airbus ACJ320232X
+06A0D6,A7MHH,Qatar Amiri Flight,Airbus ACJ319115X
+06A18D,A7HSJ,Qatar Amiri Flight,Airbus ACJ320232SL
+06A1E4,A7HBJ,Qatar Amiri Flight,Boeing 7478KBBBJ
+084006,TTABE,Government of Chad,
+084F00,TTABC,Government of Chad,Mc Donnell Douglas DC-987
+088005,5VTAI,Government of Togo,
+08CBAB,9QCGC,Government of Democratic Rep of Congo,
+08CBCB,9QCDC,Government of Democratic Republic of Congo,
+08CE96,9QCLK,Government of Democratic Republic of Congo,
+090088,D2ANG,Government of Angola,Bombardier Global Express XRS
+0900B5,D2EEB,Government of Angola,
+09A01B,C5GAF,Government of Gambia,
+09A027,C5GOG,Government of Gambia,
+09A042,C5NBB,Corporate,
+0A4005,7TVPR,Government of Algeria,Gulfstream Aerospace GIVSP
+0A4006,7TVPS,Government of Algeria,Gulfstream Aerospace GIVSP
+0A4009,7TVPC,Government of Algeria,Gulfstream Aerospace GIVSP
+0A400A,7TVPM,Government of Algeria,Gulfstream Aerospace GIVSP
+0A400B,7TVPG,Government of Algeria,Gulfstream Aerospace GV
+0A402D,7TVPP,Government of Algeria,Airbus A340541
+0A404C,7TVPE,Government of Algeria,Avionsde Transport Regional ATR72600
+0A404D,7TVPF,Government of Algeria,Avionsde Transport Regional ATR72600
+0D8032,207,Venezuelan Air Force,
+0D8034,YV2165,Venezuelan Air Force,
+0D809F,YV2040,Petroleos de Venezuela SA,
+0D80A4,YV1129,Servicio Autonomo de Coordinacion de Transporte Aereo,Dassault Falcon 50
+0D80AE,YV1004,Conviasa,Airbus A340211
+0D80E9,YV2485,Petroleos de Venezuela SA,
+0D80EC,YV2486,Petroleos de Venezuela SA,Dassault Falcon 900EXEASy
+0D80EE,YV1128,Petroleos de Venezuela SA,Dassault Falcon 50
+0D80FF,YV2565,Petroleos de Venezuela SA,Bombardier Learjet 45
+0D8100,YV2567,Petroleos de Venezuela SA,Bombardier Learjet 45XR
+0D8106,YV1118,Petroleos de Venezuela SA,Bombardier Learjet 45
+0D8163,YV2716,Petroleos de Venezuela SA,Bombardier Learjet 45
+0D8167,YV2726,Petroleos de Venezuela SA,
+0D8169,YV2734,Petroleos de Venezuela SA,Bombardier Learjet 45
+0D8173,YV2738,Petroleos de Venezuela SA,
+0D8181,YV2763,Petroleos de Venezuela SA,Beech1900D
+0D819B,YV2865,Petroleos De Venezuela SA,Beech1900D
+0D81EC,YV3016,Conviasa,Embraer EMB-190STD
+0D82E8,YV3360,Petroleos de Venezuela SA,Falcon 2000EX
+0D8373,YV2984,Conviasa/ Venezuelan Government,Airbus A319-133X
+14F114,RA61716,Russia State Transport Company,Antonov An-148100EA
+14F118,RA61720,Russia State Transport Company,Antonov An-148100EA
+14FC05,RA64517,Russia State Transport Company,Tupolev Tu-214PU
+14FC08,RA64520,Russia State Transport Company,Tupolev Tu-214PU
+14FC0A,RA64522,Russia State Transport Company,Tupolev Tu-214SUS
+14FC0B,RA64523,Russian FSB,Tupolev Tu-214VPU
+14FC0C,RA64524,Russia State Transport Company,
+150171,RA65905,Russia State Transport Company,Tupolev Tu-134A-3
+150177,RA65911,Russia State Transport Company,Tupolev Tu-134A-3
+152A60,RA76384,CEIBA Cargo,
+1557A0,RA87968,Russia State Transport Company,Yakovlev Yak-40
+1557A4,RA87972,Russia State Transport Company,Yakovlev Yak-40
+155BCF,RA89039,Russia State Transport Company,Sukhoi Superjet10095B
+155BEA,RA89066,MChS Rossii,
+155BEB,RA89067,MChS Rossii,
+15770C,RA96012,Russia State Transport Company,Ilyushin IL-96300
+157710,RA96016,Russia State Transport Company,Ilyushin IL-96300
+157711,RA96017,Russia State Transport Company,Ilyushin IL-96300
+157713,RA96019,Russia State Transport Company,Ilyushin IL-96300PU
+157714,RA96020,Russia State Transport Company,Ilyushin IL-96300PU
+157715,RA96021,Russia State Transport Company,Ilyushin IL-96300PU
+157766,RA96102,Russian Air Force,Ilyushin IL-96VVIP
+39AE68,FHLTI,Government of Togo,Dassault Falcon 7X
+3CC011,YV3000,Venezuela Air Force,Dornier228NG
+3CE2D2,YV3083,Venezuela Air Force,Dornier D228
+40013D,VPBAT,Goverment of Qatar,
+424238,VPBBF,SW Business Aviation,Gulfstream Aerospace G650
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650
+424565,VQBSK,Worldwide Aircraft Holding Company,
+424918,VQBDD,Government of Jordan,
+484362,P4KAZ,Mint Juleps Investments,Boeing 737NG7EJWBBJ
+4850BE,P4RMA,Gen Haftar Libya private lease,Mystere Falcon 900
+485920,PHGOV,Gov of NL Royal Fam Jet,Boeing 737600BBJ
+495238,CSTQX,Ceiba Intercontinental,Boeing 7772FBLR
+510001,EW85815,Government of Belarus,
+51002B,EW001PA,Government of Belarus,Boeing 737NG8EVWBBJ2
+51005E,EW001PB,Government of Belarus,Boeing 76732KER
+51100D,STPRM,Sudanese Police Air Wing,Antonov An-72100D
+600801,4K-8888,Azerbaijan Government,
+600806,4KAI06,SW Business Aviation,Gulfstream Aerospace G550
+600B78,4KAZ888,SW Business Aviation,Gulfstream Aerospace G450
+600BC0,4KAI08,Government of Azerbaijan,Airbus A340ACJ642X
+600BC4,4KAI88,SW Business Aviation,Gulfstream Aerospace G650
+600BE8,4KAI01,Government of Azerbaijan,Boeing 76732LER
+60183E,EZB024,Government of Turkmenistan,Bombardier Challenger870
+60185A,EZA007,Government of Turkmenistan,Boeing 737NG7GLW
+601861,EZA777,Government of Turkmenistan,Boeing 77722KLR
+683037,UPB5701,Government of Kazakhstan,Boeing 7572M6
+6830A5,UPA2001,Government of Kazakhstan,Airbus ACJ320214X
+6830ED,UPA3001,Government of Kazakhstan,Airbus A330243
+6831ED,74008,Kazakhstan Border Guards,Antonov An-74TK-200
+70601E,9KAJD,Government of Kuwait,
+70601F,9KAJE,Government of Kuwait,
+706020,9KAJF,Government of Kuwait,
+706024,9KAKD,Government of Kuwait,Airbus A320212
+706047,9KGEA,Government of Kuwait,Airbus ACJ319115X
+706048,9KGFA,Government of Kuwait,Gulfstream Aerospace G550
+70604A,9KGBB,Government of Kuwait,Airbus A340542
+70604B,9KGAA,State of Kuwait,Boeing 7478JKBBJ
+70604C,9KGCC,Government of Kuwait,Boeing 737NG9BQBBJ3
+706053,9KGGB,Government of Kuwait,Gulfstream Aerospace G650
+706054,9KGGC,Government of Kuwait,Gulfstream Aerospace G650
+706055,9KGGD,Government of Kuwait,Gulfstream Aerospace G650
+706203,9KGGA,Government of Kuwait,Gulfstream Aerospace G650
+70C020,A4OSO,Oman Royal Flight,Boeing 747SP27
+70C04D,A4OOMN,Oman Royal Flight,Boeing 747430
+70C057,A4OAA,Oman Royal Flight,Airbus A320232
+70C0B3,A4OAD,Oman Royal Flight,Gulfstream Aerospace G550
+70C0B4,A4OAE,Oman Royal Flight,Gulfstream Aerospace G550
+70C0B7,A4OHMS,Oman Royal Flight,Boeing 7478H0BBJ
+70C0BA,A4OAJ,Oman Royal Flight,Airbus ACJ319133X
+71002D,HZSK1,Saudi Private FLITE Charters,Gulfstream Aerospace G4SP
+710038,HZAKF,Saudi Arabian Airlines,
+710100,HZMF1,Saudi Ministry of Finance,Boeing 737NG7FGWBBJ
+710195,HZMF7,Saudi Ministry of Finance,Boeing 7878BBJ
+71019B,HZMF8,Saudi Ministry of Finance,Boeing 7878BBJ
+7101E3,HZMF2,Saudi Ministry of Finance,Boeing 737NG7AJWBBJ
+7101E4,HZWBT5,HRH Prince Awaleed Bin Talal,
+7101E7,HZMF3,Saudi Ministry of Finance,Gulfstream Aerospace G300
+7101E9,HZMF4,Saudi Ministry of Finance,Gulfstream Aerospace G300
+7101F0,HZMF5,Saudi Ministry of Finance,Gulfstream Aerospace G300
+7101F1,HZWBT7,Kingdom Holding( King Abdullah),Boeing 7474J6
+71022B,HZMF6,Saudi Ministry of Finance,Boeing 737NG9FGW
+710321,HZHM1A,Government of Saudi Arabia,Boeing 7473G1
+710322,HZHM1B,Government of Saudi Arabia,
+71032C,HZHMED,Government of Saudi Arabia,Boeing 75723A
+710333,HZHM1,Government of Saudi Arabia,Boeing 747468
+710334,HZHMS2,Government of Saudi Arabia,Airbus A340213X
+710336,HZHM1C,Government of Saudi Arabia,
+72779A,P885,Air Koryo,
+7304E1,EPAGA,Government of Iran,
+730400,EPAGB,Meraj Airlines,
+730541,EPAJA,Meraj Airlines,
+730543,EPAJC,Meraj Airlines,
+778561,YKAKA,Syrianair,
+78048C,B-6130,Air China,Airbus A330-243
+7BC006,B-2479,Air China,Boeing 747-89L
+894001,A9CBRF,Bahrain Amiri Flight,
+894011,A9CBDF,Bahrain Defence Force,Avro 146RJ85
+894014,A9CHMK,Bahrain Amiri Flight,Boeing 7474P8
+894016,A9CHWR,Bahrain Defence Force,Avro 146RJ85
+894042,A9CAWL,Bahrain Defence Force,Avro 146RJ100
+89404D,A9CHMH,Bahrain Amiri Flight,Boeing 7674FSER
+894055,A9CBHR,Bahrain Amiri Flight,Gulfstream Aerospace G450
+894060,A9CBRN,Bahrain Amiri Flight,Gulfstream Aerospace G550
+89407F,A9CBAH,Bahrain Amiri Flight,Gulfstream Aerospace G650
+894081,A9CISA,Bahrain Defence Force,Boeing 737NG86JW
+89605A,A6HRS,Dubai Air Wing,Boeing 737NG7E0BBJ
+896060,A6YAS,Abu Dhabi Amiri Flight,
+896063,A6ESH,Sharjah Rulers Flight,Airbus ACJ319132
+89607A,A6MRM,Dubai Air Wing,Boeing 737NG8ECBBJ2
+8960AE,A6MMM,Dubai Air Wing,Boeing 747422
+8960B1,A6AUH,Abu Dhabi Amiri Flight,Boeing 737NG8EXBBJ2
+8960B4,A6HRM,Dubai Air Wing,Boeing 747422
+896101,A6UAE,Abu Dhabi Amiri Flight,
+896103,A6HEH,Dubai Air Wing,Boeing 737NG8AJBBJ2
+89615A,A6MRS,Dubai Air Wing,Boeing 737NG8E0BBJ2
+8961B4,A6COM,Dubai Air Wing,Boeing 747433SCD
+8961DB,A6RJ1,Dubai Air Wing,Avro 146RJ85
+8961DC,A6RJ2,Dubai Air Wing,Avro 146RJ85
+89621F,A6DLM,Abu Dhabi Amiri Flight,Airbus A320232
+89624B,A6HMS,Government of Fujairah,Airbus A320232
+896264,A6ALN,Abu Dhabi Amiri Flight,Boeing 7772ANER
+896272,A6GGP,Dubai Air Wing,Boeing 747412F
+89629F,A6SIL,Abu Dhabi Amiri Flight,Boeing 77735RER
+8962E9,A6PFA,Abu Dhabi Amiri Flight,
+896302,A6CJE,Emirates Airline,Airbus ACJ319115
+89636E,A6PFC,Abu Dhabi Amiri Flight,Boeing 787-8
+896430,A6FZZ,Dubai Air Wing,Boeing 737NG8KNWBBJ2
+896436,A6SHJ,Sharjah Rulers Flight,Airbus ACJ320232XSL
+896438,A6HHH,Dubai Air Wing,
+A7CAD8,HZMF9,Saudi Ministry of Finance,
+AC85AF,YV2869,Petroleos de Venezuela SA,
+ADFDF8,828000,US Govt Air Force 1,Boeing VC25A
+ADFDF9,929000,US Govt Air Force 1,Boeing VC25A

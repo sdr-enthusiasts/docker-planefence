@@ -1,0 +1,38 @@
+06A001,A7HHK,Qatar Amiri Flight,Airbus A340-211,2020/12/09,14:30:14,43.12820,-70.29385,A7HHK,https://globe.adsbexchange.com/?icao=06A001&showTrace=2020-12-09
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/12/08,00:00:00,41.27563,-69.65057,RJA950,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-08
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/12/07,23:51:39,40.50659,-71.05554,RJA950,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-07
+0A400B,7TVPG,Government of Algeria,Gulfstream Aerospace GV,2020/12/07,21:39:57,40.42268,-71.05725,,https://globe.adsbexchange.com/?icao=0A400B&showTrace=2020-12-07
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/12/06,13:33:58,43.05081,-69.67032,,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-12-06
+0A400A,7TVPM,Government of Algeria,Gulfstream Aerospace GIVSP,2020/11/25,08:28:19,41.77048,-68.96705,,https://globe.adsbexchange.com/?icao=0A400A&showTrace=2020-11-25
+706054,9KGGC,Government of Kuwait,Gulfstream Aerospace G650,2020/11/24,22:45:58,41.49839,-72.81272,,https://globe.adsbexchange.com/?icao=706054&showTrace=2020-11-24
+4850BE,P4-RMA,Gen Haftar Libya private lease,Mystere Falcon 900,2020/11/23,17:37:12,41.74246,-72.35583,,https://globe.adsbexchange.com/?icao=4850BE&showTrace=2020-11-23
+06A001,A7HHK,Qatar Amiri Flight,Airbus A340-211,2020/11/22,23:36:54,41.68053,-72.39697,,https://globe.adsbexchange.com/?icao=06A001&showTrace=2020-11-22
+8960B4,A6HRM,Dubai Air Wing,Boeing 747-422,2020/11/18,23:04:40,42.49051,-72.13336,,https://globe.adsbexchange.com/?icao=8960B4&showTrace=2020-11-18
+60185A,EZA007,Government of Turkmenistan,Boeing 737-NG7GLW,2020/11/17,19:05:03,42.55550,-72.19193,,https://globe.adsbexchange.com/?icao=60185A&showTrace=2020-11-17
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/11/02,09:17:40,40.79741,-71.81097,RJA950,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-11-02
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/10/31,06:02:24,43.27598,-70.84573,RJA950,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-10-31
+71002D,HZSK1,Saudi Private FLITE Charters,Gulfstream Aerospace G4SP,2020/10/13,14:00:09,42.35875,-70.99546,,https://globe.adsbexchange.com/?icao=71002D&showTrace=2020-10-13
+71002D,HZSK1,Saudi Private FLITE Charters,Gulfstream Aerospace G4SP,2020/10/12,19:12:07,43.06737,-69.89847,,https://globe.adsbexchange.com/?icao=71002D&showTrace=2020-10-12
+0A400B,7TVPG,Government of Algeria,Gulfstream Aerospace GV,2020/09/26,08:09:35,41.72406,-69.39208,Q7TVPG,https://globe.adsbexchange.com/?icao=0A400B&showTrace=2020-09-26
+06A1E4,A7HBJ,Qatar Amiri Flight,Boeing 747-8KBBBJ,2020/09/20,19:49:44,40.86169,-71.80895,,https://globe.adsbexchange.com/?icao=06A1E4&showTrace=2020-09-20
+06A05A,A7AAH,Qatar Amiri Flight,Airbus A340-313X,2020/09/20,12:40:38,41.59488,-72.23180,,https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-09-20
+06A01C,A7HJJ,Qatar Amiri Flight,Airbus A330-202,2020/09/19,15:07:07,41.38792,-69.42910,,https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-19
+06A1E4,A7HBJ,Qatar Amiri Flight,Boeing 747-8KBBBJ,2020/09/16,11:46:29,42.27763,-69.66250,,https://globe.adsbexchange.com/?icao=06A1E4&showTrace=2020-09-16
+894060,A9CBRN,Bahrain Amiri Flight,Gulfstream Aerospace G550,2020/09/15,19:44:07,41.61058,-72.49616,,https://globe.adsbexchange.com/?icao=894060&showTrace=2020-09-15
+06A01C,A7HJJ,Qatar Amiri Flight,Airbus A330-202,2020/09/14,21:46:05,41.67319,-72.43363,,https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-14
+896264,A6ALN,Abu Dhabi Amiri Flight,Boeing 777-2ANER,2020/09/13,09:12:39,40.84882,-69.42621,AUH03,https://globe.adsbexchange.com/?icao=896264&showTrace=2020-09-13
+894060,A9CBRN,Bahrain Amiri Flight,Gulfstream Aerospace G550,2020/09/13,17:30:24,42.83383,-69.49173,,https://globe.adsbexchange.com/?icao=894060&showTrace=2020-09-13
+06A01C,A7HJJ,Qatar Amiri Flight,Airbus A330-202,2020/09/13,05:15:12,41.25161,-69.25076,,https://globe.adsbexchange.com/?icao=06A01C&showTrace=2020-09-13
+0A4009,7TVPC,Government of Algeria,Gulfstream Aerospace GIVSP,2020/08/05,10:12:14,40.71945,-72.44769,,https://globe.adsbexchange.com/?icao=0A4009&showTrace=2020-08-05
+0A4005,7TVPR,Government of Algeria,Gulfstream Aerospace GIVSP,2020/07/23,09:03:15,40.54010,-69.21936,,https://globe.adsbexchange.com/?icao=0A4005&showTrace=2020-07-23
+4850BE,P4-RMA,TBC,Mystere Falcon 900,2020/07/14,03:32:03,42.03337,-72.22929,,https://globe.adsbexchange.com/?icao=4850BE&showTrace=2020-07-14
+06A0A3,A7MED,Qatar Amiri Flight,Airbus ACJ319-133LR,2020/06/25,11:35:22,43.05956,-67.29741,A7MED,https://globe.adsbexchange.com/?icao=06A0A3&showTrace=2020-06-25
+06A05A,A7AAH,Qatar Amiri Flight,Airbus A340-313X,2020/06/12,09:45:17,41.67366,-72.48686,A7AAH,https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-06-12
+484362,P4KAZ,Mint Juleps Investments,Boeing 737-NG7EJWBBJ,2020/06/11,15:46:12,43.27780,-69.84181,,https://globe.adsbexchange.com/?icao=484362&showTrace=2020-06-11
+06A05A,A7AAH,Qatar Amiri Flight,Airbus A340-313X,2020/06/11,14:01:39,43.34056,-69.80796,,https://globe.adsbexchange.com/?icao=06A05A&showTrace=2020-06-11
+06A038,A7HHM,Qatar Amiri Flight,Airbus A330-202,2020/03/27,21:32:55,42.67090,-71.89578,QAF3,https://globe.adsbexchange.com/?icao=06A038&showTrace=2020-03-27
+896272,A6GGP,Dubai Air Wing,Boeing 747-412F,2020/03/26,21:29:41,41.77859,-72.52567,,https://globe.adsbexchange.com/?icao=896272&showTrace=2020-03-26
+06A038,A7HHM,Qatar Amiri Flight,Airbus A330-202,2020/03/26,23:12:36,43.64305,-71.60830,,https://globe.adsbexchange.com/?icao=06A038&showTrace=2020-03-26
+896430,A6FZZ,Dubai Air Wing,Boeing 737-NG8KNWBBJ2,2020/03/18,10:28:03,40.11974,-73.24897,,https://globe.adsbexchange.com/?icao=896430&showTrace=2020-03-18
+896272,A6GGP,Dubai Air Wing,Boeing 747-412F,2020/03/17,19:48:15,40.21623,-72.73657,,https://globe.adsbexchange.com/?icao=896272&showTrace=2020-03-17
+4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650,2020/03/14,11:24:35,43.83033,-71.42415,RJA954,https://globe.adsbexchange.com/?icao=4243E4&showTrace=2020-03-14
