@@ -12,6 +12,9 @@
 source /usr/share/planefence/planefence.conf
 [[ -f "$CSV.tmp" ]] && rm -f "$CSV.tmp"
 
+# if there are no entries, exit
+[[ ! -f "$CSV" ]] && exit
+
 # find array length
 numrec=0
 while read -r l
@@ -51,3 +54,4 @@ do
 
 done < "$CSV"
 
+mv -f "$CSV.tmp" "$CSV"
