@@ -91,8 +91,12 @@ RUN set -x && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
-       date +"%Y-%m-%d %H:%M:%S %Z" > /root/.buildtime && \
     popd && \
+    git clone https://github.com/kx1t/docker-planefence /git/docker-planefence && \
+    pushd /git/docker-planefence && \
+       echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
+    popd && \
+       
 #
 # Install the cleanup service that ensures that older log files and data get deleted after a user-defined period:
     mkdir -p /etc/services.d/cleanup && \
@@ -108,6 +112,13 @@ RUN set -x && \
        cp /planefence/88-planefence.conf /etc/lighttpd/conf-available && \
        ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
 #
+# Install Plane-Alert
+    mkdir -p /usr/share/plane-alert/html && \
+    cp /plane-alert/* /usr/share/plane-alert && \
+    chmod a+x /usr/share/plane-alert/*.sh && \
+    cp /plane-alert/88-plan3-alert.conf /etc/lighttpd/conf-available && \
+    ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
+#
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
 #
@@ -118,7 +129,16 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/* /etc/services.d/planefence/.blank /etc/services.d/socket30003/.blank /run/socket30003/install-* /.dockerenv /git/* /planefence/*
+    rm -rf 
+	/src/* \
+	/tmp/* \
+	/var/lib/apt/lists/* \
+	/etc/services.d/planefence/.blank \
+	/etc/services.d/socket30003/.blank \
+	/run/socket30003/install-* \
+	/.dockerenv \
+	/git/* \
+	/planefence/*
 
 ENTRYPOINT [ "/init" ]
 
