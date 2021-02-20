@@ -121,6 +121,12 @@ done
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+#
+#--------------------------------------------------------------------------------
+# add plane-alert stuff here
+mkdir -p /usr/share/planefence/html/plane-alert
+# copy in env vars and set PLANEALERT=true in planefence.conf
+
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
 #
