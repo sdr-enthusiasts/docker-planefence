@@ -3,7 +3,7 @@
 
 APPNAME="socket30003"
 
-echo "[$APPNAME][$(date)] Socket30003 deployment started"
+echo "[$APPNAME][$(date)] Socket30003 started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions

@@ -3,7 +3,7 @@
 
 APPNAME="planefence"
 
-echo "[$APPNAME][$(date)] PlaneFence deployment started"
+echo "[$APPNAME][$(date)] PlaneFence started as an s6 serivce"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -136,7 +136,7 @@ do
                   echo "[$APPNAME][$(date)] PlaneFence has exited... restarting in $LOOPTIME"
         else
                   echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
-                  echo "[$APPNAME][$(date)] If this continues to happen, check this:"
+                  echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
                   echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 fi
 	sleep $LOOPTIME

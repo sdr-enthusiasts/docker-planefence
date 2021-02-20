@@ -185,22 +185,19 @@ EOF
 		<th class="js-sort-number">10 min avg</th>
 		<th class="js-sort-number">1 hr avg</th>
 EOF
-		if (( TWEETCOL == true ))
-		then
-			# there's Twitter info in field 12
-			printf "<th>Tweeted</th>" >> "$2"
-			LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt and Tweeted table headers..."
-		else
-			LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
-		fi
-
-		if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
-		then
-			printf "<th>Spectrogram</th>" >> "$2"
-		fi
-
+  fi
+	if (( TWEETCOL == true ))
+	then
+		# there's Twitter info in field 12
+		printf "<th>Tweeted</th>" >> "$2"
+		LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt and Tweeted table headers..."
 	else
-		LOG "Number of fields in CSV is $MAXFIELDS. Not adding NoiseCapt table headers!"
+		LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
+	fi
+
+	if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
+	then
+		printf "<th>Spectrogram</th>" >> "$2"
 	fi
 
 	printf "</tr>\n" >>"$2"
