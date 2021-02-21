@@ -69,15 +69,12 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 # so /run/* can be TMPFS. As a result, if .twurlrc is still there, move it to its new location.
 # This one-time action can be obsoleted once all users have moved over.
 [[ -f /run/planefence/.twurlrc ]] && mv -f /run/planefence/.twurlrc /usr/share/planefence/persist
-[[ -f ~/.twurlrc ]] && cp ~/.twurlrc /usr/share/planefence/persist
+[[ -f /root/.twurlrc ]] && cp /root/.twurlrc /usr/share/planefence/persist
 #
 # .twurlrc can get lost on reboot or redeployment of the container.
 # If there is a copy in the mounted volume, restore it:
 #
-if [[ ! -f ~/.twurlrc ]] && [[ -f /usr/share/planefence/persist/.twurlrc ]]
-then
-	cp /usr/share/planefence/persist/.twurlrc ~/.twurlrc
-fi
+[[ ! -f /root/.twurlrc ]] && [[ -f /usr/share/planefence/persist/.twurlrc ]] && cp /usr/share/planefence/persist/.twurlrc /root
 # -----------------------------------------------------------------------------------
 #
 # enable or disable tweeting:
@@ -124,9 +121,24 @@ cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 #
 #--------------------------------------------------------------------------------
 # add plane-alert stuff here
-mkdir -p /usr/share/planefence/html/plane-alert
 # copy in env vars and set PLANEALERT=true in planefence.conf
-
+#
+mkdir -p /usr/share/planefence/html/plane-alert
+[[ -f /usr/share/planefence/persist/plane-alert-db.txt ]] && cp /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert
+[[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ -f /usr/share/plane-alert/plane-alert-db.txt ]] && cp /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
+[[ -f /usr/share/plane-alert/plane-alert-db.txt ]] && cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+[[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
+if [[ "x$PF_PA_TWID" != "x" ]]
+then
+	rm -f /usr/share/plane-alert/plane-alert.twitterid
+	while IFS=, read -r LINE
+	do 
+		echo $LINE >> /usr/share/plane-alert/plane-alert.twitterid
+	done <<< "$PF_PA_TWID"
+fi
+[[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PF_MAPURL" != "x" ]] && LINK=$(sed 's|/|\\/|g' <<< "$PF_MAPURL") && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$LINK\""'|' /usr/share/plane-alert/plane-alert.conf
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
 #

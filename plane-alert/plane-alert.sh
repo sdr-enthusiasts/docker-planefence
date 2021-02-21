@@ -42,8 +42,6 @@ function cleanup
 	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
 	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
-	# restart planefence if it was active before we started:
-	[ "$PFACTIVE" == "true" ] && sudo /bin/systemctl restart planefence
 	[ "$TESTING" == "true" ] && echo 11. Finished.
 }
 #

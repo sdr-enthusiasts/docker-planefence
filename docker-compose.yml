@@ -1,7 +1,7 @@
 version: '3.8'
 
 volumes:
-  planefence:
+#  planefence:
   readsbpb_rrd:
   readsbpb_autogain:
 
@@ -18,7 +18,7 @@ services:
     environment:
       - TZ=${FEEDER_TZ}
     volumes:
-      - planefence:/usr/share/planefence/persist
+      - ${HOME}/.planefence:/usr/share/planefence/persist
       - /opt/planefence/Volumes/html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=128M
