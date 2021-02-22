@@ -124,19 +124,27 @@ cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 # copy in env vars and set PLANEALERT=true in planefence.conf
 #
 mkdir -p /usr/share/planefence/html/plane-alert
-[[ -f /usr/share/planefence/persist/plane-alert-db.txt ]] && cp /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert
+# If the plane-alert database doesn't exist on persistent disk, copy it from our repository
 [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ -f /usr/share/plane-alert/plane-alert-db.txt ]] && cp /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
-[[ -f /usr/share/plane-alert/plane-alert-db.txt ]] && cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
-[[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
-if [[ "x$PF_PA_TWID" != "x" ]]
+# if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
+if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
-	rm -f /usr/share/plane-alert/plane-alert.twitterid
-	while IFS=, read -r LINE
-	do 
-		echo $LINE >> /usr/share/plane-alert/plane-alert.twitterid
-	done <<< "$PF_PA_TWID"
+		echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
+		echo "Do this on the host to get a base file:"
+		echo "sudo wget -q -O ~/.planefence/plane-alert-db.txt https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt"
+		echo "and then restart this docker container"
+		PF_PLANEALERT="OFF"
+else
+		# create a link of the plane-alert file to plane-alert's HTML directory
+		ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+		# make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
+		sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
 fi
-[[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf
+
+# Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
+[[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< $PF_PA_TWID > /usr/share/plane-alert/plane-alert.twitterid && rm -f /usr/share/plane-alert/plane-alert.twitterid 2>/dev/null
+# and write the rest of the parameters into their place
+[[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1'"\"false\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && LINK=$(sed 's|/|\\/|g' <<< "$PF_MAPURL") && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$LINK\""'|' /usr/share/plane-alert/plane-alert.conf
 #--------------------------------------------------------------------------------
