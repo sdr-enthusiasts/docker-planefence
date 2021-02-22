@@ -73,13 +73,18 @@ RUN set -x && \
     mkdir -p /usr/share/socket30003 && \
     mkdir -p /run/socket30003 && \
     mkdir -p /etc/services.d/socket30003 && \
-    git clone https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
+    git clone --depth=1 https://github.com/kx1t/dump1090.socket30003.git /git/socket30003 && \
     pushd "/git/socket30003" && \
        ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
        cp /planefence/services.d/start_socket30003 /etc/services.d/socket30003/run && \
        chmod a+x /usr/share/socket30003/*.pl && \
        chmod a+x /etc/services.d/socket30003/run && \
-    popd
+    popd && \
+#
+# Remove the temporary files because we are done with them:
+    rm -rf /etc/services.d/socket30003/.blank && \
+    rm -rf /run/socket30003/install-* && \
+    rm -rf /git/socket30003
 
 RUN set -x && \
 #
@@ -97,10 +102,11 @@ RUN set -x && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     popd && \
-    git clone https://github.com/kx1t/docker-planefence /git/docker-planefence && \
+    git clone --depth=1 https://github.com/kx1t/docker-planefence /git/docker-planefence && \
     pushd /git/docker-planefence && \
        echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
-    popd
+    popd && \
+    rm -rf /git/docker-planefence
 
 RUN set -x && \
 #
@@ -116,7 +122,11 @@ RUN set -x && \
        chmod a+x /etc/services.d/lighttpd/run && \
     # Place and enable the lighty mod:
        cp /planefence/88-planefence.conf /etc/lighttpd/conf-available && \
-       ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled
+       ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
+#
+# Remove /planefence because we're done with it
+    rm -rf /planefence \
+           /etc/services.d/planefence/.blank
 
 RUN set -x && \
 #
@@ -125,7 +135,10 @@ RUN set -x && \
     cp -r /plane-alert/* /usr/share/plane-alert && \
     chmod a+x /usr/share/plane-alert/*.sh && \
     cp /plane-alert/88-plane-alert.conf /etc/lighttpd/conf-available && \
-    ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled
+    ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
+#
+# Remove /plane-alert because we're done with it
+    rm -rf /plane-alert
 
 RUN set -x && \
 #
@@ -140,16 +153,12 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf \
-	/src/* \
-	/tmp/* \
-	/var/lib/apt/lists/* \
-	/etc/services.d/planefence/.blank \
-	/etc/services.d/socket30003/.blank \
-	/run/socket30003/install-* \
-	/.dockerenv \
-	/git/* \
-	/planefence \
-	/plane-alert
+	     /src/* \
+	     /tmp/* \
+	     /var/lib/apt/lists/* \
+	     /.dockerenv \
+	     /git
+
 
 ENTRYPOINT [ "/init" ]
 
