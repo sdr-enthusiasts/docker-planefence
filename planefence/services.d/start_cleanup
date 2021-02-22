@@ -36,7 +36,8 @@ CLEANUP ()
     find /usr/share/planefence/plane* -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.log -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
-    find /usr/share/planefence/persist/*.tmp -mindepth 1 -mtime +2 -delete 2>/dev/null
+    find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
+    find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
     tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
     mv -f /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
   else
