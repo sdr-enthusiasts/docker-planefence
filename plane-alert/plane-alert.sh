@@ -78,8 +78,26 @@ TESTING=""
 		> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 	[ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 
-# If there's nothing in $TMPDIR/plalert.out.tmp then exit as there's nothing to be done...
-	[ "$(cat $TMPDIR/plalert.out.tmp | wc -l)" == "0" ] && exit 0
+# If there's nothing in $TMPDIR/plalert.out.tmp then write a standard file and exit as there's nothing to be done...
+if [ "$(cat $TMPDIR/plalert.out.tmp | wc -l)" == "0" ]
+then
+	cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
+	echo "No planes from the alert file have been detected!"
+	cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
+
+	#Now the basics have been written, we need to replace some of the variables in the template with real data:
+	sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##ADSBLINK##/$ADSBLINK/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
+
+	#Finally, put the temp index into its place:
+	mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
+	# And exit outa here!
+	exit 0
+fi
 
 # Create a backup of $OUTFILE so we can compare later on. Ignore any complaints if there's no original $OUTFILE
 	for a in ${OUTFILE%.*}*.csv
@@ -189,7 +207,7 @@ TESTING=""
 
 # Now everything is in place, let's update the website
 
-	cp $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
+	cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 	cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 	(( COUNTER = 1 ))
 	while read -r line
