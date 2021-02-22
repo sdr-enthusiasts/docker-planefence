@@ -232,7 +232,7 @@ fi
 
 	#Now the basics have been written, we need to replace some of the variables in the template with real data:
 	sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
-	sed -i "s/##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
+	sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
