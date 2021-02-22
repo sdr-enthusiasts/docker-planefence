@@ -595,8 +595,8 @@ else
 	rm -f $OUTFILEDIR/noisecapt-spectro-latest.png 2>/dev/null
 fi
 
-# If $PLANEALERT=true then lets call dictalert to see if the new lines contain any planes of special interest:
-[ "$PLANEALERT" == "true" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP" ; $PLALERTFILE $INFILETMP )
+# If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
+[ "$PLANEALERT" == "ON" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP" ; $PLALERTFILE $INFILETMP )
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:

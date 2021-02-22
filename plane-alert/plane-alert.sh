@@ -31,7 +31,7 @@
 # PLEASE EDIT PARAMETERS IN 'plane-alert.conf' BEFORE USING PLANE-ALERT !!!
 #
 # -----------------------------------------------------------------------------------
-# Exit if there is no input file defined
+# Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
 	[ "$1" == "" ] && { echo "No inputfile detected. Syntax: $0 <inputfile>"; exit 1; } || INFILE="$1"
 #	[ "$TESTING" == "true" ] && echo cmdline arg = \"$1\"
 #
@@ -53,20 +53,14 @@ trap cleanup EXIT
 # Let's see if there is a CONF file that defines some of the parameters
 	[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
-# Switch off planefence if it's running, except when plane-alert.sh was called from within PlaneFence
-# note this is commented out because its not needed in a dockerized deployment
-#	if [ "$(/bin/systemctl is-active planefence 2>/dev/null)" == "active" ] && [ "$(ps -o comm= $PPID)" != "planefence.sh" ]
-#	then
-#		sudo /bin/systemctl stop planefence
-#		PFACTIVE=true
-#	else
-#		PFACTIVE=false
-#	fi
-# -----------------------------------------------------------------------------------
+#
+# Stop printing debug into to stdout:
+TESTING=""
 #
 # Now let's start
 #
-# First, let's get the file with planes to monitor.
+#
+# Get the file with planes to monitor.
 # The file is in CSV format with this syntax:
 # ICAO,TailNr,Owner,PlaneDescription
 # for example:
@@ -224,7 +218,7 @@ trap cleanup EXIT
 	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
 
 	#Finally, put the temp index into its place:
 	mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
-

@@ -120,8 +120,9 @@ done
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 #
 #--------------------------------------------------------------------------------
-# add plane-alert stuff here
-# copy in env vars and set PLANEALERT=true in planefence.conf
+#
+# Now initialize Plane Alert. Note that this isn't in its own s6 runtime because it's
+# only called synchronously from planefence (if enabled)
 #
 mkdir -p /usr/share/planefence/html/plane-alert
 # If the plane-alert database doesn't exist on persistent disk, copy it from our repository
@@ -140,15 +141,20 @@ else
 		# make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 		sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
 fi
-
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
-[[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< $PF_PA_TWID > /usr/share/plane-alert/plane-alert.twitterid && rm -f /usr/share/plane-alert/plane-alert.twitterid 2>/dev/null
+[[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
 # and write the rest of the parameters into their place
 [[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1'"\"false\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && LINK=$(sed 's|/|\\/|g' <<< "$PF_MAPURL") && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$LINK\""'|' /usr/share/plane-alert/plane-alert.conf
+# Last, write the sort-table.js into the web directory as we cannot create it during build:
+cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
+#
+#
+#
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
+#
 #
 echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..."
 sleep $LOOPTIME
