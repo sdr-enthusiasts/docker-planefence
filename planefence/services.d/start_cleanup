@@ -32,14 +32,27 @@ CLEANUP ()
 {
   if (( OLDERTHAN > 0 ))
   then
+    echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days"
+    echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day"
+    echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to 5000 lines (if needed)"
     find /tmp -mindepth 1 -mtime +2 -delete 2>/dev/null
-    find /usr/share/planefence/plane* -mtime +$OLDERTHAN -delete 2>/dev/null
+    find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
+    find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.log -mtime +$OLDERTHAN -delete 2>/dev/null
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
     find /usr/share/planefence/persist/*.log -mtime +1 -delete 2>/dev/null
-    tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
-    mv -f /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
+    if [[ -f /tmp/planefence.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
+      mv -f /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
+    fi
+    if [[ -f /tmp/noise2fence.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
+      mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
+    fi
+
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
 
