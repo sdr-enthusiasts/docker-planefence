@@ -23,7 +23,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(git) && \
     TEMP_PACKAGES+=(automake) && \
     TEMP_PACKAGES+=(autoconf) && \
-    KEPT_PACKAGES+=(wget) && \
+    # KEPT_PACKAGES+=(wget) && \
     # logging
     KEPT_PACKAGES+=(gawk) && \
     KEPT_PACKAGES+=(pv) && \
@@ -35,7 +35,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
-    KEPT_PACKAGES+=(procps nano aptitude netcat) && \
+    KEPT_PACKAGES+=(procps nano netcat) && \
 #
 # define packages needed for PlaneFence, including socket30003
     KEPT_PACKAGES+=(python-pip) && \
@@ -49,7 +49,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
-    KEPT_PACKAGES+=(alsa-utils) && \
+    # KEPT_PACKAGES+=(alsa-utils) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
 #

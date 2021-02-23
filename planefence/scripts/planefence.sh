@@ -102,8 +102,9 @@ fi
 # Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
-[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-
+# replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+[[ "x$REMOTENOISE" != "x" ]] && [[ "$(curl --fail -s $REMOTENOISE/noisecapt-$FENCEDATE.log > /tmp/noisecapt-$FENCEDATE.log; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+#
 #
 # Functions
 #
@@ -270,8 +271,8 @@ EOF
 				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
 				LOG "SPECTROFILE (before copying) is $SPECTROFILE"
 
-				[[ "$NOISECAPT" == "1" ]] && wget -q -O $OUTFILEDIR/$SPECTROFILE $REMOTENOISE/$SPECTROFILE
-
+				# replace wget by curl to save disk space: [[ "$NOISECAPT" == "1" ]] && wget -q -O $OUTFILEDIR/$SPECTROFILE $REMOTENOISE/$SPECTROFILE
+				[[ "$NOISECAPT" == "1" ]] && curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
 				# generate noisegraph if it doesnt already exist
 				if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
 				then
@@ -587,7 +588,8 @@ fi
 if [ "$NOISECAPT" == "1" ]
 then
 	# get the latest spectrogram from the remote server
-	wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
+	curl --fail -s $REMOTENOISE/noisecapt-spectro-latest.png >$OUTFILEDIR/noisecapt-spectro-latest.png
+	# was - wget now using curl to save disk space wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
         #scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
 	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
 

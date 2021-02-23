@@ -32,7 +32,8 @@ VERSION=0.1-docker
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and this URL is reachable, we collect noise data
 # Note that this doesn't check for the validity of the actual URL, just that we can reach it.
-[[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+#replace wget with curl to save disk space --was [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+[[ "x$REMOTENOISE" != "x" ]] && [[ "$(curl  --fail -s -o /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
 
 if [ "$NOISECAPT" != "1" ]
 then
@@ -61,7 +62,8 @@ CSVFILE=$CSVNAMEBASE$NOISEDATE$CSVNAMEEXT
 
 
 
-if [ "$(wget -q -O - $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
+# replace wget by curl to save disk space. was: if [ "$(wget -q -O - $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
+if [ "$(curl --fail -s $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
 then
 	echo "Can't reach $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT ... exiting"
 	exit 1
