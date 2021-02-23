@@ -37,8 +37,9 @@ There is a sample `docker-compose` file and a sample `.env` file that contain al
 
 Follow these commands:
 ```
-sudo mkdir -d /opt/planefence/Volumes/html/
-sudo chown -R pi: /opt/planefence  # replace "pi" by the account you are using. On Ubuntu systems, this may be "ubuntu". Please leave the ":" in place! 
+sudo mkdir -d /opt/planefence/Volumes/html
+mkdir -d ~/.planefence
+sudo chown -R ${USER}: /opt/planefence
 wget -O /opt/planefence/docker-compose.yml https://raw.githubusercontent.com/kx1t/docker-planefence/main/docker-compose.yml
 wget -O /opt/planefence/.env https://raw.githubusercontent.com/kx1t/docker-planefence/main/.env-example
 ```
