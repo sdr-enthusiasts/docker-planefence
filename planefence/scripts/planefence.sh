@@ -103,7 +103,15 @@ fi
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
 # replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-[[ "x$REMOTENOISE" != "x" ]] && [[ "$(curl --fail -s $REMOTENOISE/noisecapt-$FENCEDATE.log > /tmp/noisecapt-$FENCEDATE.log; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+if [[ "x$REMOTENOISE" != "x" ]]
+then
+	if [[ "$(curl --fail -s $REMOTENOISE/noisecapt-$FENCEDATE.log > /tmp/noisecapt-$FENCEDATE.log; echo $?)" == "0" ]]
+	then
+		NOISECAPT=1
+	else
+		NOISECAPT=0
+	fi
+fi
 #
 #
 # Functions
@@ -176,7 +184,8 @@ WRITEHTMLTABLE () {
 	<th class="js-sort-number">Min. Altitude</th>
 	<th class="js-sort-number">Min. Distance</th>
 EOF
-	if (( NOISECOL == true ))
+	# if (( NOISECOL == true ))
+	if [[ "$NOISECAPT" == "1" ]]
 	then
 		cat <<EOF >>"$2"
 		<th class="js-sort-number">Loudness</th>
@@ -196,7 +205,7 @@ EOF
 		LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
 	fi
 
-	if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
+	if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && [[ "$NOISECAPT" == "1" ]]
 	then
 		printf "<th>Spectrogram</th>" >> "$2"
 	fi
@@ -248,7 +257,7 @@ EOF
 			fi
 
 			# If MAXFIELDS>10 then there is definitely audio information.
-			if (( NOISECOL == true ))
+			if (( NOISECOL == true )) && [[ "NOISECAPT" == "1" ]]
 			then
 				# determine cell bgcolor
 				(( LOUDNESS = NEWVALUES[7] - NEWVALUES[11] ))
@@ -269,40 +278,43 @@ EOF
 
 				# determine the name of a potential spectrogram file
 				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
+				# if it has a weird date, discard it because it wont exist:
+				[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE=""
 				LOG "SPECTROFILE (before copying) is $SPECTROFILE"
 
 				# replace wget by curl to save disk space: [[ "$NOISECAPT" == "1" ]] && wget -q -O $OUTFILEDIR/$SPECTROFILE $REMOTENOISE/$SPECTROFILE
-				[[ "$NOISECAPT" == "1" ]] && curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
-				# generate noisegraph if it doesnt already exist
-				if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
+				if [[ "$NOISECAPT" == "1" ]]
 				then
-					LOG "Invoking GnuPlot with START=$STARTTIME END=$ENDTIME"
-					gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
-					LOG "SPECTROFILE=$SPECTROFILE"
-				else
-					LOG "Didnt write graph. Reason:"
-					[ -f "$NOISEGRAPHFILE" ] && LOG "$NOISEGRAPHFILE exists" || LOG "$NOISEGRAPHFILE doesn't exist"
-					LOG "Timediff is $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) "
+					curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
+					# generate noisegraph if it doesnt already exist
+					if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
+					then
+						LOG "Invoking GnuPlot with START=$STARTTIME END=$ENDTIME"
+						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+						LOG "SPECTROFILE=$SPECTROFILE"
+					else
+						LOG "Didnt write graph. Reason:"
+						[ -f "$NOISEGRAPHFILE" ] && LOG "$NOISEGRAPHFILE exists" || LOG "$NOISEGRAPHFILE doesn't exist"
+						LOG "Timediff is $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) "
+					fi
+					# print Noise Values
+					if [ -f "$NOISEGRAPHFILE" ]
+					then
+						printf "<td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
+					else
+						printf "<td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
+					fi
+
+					for i in {7..11}
+					do
+						printf "<td>%s dBFS</td>\n" "${NEWVALUES[i]}" >>"$2"
+					done
 				fi
-
-
-				# print Noise Values
-				if [ -f "$NOISEGRAPHFILE" ]
-				then
-					printf "<td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
-				else
-					printf "<td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
-				fi
-
-				for i in {7..11}
-				do
-					printf "<td>%s dBFS</td>\n" "${NEWVALUES[i]}" >>"$2"
-				done
 
 				if [ "${NEWVALUES[1]:0:1}" == "@" ]
 				then
-					# a tweet was sent. If there is info in field 12, then put a link, otherwise simple say "yes"
-					if  [ "${NEWVALUES[12]}" != "" ]
+					# a tweet was sent. If there is info the  field 12, then put a link, otherwise simple say "yes"
+					if  [ "${NEWVALUES[12]::13}" == "https://t.co/" ]
 					then
 						# there's tweet info in this field
 						printf "<td><a href=\"%s\" target=\"_new\">yes</a></td>\n" "$(echo ${NEWVALUES[12]} | tr -d '[:cntrl:]')" >> "$2"
@@ -319,7 +331,7 @@ EOF
                                 if [ "${NEWVALUES[1]:0:1}" == "@" ]
                                 then
                                         # a tweet was sent. If there is info in field 7, then put a link, otherwise simple say "yes"
-                                        if  [ "${NEWVALUES[7]}" != "" ]
+                                        if  [ "${NEWVALUES[7]::13}" == "https://t.co/" ]
                                         then
                                                 # there's tweet info in this field
 						printf "<td><a href=\"%s\" target=\"_new\">yes</a></td>\n" "$(echo ${NEWVALUES[7]} | tr -d '[:cntrl:]')" >> "$2"
@@ -333,7 +345,7 @@ EOF
                                 fi
 			fi
 
-			if [ -f "$OUTFILEDIR/$SPECTROFILE" ]
+			if [[ -f "$OUTFILEDIR/$SPECTROFILE" ]] && [[ "$SPECTROFILE" != "" ]]
 			then
 				printf "<td><A href=\"%s\" target=\"_new\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2"
 				LOG "SpectroFile exists, added link to table"
@@ -540,7 +552,7 @@ else
 fi
 
 # Now check if we need to add noise data to the csv file
-if [ "$NOISECAPT" == "1" ]
+if [[ "$NOISECAPT" == "1" ]]
 then
 	LOG "Invoking noise2fence!"
 	$PLANEFENCEDIR/noise2fence.sh
