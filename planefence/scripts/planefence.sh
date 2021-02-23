@@ -547,6 +547,9 @@ else
 	LOG "Info: Noise2Fence not enabled"
 fi
 
+#Dirty fix -- sometimes the CSV file needs fixing
+$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
+
 # And see if we need to invoke PlaneTweet:
 if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
 then
