@@ -68,7 +68,10 @@ TESTING=""
 #
 # We need to write this to a grep input file that consists simply of lines with "^icao"
 
-	awk 'BEGIN { FS = "," } ; { print "^", $1 }' $PLANEFILE | tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp
+	sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
+	| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO`\
+	| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
+
 	[ "$TESTING" == "true" ] && ( echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines )
 
 # Now grep through the input file to see if we detect any planes
@@ -79,25 +82,25 @@ TESTING=""
 	[ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 
 # If there's nothing in $TMPDIR/plalert.out.tmp then write a standard file and exit as there's nothing to be done...
-if [ "$(cat $TMPDIR/plalert.out.tmp | wc -l)" == "0" ]
-then
-	cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
-	echo "No planes from the alert file have been detected!"
-	cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
+#if [ "$(cat $TMPDIR/plalert.out.tmp | wc -l)" == "0" ]
+#then
+#	cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
+#	echo "No new planes from the alert file have been detected!<br />" >> $TMPDIR/plalert-index.tmp
+#	cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
 
-	#Now the basics have been written, we need to replace some of the variables in the template with real data:
-	sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
-	sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
-	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
-	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
-	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
-	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
+#	#Now the basics have been written, we need to replace some of the variables in the template with real data:
+#	sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
+#	sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
+#	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
+#	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
+#	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
+#	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
 
-	#Finally, put the temp index into its place:
-	mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
-	# And exit outa here!
-	exit 0
-fi
+#	#Finally, put the temp index into its place:
+#	mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
+#	# And exit outa here!
+#	exit 0
+#fi
 
 # Create a backup of $OUTFILE so we can compare later on. Ignore any complaints if there's no original $OUTFILE
 	for a in ${OUTFILE%.*}*.csv
@@ -115,7 +118,7 @@ fi
 		[ "$OUTAPPDATE" == "true" ] && OUTWRITEFILE="${OUTFILE%.*}"-"$(date -d "${plalertplane[4]}" +%Y-%m-%d)".csv || OUTWRITEFILE="$OUTFILE"
 
 		# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
-		printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s\n" \
+		printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
 				"$(grep "^${plalertplane[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
 				"${plalertplane[4]}"	`# Date first heard` \
 				"${plalertplane[5]:0:8}"	`# Time first heard` \
@@ -124,6 +127,7 @@ fi
 				"${plalertplane[11]}"	`# callsign` \
 				"${plalertplane[0]}"	`# ICAO for insertion into ADSBExchange link`\
 				"$(date -d "${plalertplane[4]}" +%Y-%m-%d)"	`# reformatted date for insertion into ADSBExchange link`\
+				"$MAPZOOM"					  `# zoom factor of the map`\
 			>> "$OUTWRITEFILE"			`# Append this line to $OUTWRITEFILE`
 
 		[ -f "$OUTWRITEFILE".old ] && cat "$OUTWRITEFILE" "$OUTWRITEFILE".old > $TMPDIR/plalert2.out.tmp || mv -f "$OUTWRITEFILE" $TMPDIR/plalert2.out.tmp
@@ -182,15 +186,11 @@ fi
 			while IFS= read -r twitterid
 			do
 				# tweet and add the processed output to $result:
-				if [ "$TESTING" == "true" ]
-				then
-					echo 8. We would have been tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
-				else
-					result=$(\
+				[[ "$TESTING" == "true" ]] && echo 8. Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+				result=$(\
 						$TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}'\
  						        | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
-					[ "$result" != "" ] && ( echo "9. Tweet error: $result" ; echo Diagnostics: ; echo Twitter ID: $twitterid ; echo Text: $TWITTEXT ; (( ERRORCOUNT += 1 )) )
-				fi
+				[ "$result" != "" ] && ( echo "9. Tweet error: $result" ; echo Diagnostics: ; echo Twitter ID: $twitterid ; echo Text: $TWITTEXT ; (( ERRORCOUNT += 1 )) )
 			done < "$TWIDFILE"
 		else
 			if [ "$TESTING" == "true" ]
@@ -213,7 +213,7 @@ fi
 	while read -r line
 	do
 		IFS=',' read -ra plalertplane <<< "$line"
-		if [ "${plalertplane[0]}" != "" ]
+		if [[ "${plalertplane[0]}" != "" ]] && [[ "$(date -d "${plalertplane[4]} ${plalertplane[5]}" +%s)" -gt "$(date -d "$HISTTIME days ago" +%s)" ]]
 		then
 			printf "%s\n" "<tr>" >> $TMPDIR/plalert-index.tmp
 			printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >> $TMPDIR/plalert-index.tmp # column: Number
@@ -222,7 +222,7 @@ fi
 			printf "    %s%s%s\n" "<td>" "${plalertplane[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
 			printf "    %s%s%s\n" "<td>" "${plalertplane[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
 			printf "    %s%s%s\n" "<td>" "${plalertplane[4]} ${plalertplane[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time
-			printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${plalertplane[6]}&mlon=${plalertplane[7]}&zoom=8\" target=\"_blank\">${plalertplane[6]}N, ${plalertplane[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
+			printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${plalertplane[6]}&mlon=${plalertplane[7]}&zoom=$MAPZOOM\" target=\"_blank\">${plalertplane[6]}N, ${plalertplane[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
 			printf "    %s%s%s\n" "<td>" "${plalertplane[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
 			printf "    %s%s%s\n" "<td>" "<a href=\"${plalertplane[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
 			printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
@@ -236,6 +236,7 @@ fi
 	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
+	sed -i "s/##HISTTIME##/$HISTTIME/g" $TMPDIR/plalert-index.tmp
 	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
 
 	#Finally, put the temp index into its place:
