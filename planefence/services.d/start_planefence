@@ -129,7 +129,7 @@ mkdir -p /usr/share/planefence/html/plane-alert
 # If the plane-alert database doesn't exist on persistent disk, copy it from our repository for future reference
 if [[ -f /usr/share/planefence/persist/plane-alert-db.txt ]]
 then
-	cp -f /usr/share/planefence/persistplane-alert-db.txt /usr/share/plane-alert/
+	cp -f /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert/
 elif [[ -f /usr/share/plane-alert/plane-alert-db.txt ]]
 then
 	cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
