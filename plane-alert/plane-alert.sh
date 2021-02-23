@@ -173,7 +173,7 @@ fi
 	        	        TWITTEXT+="Owner: ${plalertplane[2]}\n"
                         	TWITTEXT+="Aircraft: ${plalertplane[3]}\n"
 	                        TWITTEXT+="First heard: ${plalertplane[4]} ${plalertplane[5]}\n"
-        	                TWITTEXT+="${plalertplane[9]}"
+        	                TWITTEXT+="$(sed 's|/|\\/|g' <<< "${plalertplane[9]}")"
 
 		        [ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
                         [ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
