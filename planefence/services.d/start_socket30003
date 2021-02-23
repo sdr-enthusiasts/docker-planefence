@@ -63,7 +63,7 @@ do
 		 # we do this inside this endless loop so it will show in the logs regularly
 		 if [[ $(timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 2>/dev/null && echo $?) ]]
 		 then
-		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl)"
+		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl) exited with code $?"
 		 else
 	  	  echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
 				echo "[$APPNAME][$(date)] If this error keeps on repeating. ensure that readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
