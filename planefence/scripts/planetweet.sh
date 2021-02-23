@@ -29,7 +29,7 @@
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-        HEADR=("Transponder ID" "Flight" "Time in range" "Time out of range" "Min. Alt. (ft)" "Min. Dist. (miles)" "Link" "Loudness" "Peak Audio Level")
+        HEADR=("Transponder ID" "Flight" "Time in range" "Time out of range" "Min. Alt." "Min. Dist." "Link" "Loudness" "Peak Audio Level")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
         TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
