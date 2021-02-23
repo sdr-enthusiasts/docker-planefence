@@ -163,4 +163,4 @@ RUN set -x && \
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
-EXPOSE 30003
+#EXPOSE 30003
