@@ -205,3 +205,6 @@ A7CAD8,HZMF9,Saudi Ministry of Finance,
 AC85AF,YV2869,Petroleos de Venezuela SA,
 ADFDF8,828000,US Govt Air Force 1,Boeing VC25A
 ADFDF9,929000,US Govt Air Force 1,Boeing VC25A
+A0B2BD,N144NE,NE Life Flight,EuroCopter 45
+A0B674,N145NE,NE Life Flight,EuroCopter 45
+A2B2D2,N273NE,NE Life Flight,EuroCopter 45

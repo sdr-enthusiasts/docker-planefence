@@ -125,22 +125,30 @@ cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 # only called synchronously from planefence (if enabled)
 #
 mkdir -p /usr/share/planefence/html/plane-alert
-# If the plane-alert database doesn't exist on persistent disk, copy it from our repository
-[[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ -f /usr/share/plane-alert/plane-alert-db.txt ]] && cp /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
+# If the plane-alert database exists on the persistent disk, then copy into place
+# If the plane-alert database doesn't exist on persistent disk, copy it from our repository for future reference
+if [[ -f /usr/share/planefence/persist/plane-alert-db.txt ]]
+then
+	cp -f /usr/share/planefence/persistplane-alert-db.txt /usr/share/plane-alert/
+elif [[ -f /usr/share/plane-alert/plane-alert-db.txt ]]
+then
+	cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
+fi
+
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
 		echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "Do this on the host to get a base file:"
 		echo "sudo wget -q -O ~/.planefence/plane-alert-db.txt https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt"
-		echo "and then restart this docker container"
+		echo "and then hard-restart this docker container"
 		PF_PLANEALERT="OFF"
-else
-		# create a link of the plane-alert file to plane-alert's HTML directory
-		ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
-		# make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
-		sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
 fi
+# create a copy of the plane-alert file to plane-alert's HTML directory
+cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+# make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
+sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
+
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
 # and write the rest of the parameters into their place

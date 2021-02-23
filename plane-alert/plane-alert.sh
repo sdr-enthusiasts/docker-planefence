@@ -39,7 +39,7 @@
 function cleanup
 {
 	# do some final clean-up before exiting - this funciton is called by a trap on receiving the EXIT signal
-	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
+	#rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
 	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
 	[ "$TESTING" == "true" ] && echo 11. Finished.
@@ -184,7 +184,7 @@ fi
 				# tweet and add the processed output to $result:
 				if [ "$TESTING" == "true" ]
 				then
-					echo 8. Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+					echo 8. We would have been tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 				else
 					result=$(\
 						$TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}'\
