@@ -266,7 +266,7 @@ EOF
 					SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
 					# if it has a weird date, discard it because it wont exist.
 					# otherwise, go get it from the remote server:
-					echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
+					# debug code: echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
 					[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
 			else
 					SPECTROFILE=""
