@@ -178,7 +178,7 @@ do
                   echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
                   echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 fi
-	[ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
+	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
 	sleep $LOOPTIME
 	echo "[$APPNAME][$(date)] PlaneFence restarting now"
 done
