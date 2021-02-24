@@ -66,7 +66,8 @@ do
 		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl) exited with code $?"
 		 else
 	  	  echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
-				echo "[$APPNAME][$(date)] If this error keeps on repeating. ensure that readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
+				echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
+				echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
 		 fi
 	 fi
 	 echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"

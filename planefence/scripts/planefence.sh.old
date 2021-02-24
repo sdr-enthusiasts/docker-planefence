@@ -142,32 +142,35 @@ LOG "Defining WRITEHTMLTABLE"
 WRITEHTMLTABLE () {
 	# -----------------------------------------
 	# Next create an HTML table from the CSV file
-	# Usage: WRITEHTMLTABLE INPUTFILE OUTPUTFILE
-	LOG "WRITEHTMLTABLE $1 $2"
+	# Usage: WRITEHTMLTABLE INPUTFILE OUTPUTFILE [standalone]
+	LOG "WRITEHTMLTABLE $1 $2 $3"
 
-	# First, let's figure out if there are *any* Tweets or noise data
-	# If so, we need to include those columns. If not, we can leave them out
+	# figure out if there is NOISE data in the CSV file.
+        MAXFIELDS=0
+        TWEETCOL=1 # remember, in BASH, "0" is "true" and "!0" is "false"
+        NOISECOL=1
 
-	HASTWEET="false"
-	HASNOISE="false"
 	if [ -f "$1" ]
 	then
 		while read -r NEWLINE
 		do
 			IFS=, read -ra RECORD <<< "$NEWLINE"
-			[[ "${RECORD[1]::1}" == "@" ]] && HASTWEET="true"
-			[[ "${RECORD[7]}" != "" ]] && HASNOISE="true"
+			if (( ${#RECORD[*]} > MAXFIELDS ))
+			then
+				MAXFIELDS=${#RECORD[*]}
+				(( MAXFIELDS > 10 )) && NOISECOL=0
+			fi
+
+			# check if there is tweeted data in the CSV file
+			[ "${RECORD[1]:0:1}" == "@" ] && TWEETCOL=0
+
 		done < "$1"
-	else
-		# Return silently without writing the table as there's no data to be written
-		return 1
 	fi
 
-	# see if there is an airlinecodes.txt database
-	AIRLINECODES="/usr/share/planefence/persist/airlinecodes.txt"
-	[[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
-
-	# Now write the HTML table header
+	if [ "$3" == "standalone" ]
+	then
+		printf "<html>\n<body>\n" >>"$2"
+	fi
 
 	cat <<EOF >>"$2"
 	<!-- table border="1" class="planetable" -->
@@ -176,16 +179,14 @@ WRITEHTMLTABLE () {
 	<th class="js-sort-number">No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
-	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline</th>")
 	<th class="js-sort-date">Time First Seen</th>
 	<th class="js-sort-date">Time Last Seen</th>
 	<th class="js-sort-number">Min. Altitude</th>
 	<th class="js-sort-number">Min. Distance</th>
 EOF
-
-	if [[ "$HASNOISE" == "true" ]]
+	# if (( NOISECOL == true ))
+	if [[ "$NOISECAPT" == "1" ]]
 	then
-		# print the headers for the standard noise columns
 		cat <<EOF >>"$2"
 		<th class="js-sort-number">Loudness</th>
 		<th class="js-sort-number">Peak RMS sound</th>
@@ -194,149 +195,178 @@ EOF
 		<th class="js-sort-number">10 min avg</th>
 		<th class="js-sort-number">1 hr avg</th>
 EOF
-		# If there are spectrograms for today, then also make a column for these:
-		(( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && printf "<th>Spectrogram</th>" >> "$2"
+  fi
+	if (( TWEETCOL == true ))
+	then
+		# there's Twitter info in field 12
+		printf "<th>Tweeted</th>" >> "$2"
+		LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt and Tweeted table headers..."
+	else
+		LOG "Number of fields in CSV is $MAXFIELDS. Adding NoiseCapt table headers..."
 	fi
 
-	if [[ "$HASTWEET" == "true" ]]
+	if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && [[ "$NOISECAPT" == "1" ]]
 	then
-		# print a header for the Tweeted column
-		printf "	<th>Tweeted</th>" >> "$2"
+		printf "<th>Spectrogram</th>" >> "$2"
 	fi
+
 	printf "</tr>\n" >>"$2"
 
 	# Now write the table
 	COUNTER=0
-	while read -r NEWLINE
-	do
-		  [[ "$NEWLINE" == "" ]] && continue # skip empty lines
-			[[ "${NEWVALUES::1}" == "#" ]] && continue #skip lines that start with a "#"
+	if [ -f "$1" ]
+	then
+	  while read -r NEWLINE
+	  do
+	    if [ "$NEWLINE" != "" ]
+	    then
+		(( COUNTER = COUNTER + 1 ))
+		IFS=, read -ra NEWVALUES <<< "$NEWLINE"
+		# only write the row if the first field contains 6 characters (otherwise treat it as a header, and skip)
+		if [ "${#NEWVALUES[0]}" == "6" ]
+		then
+			printf "<tr>\n" >>"$2"
+			printf "<td>%s</td>" "$COUNTER" >>"$2" # table index number
+			printf "<td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO Hex ID
 
-			IFS=, read -ra NEWVALUES <<< "$NEWLINE"
+			# if the flight number start with \@ then strip that in the HTML representation
+			# (\@ is written as the first character of the flight number by PlaneTweet if it has already tweeted the record)
+      # Also, if the flight number is absent but $TRACKSERVICE==adsbexchange then insert a link after all
 
-			# Do some prep work:
-			# --------------------------------------------------------------
-			# Step 1/5. Replace the map zoom by whatever $HEATMAPZOOM contains
-			[[ -z "$HEATMAPZOOM" ]] && NEWVALUES[6]=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "${NEWVALUES[6]}")
-
-			# Step 2/5. If there is no flight number, insert the word "link"
-			[[ "${NEWVALUES[1]#@}" == "" ]] && NEWVALUES[1]+="link"
-
-			# Step 3/5. If there's noise data, get a background color:
-			# (only when we are printing noise data, and there's actual data in this record)
-			LOUDNESS=""
-			if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
+			if  { [ "${NEWVALUES[1]}" == "@" ] || [ "${NEWVALUES[1]}" == "" ]; } && [ "$TRACKSERVICE" == "adsbexchange" ]
 			then
+				d=$(date -d "${NEWVALUES[2]}" +%s)
+				utcdate=$(date -u -d @"$d" +%Y-%m-%d)
+        printf "<td><a href=\"http://globe.adsbexchange.com/?icao=%s&lat=%s&lon=%s&zoom=13&showTrace=%s\" target=\"_blank\">link</a></td>\n" "${NEWVALUES[0]}" "$LAT" "$LON" "$utcdate" >> "$2"
+			elif [ "${NEWVALUES[1]:0:1}" == "@" ]
+                        then
+				printf "<td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]:1}" >> "$2"
+                        else
+				printf "<td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]}" >> "$2"
+			fi
+
+			printf "<td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
+			printf "<td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
+			printf "<td>%s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" >>"$2" # min altitude
+
+			if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
+			then
+				printf "<td>%.2f %s</td>\n" "$(echo "${NEWVALUES[5]} * $DISTCONV" | bc -l)" "$DISPLAYUNIT" >>"$2" # min distance
+			else
+				printf "<td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >>"$2" # min distance
+			fi
+
+			# If MAXFIELDS>10 then there is definitely audio information.
+			if (( NOISECOL == true )) && [[ "NOISECAPT" == "1" ]]
+			then
+				# determine cell bgcolor
 				(( LOUDNESS = NEWVALUES[7] - NEWVALUES[11] ))
 				BGCOLOR="$RED"
 				((  LOUDNESS <= YELLOWLIMIT )) && BGCOLOR="$YELLOW"
 				((  LOUDNESS <= GREENLIMIT )) && BGCOLOR="$GREEN"
-			fi
 
-			# Step 4/5. Get a noise graph
-			# (only when we are printing noise data, and there's actual data in this record)
-			if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
-			then
-					# First, the noise graph:
-					# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-					NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-"${NEWVALUES[0]}".png"
-					NOISEGRAPHLINK=${NOISEGRAPHFILE##*/}
+				NOISEGRAPHLINK="$NOISEGRAPHBASE-$(date -d "${NEWVALUES[2]}" +%H%M%S)-"${NEWVALUES[0]}".png"
+				NOISEGRAPHFILE="$OUTFILEDIR"/"$NOISEGRAPHLINK"
+				[ "${NEWVALUES[1]:0:1}" == "@" ] && TITLE="Noise plot for ${NEWVALUES[1]:1} at ${NEWVALUES[3]}" || TITLE="Noise plot for ${NEWVALUES[1]} at ${NEWVALUES[3]}"
 
-					# If no graph already exists, create one:
-					if [[ ! -f "$NOISEGRAPHFILE" ]]
+				STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
+				ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
+				# if the timeframe is less than 15 seconds, extend the ENDTIME to 30 seconds
+				(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
+
+				LOG "SpectroFile between $STARTTIME and $ENDTIME"
+
+				# determine the name of a potential spectrogram file
+				SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
+				# if it has a weird date, discard it because it wont exist:
+				[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE=""
+				LOG "SPECTROFILE (before copying) is $SPECTROFILE"
+
+				# replace wget by curl to save disk space: [[ "$NOISECAPT" == "1" ]] && wget -q -O $OUTFILEDIR/$SPECTROFILE $REMOTENOISE/$SPECTROFILE
+				if [[ "$NOISECAPT" == "1" ]]
+				then
+					curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
+					# generate noisegraph if it doesnt already exist
+					if [ ! -f "$NOISEGRAPHFILE" ] && [ $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) -gt 300 ]
 					then
-						# set some parameters for the graph:
-						TITLE="Noise plot for ${NEWVALUES[1]#@} at ${NEWVALUES[3]}"
-						STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
-						ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
-						# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
-						(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-
-						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+						LOG "Invoking GnuPlot with START=$STARTTIME END=$ENDTIME"
+						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+						LOG "SPECTROFILE=$SPECTROFILE"
+					else
+						LOG "Didnt write graph. Reason:"
+						[ -f "$NOISEGRAPHFILE" ] && LOG "$NOISEGRAPHFILE exists" || LOG "$NOISEGRAPHFILE doesn't exist"
+						LOG "Timediff is $(( $(date +%s) - $(date -d "${NEWVALUES[3]}" +%s) )) "
 					fi
-			fi
-
-			# Step 5/5. Get a spectrogram
-			# (only when we are printing noise data, and there's actual data in this record)
-			if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
-			then
-					STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
-					ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
-					(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-					SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
-					# if it has a weird date, discard it because it wont exist.
-					# otherwise, go get it from the remote server:
-					echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
-					[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
-			else
-					SPECTROFILE=""
-			fi
-
-			# --------------------------------------------------------------
-			# Now, we're ready to start putting things in the table:
-
-			printf "<tr>\n" >>"$2"
-			printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
-			printf "   <td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
-			[[ "$AIRLINECODES" != "" ]] && a="${NEWVALUES[1]#@}" && printf "   <td>%s</td>\n" "$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES)"  >>"$2" # Print flight number if we can find it
-			printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
-			printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
-			printf "   <td>%s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" >>"$2" # min altitude
-			printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >>"$2" # min distance
-
-			# Print the noise values if we have determined that there is data
-			if [[ "$HASNOISE" == "true" ]]
-			then
-					# First the loudness field, which needs a color and a link to a noise graph:
-					if [[ "$LOUDNESS" != "" ]]
+					# print Noise Values
+					if [ -f "$NOISEGRAPHFILE" ]
 					then
-							if [[ "$NOISEGRAPHLINK" != "" ]]
-							then
-								printf "<td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
-							else
-								printf "<td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
-							fi
+						printf "<td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
+					else
+						printf "<td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
 					fi
 
 					for i in {7..11}
 					do
-							if [[ "${NEWVALUES[i]}" != "" ]]
-							then
-								printf "   <td>%s dBFS</td>\n" "${NEWVALUES[i]}" >>"$2" # print actual value with "dBFS" unit
-							else
-								printf "   <td></td>\n" >>"$2" # print an empty field
-							fi
-  				done
+						printf "<td>%s dBFS</td>\n" "${NEWVALUES[i]}" >>"$2"
+					done
+				fi
 
-					# print SpectroFile:
-					[[ -f "$OUTFILEDIR/$SPECTROFILE" ]] && printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2" || printf "   <td></td>\n" >>"$2"
+				if [ "${NEWVALUES[1]:0:1}" == "@" ]
+				then
+					# a tweet was sent. If there is info the  field 12, then put a link, otherwise simple say "yes"
+					if  [ "${NEWVALUES[12]::13}" == "https://t.co/" ]
+					then
+						# there's tweet info in this field
+						printf "<td><a href=\"%s\" target=\"_new\">yes</a></td>\n" "$(echo ${NEWVALUES[12]} | tr -d '[:cntrl:]')" >> "$2"
+					else
+						printf "<td>yes</td>\n" >> "$2"
+					fi
+                                elif (( TWEETCOL == true ))
+                                then
+                                        printf "<td></td>\n" >> "$2"
+				fi
+			else
+				# else there was no audio information.
+				# figure out if there's tweet information:
+                                if [ "${NEWVALUES[1]:0:1}" == "@" ]
+                                then
+                                        # a tweet was sent. If there is info in field 7, then put a link, otherwise simple say "yes"
+                                        if  [ "${NEWVALUES[7]::13}" == "https://t.co/" ]
+                                        then
+                                                # there's tweet info in this field
+						printf "<td><a href=\"%s\" target=\"_new\">yes</a></td>\n" "$(echo ${NEWVALUES[7]} | tr -d '[:cntrl:]')" >> "$2"
+
+                                        else
+                                                printf "<td>yes</td>\n" >> "$2"
+                                        fi
+				elif (( TWEETCOL == true ))
+				then
+					printf "<td></td>\n" >> "$2"
+                                fi
 			fi
 
-			# If there is a tweet value, then provide info and link as available
-			if [[ "$HASTWEET" == "true" ]]
+			if [[ -f "$OUTFILEDIR/$SPECTROFILE" ]] && [[ "$SPECTROFILE" != "" ]]
 			then
-				# Was there a tweet?
-				if [[ "${NEWVALUES[1]::1}" == "@" ]]
-				then
-					# Print "yes" and add a link if available
-					if [[ "${NEWVALUES[12]::13}" == "https://t.co/" ]]
-					then
-							printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[12]}")"  >>"$2"
-				  else
-							printf "   <td>yes</td>\n" >>"$2"
-					fi
-				else
-					# If there were tweet, but not for this record, then print "no"
-					printf "   <td>no</td>\n" >>"$2"
-				fi
-			# There were no tweets at all, so don't even print a field
+				printf "<td><A href=\"%s\" target=\"_new\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2"
+				LOG "SpectroFile exists, added link to table"
+			#else
+				#LOG "SpectroFile doesnt exist, no link added to table"
 			fi
 
 			printf "</tr>\n" >>"$2"
-
-	done < "$1"
+		fi
+	    fi
+	  done < "$1" # while read -r NEWLINE
+	fi
 	printf "</table>\n" >>"$2"
+	if [ "$COUNTER" == "0" ]
+	then
+		printf "<p class=\"history\">No flights in range!</p>" >>"$2"
+	fi
+        if [ "$3" == "standalone" ]
+        then
+                printf "</body>\n</html>\n" >>"$2"
+        fi
 }
 
 # Function to write the PlaneFence history file

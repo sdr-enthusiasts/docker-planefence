@@ -3,7 +3,7 @@
 
 APPNAME="planefence"
 
-echo "[$APPNAME][$(date)] PlaneFence started as an s6 serivce"
+echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -119,22 +119,19 @@ done
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 #
+# Copy the airlinecodes.txt file to the persist directory
+cp -u /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
+#
 #--------------------------------------------------------------------------------
 #
 # Now initialize Plane Alert. Note that this isn't in its own s6 runtime because it's
 # only called synchronously from planefence (if enabled)
 #
 mkdir -p /usr/share/planefence/html/plane-alert
-# If the plane-alert database exists on the persistent disk, then copy into place
-# If the plane-alert database doesn't exist on persistent disk, copy it from our repository for future reference
-if [[ -f /usr/share/planefence/persist/plane-alert-db.txt ]]
-then
-	cp -f /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert/
-elif [[ -f /usr/share/plane-alert/plane-alert-db.txt ]]
-then
-	cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
-fi
-
+# Sync the plane-alert DB with a preference for newer versions on the persist volume:
+cp -u /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert/ 2>/dev/null
+cp -u /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist 2>/dev/null
+#
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
@@ -181,6 +178,7 @@ do
                   echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
                   echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 fi
+	[ -z "$TESTTIME" ] LOOPTIME="$TESTTIME" # debug code
 	sleep $LOOPTIME
 	echo "[$APPNAME][$(date)] PlaneFence restarting now"
 done
