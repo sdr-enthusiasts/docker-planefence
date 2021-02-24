@@ -163,6 +163,8 @@ WRITEHTMLTABLE () {
 		return 1
 	fi
 
+	# debug code: echo HASTWEET=$HASTWEET and HASNOISE=$HASNOISE
+
 	# see if there is an airlinecodes.txt database
 	AIRLINECODES="/usr/share/planefence/persist/airlinecodes.txt"
 	[[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
@@ -195,13 +197,13 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 EOF
 		# If there are spectrograms for today, then also make a column for these:
-		(( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && printf "<th>Spectrogram</th>" >> "$2"
+		(( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && printf "<th>Spectrogram</th>\n" >> "$2"
 	fi
 
 	if [[ "$HASTWEET" == "true" ]]
 	then
 		# print a header for the Tweeted column
-		printf "	<th>Tweeted</th>" >> "$2"
+		printf "	<th>Tweeted</th>\n" >> "$2"
 	fi
 	printf "</tr>\n" >>"$2"
 
