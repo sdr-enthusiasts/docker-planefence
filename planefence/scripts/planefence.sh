@@ -197,7 +197,13 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 EOF
 		# If there are spectrograms for today, then also make a column for these:
-		(( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 )) && printf "<th>Spectrogram</th>\n" >> "$2"
+		if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
+		then
+				printf "<th>Spectrogram</th>\n" >> "$2"
+				SPECTROPRINT="true"
+		else
+				SPECTROPRINT="false"
+		fi
 	fi
 
 	if [[ "$HASTWEET" == "true" ]]
@@ -295,10 +301,12 @@ EOF
 					then
 							if [[ "$NOISEGRAPHLINK" != "" ]]
 							then
-								printf "<td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
+								printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
 							else
-								printf "<td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
+								printf "   <td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
 							fi
+					else
+								printf "   <td></td>\n" >>"$2" # print an empty field
 					fi
 
 					for i in {7..11}
@@ -312,7 +320,15 @@ EOF
   				done
 
 					# print SpectroFile:
-					[[ -f "$OUTFILEDIR/$SPECTROFILE" ]] && printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2" || printf "   <td></td>\n" >>"$2"
+					if [[ "$SPECTROPRINT" == "true" ]]
+					then
+							if [[ -f "$OUTFILEDIR/$SPECTROFILE" ]]
+							then
+									printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2"
+							else
+									printf "   <td></td>\n" >>"$2"
+							fi
+					fi
 			fi
 
 			# If there is a tweet value, then provide info and link as available
