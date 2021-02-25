@@ -68,10 +68,21 @@ do
 		r[12]="${r[7]}"
 		r[7]=""
 
-		printf -v l '%s,' "${r[@]}"
-		l="${l%,}"
-		echo now: $l
+
 	fi
+
+	# fix an issue where there's no audio and somehow it fills up the audio fields with -999. This has probably to do
+	# with the planefence.sh algorithm that tries to find the right time range for the spectrogram or noiseplot.
+	# It's easier to just fix it here...
+
+	for a in {8..11}
+	do
+		 [[ "${r[a]}" == "-999" ]] && r[a]=""
+	done
+
+	printf -v l '%s,' "${r[@]}"
+	l="${l%,}"
+	echo now: $l
 
 	echo $l >> "$CSV.tmp"
 
