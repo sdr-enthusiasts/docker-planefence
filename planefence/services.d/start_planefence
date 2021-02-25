@@ -172,7 +172,7 @@ do
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
 	          echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)"
-                  echo "[$APPNAME][$(date)] PlaneFence has exited... restarting in $LOOPTIME"
+                  echo "[$APPNAME][$(date)] PlaneFence run successful. Restarting in $LOOPTIME"
         else
                   echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
                   echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
