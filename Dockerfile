@@ -49,9 +49,11 @@ RUN set -x && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
+    # KEPT_PACKAGES+=(chromium) && \ # adds 400 Mb to image!
     # KEPT_PACKAGES+=(alsa-utils) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
+    echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \
 #
 # Install all these packages:
     apt-get update && \
@@ -149,7 +151,9 @@ RUN set -x && \
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
 #
 # Clean up
-    apt-get remove -y ${TEMP_PACKAGES[@]} && \
+    TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
+    echo Uninstalling $TEMP_PACKAGES && \
+    apt-get remove -y $TEMP_PACKAGES && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf \
