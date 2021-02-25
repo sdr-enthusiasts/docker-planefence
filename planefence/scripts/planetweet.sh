@@ -29,40 +29,35 @@
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-        HEADR=("Transponder ID" "Flight" "Time in range" "Time out of range" "Min. Alt." "Min. Dist." "Link" "Loudness" "Peak Audio Level")
+HEADR=("Transponder ID" "Flight" "Airline" "Time in range" "Time out of range" "Min. Alt." "Min. Dist." "Link" "Loudness" "Peak Audio Level")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
-        TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
-        YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
+TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
+YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # TWURLPATH is where we can find TWURL. This only needs to be filled in if you can't get it
 # as part of the default PATH:
-        [ ! `which twurl` ] && TWURLPATH="/root/.rbenv/shims/"
+#[ ! `which twurl` ] && TWURLPATH="/root/.rbenv/shims/"
 # SLEEPTIME determine how long (in seconds) we wait after checking and (potentially) tweeting
 # before we check again:
-        SLEEPTIME=60
+SLEEPTIME=60
 # If the VERBOSE variable is set to "1", then we'll write logs to LOGFILE.
 # If you don't want logging, simply set  the VERBOSE=1 line below to VERBOSE=0
-        VERBOSE=1
-        LOGFILE=/tmp/planetweet.log
-        TMPFILE=/tmp/planetweet.tmp
-        TWEETON=yes
+VERBOSE=1
+LOGFILE=/tmp/planetweet.log
+TMPFILE=/tmp/planetweet.tmp
+TWEETON=yes
 
-	CSVDIR=$OUTFILEDIR
-        CSVNAMEBASE=$CSVDIR/planefence-
-	CSVNAMEEXT=".csv"
-	VERBOSE=1
-	CSVTMP=/tmp/planetweet2-tmp.csv
+CSVDIR=$OUTFILEDIR
+CSVNAMEBASE=$CSVDIR/planefence-
+CSVNAMEEXT=".csv"
+VERBOSE=1
+CSVTMP=/tmp/planetweet2-tmp.csv
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
-	MINTIME=200
+MINTIME=200
 # $ATTRIB contains the attribution line at the bottom of the tweet
-        [[ "x$ATTRIB" == "x" ]] && ATTRIB="(C) 2021 KX1T - docker:kx1t/planefence"
+[[ "x$ATTRIB" == "x" ]] && ATTRIB="Planefence by kx1t - docker:kx1t/planefence"
 # -----------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------
-# Additional variables:
-	CURRENT_PID=$$
-	PROCESS_NAME=$(basename $0)
-	VERSION=3.0_docker-planefence
 # -----------------------------------------------------------------------------------
 #
 # First create an function to write to the log
@@ -80,6 +75,8 @@ then # $1 contains the date for which we want to run PlaneFence
 else
 	TWEETDATE=$(date --date="today" '+%y%m%d')
 fi
+
+[[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
 
 CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
 #CSVFILE=/tmp/planefence-200526.csv
@@ -107,28 +104,30 @@ then
 		# We will process those
 		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ]
 		then
-			# Go get the data for the record:
-			# Figure out the start and end time of the record, in seconds since epoch
-                        # Create a Tweet with the first 6 fields, each of them followed by a Newline character
-                        TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
-                        for i in {1..5}
-                        do
-                                TWEET+="${HEADR[i]}: ${RECORD[i]}%0A"
-                        done
 
-                        # If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
-                        # There is more data we could tweet, but we're a bit restricted in real estate on twitter.
-                        (( RECORD[7] < 0 )) && TWEET+="${HEADR[8]}: ${RECORD[7]} dBFS%0A${HEADR[7]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
+        [[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print "#" $2}}' $AIRLINECODES |tr -d '[:space:]')"
+			  # Go get the data for the record:
+			  # Figure out the start and end time of the record, in seconds since epoch
+        # Create a Tweet with the first 6 fields, each of them followed by a Newline character
+        TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
+        TWEET+="${HEADR[1]}: ${RECORD[1]}%0A"
+        TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
+        TWEET+="${HEADR[3]}: ${RECORD[2]}%0A"
+        TWEET+="${HEADR[4]}: ${RECORD[3]}%0A"
+        TWEET+="${HEADR[5]}: ${RECORD[4]}%0A"
+        TWEET+="${HEADR[6]}: ${RECORD[5]}%0A"
 
+        # If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
+        # There is more data we could tweet, but we're a bit restricted in real estate on twitter.
+        (( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
 
-                        # Add attribution to the tweet:
-                        TWEET+="%0A$ATTRIB%0A"
+        # Add attribution to the tweet:
+        TWEET+="%0A$ATTRIB%0A"
 
-                        # Now add the last field without title or training Newline
-                        # Reason: this is a URL that Twitter reinterprets and previews on the web
-                        # Also, the Newline at the end tends to mess with Twurl
-
-                        TWEET+="${RECORD[6]}"
+        # Now add the last field (attribution) without title or training Newline
+        # Reason: this is a URL that Twitter reinterprets and previews on the web
+        # Also, the Newline at the end tends to mess with Twurl
+        TWEET+="${RECORD[6]}"
 
 			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 

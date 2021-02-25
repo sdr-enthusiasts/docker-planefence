@@ -166,7 +166,7 @@ WRITEHTMLTABLE () {
 	# debug code: echo HASTWEET=$HASTWEET and HASNOISE=$HASNOISE
 
 	# see if there is an airlinecodes.txt database
-	AIRLINECODES="/usr/share/planefence/persist/airlinecodes.txt"
+
 	[[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
 
 	# Now write the HTML table header
