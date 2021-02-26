@@ -79,7 +79,7 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 # This one-time action can be obsoleted once all users have moved over.
 [[ -f /run/planefence/.twurlrc ]] && mv -n /run/planefence/.twurlrc /usr/share/planefence/persist
 # Now update the .twurlrc in /root if there is a newer version in the persist directory
-[[ -f /usr/share/planefence/persist/.twurlrc ]] cp -u /usr/share/planefence/persist/.twurlrc /root
+[[ -f /usr/share/planefence/persist/.twurlrc ]] && cp -u /usr/share/planefence/persist/.twurlrc /root
 # If there's still nothing in the persist directory or it appears out of date, back up the .twurlrc from /root to there
 [[ -f /root/.twurlrc ]] && cp -n /root/.twurlrc /usr/share/planefence/persist
 #
