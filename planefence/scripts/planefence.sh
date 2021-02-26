@@ -253,14 +253,20 @@ EOF
 					# If no graph already exists, create one:
 					if [[ ! -f "$NOISEGRAPHFILE" ]]
 					then
-						# set some parameters for the graph:
-						TITLE="Noise plot for ${NEWVALUES[1]#@} at ${NEWVALUES[3]}"
-						STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
-						ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
-						# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
-						(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-						#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
-						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+							# set some parameters for the graph:
+							TITLE="Noise plot for ${NEWVALUES[1]#@} at ${NEWVALUES[3]}"
+							STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
+							ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
+							# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
+							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
+							# check if there are any noise samples
+							if [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+							then
+								#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
+								gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+							else
+							  NOISEGRAPHLINK=""
+							fi
 					fi
 			fi
 
