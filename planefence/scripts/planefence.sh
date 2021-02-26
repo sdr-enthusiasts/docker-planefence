@@ -633,27 +633,6 @@ then
 
 fi
 
-
-		# clear out any old output files:
-		rm -f /tmp/pf-out-filtered.tmp
-
-		# loop through the existing records and write everything but entries that are within $MINTIME:
-		while IFS= read -ra a
-		do
-				IFS=, read -ra b <<< "$a"
-				# Identify items to keep:
-				# - ICAO (field 0) is different, OR
-				# - starttime_new_record - endtime_looped_record > MINTIME
-				# else - toss the new record
-				st=$(date -d "${t[2]}" +%s)
-				et=$(date -d "{b[3]}" +%s)
-				if [[ "${t[0]}" != "${b[0]}" ]] || (( st - et > MINTIME )) || (( st == et ))
-				then
-
-
-
-done < "$OUTFILECSV
-
 #----end implementation of ignore list---#
 # And see if we need to invoke PlaneTweet:
 if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
