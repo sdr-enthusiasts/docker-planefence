@@ -99,6 +99,7 @@ RUN set -x && \
     pushd /planefence && \
        cp scripts/* /usr/share/planefence && \
        cp jscript/* /usr/share/planefence/stage && \
+       cp planefence.config /usr/share/planefence/stage && \
        cp services.d/start_planefence /etc/services.d/planefence/run && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
