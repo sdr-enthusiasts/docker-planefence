@@ -557,9 +557,102 @@ fi
 #Dirty fix -- sometimes the CSV file needs fixing
 $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
-#---insert here implementation of ignore list----#
+
+# Ignore list -- first clean up the list to ensure there are no empty lines
+sed -i '/^$/d' "$IGNORELIST"
+# now apply the filter
+LINESFILTERED=$(grep -i -f "$IGNORELIST" "$OUTFILECSV" 2>/dev/null | wc -l)
+if (( LINESFILTERED > 0 ))
+then
+		grep -v -i -f "$IGNORELIST" "$OUTFILECSV" > /tmp/pf-out.tmp
+		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
+fi
+
+# rewrite LINESFILTERED to file
+[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
+echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
+
+# Now see is MINTIME is set. If so, we need to filter duplicates
+# We will do it all in memory - load OUTFILECSV into an array, process the array, and write back to disk:
+if [[ -f "$OUTFILECSV" ]] && [[ "$MINTIME" -gt 0 ]]
+then
+
+		# read the entire OUTFILECSV into memory: line by line into 'l[]'
+		unset l
+		i=0
+		while IFS= read -r l[i]
+		do
+			(( i++ ))
+		done < "$OUTFILECSV"
+
+		# if the file was empty, stop processing
+
+		# $l[] contains all the OUTFILECSV lines. $i contains the total line count
+		# Loop through them in reverse order - skip the top one as the 1st entry is always unique
+		# Note - if the file is empty or has only 1 element, then the initial value of j (=i-1) = -1 or 0 and the
+		# loop will be skipped. This is intentional behavior.
+
+		for (( j=$i-1; j>0; j-- ))
+		do
+				IFS=, read -ra r <<< "${l[j]}"
+				# $l now contains the entire line, $r contains the line in records. Start time is in r[2]. End time is in r[3]
+				# We now need to filter out any that are too close in time
+
+				rst=$(date +d "${r[2]}" +%s)	# get the record's start time in seconds (rst= r start time)
+				icao="${r[0]}"								# get the record's icao address
+				for (( k=j-1; k>=0; k-- ))
+				do
+						# if the line is empty, continue, else read in the line
+						[[ -z "${l[k]}" ]] && continue
+						IFS=, read -ra s <<< "${l[k]}"
+
+						# skip/continue if ICAO don't match
+						[[ "${s[0]}" == "$icao" ]] && continue
+
+						# stop processing this loop if the time diff is larger
+						tet=$(date +d "${s[3]}" +%s) 	# (tet= test's end time. Didn't want to use 'set')
+						(( rst - tet > MINTIME )) && break
+
+						# If we're still here, then the ICAO's match and the time is within the MINTIME boundaries.
+						# So we take action and empty out the entire string
+						l[k]=""
+				done
+		done
+
+		# Now, the array in memory contains the records, with empty lines for the dupes
+		# Write back all lines except for the empty ones:
+		rm -f /tmp/pf-out.tmp
+		for ((a=0; a<i; a++)
+		do
+		 	 [[ -z "${l[a]}" ]] && echo "${l[a]}" >> /tmp/pf-out.tmp
+		done
+		mv /tmp/pf-out.tmp "$OUTFILECSV"
+
+		# clean up some memory
+		unset l r s i j k a rst tet icao
+
+fi
 
 
+		# clear out any old output files:
+		rm -f /tmp/pf-out-filtered.tmp
+
+		# loop through the existing records and write everything but entries that are within $MINTIME:
+		while IFS= read -ra a
+		do
+				IFS=, read -ra b <<< "$a"
+				# Identify items to keep:
+				# - ICAO (field 0) is different, OR
+				# - starttime_new_record - endtime_looped_record > MINTIME
+				# else - toss the new record
+				st=$(date -d "${t[2]}" +%s)
+				et=$(date -d "{b[3]}" +%s)
+				if [[ "${t[0]}" != "${b[0]}" ]] || (( st - et > MINTIME )) || (( st == et ))
+				then
+
+
+
+done < "$OUTFILECSV
 
 #----end implementation of ignore list---#
 # And see if we need to invoke PlaneTweet:
@@ -698,6 +791,12 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 			   <li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 EOF
 
+if [[ -f "/run/planefence/filtered-$FENCEDATE" ]]
+then
+	 	[[ -f "$IGNORELIST" ]] && [[ ! -z "$MINTIME" ]] printf "<li> %s entries were filtered out today because of an ignore-list or because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME"
+		[[ ! -f "$IGNORELIST" ]] && [[ ! -z "$MINTIME" ]] printf "<li> %d entries were filtered out today because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME"
+		[[ -f "$IGNORELIST" ]] && [[ -z "$MINTIME" ]] printf "<li> %d entries were filtered out today because of an ignore list\n" "$(</run/planefence/filtered-$FENCEDATE)"
+fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 			</ul>
