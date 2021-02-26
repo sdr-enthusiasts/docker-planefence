@@ -64,7 +64,7 @@ do
 			if [[ "${r[i]::13}" == "https://t.co/" ]]
 			then
 				r[12]=${r[i]}
-				for ((j=$i; j<12, j++))
+				for ((j=i; j<12, j++))
 				do
 						r[j]=""
 				done

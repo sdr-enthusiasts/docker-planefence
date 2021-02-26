@@ -592,7 +592,7 @@ then
 		# Note - if the file is empty or has only 1 element, then the initial value of j (=i-1) = -1 or 0 and the
 		# loop will be skipped. This is intentional behavior.
 
-		for (( j=$i-1; j>0; j-- ))
+		for (( j=i-1; j>0; j-- ))
 		do
 				IFS=, read -ra r <<< "${l[j]}"
 				# $l now contains the entire line, $r contains the line in records. Start time is in r[2]. End time is in r[3]
