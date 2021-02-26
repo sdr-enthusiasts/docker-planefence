@@ -58,15 +58,18 @@ do
 	fi
 
 	# there are less than 13 fields, then it's possible we have to relocate the twitter ID
-	# which may have been written into field 7
-	if [[ "${r[7]::13}" == "https://t.co/" ]]
-	then
-		r[8]=""
-		r[9]=""
-		r[10]=""
-		r[11]=""
-		r[12]="${r[7]}"
-		r[7]=""
+	# which may have been written into field 7-11
+	for i in {7..11}
+	do
+			if [[ "${r[i]::13}" == "https://t.co/" ]]
+			then
+				r[12]=${r[i]}
+				for ((j=$i; j<12, j++))
+				do
+						r[j]=""
+				done
+			fi
+	done
 
 
 	fi

@@ -259,8 +259,8 @@ EOF
 						ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
 						# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 						(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-
-						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+						#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
+						gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 					fi
 			fi
 
@@ -551,6 +551,11 @@ fi
 #Dirty fix -- sometimes the CSV file needs fixing
 $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
+#---insert here implementation of ignore list----#
+
+
+
+#----end implementation of ignore list---#
 # And see if we need to invoke PlaneTweet:
 if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
 then

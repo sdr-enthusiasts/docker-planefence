@@ -22,7 +22,7 @@ set key right top
 set xtics rotate
 
 # set y2tics 5 nomirror tc ls 6
-# set y2label 'Loudblness (dB)' tc ls 6
+# set y2label 'Loudness (dB)' tc ls 6
 
 set style rect fc lt -1 fs solid 0.15 noborder
 set obj rect from (start + offset), graph 0 to (end + offset), graph 1
@@ -45,4 +45,3 @@ set obj rect from (start + offset), graph 0 to (end + offset), graph 1
 #	'' using ($1 - offset):4 with lines ls 3 title '5-min Avg',\
 #	'' using ($1 - offset):5 with lines ls 4 title '10-min Avg',\
 #	'' using ($1 - offset):6 with lines ls 5 title '1-hr Avg'\
-
