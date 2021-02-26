@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -255,10 +256,10 @@ EOF
 					then
 							# set some parameters for the graph:
 							TITLE="Noise plot for ${NEWVALUES[1]#@} at ${NEWVALUES[3]}"
-							STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
-							ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
+							STARTTIME=$(date -d "${NEWVALUES[2]}" +%s)
+							ENDTIME=$(date -d "${NEWVALUES[3]}" +%s)
 							# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
-							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
+							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
 							# check if there are any noise samples
 							if [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
 							then
@@ -555,7 +556,7 @@ else
 fi
 
 #Dirty fix -- sometimes the CSV file needs fixing
-$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
+#$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
@@ -572,9 +573,9 @@ fi
 [[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
-# Now see is MINTIME is set. If so, we need to filter duplicates
+# Now see is IGNORETIME is set. If so, we need to filter duplicates
 # We will do it all in memory - load OUTFILECSV into an array, process the array, and write back to disk:
-if [[ -f "$OUTFILECSV" ]] && [[ "$MINTIME" -gt 0 ]]
+if [[ -f "$OUTFILECSV" ]] && [[ "$IGNORETIME" -gt 0 ]]
 then
 
 		# read the entire OUTFILECSV into memory: line by line into 'l[]'
@@ -594,26 +595,30 @@ then
 
 		for (( j=i-1; j>0; j-- ))
 		do
+				unset r
 				IFS=, read -ra r <<< "${l[j]}"
 				# $l now contains the entire line, $r contains the line in records. Start time is in r[2]. End time is in r[3]
 				# We now need to filter out any that are too close in time
-
-				rst=$(date +d "${r[2]}" +%s)	# get the record's start time in seconds (rst= r start time)
+				echo r: ${r[@]}
+        echo rst: date -d "${r[2]}" +%s
+				rst=$(date -d "${r[2]}" +%s)	# get the record's start time in seconds (rst= r start time)
 				icao="${r[0]}"								# get the record's icao address
 				for (( k=j-1; k>=0; k-- ))
 				do
 						# if the line is empty, continue, else read in the line
 						[[ -z "${l[k]}" ]] && continue
+						unset s
 						IFS=, read -ra s <<< "${l[k]}"
 
 						# skip/continue if ICAO don't match
-						[[ "${s[0]}" == "$icao" ]] && continue
+						[[ "${s[0]}" != "$icao" ]] && continue
 
 						# stop processing this loop if the time diff is larger
-						tet=$(date +d "${s[3]}" +%s) 	# (tet= test's end time. Didn't want to use 'set')
-						(( rst - tet > MINTIME )) && break
+						tet=$(date -d "${s[3]}" +%s) 	# (tet= test's end time. Didn't want to use 'set')
+						echo tet: date -d "${s[3]}" +%s
+						(( rst - tet > IGNORETIME )) && break
 
-						# If we're still here, then the ICAO's match and the time is within the MINTIME boundaries.
+						# If we're still here, then the ICAO's match and the time is within the IGNORETIME boundaries.
 						# So we take action and empty out the entire string
 						l[k]=""
 				done
@@ -622,11 +627,12 @@ then
 		# Now, the array in memory contains the records, with empty lines for the dupes
 		# Write back all lines except for the empty ones:
 		rm -f /tmp/pf-out.tmp
-		for ((a=0; a<i; a++)
+		for ((a=0; a<i; a++))
 		do
 		 	 [[ -z "${l[a]}" ]] && echo "${l[a]}" >> /tmp/pf-out.tmp
 		done
-		mv /tmp/pf-out.tmp "$OUTFILECSV"
+	#	mv /tmp/pf-out.tmp "$OUTFILECSV"
+	mv -f /tmp/pf-out.tmp /usr/share/planefence/persist
 
 		# clean up some memory
 		unset l r s i j k a rst tet icao
@@ -772,9 +778,9 @@ EOF
 
 if [[ -f "/run/planefence/filtered-$FENCEDATE" ]]
 then
-	 	[[ -f "$IGNORELIST" ]] && [[ ! -z "$MINTIME" ]] printf "<li> %s entries were filtered out today because of an ignore-list or because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME"
-		[[ ! -f "$IGNORELIST" ]] && [[ ! -z "$MINTIME" ]] printf "<li> %d entries were filtered out today because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME"
-		[[ -f "$IGNORELIST" ]] && [[ -z "$MINTIME" ]] printf "<li> %d entries were filtered out today because of an ignore list\n" "$(</run/planefence/filtered-$FENCEDATE)"
+	 	[[ -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %s entries were filtered out today because of an ignore-list or because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
+		[[ ! -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
+		[[ -f "$IGNORELIST" ]] && [[ -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because of an ignore list\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
 fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"

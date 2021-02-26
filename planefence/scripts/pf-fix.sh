@@ -63,16 +63,13 @@ do
 	do
 			if [[ "${r[i]::13}" == "https://t.co/" ]]
 			then
-				r[12]=${r[i]}
-				for ((j=i; j<12, j++))
+				r[12]="${r[i]}"
+				for ((j=i; j<12; j++))
 				do
 						r[j]=""
 				done
 			fi
 	done
-
-
-	fi
 
 	# fix an issue where there's no audio and somehow it fills up the audio fields with -999. This has probably to do
 	# with the planefence.sh algorithm that tries to find the right time range for the spectrogram or noiseplot.
