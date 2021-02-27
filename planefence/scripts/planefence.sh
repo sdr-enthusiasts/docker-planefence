@@ -157,7 +157,7 @@ WRITEHTMLTABLE () {
 		do
 			IFS=, read -ra RECORD <<< "$NEWLINE"
 			[[ "${RECORD[1]::1}" == "@" ]] && HASTWEET="true"
-			[[ "${RECORD[7]}" != "" ]] && HASNOISE="true"
+			[[ "${RECORD[8]}" != "" ]] && HASNOISE="true"
 		done < "$1"
 	else
 		# Return silently without writing the table as there's no data to be written
