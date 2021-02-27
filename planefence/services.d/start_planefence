@@ -24,8 +24,7 @@ echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
-[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs)
-cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs) || cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
 [[ "$PF_INTERVAL" != "" ]] && LOOPTIME=$PF_INTERVAL || LOOPTIME=120
