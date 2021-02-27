@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+#set -x
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -573,71 +573,83 @@ fi
 [[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
+# if IGNOREDUPES is not empty then remove duplicates
+if [[ "$IGNOREDUPES" != "" ]]
+then
+	i=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
+	if (( i>0 ))
+	then
+		awk -F',' '!seen[$1 $2]++' "$OUTFILECSV" > /tmp/pf-out.tmp
+		(( LINESFILTERED+=i ))
+		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
+	fi
+fi
+
 # Now see is IGNORETIME is set. If so, we need to filter duplicates
 # We will do it all in memory - load OUTFILECSV into an array, process the array, and write back to disk:
-if [[ -f "$OUTFILECSV" ]] && [[ "$IGNORETIME" -gt 0 ]]
-then
-
-		# read the entire OUTFILECSV into memory: line by line into 'l[]'
-		unset l
-		i=0
-		while IFS= read -r l[i]
-		do
-			(( i++ ))
-		done < "$OUTFILECSV"
-
-		# if the file was empty, stop processing
-
-		# $l[] contains all the OUTFILECSV lines. $i contains the total line count
-		# Loop through them in reverse order - skip the top one as the 1st entry is always unique
-		# Note - if the file is empty or has only 1 element, then the initial value of j (=i-1) = -1 or 0 and the
-		# loop will be skipped. This is intentional behavior.
-
-		for (( j=i-1; j>0; j-- ))
-		do
-				unset r
-				IFS=, read -ra r <<< "${l[j]}"
-				# $l now contains the entire line, $r contains the line in records. Start time is in r[2]. End time is in r[3]
-				# We now need to filter out any that are too close in time
-				echo r: ${r[@]}
-        echo rst: date -d "${r[2]}" +%s
-				rst=$(date -d "${r[2]}" +%s)	# get the record's start time in seconds (rst= r start time)
-				icao="${r[0]}"								# get the record's icao address
-				for (( k=j-1; k>=0; k-- ))
-				do
-						# if the line is empty, continue, else read in the line
-						[[ -z "${l[k]}" ]] && continue
-						unset s
-						IFS=, read -ra s <<< "${l[k]}"
-
-						# skip/continue if ICAO don't match
-						[[ "${s[0]}" != "$icao" ]] && continue
-
-						# stop processing this loop if the time diff is larger
-						tet=$(date -d "${s[3]}" +%s) 	# (tet= test's end time. Didn't want to use 'set')
-						echo tet: date -d "${s[3]}" +%s
-						(( rst - tet > IGNORETIME )) && break
-
-						# If we're still here, then the ICAO's match and the time is within the IGNORETIME boundaries.
-						# So we take action and empty out the entire string
-						l[k]=""
-				done
-		done
-
-		# Now, the array in memory contains the records, with empty lines for the dupes
-		# Write back all lines except for the empty ones:
-		rm -f /tmp/pf-out.tmp
-		for ((a=0; a<i; a++))
-		do
-		 	 [[ -z "${l[a]}" ]] && echo "${l[a]}" >> /tmp/pf-out.tmp
-		done
-	#	mv /tmp/pf-out.tmp "$OUTFILECSV"
-	mv -f /tmp/pf-out.tmp /usr/share/planefence/persist
-
-		# clean up some memory
-		unset l r s i j k a rst tet icao
-
-fi
+#if [[ -f "$OUTFILECSV" ]] && [[ "$IGNORETIME" -gt 0 ]]
+#then
+#
+#		# read the entire OUTFILECSV into memory: line by line into 'l[]'
+#		unset l
+#		i=0
+#		while IFS= read -r l[i]
+#		do
+#			(( i++ ))
+#		done < "$OUTFILECSV"
+#
+#		# if the file was empty, stop processing
+#
+#		# $l[] contains all the OUTFILECSV lines. $i contains the total line count
+#		# Loop through them in reverse order - skip the top one as the 1st entry is always unique
+#		# Note - if the file is empty or has only 1 element, then the initial value of j (=i-1) = -1 or 0 and the
+#		# loop will be skipped. This is intentional behavior.
+#
+#		for (( j=i-1; j>0; j-- ))
+#		do
+#				unset r
+#				IFS=, read -ra r <<< "${l[j]}"
+#				# $l now contains the entire line, $r contains the line in records. Start time is in r[2]. End time is in r[3]
+#				# We now need to filter out any that are too close in time
+#				echo r: ${r[@]}
+#        echo rst: date -d "${r[2]}" +%s
+#				rst=$(date -d "${r[2]}" +%s)	# get the record's start time in seconds (rst= r start time)
+#				icao="${r[0]}"								# get the record's icao address
+#				for (( k=j-1; k>=0; k-- ))
+#				do
+#						# if the line is empty, continue, else read in the line
+#						[[ -z "${l[k]}" ]] && continue
+#						unset s
+#						IFS=, read -ra s <<< "${l[k]}"
+#
+#						# skip/continue if ICAO don't match
+#						[[ "${s[0]}" != "$icao" ]] && continue
+#
+#						# stop processing this loop if the time diff is larger
+#						tet=$(date -d "${s[3]}" +%s) 	# (tet= test's end time. Didn't want to use 'set')
+#						echo tet: date -d "${s[3]}" +%s
+#						(( rst - tet > IGNORETIME )) && break
+#
+#						# If we're still here, then the ICAO's match and the time is within the IGNORETIME boundaries.
+#						# So we take action and empty out the entire string
+#						l[k]=""
+#				done
+#		done
+#
+#		# Now, the array in memory contains the records, with empty lines for the dupes
+#		# Write back all lines except for the empty ones:
+#		rm -f /tmp/pf-out.tmp
+#		for ((a=0; a<i; a++))
+#		do
+#		 	 [[ -z "${l[a]}" ]] && echo "${l[a]}" >> /tmp/pf-out.tmp
+#		done
+#	#	mv /tmp/pf-out.tmp "$OUTFILECSV"
+#	mv -f /tmp/pf-out.tmp /usr/share/planefence/persist
+#
+#		# clean up some memory
+#		unset l r s i j k a rst tet icao
+#
+#fi
 
 #----end implementation of ignore list---#
 # And see if we need to invoke PlaneTweet:

@@ -52,7 +52,7 @@ CLEANUP ()
       tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
       mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
     fi
-
+    sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
 
