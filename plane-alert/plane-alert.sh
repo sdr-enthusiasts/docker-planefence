@@ -39,9 +39,10 @@
 function cleanup
 {
 	# do some final clean-up before exiting - this funciton is called by a trap on receiving the EXIT signal
-	#rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
+	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
 	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
+	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv
 	[ "$TESTING" == "true" ] && echo 11. Finished.
 }
 #
@@ -81,41 +82,16 @@ grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep
 		> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 [ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 
-# If there's nothing in $TMPDIR/plalert.out.tmp then write a standard file and exit as there's nothing to be done...
-#if [ "$(cat $TMPDIR/plalert.out.tmp | wc -l)" == "0" ]
-#then
-#	cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
-#	echo "No new planes from the alert file have been detected!<br />" >> $TMPDIR/plalert-index.tmp
-#	cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
 
-#	#Now the basics have been written, we need to replace some of the variables in the template with real data:
-#	sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
-#	sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
-#	sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
-#	sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
-#	sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
-#	sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
-
-#	#Finally, put the temp index into its place:
-#	mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
-#	# And exit outa here!
-#	exit 0
-#fi
-
-# Create a backup of $OUTFILE so we can compare later on. Ignore any complaints if there's no original $OUTFILE
-for a in ${OUTFILE%.*}*.csv
-do
-		cp -f "$a" "$a".old >/dev/null 2>/dev/null
-done
+# Create a backup of $OUTFILE so we can compare later on.
+touch "$OUTFILE" # ensure it always exists, even is there's no $OUTFILE
+cp -f "$OUTFILE" /tmp/pa-old.csv
 
 # Process the intermediate file:
-while read -r line
+while IFS= read -r line
 do
 		[ "$TESTING" == "true" ] && echo 3. Parsing line $line
 		IFS=',' read -ra plalertplane <<< "$line"		# load a single line into an array called $plalertplane
-
-		# Determine the real name of the output file and write it to $OUTWRITEFILE:
-		[ "$OUTAPPDATE" == "true" ] && OUTWRITEFILE="${OUTFILE%.*}"-"$(date -d "${plalertplane[4]}" +%Y-%m-%d)".csv || OUTWRITEFILE="$OUTFILE"
 
 		# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
 		printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
@@ -128,56 +104,40 @@ do
 				"${plalertplane[0]}"	`# ICAO for insertion into ADSBExchange link`\
 				"$(date -d "${plalertplane[4]}" +%Y-%m-%d)"	`# reformatted date for insertion into ADSBExchange link`\
 				"$MAPZOOM"					  `# zoom factor of the map`\
-			>> "$OUTWRITEFILE"			`# Append this line to $OUTWRITEFILE`
-
-		[ -f "$OUTWRITEFILE".old ] && cat "$OUTWRITEFILE" "$OUTWRITEFILE".old > $TMPDIR/plalert2.out.tmp || mv -f "$OUTWRITEFILE" $TMPDIR/plalert2.out.tmp
-		sort -t',' -k5,5  -k1,1 -u -o "$OUTWRITEFILE" $TMPDIR/plalert2.out.tmp	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
-
-	        [ "$TESTING" == "true" ] && ( echo 5. $OUTWRITEFILE contains $(wc -l < $OUTWRITEFILE) lines with this: ; cat $OUTWRITEFILE )
+			>> "$OUTFILE"			`# Append this line to $OUTWRITEFILE`
 
 done < $TMPDIR/plalert.out.tmp
-
+sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
+mv -f /tmp/pa-new.csv "$OUTFILE"
 # the log files are now done, but we want to figure out what is new
 # so create some diff files
-
-# first remove any left over diff files
-rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
-
-# now create the new diff files:
-for a in ${OUTFILE%.*}*.csv
-do
-		if [ -f "$a".old ]
-		then
-			diff "$a" "$a".old	`# determine the difference between the current and the old $OUTWRITEFILE` \
-				| grep '^[<>]' 		`# get only the line that we really want; however, there are still some unwanted characters at the beginning` \
-				| sed -e 's/^[< ]*//'   `# strip off the unwanted characters` \
-			     >> "$a".diff	`# write to a file with ONLY the new lines added so we can do extra stuff with them`
-		else
-			cp "$a" "$a".diff
-		fi
-done
-
+rm -f /tmp/pa-diff.csv
+touch /tmp/pa-diff.csv
+#  compare the new csv file ...to the old one...     only look at lines with '>' and then strip off '> ' from them
+diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//' >/tmp/pa-diff.csv
 
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
-# First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
-ERRORCOUNT=0
+# but only if there are actually newly acquired records
+#
+# Let's tweet them, if there are any, and if twitter is enabled and set up:
+if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" == "true" ]] && [[ -f "$TWIDFILE" ]]
+then
 
-while read -r line
-do
-			IFS=',' read -ra plalertplane <<< "$line"
-			# check if we want to tweet them:
-	if [ "$TWITTER" == "true" ] && [ -f "$TWIDFILE" ]
-	then
+# First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
+		ERRORCOUNT=0
+		while IFS= read -r line
+		do
+				IFS=',' read -ra plalertplane <<< "$line"
 				# First build the text of the tweet: reminder:
 				# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 				# 8-callsign,9-adsbx_url
 				TWITTEXT="Aircraft of interest detected:\n"
 				TWITTEXT+="ICAO: ${plalertplane[0]} Tail: ${plalertplane[1]} Flight: ${plalertplane[8]}\n"
-	      TWITTEXT+="Owner: ${plalertplane[2]}\n"
-        TWITTEXT+="Aircraft: ${plalertplane[3]}\n"
-	      TWITTEXT+="First heard: ${plalertplane[4]} ${plalertplane[5]}\n"
-        TWITTEXT+="$(sed 's|/|\\/|g' <<< "${plalertplane[9]}")"
+	     	TWITTEXT+="Owner: ${plalertplane[2]}\n"
+      	TWITTEXT+="Aircraft: ${plalertplane[3]}\n"
+	     	TWITTEXT+="First heard: ${plalertplane[4]} ${plalertplane[5]}\n"
+      	TWITTEXT+="$(sed 's|/|\\/|g' <<< "${plalertplane[9]}")"
 
 		    [ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
         [ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
@@ -185,40 +145,32 @@ do
 				# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
 				while IFS= read -r twitterid
 				do
-					# tweet and add the processed output to $result:
-					[[ "$TESTING" == "true" ]] && echo 8. Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
-					[[ "$twitterid" == "" ]] && continue
-					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
- 					processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
-					if [[ "$processedresult" != "" ]]
-					then
-						echo "9. Tweet error: $rawresult"
-						echo "Diagnostics:"
-						echo "Error: $processedresult"
-						echo "Twitter ID: $twitterid"
-						echo "Text: $TWITTEXT"
-						(( ERRORCOUNT++ ))
-					else
-						echo "Plane-alert tweet for ${plalertplane[0]} sent successfully to $twitterid"
-					fi
+						# tweet and add the processed output to $result:
+						[[ "$TESTING" == "true" ]] && echo 8. Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+						[[ "$twitterid" == "" ]] && continue
+						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+ 						processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+						if [[ "$processedresult" != "" ]]
+						then
+								echo "9. Tweet error: $rawresult"
+								echo "Diagnostics:"
+								echo "Error: $processedresult"
+								echo "Twitter ID: $twitterid"
+								echo "Text: $TWITTEXT"
+								(( ERRORCOUNT++ ))
+						else
+								echo "Plane-alert tweet for ${plalertplane[0]} sent successfully to $twitterid"
+						fi
 				done < "$TWIDFILE"
-	else
-		  if [ "$TESTING" == "true" ]
-		  then
-					echo 10. Skipped tweeting.
-					echo \$TWITTER is $TWITTER and must be \"true\"
-					[ -f "$TWURL" ] && echo $TWURL exists || echo $TWURL doesnt exist! Error!
-					[ -f "$TWIDFILE" ] && echo $TWIDFILE exists || echo $TWIDFILE doesnt exist! Error!
-		  fi
-	fi
-done < <(cat ${OUTFILE%.*}*.diff)
+		done < /tmp/pa-diff.csv
+fi
 
 (( ERRORCOUNT > 0 )) && echo There were $ERRORCOUNT tweet errors.
 
 # Now everything is in place, let's update the website
 
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
-cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
+#cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
 COUNTER=1
 while read -r line
@@ -238,7 +190,7 @@ do
 				printf "    %s%s%s\n" "<td>" "<a href=\"${plalertplane[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
 				printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 		fi
-done < $WEBDIR/$CONCATLIST
+done < "$OUTFILE"
 cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
 
 # Now the basics have been written, we need to replace some of the variables in the template with real data:

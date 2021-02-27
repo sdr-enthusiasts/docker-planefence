@@ -39,7 +39,7 @@
 function cleanup
 {
 	# do some final clean-up before exiting - this funciton is called by a trap on receiving the EXIT signal
-	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
+	#rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
 	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
 	[ "$TESTING" == "true" ] && echo 11. Finished.
@@ -103,11 +103,13 @@ grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep
 #fi
 
 # Create a backup of $OUTFILE so we can compare later on. Ignore any complaints if there's no original $OUTFILE
-
-cat ${OUTFILE%.*}*.csv > /tmp/pa-old.csv 2>/dev/null
+for a in ${OUTFILE%.*}*.csv
+do
+		cp -f "$a" "$a".old >/dev/null 2>/dev/null
+done
 
 # Process the intermediate file:
-while IFS= read -r line
+while read -r line
 do
 		[ "$TESTING" == "true" ] && echo 3. Parsing line $line
 		IFS=',' read -ra plalertplane <<< "$line"		# load a single line into an array called $plalertplane
@@ -161,7 +163,7 @@ done
 # First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
 ERRORCOUNT=0
 
-while IFS= read -r line
+while read -r line
 do
 			IFS=',' read -ra plalertplane <<< "$line"
 			# check if we want to tweet them:
@@ -209,7 +211,7 @@ do
 					[ -f "$TWIDFILE" ] && echo $TWIDFILE exists || echo $TWIDFILE doesnt exist! Error!
 		  fi
 	fi
-done < "${OUTFILE%.*}*.diff"
+done < <(cat ${OUTFILE%.*}*.diff)
 
 (( ERRORCOUNT > 0 )) && echo There were $ERRORCOUNT tweet errors.
 
