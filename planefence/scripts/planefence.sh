@@ -261,7 +261,7 @@ EOF
 							# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
 							# check if there are any noise samples
-							if [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+							if [[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
 							then
 								#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
 								gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
@@ -278,7 +278,7 @@ EOF
 					STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
 					ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
 					(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-					SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png
+					[[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png || SPECTROFILE=""
 					# if it has a weird date, discard it because it wont exist.
 					# otherwise, go get it from the remote server:
 					# debug code: echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
@@ -560,7 +560,7 @@ fi
 
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
-sed -i '/^$/d' "$IGNORELIST"
+sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
 # now apply the filter
 LINESFILTERED=$(grep -i -f "$IGNORELIST" "$OUTFILECSV" 2>/dev/null | wc -l)
 if (( LINESFILTERED > 0 ))
@@ -576,13 +576,16 @@ echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 # if IGNOREDUPES is not empty then remove duplicates
 if [[ "$IGNOREDUPES" != "" ]]
 then
-	i=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
+	LINESFILTERED=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
 	then
 		awk -F',' '!seen[$1 $2]++' "$OUTFILECSV" > /tmp/pf-out.tmp
-		(( LINESFILTERED+=i ))
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
+	# rewrite LINESFILTERED to file
+	[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
+	echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
+
 fi
 
 # Now see is IGNORETIME is set. If so, we need to filter duplicates
