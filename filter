@@ -1,0 +1,2 @@
+grep -v -i -f ~/.planefence/planefence-ignore.txt /opt/planefence/Volumes/html/planefence-210225.csv
+

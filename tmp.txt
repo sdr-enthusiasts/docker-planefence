@@ -1,0 +1,6 @@
+a=123
+b="hello world"
+c="one more variable"
+   d=1234
+# this should be skipped
+   # skip this one too
