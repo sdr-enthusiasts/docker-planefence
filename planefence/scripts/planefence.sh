@@ -234,7 +234,7 @@ EOF
 			# Step 3/5. If there's noise data, get a background color:
 			# (only when we are printing noise data, and there's actual data in this record)
 			LOUDNESS=""
-			if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
+			if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[9]}" != "" ]]
 			then
 				(( LOUDNESS = NEWVALUES[7] - NEWVALUES[11] ))
 				BGCOLOR="$RED"
@@ -345,11 +345,7 @@ EOF
 				if [[ "${NEWVALUES[1]::1}" == "@" ]]
 				then
 					# Print "yes" and add a link if available
-<<<<<<< HEAD
 					if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
-=======
-					if [[ "${NEWVALUES[-12]::13}" == "https://t.co/" ]]
->>>>>>> 72fa4a87bdc6992ccb05c735f8615a57f2bc5a35
 					then
 							printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >>"$2"
 				  else
