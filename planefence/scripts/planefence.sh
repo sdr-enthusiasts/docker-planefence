@@ -345,9 +345,9 @@ EOF
 				if [[ "${NEWVALUES[1]::1}" == "@" ]]
 				then
 					# Print "yes" and add a link if available
-					if [[ "${NEWVALUES[12]::13}" == "https://t.co/" ]]
+					if [[ "${NEWVALUES[-12]::13}" == "https://t.co/" ]]
 					then
-							printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[12]}")"  >>"$2"
+							printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >>"$2"
 				  else
 							printf "   <td>yes</td>\n" >>"$2"
 					fi
