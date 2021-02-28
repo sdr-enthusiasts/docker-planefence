@@ -260,8 +260,9 @@ EOF
 							ENDTIME=$(date -d "${NEWVALUES[3]}" +%s)
 							# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
+							NOWTIME=$(date +%s)
 							# check if there are any noise samples
-							if [[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+							if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
 							then
 								#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
 								gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
@@ -556,7 +557,7 @@ else
 fi
 
 #Dirty fix -- sometimes the CSV file needs fixing
-#$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
+$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
