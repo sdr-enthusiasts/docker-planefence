@@ -57,6 +57,38 @@ CSVTMP=/tmp/planetweet2-tmp.csv
 MINTIME=200
 # $ATTRIB contains the attribution line at the bottom of the tweet
 [[ "x$ATTRIB" == "x" ]] && ATTRIB="Planefence by kx1t - docker:kx1t/planefence"
+
+case $PF_DISTUNIT in
+	nauticalmile)
+		DISTUNIT="nm"
+	;;
+
+	kilometer)
+		DISTUNIT="km"
+	;;
+
+	mile)
+		DISTUNIT="mile"
+	;;
+
+	meter)
+		DISTUNIT="meter"
+	;;
+
+esac
+
+case $PF_ALTUNIT in
+	meter)
+		ALTUNIT="m"
+	;;
+
+	feet)
+		ALTUNIT="ft"
+	;;
+
+esac
+
+
 # -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
 #
@@ -114,8 +146,8 @@ then
         TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
         TWEET+="${HEADR[3]}: ${RECORD[2]}%0A"
         TWEET+="${HEADR[4]}: ${RECORD[3]}%0A"
-        TWEET+="${HEADR[5]}: ${RECORD[4]}%0A"
-        TWEET+="${HEADR[6]}: ${RECORD[5]}%0A"
+        TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
+        TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
         # If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
         # There is more data we could tweet, but we're a bit restricted in real estate on twitter.
