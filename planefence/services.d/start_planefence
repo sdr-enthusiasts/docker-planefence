@@ -174,6 +174,22 @@ cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane
 # directory - no recursion - just in case some idiot maps the persist directory to the host's "/"
 chmod a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 #
+# Do one last check. If FEEDER_LAT=90.12345, then the user obviously hasn't touched the config file.
+if [[ "$FEEDER_LAT"="90.12345" ]]
+then
+		sleep 10s
+		echo "----------------------------------------------------------"
+		echo "!!! STOP !!!! You haven't configured PlaneFence !!!!"
+		echo "Planefence will not run unless you edit it configuration."
+		echo "You can do this by pressing CTRL-c now and typing:"
+		echo "sudo nano -l ~/.planefence/planefence.config"
+		echo "Once done, restart the container and this message should disappear."
+		echo "----------------------------------------------------------"
+		while true
+		do
+				sleep 99999
+		done
+fi
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
 #
