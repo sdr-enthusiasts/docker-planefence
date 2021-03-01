@@ -5,7 +5,7 @@ volumes:
   readsbpb_autogain:
 
 services:
-    
+
   planefence:
     image: kx1t/planefence
     tty: true
@@ -21,8 +21,9 @@ services:
     # generated automatically when you start the container for the first
     # time. Planefence will not work unless you have either a .env file or
     # a planefence.config file. Any values defined in planefence.config
-    # will take priority over those in .env
-    env_file: .env
+    # will take priority over those in .env. Uncomment the line below if you
+    # really want to continue to use your pre-existing .env file:
+    # env_file: .env
     environment:
       - TZ=${FEEDER_TZ}
     volumes:
