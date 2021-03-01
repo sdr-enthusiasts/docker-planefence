@@ -136,20 +136,21 @@ cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
 #
 mkdir -p /usr/share/planefence/html/plane-alert
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
-cp -u /usr/share/planefence/persist/plane-alert-db.txt /usr/share/plane-alert/ 2>/dev/null
-cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist 2>/dev/null
+[[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
+ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+
 #
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
 		echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "Do this on the host to get a base file:"
-		echo "sudo wget -q -O ~/.planefence/plane-alert-db.txt https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt"
-		echo "and then hard-restart this docker container"
+		echo "sudo curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
 # create a copy of the plane-alert file to plane-alert's HTML directory
-cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+ln -sf /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
 
