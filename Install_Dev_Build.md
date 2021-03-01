@@ -25,10 +25,10 @@ Now, there are a few possibilities:
 3. You don't run `tar1090`, `dump1090[-fa]`, or `readsb` anywhere else and you need to install an instance of this software on your local machine.
 
 
-### Adding Planefence to an existing, local, containerized setup of `tar1090`, `dump1090[-fa]`, or `readsb`
+### Situation 1 - Adding Planefence to an existing, local, containerized setup of `tar1090`, `dump1090[-fa]`, or `readsb`
 - Extract from `docker-compose.yml` the entire `planefence:` section under `services:`. Open your existing `docker-compose.yml` and add this section there. Note -- YML is very sensitive to indents. Make sure that they line up in the target file the same way as they were in the file you copied from.
 
-### You are running your feeder elsewhere
+### Situation 2- You are running your feeder elsewhere
 - Edit the `docker-compose.yml` file attached and remove or comment out the following:
 ```
 #volumes:
@@ -38,7 +38,7 @@ Now, there are a few possibilities:
 - Remove or comment out the entire `readsb:` section from line 42 through the end of the file
 - On your other setup, MAKE SURE (!!) that you generate SBS formatted data on port 30003. How to do this varies by setup and goes beyond this manual, but please reach out for help if needed!
 
-### Adding a feeder from scratch
+### Situation 3 - Adding a feeder from scratch
 - It is assumed that you understand what this entails. If you don't -- please read [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) on the topic!
 - The example here adds a `readsb-protobuf` container. Setup for `dump1090[-fa]` or `tar1090` is very similar
 - `readsb-protobuf` will need a `.env` file. We will tell you how to EASILY create one after you are done fully configuring PlaneFence.
