@@ -126,6 +126,7 @@ done
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
+[[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
 # Copy the airlinecodes.txt file to the persist directory
 cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
