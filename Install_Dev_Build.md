@@ -54,7 +54,7 @@ In the `docker-compose.yml` file, you should configure the following:
 ```
 - Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these (except for updating `/home/pi/.planefence` -> `/home/ubuntu/planefence` if required). However, if you have to, you can map the HTML directory to some other location. ONLY change what is to the LEFT of the colon.
-- You can exit the editor and start the container (`docker-compose up -d`)
+- You can exit the editor and start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
 
 #### Planefence Settings Configuration
 - When you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work! You can check if the system recognized you've made edits by typing `docker logs planefence` - if you haven't set up the system, it *will* complain.
@@ -76,6 +76,7 @@ In the `docker-compose.yml` file, you should configure the following:
 
 ## Seeing my own setup and troubleshooting
 - Be patient. Many of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
+- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? cat 
 - Check the logs: `docker logs -f planefence`
 - Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8081/plane-alert
