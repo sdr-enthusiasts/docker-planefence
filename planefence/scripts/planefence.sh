@@ -171,7 +171,7 @@ WRITEHTMLTABLE () {
 	<th class="js-sort-number">No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
-	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline</th>")
+	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
 	<th class="js-sort-date">Time First Seen</th>
 	<th class="js-sort-date">Time Last Seen</th>
 	<th class="js-sort-number">Min. Altitude</th>
@@ -287,7 +287,13 @@ EOF
 			printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
 			printf "   <td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
-			[[ "$AIRLINECODES" != "" ]] && a="${NEWVALUES[1]#@}" && printf "   <td>%s</td>\n" "$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES)"  >>"$2" # Print flight number if we can find it
+			if [[ "$AIRLINECODES" != "" ]]
+			then
+				a="${NEWVALUES[1]#@}"
+				b="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
+				[[ "$b" == "" ]] && [[ "${a:0:1}" == "N" ]] && b="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+				printf "   <td>%s</td>\n" "$b" >>"$2"
+			fi
 			printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 			printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
 			printf "   <td>%s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" >>"$2" # min altitude
