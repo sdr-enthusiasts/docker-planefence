@@ -37,6 +37,7 @@ Now, there are a few possibilities:
 ```
 - Remove or comment out the entire `readsb:` section from line 42 through the end of the file
 - On your other setup, MAKE SURE (!!) that you generate SBS formatted data on port 30003. How to do this varies by setup and goes beyond this manual, but please reach out for help if needed!
+- When you start editing `planefence.config` (wait until you get to this, following the guide step by step), pay extra attention to this parameter `PF_SOCK30003HOST=`
 
 ### Situation 3 - Adding a feeder from scratch
 - It is assumed that you understand what this entails. If you don't -- please read [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) on the topic!
