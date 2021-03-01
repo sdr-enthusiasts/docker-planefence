@@ -137,13 +137,14 @@ then
 		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ]
 		then
 
-        [[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print "#" $2}}' $AIRLINECODES |tr -d '[:space:]')"
+        AIRLINETAG=""
+	[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print "#" $2}}' $AIRLINECODES |tr -d '[:space:]')"
 			  # Go get the data for the record:
 			  # Figure out the start and end time of the record, in seconds since epoch
         # Create a Tweet with the first 6 fields, each of them followed by a Newline character
         TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
         TWEET+="${HEADR[1]}: ${RECORD[1]}%0A"
-        TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
+        [[ "$AIRLINETAG" != "" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
         TWEET+="${HEADR[3]}: ${RECORD[2]}%0A"
         TWEET+="${HEADR[4]}: ${RECORD[3]}%0A"
         TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"

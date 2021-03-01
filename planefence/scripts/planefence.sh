@@ -64,34 +64,26 @@ DISTUNIT="mi"
 DISTCONV=1
 if [ "$SOCKETCONFIG" != "" ]
 then
-	IFS=" =#" read -raa <<< $(grep -P '^(?=[\s]*+[^#])[^#]*(distanceunit)' $SOCKETCONFIG)
-	case "${a[1]}" in
+	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
 		nauticalmile)
 			DISTUNIT="nm"
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.868976
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=0.539957
 			;;
 		kilometer)
 			DISTUNIT="km"
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.621371
 			;;
 		mile)
 			DISTUNIT="mi"
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=1.60934
 			;;
 		meter)
 			DISTUNIT="m"
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=0.001000
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.000621371
 	esac
 fi
 
 # get ALTITUDE unit:
-ALTUNIT="feet"
+ALTUNIT="ft"
 if [ "$SOCKETCONFIG" != "" ]
 then
-        IFS=" =#" read -raa <<< $(grep -P '^(?=[\s]*+[^#])[^#]*(altitudeunit)' $SOCKETCONFIG)
-        case "${a[1]}" in
+	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
                 feet)
                         ALTUNIT="ft"
                         ;;
@@ -677,16 +669,17 @@ fi
 
 # Now, let's see if the DISTUNIT and DISPLAYUNIT are the same. If not, we need to convert to DISPLAYUNIT:
 
-if [ "$DISPLAYUNIT" == "" ]
-then
+# for the docker version, lets just hardcode everything to the same unit
+#if [ "$DISPLAYUNIT" == "" ]
+#then
 	DISPLAYUNIT="$DISTUNIT"
 	DISPLAYDIST="$DIST"
-fi
+#fi
 
-if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
-then
-	printf -v DISPLAYDIST "%.1f" "$(echo "$DIST * $DISTCONV" | bc -l)"
-fi
+#if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
+#then
+#	printf -v DISPLAYDIST "%.1f" "$(echo "$DIST * $DISTCONV" | bc -l)"
+#fi
 
 # Now let's link to the latest Spectrogram, if one was generated for today:
 
