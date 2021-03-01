@@ -45,7 +45,7 @@ cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
 #
 mkdir -p /usr/share/planefence/html/plane-alert
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
-[[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && cp -f /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
+cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
