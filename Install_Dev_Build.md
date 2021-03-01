@@ -2,9 +2,12 @@
 
 ## Install a new instance
 
-Note - this guide assumes that `/home/pi` is your home directory. If it is not (for example, Ubuntu builds use `/home/ubuntu` as their default account), please change all occurences of `/home/pi` to your home directory path.
+Note - this guide assumes that `/home/pi` is your home directory. If it is not (for example, Ubuntu builds use `/home/ubuntu` as their default account), please change all occurrences of `/home/pi` to your home directory path.
+
+The guide also assumes you run on a `armhf` or `arm64` machine. If not, see the section "Building my own container" below and then follow the rest of the guide.
 
 ### Getting ready
+Some of these things you may already have done. You can skip those steps. We erred on the side of completeness.
 1. Create a landing directory for Planefence:
 ```
 sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence
