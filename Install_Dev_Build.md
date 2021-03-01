@@ -59,7 +59,7 @@ In the `docker-compose.yml` file, you should configure the following:
 #### Planefence Settings Configuration
 - When you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work! You can check if the system recognized you've made edits by typing `docker logs planefence` - if you haven't set up the system, it *will* complain.
 - MANDATORY: First -- copy the template config file in place: `sudo cp ~/.planefence/planefence.config-RENAME-and-EDIT-me ~/.planefence/planefence.config`
-    -- ALTERNATIVE - if you have used PlaneFence in the past and created a `.env` file, you can use this file as a basis for your `planefence.config` file. You can copy it with `sudo cp /opt/planefence/.env ~/.planefence/planefence.config`. However, there are many new features and setting described in the planefence.config-RENAME-and-EDIT-me file. You should take notice and copy these in!
+  - ALTERNATIVE - if you have used PlaneFence in the past and created a `.env` file, you can use this file as a basis for your `planefence.config` file. You can copy it with `sudo cp /opt/planefence/.env ~/.planefence/planefence.config`. However, there are many new features and setting described in the planefence.config-RENAME-and-EDIT-me file. You should take notice and copy these in!
 - MANDATORY: `sudo nano ~/.planefence/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
 - OPTIONAL: `sudo nano ~/.planefence/plane-ignore.txt`. In this file, you can add things that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `sudo nano ~/.planefence/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/kx1t/planefence/issues so we can add your changes to the default file.
@@ -76,7 +76,7 @@ In the `docker-compose.yml` file, you should configure the following:
 
 ## Seeing my own setup and troubleshooting
 - Be patient. Many of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
-- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? cat 
+- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? cat
 - Check the logs: `docker logs -f planefence`
 - Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8081/plane-alert
