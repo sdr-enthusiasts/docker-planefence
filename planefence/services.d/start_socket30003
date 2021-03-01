@@ -20,7 +20,9 @@ echo "[$APPNAME][$(date)] Socket30003 started as an s6 service"
 mkdir -p /run/socket30003
 #
 # Load parameters from the config file:
-[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs)
+#[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs)
+[[ -f /usr/share/planefence/persist/planefence.config ]] && set -o allexport && source /usr/share/planefence/persist/planefence.config && set +o allexport 
+
 # If things went wrong then simply sleep forever.
 # No need to notify -- .../run/planefence is doing the same thing and is
 # screaming all over the logs by now.
