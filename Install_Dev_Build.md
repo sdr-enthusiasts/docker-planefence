@@ -42,7 +42,6 @@ Now, there are a few possibilities:
 - It is assumed that you understand what this entails. If you don't -- please read [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) on the topic!
 - The example here adds a `readsb-protobuf` container. Setup for `dump1090[-fa]` or `tar1090` is very similar
 - `readsb-protobuf` will need a `.env` file. We will tell you how to EASILY create one after you are done fully configuring PlaneFence.
--
 
 ### Planefence Configuration
 #### Initial docker configuration
@@ -53,13 +52,14 @@ In the `docker-compose.yml` file, you should configure the following:
 #   ports:
 #     -8088:80
 ```
-- Sometimes, `TZ=${FEEDER_TZ}` doesn't work and you may have to change this to `TZ=America/New_York` or whatever is appropriate for you. Note that this variable is case sensitive
+- Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these (except for updating `/home/pi/.planefence` -> `/home/ubuntu/planefence` if required). However, if you have to, you can map the HTML directory to some other location. ONLY change what is to the LEFT of the colon.
 - You can exit the editor and start the container (`docker-compose up -d`)
 
 #### Planefence Settings Configuration
 - When you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work! You can check if the system recognized you've made edits by typing `docker logs planefence` - if you haven't set up the system, it *will* complain.
-- MANDATORY: First -- copy the template config file in place: `sudo mv ~/.planefence/planefence.config-RENAME-and-EDIT-me ~/.planefence/planefence.config`
+- MANDATORY: First -- copy the template config file in place: `sudo cp ~/.planefence/planefence.config-RENAME-and-EDIT-me ~/.planefence/planefence.config`
+    -- ALTERNATIVE - if you have used PlaneFence in the past and created a `.env` file, you can use this file as a basis for your `planefence.config` file. You can copy it with `sudo cp /opt/planefence/.env ~/.planefence/planefence.config`. However, there are many new features and setting described in the planefence.config-RENAME-and-EDIT-me file. You should take notice and copy these in!
 - MANDATORY: `sudo nano ~/.planefence/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
 - OPTIONAL: `sudo nano ~/.planefence/plane-ignore.txt`. In this file, you can add things that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `sudo nano ~/.planefence/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/kx1t/planefence/issues so we can add your changes to the default file.

@@ -22,10 +22,11 @@ services:
     # time. Planefence will not work unless you have either a .env file or
     # a planefence.config file. Any values defined in planefence.config
     # will take priority over those in .env. Uncomment the line below if you
-    # really want to continue to use your pre-existing .env file:
+    # really want to continue to use your pre-existing .env file.
+    # Also, update TZ=America/New_York to your own timezone.
     # env_file: .env
     environment:
-      - TZ=${FEEDER_TZ}
+      - TZ=America/New_York
     volumes:
       # adopt this one to point at your home directory if it is not /home/pi
       - /home/pi/.planefence:/usr/share/planefence/persist
