@@ -6,6 +6,8 @@ Note - this guide assumes that `/home/pi` is your home directory. If it is not (
 
 The guide also assumes you run on a `armhf` or `arm64` machine. If not, see the section "Building my own container" below and then follow the rest of the guide.
 
+Last, the guide assumes that you have `docker` and `docker-compose` installed. If you don't, please follow the relevant sections of [this guide](https://mikenye.gitbook.io/ads-b/setting-up-the-host-system/install-docker).
+
 ### Getting ready
 Some of these things you may already have done. You can skip those steps. We erred on the side of completeness.
 1. Create a landing directory for Planefence:
@@ -75,9 +77,23 @@ In the `docker-compose.yml` file, you should configure the following:
 ## Seeing my own setup and troubleshooting
 - Be patient. Many of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
 - Check the logs: `docker logs -f planefence`
-- Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station
+- Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
+- Plane-alert will appear at http://myip:8081/plane-alert
 - Twitter setup is complex. [Here](https://github.com/kx1t/docker-planefence#setting-up-tweeting)'s a description on what to do.
 - If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/blob/main/README.md).
+
+## Building my own container
+This section is for those who don't trust my container building skills (honestly, I wouldn't trust myself!) or who run on an architecture that is different than `armhf` (Raspberry Pi 3B+/4 with Raspberry OS 32 bits) or `arm64` (Raspberry Pi 4 with Ubuntu 64 bits). In that case, you may have to create your own container using these steps. This assumes that you have `git` installed. If you don't, please install it first using `sudo apt-get install git`.
+ ```
+sudo mkdir -p /opt/planefence
+sudo chmod a+rwx /opt/planefence
+cd /opt/planefence
+git clone https://github.com/kx1t/docker-planefence
+cd docker-planefence
+docker build --compress --pull -t kx1t/planefence:arm-test-pr .
+```
+This should create a container ready to use on your local system.
+
 
 ## Getting help
 - If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message.
