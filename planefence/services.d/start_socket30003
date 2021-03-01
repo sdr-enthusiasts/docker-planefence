@@ -18,6 +18,19 @@ echo "[$APPNAME][$(date)] Socket30003 started as an s6 service"
 #
 # Make sure the /run directory exists
 mkdir -p /run/socket30003
+#
+# Load parameters from the config file:
+[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs)
+# If things went wrong then simply sleep forever.
+# No need to notify -- .../run/planefence is doing the same thing and is
+# screaming all over the logs by now.
+if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
+then
+		while true
+		do
+				sleep 99999
+		done
+fi
 # $LOOPTIME is used to delay a restart after socket30003 exits for any reason, as not to
 # spam the system with restarts:
 LOOPTIME=30
