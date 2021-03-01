@@ -58,6 +58,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planeheat.sh
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf
@@ -125,6 +126,7 @@ done
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
+[[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
 # Copy the airlinecodes.txt file to the persist directory
 cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist

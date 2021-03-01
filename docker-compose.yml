@@ -1,29 +1,44 @@
 version: '3.8'
 
 volumes:
-#  planefence:
   readsbpb_rrd:
   readsbpb_autogain:
 
 services:
+    
   planefence:
     image: kx1t/planefence
     tty: true
     container_name: planefence
     hostname: planefence
     restart: always
+    # by adding a ports mapping, the planefence website is exposed to the
+    # host and your internal network:
     ports:
       - 8088:80
+    # we are phasing out the .env file in favor of a similar file named
+    # ~/.planefence/planefence.config. A template of that file will be
+    # generated automatically when you start the container for the first
+    # time. Planefence will not work unless you have either a .env file or
+    # a planefence.config file. Any values defined in planefence.config
+    # will take priority over those in .env
     env_file: .env
     environment:
       - TZ=${FEEDER_TZ}
     volumes:
-      - ${HOME}/.planefence:/usr/share/planefence/persist
+      # adopt this one to point at your home directory if it is not /home/pi
+      - /home/pi/.planefence:/usr/share/planefence/persist
+      # the following exposes the html directory to the host, in case you
+      # want to use an external http daemon (lighttpd, nginx, etc)
       - /opt/planefence/Volumes/html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=128M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
 
+  # the readsb entry pulls in a readsb container to get adsb data. If you want to
+  # use your own, you can remove this one. Just make sure you expose port
+  # 30003 and tell readsb/dump1090 to produce SBS data on port 30003 on your
+  # own feeder. Also update planefence.config to point it at your feeder.
   readsb:
     image: mikenye/readsb-protobuf:latest
     tty: true

@@ -214,7 +214,7 @@ AKR,Aero Clinker,AERO CLINKER,Mexico
 AKT,Karat,AVIAKARAT,Russia
 AKX,Air Nippon Network Co. Ltd.,ALFA WING,Japan
 AKY,Yak-Service,YAK-SERVICE,Russia
-AKZ,AK Navigator LLC,ABSOLUTE,Kazakhstan
+AKZ,AK Navigator,ABSOLUTE,Kazakhstan
 ALB,Aero Albatros,ALBATROS,Mexico
 ALC,Southern Jersey Airways, Inc.,ACOM,United States
 ALD,Albion Aviation,ALBION,United Kingdom
@@ -716,12 +716,13 @@ BTI,Air Baltic,AIRBALTIC,Latvia
 BTK,Batik Air,BATIK,Indonesia
 BTL,Baltia Air Lines,BALTIA,United States
 BTP,Veritair,NET RAIL,United Kingdom
+BTQ,Boutique Air,BOUTIQUE,United States
 BTR,Botir-Avia,BOTIR-AVIA,Kyrgyzstan
 BTS,Aerotaxis Albatros,AEROLINEAS ALBATROS,Mexico
 BTT,BT-Slavuta,BEETEE-SLAVUTA,Ukraine
 BTU,Rolls-Royce plc,ROLLS,United Kingdom
 BTV,Batavia Air,BATAVIA,Indonesia
-BTZ,Bristow U.S. LLC,BRISTOW,United States
+BTZ,Bristow U.S.,BRISTOW,United States
 BUC,Bulgarian Air Charter,BULGARIAN CHARTER,Bulgaria
 BUE,Orebro Aviation,BLUELIGHT,Sweden
 BUG,UVT Aero,,Russia
@@ -992,7 +993,7 @@ CNL,Centennial Airlines,WYO-AIR,United States
 CNM,Air China Inner Mongolia,MENGYUAN,China
 CNO,SAS Braathens,SCANOR,Norway
 CNR,Condor Aero Services,CONAERO,United States
-CNS,Cobalt Air LLC,CHRONOS,United States
+CNS,Cobalt Air,CHRONOS,United States
 CNT,Centre national d'études des télécommunications - C.N.E.T.,KNET,France
 CNU,Air Consul,AIR CONSUL,Spain
 CNV,U.S. Navy Reserve Logistic Air Forces,CONVOY,United States
@@ -3342,7 +3343,7 @@ NVP,Navegacao Aérea De Portugal,,Portugal
 NVQ,Novo Air,NOVO AIR,Bangladesh
 NVR,Novair,NAVIGATOR,Sweden
 NVY,Royal Navy,NAVY,United Kingdom
-NWA,Northwest Airlines,NORTHWEST,United States
+NWA,Delta Airlines,NORTHWEST,United States
 NWD,New World Jet Corporation,NEW WORLD,United States
 NWE,Northwest Aero Associates,,United States
 NWG,Airwing,NORWING,Norway
@@ -4900,7 +4901,7 @@ TWM,Transairways,,Mozambique
 TWN,Avialeasing Aviation Company,TWINARROW,Uzbekistan
 TWO,Twente Airlines,COLIBRI,Netherlands
 TWW,Trans Air Welwitchia,WELWITCHIA,Angola
-TWY,Sunset Aviation, LLC,TWILIGHT,United States
+TWY,Sunset Aviation,TWILIGHT,United States
 TXA,Texair Charter,OKAY AIR,United States
 TXB,Bell Helicopter Textron,TEXTRON,Canada
 TXC,TransAVIAexport Airlines,TRANSEXPORT,Belarus

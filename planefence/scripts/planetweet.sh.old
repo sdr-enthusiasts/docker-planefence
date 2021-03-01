@@ -138,18 +138,13 @@ then
 		then
 
         AIRLINETAG=""
-	[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES |tr -d '[:space:]')"
+	[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print "#" $2}}' $AIRLINECODES |tr -d '[:space:]')"
 			  # Go get the data for the record:
 			  # Figure out the start and end time of the record, in seconds since epoch
-	[[ "$AIRLINETAG" == "" ]] && [[ "${RECORD[1]:0:1}" == "N" ]] && AIRLINETAG="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${RECORD[1]} | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g' | awk '{$1=$1};1' |tr -d '[:space:]')"
-	AIRLINETAG="${AIRLINETAG% INC}" && AIRLINETAG="${AIRLINETAG% CORP}" && AIRLINETAG="${AIRLINETAG% CO}" && AIRLINETAG="${AIRLINETAG% LLC}" && AIRLINETAG="${AIRLINETAG% INC DBA}"
-	AIRLINETAG="#$AIRLINETAG"
-
-
         # Create a Tweet with the first 6 fields, each of them followed by a Newline character
         TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
         TWEET+="${HEADR[1]}: ${RECORD[1]}%0A"
-        [[ "$AIRLINETAG" != "#" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
+        [[ "$AIRLINETAG" != "" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
         TWEET+="${HEADR[3]}: ${RECORD[2]}%0A"
         TWEET+="${HEADR[4]}: ${RECORD[3]}%0A"
         TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"

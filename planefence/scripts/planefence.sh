@@ -64,34 +64,26 @@ DISTUNIT="mi"
 DISTCONV=1
 if [ "$SOCKETCONFIG" != "" ]
 then
-	IFS=" =#" read -raa <<< $(grep -P '^(?=[\s]*+[^#])[^#]*(distanceunit)' $SOCKETCONFIG)
-	case "${a[1]}" in
+	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
 		nauticalmile)
 			DISTUNIT="nm"
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.868976
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=0.539957
 			;;
 		kilometer)
 			DISTUNIT="km"
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.621371
 			;;
 		mile)
 			DISTUNIT="mi"
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=1.60934
 			;;
 		meter)
 			DISTUNIT="m"
-			[ "$DISPLAYUNIT" == "km" ] && DISTCONV=0.001000
-			[ "$DISPLAYUNIT" == "mi" ] && DISTCONV=0.000621371
 	esac
 fi
 
 # get ALTITUDE unit:
-ALTUNIT="feet"
+ALTUNIT="ft"
 if [ "$SOCKETCONFIG" != "" ]
 then
-        IFS=" =#" read -raa <<< $(grep -P '^(?=[\s]*+[^#])[^#]*(altitudeunit)' $SOCKETCONFIG)
-        case "${a[1]}" in
+	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
                 feet)
                         ALTUNIT="ft"
                         ;;
@@ -179,7 +171,7 @@ WRITEHTMLTABLE () {
 	<th class="js-sort-number">No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
-	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline</th>")
+	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
 	<th class="js-sort-date">Time First Seen</th>
 	<th class="js-sort-date">Time Last Seen</th>
 	<th class="js-sort-number">Min. Altitude</th>
@@ -260,8 +252,9 @@ EOF
 							ENDTIME=$(date -d "${NEWVALUES[3]}" +%s)
 							# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 							(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
+							NOWTIME=$(date +%s)
 							# check if there are any noise samples
-							if [[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+							if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
 							then
 								#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
 								gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
@@ -294,7 +287,13 @@ EOF
 			printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
 			printf "   <td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
-			[[ "$AIRLINECODES" != "" ]] && a="${NEWVALUES[1]#@}" && printf "   <td>%s</td>\n" "$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES)"  >>"$2" # Print flight number if we can find it
+			if [[ "$AIRLINECODES" != "" ]]
+			then
+				a="${NEWVALUES[1]#@}"
+				b="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
+				[[ "$b" == "" ]] && [[ "${a:0:1}" == "N" ]] && b="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+				printf "   <td>%s</td>\n" "$b" >>"$2"
+			fi
 			printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 			printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
 			printf "   <td>%s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" >>"$2" # min altitude
@@ -556,7 +555,7 @@ else
 fi
 
 #Dirty fix -- sometimes the CSV file needs fixing
-#$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
+$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
@@ -676,16 +675,17 @@ fi
 
 # Now, let's see if the DISTUNIT and DISPLAYUNIT are the same. If not, we need to convert to DISPLAYUNIT:
 
-if [ "$DISPLAYUNIT" == "" ]
-then
+# for the docker version, lets just hardcode everything to the same unit
+#if [ "$DISPLAYUNIT" == "" ]
+#then
 	DISPLAYUNIT="$DISTUNIT"
 	DISPLAYDIST="$DIST"
-fi
+#fi
 
-if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
-then
-	printf -v DISPLAYDIST "%.1f" "$(echo "$DIST * $DISTCONV" | bc -l)"
-fi
+#if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
+#then
+#	printf -v DISPLAYDIST "%.1f" "$(echo "$DIST * $DISTCONV" | bc -l)"
+#fi
 
 # Now let's link to the latest Spectrogram, if one was generated for today:
 
