@@ -190,7 +190,7 @@ cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane
 # to make sure that the user can write to files without using sudo:
 # trying to do this carefully so it only applies to the files, incl '.xxx' in that
 # directory - no recursion - just in case some idiot maps the persist directory to the host's "/"
-chmod a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
+chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 #
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
