@@ -99,8 +99,13 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's/127_0_0_1/'"\"$PF_SOCK30003HOST\""'/' /usr/share/planefence/planeheat.sh
+if [[ "x$PF_SOCK30003HOST" != "x" ]]
+then
+		a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
+		sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planefence.conf
+		sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
+		unset a
+fi
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf
 # -----------------------------------------------------------------------------------
 #
