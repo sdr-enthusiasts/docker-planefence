@@ -47,13 +47,8 @@ Now, there are a few possibilities:
 ### Planefence Configuration
 #### Initial docker configuration
 In the `docker-compose.yml` file, you should configure the following:
-- The image, by default, points at the release image. For the DEV version, change this: `image: kx1t/planefence:arm-test-pr`
-- If you are using your host machine's webservice, you can comment out this section. Leave it in if you want to use PlaneFence's built-in web server. In that case you can change 8088 to a port number of your liking:
-```
-#   ports:
-#     -8088:80
-```
-- Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
+- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: kx1t/planefence:arm-test-pr`
+- IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these (except for updating `/home/pi/.planefence` -> `/home/ubuntu/planefence` if required). However, if you have to, you can map the HTML directory to some other location. ONLY change what is to the LEFT of the colon.
 - You can exit the editor and start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
 
