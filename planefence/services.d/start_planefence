@@ -2,6 +2,8 @@
 #shellcheck shell=bash
 
 APPNAME="planefence"
+LOOPTIME=60
+PLANEFENCEDIR=/usr/share/planefence
 
 echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
 
