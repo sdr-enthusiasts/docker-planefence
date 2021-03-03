@@ -759,7 +759,7 @@ then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<link rel="stylesheet" href="leaflet.css" />
 	<script src="leaflet.js"></script>
-
+EOF
 fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"
