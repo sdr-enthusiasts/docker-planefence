@@ -29,7 +29,7 @@
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-HEADR=("Transponder ID" "Flight" "Airline" "Time in range" "Time out of range" "Min. Alt." "Min. Dist." "Link" "Loudness" "Peak Audio Level")
+HEADR=("ICAO" "Flt" "Airline" "Date" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
 TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
@@ -56,7 +56,7 @@ CSVTMP=/tmp/planetweet2-tmp.csv
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
 MINTIME=200
 # $ATTRIB contains the attribution line at the bottom of the tweet
-[[ "x$ATTRIB" == "x" ]] && ATTRIB="Planefence by kx1t - docker:kx1t/planefence"
+[[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
 
 case $PF_DISTUNIT in
 	nauticalmile)
@@ -138,20 +138,18 @@ then
 		then
 
         AIRLINETAG=""
-	[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES |tr -d '[:space:]')"
+				[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES |tr -d '[:space:]')"
 			  # Go get the data for the record:
 			  # Figure out the start and end time of the record, in seconds since epoch
-	[[ "$AIRLINETAG" == "" ]] && [[ "${RECORD[1]:0:1}" == "N" ]] && AIRLINETAG="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${RECORD[1]} | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g' | awk '{$1=$1};1' |tr -d '[:space:]')"
-	AIRLINETAG="${AIRLINETAG% INC}" && AIRLINETAG="${AIRLINETAG% CORP}" && AIRLINETAG="${AIRLINETAG% CO}" && AIRLINETAG="${AIRLINETAG% LLC}" && AIRLINETAG="${AIRLINETAG% INC DBA}"
-	AIRLINETAG="#$AIRLINETAG"
-
+				[[ "$AIRLINETAG" == "" ]] && [[ "${RECORD[1]:0:1}" == "N" ]] && AIRLINETAG="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${RECORD[1]} | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g' | awk '{$1=$1};1' |tr -d '[:space:]')"
+				AIRLINETAG="${AIRLINETAG% INC}" && AIRLINETAG="${AIRLINETAG% CORP}" && AIRLINETAG="${AIRLINETAG% CO}" && AIRLINETAG="${AIRLINETAG% LLC}" && AIRLINETAG="${AIRLINETAG% INC DBA}"
+				AIRLINETAG="#$AIRLINETAG"
 
         # Create a Tweet with the first 6 fields, each of them followed by a Newline character
         TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
-        TWEET+="${HEADR[1]}: ${RECORD[1]}%0A"
-        [[ "$AIRLINETAG" != "#" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG%0A"
-        TWEET+="${HEADR[3]}: ${RECORD[2]}%0A"
-        TWEET+="${HEADR[4]}: ${RECORD[3]}%0A"
+        TWEET+="${HEADR[1]}: ${RECORD[1]} "
+        [[ "$AIRLINETAG" != "#" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG"
+        TWEET+="%0A${HEADR[3]}: ${RECORD[2]}-${RECORD[3]#* }%0A"
         TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
         TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
@@ -167,36 +165,35 @@ then
         # Also, the Newline at the end tends to mess with Twurl
         TWEET+="${RECORD[6]}"
 
-			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
+				LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
-			# Before anything else, let's add the "tweeted" flag to the flight number:
-			XX="@${RECORD[1]}"
-			RECORD[1]=$XX
+				# Before anything else, let's add the "tweeted" flag to the flight number:
+				XX="@${RECORD[1]}"
+				RECORD[1]=$XX
 
 
-			# And now, let's tweet!
-                        if [ "$TWEETON" == "yes" ]
-                        then
-				# send a tweet and read the link to the tweet into ${LINK[1]}
-				LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
-                                LOG "LINK=$LINK"
-                                echo "TWEET TEXT=$TWEET"
-			else
-				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
-                        fi
+				# And now, let's tweet!
+      	if [ "$TWEETON" == "yes" ]
+      	then
+			  		# send a tweet and read the link to the tweet into ${LINK[1]}
+				  	LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+						echo Tweet generated. Twitter returned:
+						tail -1 /tmp/tweets.log
+				else
+						LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
+      	fi
 
-			# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
-			(( RECORD[7] < 0 )) && RECORD[12]="$LINK" || RECORD[7]="$LINK"
-                        # LOG "Tweet sent!"
-			LOG "TWURL results: $LINK"
+				# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
+				(( RECORD[7] < 0 )) && RECORD[12]="$LINK" || RECORD[7]="$LINK"
+        # LOG "Tweet sent!"
+				LOG "TWURL results: $LINK"
 		else
-			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Skipping: either already tweeted, or within $MINTIME secs."
+				LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Skipping: either already tweeted, or within $MINTIME secs."
 		fi
 
 		# Now write everything back to $CSVTMP
 		( IFS=','; echo "${RECORD[*]}" >> "$CSVTMP" )
 		LOG "The record now contains $(IFS=','; echo ${RECORD[*]})"
-
 
 	done < "$CSVFILE"
 	# last, copy the TMP file back to the CSV file
