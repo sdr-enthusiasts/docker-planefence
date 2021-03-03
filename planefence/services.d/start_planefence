@@ -102,7 +102,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
 		a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
-		sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planefence.conf
+		sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
 		sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 		unset a
 fi
