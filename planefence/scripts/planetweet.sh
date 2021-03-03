@@ -60,30 +60,30 @@ MINTIME=200
 
 case $PF_DISTUNIT in
 	nauticalmile)
-		DISTUNIT="nm"
+	DISTUNIT="nm"
 	;;
 
 	kilometer)
-		DISTUNIT="km"
+	DISTUNIT="km"
 	;;
 
 	mile)
-		DISTUNIT="mile"
+	DISTUNIT="mile"
 	;;
 
 	meter)
-		DISTUNIT="meter"
+	DISTUNIT="meter"
 	;;
 
 esac
 
 case $PF_ALTUNIT in
 	meter)
-		ALTUNIT="m"
+	ALTUNIT="m"
 	;;
 
 	feet)
-		ALTUNIT="ft"
+	ALTUNIT="ft"
 	;;
 
 esac
@@ -95,15 +95,15 @@ esac
 # First create an function to write to the log
 LOG ()
 {	if [ "$VERBOSE" != "" ]
-	then
-		printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$1" >> $LOGFILE
-	fi
+then
+	printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$1" >> $LOGFILE
+fi
 
 }
 
 if [ "$1" != "" ] && [ "$1" != "reset" ]
 then # $1 contains the date for which we want to run PlaneFence
-	TWEETDATE=$(date --date="$1" '+%y%m%d')
+TWEETDATE=$(date --date="$1" '+%y%m%d')
 else
 	TWEETDATE=$(date --date="today" '+%y%m%d')
 fi
@@ -137,58 +137,52 @@ then
 		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ]
 		then
 
-        AIRLINETAG=""
-				[[ "$AIRLINECODES" != "" ]] && a="${RECORD[1]}" && AIRLINETAG="$(awk -F ',' -v a="${a:0:3}" '{if ($1 == a){print $2}}' $AIRLINECODES |tr -d '[:space:]')"
-			  # Go get the data for the record:
-			  # Figure out the start and end time of the record, in seconds since epoch
-				[[ "$AIRLINETAG" == "" ]] && [[ "${RECORD[1]:0:1}" == "N" ]] && AIRLINETAG="$(timeout 2 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${RECORD[1]} | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g' | awk '{$1=$1};1' |tr -d '[:space:]')"
-				AIRLINETAG="${AIRLINETAG% INC}" && AIRLINETAG="${AIRLINETAG% CORP}" && AIRLINETAG="${AIRLINETAG% CO}" && AIRLINETAG="${AIRLINETAG% LLC}" && AIRLINETAG="${AIRLINETAG% INC DBA}"
-				AIRLINETAG="#$AIRLINETAG"
+			AIRLINETAG="#$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} | tr -d '[:space:]')"
 
-        # Create a Tweet with the first 6 fields, each of them followed by a Newline character
-        TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
-        TWEET+="${HEADR[1]}: ${RECORD[1]} "
-        [[ "$AIRLINETAG" != "#" ]] && TWEET+="${HEADR[2]}: $AIRLINETAG"
-        TWEET+="%0A${HEADR[3]}: ${RECORD[2]}-${RECORD[3]#* }%0A"
-        TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
-        TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
+			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
+			TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
+			TWEET+="${HEADR[1]}: ${RECORD[1]}"
+			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" $AIRLINETAG"
+			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}-${RECORD[3]#* }%0A"
+			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
+			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
-        # If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
-        # There is more data we could tweet, but we're a bit restricted in real estate on twitter.
-        (( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
+			# If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
+			# There is more data we could tweet, but we're a bit restricted in real estate on twitter.
+			(( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
 
-        # Add attribution to the tweet:
-        TWEET+="%0A$ATTRIB%0A"
+			# Add attribution to the tweet:
+			TWEET+="%0A$ATTRIB%0A"
 
-        # Now add the last field (attribution) without title or training Newline
-        # Reason: this is a URL that Twitter reinterprets and previews on the web
-        # Also, the Newline at the end tends to mess with Twurl
-        TWEET+="${RECORD[6]}"
+			# Now add the last field (attribution) without title or training Newline
+			# Reason: this is a URL that Twitter reinterprets and previews on the web
+			# Also, the Newline at the end tends to mess with Twurl
+			TWEET+="${RECORD[6]}"
 
-				LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
+			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
-				# Before anything else, let's add the "tweeted" flag to the flight number:
-				XX="@${RECORD[1]}"
-				RECORD[1]=$XX
+			# Before anything else, let's add the "tweeted" flag to the flight number:
+			XX="@${RECORD[1]}"
+			RECORD[1]=$XX
 
 
-				# And now, let's tweet!
-      	if [ "$TWEETON" == "yes" ]
-      	then
-			  		# send a tweet and read the link to the tweet into ${LINK[1]}
-				  	LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
-						echo Tweet generated. Twitter returned:
-						tail -1 /tmp/tweets.log
-				else
-						LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
-      	fi
+			# And now, let's tweet!
+			if [ "$TWEETON" == "yes" ]
+			then
+				# send a tweet and read the link to the tweet into ${LINK[1]}
+				LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+				echo Tweet generated. Twitter returned:
+				tail -1 /tmp/tweets.log
+			else
+				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
+			fi
 
-				# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
-				(( RECORD[7] < 0 )) && RECORD[12]="$LINK" || RECORD[7]="$LINK"
-        # LOG "Tweet sent!"
-				LOG "TWURL results: $LINK"
+			# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
+			(( RECORD[7] < 0 )) && RECORD[12]="$LINK" || RECORD[7]="$LINK"
+			# LOG "Tweet sent!"
+			LOG "TWURL results: $LINK"
 		else
-				LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Skipping: either already tweeted, or within $MINTIME secs."
+			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Skipping: either already tweeted, or within $MINTIME secs."
 		fi
 
 		# Now write everything back to $CSVTMP
