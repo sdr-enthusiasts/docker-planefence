@@ -19,14 +19,21 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
-[[ -f /usr/share/planefence/persist/planefence.config ]] && set -o allexport && source /usr/share/planefence/persist/planefence.config && set +o allexport || cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+if [[ -f /usr/share/planefence/persist/planefence.config ]]
+then
+	set -o allexport
+	source /usr/share/planefence/persist/planefence.config
+	set +o allexport
+else
+	cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+fi
 #
 # -----------------------------------------------------------------------------------
 #
 # Move the jscript files from the staging directory into the html directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
@@ -44,7 +51,7 @@ cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
-[[ "$PF_INTERVAL" != "" ]] && LOOPTIME=$PF_INTERVAL || LOOPTIME=120
+[[ "$PF_INTERVAL" != "" ]] && export LOOPTIME=$PF_INTERVAL || export LOOPTIME=120
 #
 # PLANEFENCEDIR contains the directory where planefence.sh is location
 
@@ -74,10 +81,10 @@ fi
 #
 if [[ "$PF_LOG" == "off" ]]
 then
-	LOGFILE=/dev/null
+	export LOGFILE=/dev/null
 	sed -i 's/\(^\s*VERBOSE=\).*/\1'""'/' /usr/share/planefence/planefence.conf
 else
-	[[ "x$PF_LOG" == "x" ]] && LOGFILE="/tmp/planefence.log" || LOGFILE="$PF_LOG"
+	[[ "x$PF_LOG" == "x" ]] && export LOGFILE="/tmp/planefence.log" || export LOGFILE="$PF_LOG"
 fi
 # echo pflog=$PF_LOG and logfile=$LOGFILE
 sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.conf
