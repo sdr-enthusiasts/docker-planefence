@@ -35,7 +35,7 @@ location /website-2/ {
 # Add index.php to the list if you are using PHP
 index index.html index.htm index.nginx-debian.html;
 ```
-7. Now edit /etc/nginx/sites-available/default. There will be 3 sections that start with `server {` (potentially more that are commented out).
+8. Now edit /etc/nginx/sites-available/default. There will be 3 sections that start with `server {` (potentially more that are commented out).
     - The first section is for connections to the standard http port
     - The second section is for connections to the SSL (https) port
     - The third section rewrites any incoming "http" request into a "https" request
@@ -43,4 +43,4 @@ For each `server` section, just before the closing `}`, add the following line:
 ```
 include /etc/nginx/locations.conf;
 ```
-8. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
+9. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
