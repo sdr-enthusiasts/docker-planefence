@@ -143,7 +143,7 @@ then
 			TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
 			TWEET+="${HEADR[1]}: ${RECORD[1]}"
 			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" $AIRLINETAG"
-			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}-${RECORD[3]#* }%0A"
+			TWEET+="%0A${HEADR[3]}: ${RECORD[2]} - ${RECORD[3]#* }%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
