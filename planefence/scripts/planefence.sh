@@ -294,7 +294,7 @@ EOF
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 [[ "${NEWVALUES[1]#@}" != "" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@})" >>"$2" || printf "   <td></td>\n" >>"$2"
 		fi
 		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
