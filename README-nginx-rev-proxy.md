@@ -1,3 +1,9 @@
+## How to install and set up a reverse web proxy to point http(s)://xxxxx.com/aaaa -> http://internalhost1:8080/xxxx, http(s)://xxxxx.com/bbbb -> http://internalhost2:8080/yyyy, etc.
+
+Acknowledgements:
+- @Mikenye for the encouragements to get started
+- @wiedehopf for the large amount of handholding to get it actually done and implemented
+
 1. Start with a Raspberry Pi connected to the network and a clean install of Raspberry Pi OS, SSH enabled
 2. Log into your Pi to the command line with SSH
 3. Do a `sudo apt-get update && sudo apt-get upgrade`
