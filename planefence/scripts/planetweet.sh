@@ -58,36 +58,35 @@ MINTIME=200
 # $ATTRIB contains the attribution line at the bottom of the tweet
 [[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
 
-case $PF_DISTUNIT in
-	nauticalmile)
-	DISTUNIT="nm"
-	;;
+if [ "$SOCKETCONFIG" != "" ]
+then
+	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+		nauticalmile)
+		DISTUNIT="nm"
+		;;
+		kilometer)
+		DISTUNIT="km"
+		;;
+		mile)
+		DISTUNIT="mi"
+		;;
+		meter)
+		DISTUNIT="m"
+	esac
+fi
 
-	kilometer)
-	DISTUNIT="km"
-	;;
-
-	mile)
-	DISTUNIT="mile"
-	;;
-
-	meter)
-	DISTUNIT="meter"
-	;;
-
-esac
-
-case $PF_ALTUNIT in
-	meter)
-	ALTUNIT="m"
-	;;
-
-	feet)
-	ALTUNIT="ft"
-	;;
-
-esac
-
+# get ALTITUDE unit:
+ALTUNIT="ft"
+if [ "$SOCKETCONFIG" != "" ]
+then
+	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
+		feet)
+		ALTUNIT="ft"
+		;;
+		meter)
+		ALTUNIT="m"
+	esac
+fi
 
 # -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
