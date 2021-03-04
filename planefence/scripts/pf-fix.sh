@@ -43,8 +43,8 @@ do
 		done
 
 		d=$(date -d "${l[2]}" +%s)
-    utcdate=$(date -u -d @"$d" +%Y-%m-%d)
-    printf -v url "http://globe.adsbexchange.com/?icao=%s&lat=%s&lon=%s&zoom=13&showTrace=%s" "${r[0]}" "$LAT" "$LON" "$utcdate"
+		utcdate=$(date -u -d @"$d" +%Y-%m-%d)
+		printf -v url "http://globe.adsbexchange.com/?icao=%s&lat=%s&lon=%s&zoom=13&showTrace=%s" "${r[0]}" "$LAT" "$LON" "$utcdate"
 
 		r[6]=$url
 		l=""
@@ -61,14 +61,14 @@ do
 	# which may have been written into field 7-11
 	for i in {7..11}
 	do
-			if [[ "${r[i]::13}" == "https://t.co/" ]]
-			then
-				r[12]="${r[i]}"
-				for ((j=i; j<12; j++))
-				do
-						r[j]=""
-				done
-			fi
+		if [[ "${r[i]::13}" == "https://t.co/" ]]
+		then
+			r[12]="${r[i]}"
+			for ((j=i; j<12; j++))
+			do
+				r[j]=""
+			done
+		fi
 	done
 
 	# fix an issue where there's no audio and somehow it fills up the audio fields with -999. This has probably to do
@@ -77,13 +77,20 @@ do
 
 	for a in {7..11}
 	do
-		 [[ "${r[a]}" == "-999" ]] && r[a]=""
+		[[ "${r[a]}" == "-999" ]] && r[a]=""
 	done
 
+
+	# If the ICAO starts with "A" and there is no flight or tail number, let's algorithmically determine the tail number
+	if [[ "${r[1]#@}" == "" ]] && [[ "${r[0]:0:1}" == "A" ]]
+	then
+		r[1]+=$(/usr/share/planefence/icao2tail.py ${r[0]})
+		echo "Added ICAO"
+	fi
+
+	# finally, write everything back into $l and write the string to a temp file:
 	printf -v l '%s,' "${r[@]}"
 	l="${l%,}"
-	#echo now: $l
-
 	echo $l >> "$CSV.tmp"
 
 done < "$CSV"
