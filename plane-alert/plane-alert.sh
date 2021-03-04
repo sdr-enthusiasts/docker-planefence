@@ -25,14 +25,14 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
-	PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefence.py are located
+PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefence.py are located
 # -----------------------------------------------------------------------------------
 #
 # PLEASE EDIT PARAMETERS IN 'plane-alert.conf' BEFORE USING PLANE-ALERT !!!
 #
 # -----------------------------------------------------------------------------------
 # Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
-	[ "$1" == "" ] && { echo "No inputfile detected. Syntax: $0 <inputfile>"; exit 1; } || INFILE="$1"
+[ "$1" == "" ] && { echo "No inputfile detected. Syntax: $0 <inputfile>"; exit 1; } || INFILE="$1"
 #	[ "$TESTING" == "true" ] && echo cmdline arg = \"$1\"
 #
 #
@@ -52,7 +52,7 @@ trap cleanup EXIT
 #
 # -----------------------------------------------------------------------------------
 # Let's see if there is a CONF file that defines some of the parameters
-	[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
+[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
 #
 # Stop printing debug into to stdout:
@@ -70,16 +70,16 @@ TESTING=""
 # We need to write this to a grep input file that consists simply of lines with "^icao"
 
 sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
-	| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
-	| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
+| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
+| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
 
 [ "$TESTING" == "true" ] && ( echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines )
 
 # Now grep through the input file to see if we detect any planes
 
 grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep it agains plalertgrep.tmp` \
-		| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-		> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 [ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 
 
@@ -90,21 +90,21 @@ cp -f "$OUTFILE" /tmp/pa-old.csv
 # Process the intermediate file:
 while IFS= read -r line
 do
-		[ "$TESTING" == "true" ] && echo 3. Parsing line $line
-		IFS=',' read -ra plalertplane <<< "$line"		# load a single line into an array called $plalertplane
+	[ "$TESTING" == "true" ] && echo 3. Parsing line $line
+	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
-		# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
-		printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
-				"$(grep "^${plalertplane[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
-				"${plalertplane[4]}"	`# Date first heard` \
-				"${plalertplane[5]:0:8}"	`# Time first heard` \
-				"${plalertplane[2]}"	`# Latitude` \
-				"${plalertplane[3]}"	`# Longitude` \
-				"${plalertplane[11]}"	`# callsign` \
-				"${plalertplane[0]}"	`# ICAO for insertion into ADSBExchange link`\
-				"$(date -d "${plalertplane[4]}" +%Y-%m-%d)"	`# reformatted date for insertion into ADSBExchange link`\
-				"$MAPZOOM"					  `# zoom factor of the map`\
-			>> "$OUTFILE"			`# Append this line to $OUTWRITEFILE`
+	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
+	printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
+	"$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
+	"${pa_record[4]}"	`# Date first heard` \
+	"${pa_record[5]:0:8}"	`# Time first heard` \
+	"${pa_record[2]}"	`# Latitude` \
+	"${pa_record[3]}"	`# Longitude` \
+	"${pa_record[11]}"	`# callsign` \
+	"${pa_record[0]}"	`# ICAO for insertion into ADSBExchange link`\
+	"$(date -d "${pa_record[4]}" +%Y-%m-%d)"	`# reformatted date for insertion into ADSBExchange link`\
+	"$MAPZOOM"					  `# zoom factor of the map`\
+	>> "$OUTFILE"			`# Append this line to $OUTWRITEFILE`
 
 done < $TMPDIR/plalert.out.tmp
 sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
@@ -124,45 +124,47 @@ diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//'
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" == "true" ]] && [[ -f "$TWIDFILE" ]]
 then
 
-# First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
-		ERRORCOUNT=0
-		while IFS= read -r line
+	# First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
+	ERRORCOUNT=0
+	while IFS= read -r line
+	do
+		unset pa_record
+		IFS=',' read -ra pa_record <<< "$line"
+		# First build the text of the tweet: reminder:
+		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
+		# 8-callsign,9-adsbx_url
+		TWITTEXT="Aircraft of interest detected:\n"
+		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} Flight: ${pa_record[8]}\n"
+		TWITTEXT+="Owner: ${pa_record[2]}\n"
+		TWITTEXT+="Aircraft: ${pa_record[3]}\n"
+		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
+		TWITTEXT+="$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+
+		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
+		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
+
+		# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
+		while IFS= read -r twitterid
 		do
-				IFS=',' read -ra plalertplane <<< "$line"
-				# First build the text of the tweet: reminder:
-				# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
-				# 8-callsign,9-adsbx_url
-				TWITTEXT="Aircraft of interest detected:\n"
-				TWITTEXT+="ICAO: ${plalertplane[0]} Tail: ${plalertplane[1]} Flight: ${plalertplane[8]}\n"
-	     	TWITTEXT+="Owner: ${plalertplane[2]}\n"
-      	TWITTEXT+="Aircraft: ${plalertplane[3]}\n"
-	     	TWITTEXT+="First heard: ${plalertplane[4]} ${plalertplane[5]}\n"
-      	TWITTEXT+="$(sed 's|/|\\/|g' <<< "${plalertplane[9]}")"
-
-		    [ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
-        [ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
-
-				# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
-				while IFS= read -r twitterid
-				do
-						# tweet and add the processed output to $result:
-						[[ "$TESTING" == "true" ]] && echo 8. Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
-						[[ "$twitterid" == "" ]] && continue
-						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
- 						processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
-						if [[ "$processedresult" != "" ]]
-						then
-								echo "9. Tweet error: $rawresult"
-								echo "Diagnostics:"
-								echo "Error: $processedresult"
-								echo "Twitter ID: $twitterid"
-								echo "Text: $TWITTEXT"
-								(( ERRORCOUNT++ ))
-						else
-								echo "Plane-alert tweet for ${plalertplane[0]} sent successfully to $twitterid"
-						fi
-				done < "$TWIDFILE"
-		done < /tmp/pa-diff.csv
+			# tweet and add the processed output to $result:
+			[[ "$TESTING" == "true" ]] && echo
+			echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+			[[ "$twitterid" == "" ]] && continue
+			rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+			if [[ "$processedresult" != "" ]]
+			then
+				echo "9. Tweet error: $rawresult"
+				echo "Diagnostics:"
+				echo "Error: $processedresult"
+				echo "Twitter ID: $twitterid"
+				echo "Text: $TWITTEXT"
+				(( ERRORCOUNT++ ))
+			else
+				echo "Plane-alert tweet for ${pa_record[0]} sent successfully to $twitterid"
+			fi
+		done < "$TWIDFILE"
+	done < /tmp/pa-diff.csv
 fi
 
 (( ERRORCOUNT > 0 )) && echo There were $ERRORCOUNT tweet errors.
@@ -175,21 +177,21 @@ cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 COUNTER=1
 while read -r line
 do
-		IFS=',' read -ra plalertplane <<< "$line"
-		if [[ "${plalertplane[0]}" != "" ]] && [[ "$(date -d "${plalertplane[4]} ${plalertplane[5]}" +%s)" -gt "$(date -d "$HISTTIME days ago" +%s)" ]]
-		then
-			  printf "%s\n" "<tr>" >> $TMPDIR/plalert-index.tmp
-				printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >> $TMPDIR/plalert-index.tmp # column: Number
-				printf "    %s%s%s\n" "<td>" "${plalertplane[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
-				printf "    %s%s%s\n" "<td>" "${plalertplane[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
-				printf "    %s%s%s\n" "<td>" "${plalertplane[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
-				printf "    %s%s%s\n" "<td>" "${plalertplane[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
-				printf "    %s%s%s\n" "<td>" "${plalertplane[4]} ${plalertplane[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time
-				printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${plalertplane[6]}&mlon=${plalertplane[7]}&zoom=$MAPZOOM\" target=\"_blank\">${plalertplane[6]}N, ${plalertplane[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
-				printf "    %s%s%s\n" "<td>" "${plalertplane[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
-				printf "    %s%s%s\n" "<td>" "<a href=\"${plalertplane[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
-				printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
-		fi
+	IFS=',' read -ra pa_record <<< "$line"
+	if [[ "${pa_record[0]}" != "" ]] && [[ "$(date -d "${pa_record[4]} ${pa_record[5]}" +%s)" -gt "$(date -d "$HISTTIME days ago" +%s)" ]]
+	then
+		printf "%s\n" "<tr>" >> $TMPDIR/plalert-index.tmp
+		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >> $TMPDIR/plalert-index.tmp # column: Number
+		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
+		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
+		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
+		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
+		printf "    %s%s%s\n" "<td>" "${pa_record[4]} ${pa_record[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time
+		printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
+		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
+		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
+		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
+	fi
 done < "$OUTFILE"
 cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
 

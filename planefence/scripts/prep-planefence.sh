@@ -12,6 +12,9 @@
 # -----------------------------------------------------------------------------------
 #
 PLANEFENCEDIR=/usr/share/planefence
+APPNAME="planefence"
+
+echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
