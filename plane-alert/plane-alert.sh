@@ -58,7 +58,7 @@ trap cleanup EXIT
 #
 # -----------------------------------------------------------------------------------
 # Let's see if there is a CONF file that defines some of the parameters
-[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
+[ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf" || echo "Warning - cannot stat $PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------------
