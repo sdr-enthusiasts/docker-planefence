@@ -1,6 +1,6 @@
 # How to install and set up a reverse web proxy for use with @Mikenye's ADSB container collection
 
-In Mikenye's excellent gitbook on how to quickly set up a number of containers to receive and process ADSB aircraft telemetry,
+In Mikenye's excellent [gitbook](https://mikenye.gitbook.io/ads-b/) on how to quickly set up a number of containers to receive and process ADSB aircraft telemetry,
 you probably have created a bunch of containers that each provide a web service on their own port. This is a bit hard to manage, especially if you need to now open a large range of ports on your firewall to point at these services.
 
 This README describes how you can set up a "reverse web proxy" that allows you to point to point https://mysite.com/aaaa to something like http://internalhost1:8080/xxxx, and repeat this for each of the containers or web services. Additionally, it (optionally) will redirect any non-encrypted "http://" request to a secure "https://" request, enabling you to access your web services via SSL.
