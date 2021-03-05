@@ -46,6 +46,8 @@ then
 	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
 	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
 	echo "Plane-alert testing under way..."
+else
+	echo "Plane-alert - not testing."
 fi
 
 function cleanup
