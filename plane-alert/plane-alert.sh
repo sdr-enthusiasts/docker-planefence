@@ -71,8 +71,8 @@ then
 	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
 	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
 	echo " Plane-alert testing under way..."
-else
-	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
+#else
+#	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
 fi
 #
 # Now let's start
@@ -90,7 +90,7 @@ sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
 | awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
 | tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
 
-[ "$TESTING" == "true" ] && ( echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines )
+[ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
 
 # Now grep through the input file to see if we detect any planes
 
@@ -136,11 +136,11 @@ diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//'
 # if testing, insert the test item into the diff to trigger tweeting
 if [[ "$TESTING" == "true" ]]
 then
-	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> /tmp/pa-diff.csv
+	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> /tmp/pa-diff.csv
 	echo /tmp/pa-diff.csv:
 	cat /tmp/pa-diff.csv
-	echo \$TWITTER: $TWITTER
-	[[ -f "$TWIDFILE" ]] && echo TWIDFILE $TWIDFILE exists || echo $TWIDFILE $TWIDFILE does not exist
+	echo var TWITTER: $TWITTER
+	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE $TWIDFILE exists || echo var TWIDFILE $TWIDFILE does not exist
 fi
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
