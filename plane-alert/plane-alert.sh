@@ -140,7 +140,7 @@ then
 	echo /tmp/pa-diff.csv:
 	cat /tmp/pa-diff.csv
 	echo \$TWITTER: $TWITTER
-	[[ -f "$TWIDFILE" ]] && echo \$TWIDFILE ($TWIDFILE) exists || echo \$TWIDFILE ($TWIDFILE) does not exist
+	[[ -f "$TWIDFILE" ]] && echo TWIDFILE $TWIDFILE exists || echo $TWIDFILE $TWIDFILE does not exist
 fi
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
