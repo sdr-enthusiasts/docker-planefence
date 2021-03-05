@@ -36,19 +36,7 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 #	[ "$TESTING" == "true" ] && echo cmdline arg = \"$1\"
 #
 #
-# -----------------------------------------------------------------------------------
-# Some testing code -- if $TESTING="true" then it's executed
-# Mainly - add a random search item to the plane-alert db and add a plane into the CSV with the same hex ID we just added
-if [[ "$TESTING" == "true" ]]
-then
-	# testhex is the letter "X" followed by the number of seconds since midnight
-	# since we're filtering by day and hex ID, this combo is pretty much unique
-	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
-	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
-	echo "Plane-alert testing under way..."
-else
-	echo "Plane-alert - not testing."
-fi
+
 
 function cleanup
 {
@@ -73,8 +61,19 @@ trap cleanup EXIT
 [ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
 #
-# Stop printing debug into to stdout:
-TESTING=""
+# -----------------------------------------------------------------------------------
+# Some testing code -- if $TESTING="true" then it's executed
+# Mainly - add a random search item to the plane-alert db and add a plane into the CSV with the same hex ID we just added
+if [[ "$TESTING" == "true" ]]
+then
+	# testhex is the letter "X" followed by the number of seconds since midnight
+	# since we're filtering by day and hex ID, this combo is pretty much unique
+	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
+	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
+	echo "Plane-alert testing under way..."
+else
+	echo "Plane-alert - not testing."
+fi
 #
 # Now let's start
 #
