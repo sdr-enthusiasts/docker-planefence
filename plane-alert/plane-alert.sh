@@ -45,7 +45,6 @@ then
 	# since we're filtering by day and hex ID, this combo is pretty much unique
 	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
 	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
-	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> "$OUTFILE"
 	echo "Plane-alert testing under way..."
 fi
 
@@ -60,7 +59,6 @@ function cleanup
 	if [[ "$TESTING" == "true" ]] && [[ "$hextext" != "" ]]
 	then
 		head -n -1 "$PLANEFILE" > /tmp/plf.tmp && mv -f /tmp/plf.tmp "$PLANEFILE"
-		head -n -1 "$OUTFILE" > /tmp/plf.tmp && mv -f /tmp/plf.tmp "$OUTFILE"
 	fi
 }
 #
@@ -133,6 +131,9 @@ rm -f /tmp/pa-diff.csv
 touch /tmp/pa-diff.csv
 #  compare the new csv file ...to the old one...     only look at lines with '>' and then strip off '> ' from them
 diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//' >/tmp/pa-diff.csv
+
+# if testing, insert the test item into the diff to trigger tweeting
+[[ "$TESTING" == "true" ]] && echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> /tmp/pa-diff.csv
 
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
