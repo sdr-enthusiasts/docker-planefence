@@ -36,6 +36,19 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 #	[ "$TESTING" == "true" ] && echo cmdline arg = \"$1\"
 #
 #
+# -----------------------------------------------------------------------------------
+# Some testing code -- if $TESTING="true" then it's executed
+# Mainly - add a random search item to the plane-alert db and add a plane into the CSV with the same hex ID we just added
+if [[ "$TESTING" == "true" ]]
+then
+	# testhex is the letter "X" followed by the number of seconds since midnight
+	# since we're filtering by day and hex ID, this combo is pretty much unique
+	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
+	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
+	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> "$OUTFILE"
+	echo "Plane-alert testing under way..."
+fi
+
 function cleanup
 {
 	# do some final clean-up before exiting - this funciton is called by a trap on receiving the EXIT signal
@@ -44,6 +57,11 @@ function cleanup
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
 	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv
 	[ "$TESTING" == "true" ] && echo 11. Finished.
+	if [[ "$TESTING" == "true" ]] && [[ "$hextext" != "" ]]
+	then
+		head -n -1 "$PLANEFILE" > /tmp/plf.tmp && mv -f /tmp/plf.tmp "$PLANEFILE"
+		head -n -1 "$OUTFILE" > /tmp/plf.tmp && mv -f /tmp/plf.tmp "$OUTFILE"
+	fi
 }
 #
 # Now make sure we call 'cleanup' upon exit:
