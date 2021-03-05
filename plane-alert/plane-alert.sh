@@ -70,9 +70,9 @@ then
 	# since we're filtering by day and hex ID, this combo is pretty much unique
 	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
 	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
-	echo "Plane-alert testing under way..."
+	echo " Plane-alert testing under way..."
 else
-	echo "Plane-alert - not testing."
+	echo " Plane-alert - not testing."
 fi
 #
 # Now let's start
