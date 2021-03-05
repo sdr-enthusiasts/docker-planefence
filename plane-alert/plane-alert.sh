@@ -128,7 +128,10 @@ then
 	ERRORCOUNT=0
 	while IFS= read -r line
 	do
+		XX=$(echo -n $line | tr -d '[:cntrl:]')
+		line=$XX
 		unset pa_record
+
 		IFS=',' read -ra pa_record <<< "$line"
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
