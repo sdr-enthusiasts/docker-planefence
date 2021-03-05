@@ -14,12 +14,12 @@ There are NO changes needed to the containers. All you need is to take a quick i
 ## Installation of NGINX, a small web server with reverse-proxy capabilities
 1. Start with a Raspberry Pi connected to the network and a clean install of Raspberry Pi OS, SSH enabled. This Raspberry Pi doesn't need to be the same as the one of your ADSB containers and services, but they should be on the same (or connected) subnets inside your firewall.
 2. Log into your Pi to the command line with SSH
-3. Do a `sudo apt-get update && sudo apt-get upgrade`
+3. Do `sudo apt-get update && sudo apt-get upgrade`
 4. Do `sudo apt-get install nginx`
 
 ## Configuration of NGINX as a reverse web proxy
 1. Edit the config file: `sudo nano -l /etc/nginx/nginx.conf` and make the following changes:
-    - Once your proxy is configured / tested / stable, you may want to switch logging off (lines 41/42):
+    - Once your proxy is configured / tested / stable, you may want to switch logging off (near lines 41/42):
       `access_log /var/log/nginx/access.log;` -> `access_log off;`
       `#error_log /var/log/nginx/error.log;` -> `error_log off;`
     Then save and exit
@@ -76,16 +76,16 @@ location /radar/ {
 
 - Your SSL certificate is only valid for 90 days and needs renewing thereafter.
 Renewal is quick and easy -- `/usr/bin/certbot renew`
-You can also set up easy automatic renewal by adding a crontab to take care of this:
+You can also set up easy automatic renewal by adding a crontab entry to take care of this:
 ```
 $ crontab -e
 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 This will check daily (at noon) if your certificate needs renewing, and once there's less than 1 month left, it will auto-renew it.
-More information about using Let's Encrypt SSL certificates can be found [here](https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx).
+More information about using Let's Encrypt SSL certificates with nginx can be found [here](https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx).
 
 ## Example `/etc/nginx/sites-enabled/default` file
-Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
+Note - this is the file from my own setup. I have a bunch of services spread around machines and ports, and each `location` entry redirects a request from http://mysite.com/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
 ```
 ##
 # You should look at the following URL's in order to grasp a solid understanding
