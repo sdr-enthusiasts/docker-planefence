@@ -134,8 +134,14 @@ touch /tmp/pa-diff.csv
 diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//' >/tmp/pa-diff.csv
 
 # if testing, insert the test item into the diff to trigger tweeting
-[[ "$TESTING" == "true" ]] && echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> /tmp/pa-diff.csv
-
+if [[ "$TESTING" == "true" ]]
+then
+	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$hextext&zoom=13 >> /tmp/pa-diff.csv
+	echo /tmp/pa-diff.csv:
+	cat /tmp/pa-diff.csv
+	echo \$TWITTER: $TWITTER
+	[[ -f "$TWIDFILE" ]] && echo \$TWIDFILE ($TWIDFILE) exists || echo \$TWIDFILE ($TWIDFILE) does not exist
+fi
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
