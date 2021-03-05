@@ -26,7 +26,7 @@ There are NO changes needed to the containers. All you need is to take a quick i
 
 2. Test. At this time, http://mysite.com (using the external or internal address) should render a template web page.
 
-3. Make sure you can reach the website from the outside world. Test this with a machine outside your local network, for example on you mobile phone using the data network (Wifi switched off!)
+3. Make sure you can reach the website from the outside world. Test this with a machine outside your local network, for example your mobile phone using the data network (Wifi switched off!)
 
 4. Create and add SSL certificate Replace the email address and domain name with yours. Note - this will fail if you can't reach the machine from the Internet. See step 3 above.
 ```
