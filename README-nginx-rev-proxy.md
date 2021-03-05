@@ -7,7 +7,7 @@ This README describes how you can set up a "reverse web proxy" that allows you t
 
 There are NO changes needed to the containers. All you need is to take a quick inventory of the web services you have and the machines / ports they live on. You can do this by (for example) reading the `docker-compose.yml` files that show which services and ports are exposed.
 
-##Acknowledgements
+## Acknowledgements
 - @Mikenye for the encouragements to get started
 - @wiedehopf for the large amount of handholding to get it actually done and implemented
 
