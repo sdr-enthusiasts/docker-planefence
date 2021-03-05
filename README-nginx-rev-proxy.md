@@ -82,6 +82,7 @@ $ crontab -e
 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 This will check daily (at noon) if your certificate needs renewing, and once there's less than 1 month left, it will auto-renew it.
+More information about using Let's Encrypt SSL certificates can be found [here](https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx).
 
 ## Example `/etc/nginx/sites-enabled/default` file
 Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
