@@ -175,8 +175,7 @@ then
 		echo "and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
-# create a copy of the plane-alert file to plane-alert's HTML directory
-ln -sf /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
 
