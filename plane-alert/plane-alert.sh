@@ -72,7 +72,7 @@ then
 	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
 	echo " Plane-alert testing under way..."
 else
-	echo " Plane-alert - not testing."
+	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
 fi
 #
 # Now let's start
