@@ -432,6 +432,14 @@ foreach my $lat (keys %pos) {
 LOG("Number of sorted heatmap positions: ".(keys %sort),"I");
 # Get the highest :
 my ($highest_weight,@rubbish)= reverse sort keys %sort;
+
+# bug fix to avoid warnings about uninitialized values
+# 06-Mar-2021 by RFK with thanks to @Wiedehopf
+if (! defined $highest_weight) { 
+        $highest_weight = 1;
+}
+
+
 $highest_weight =~ s/,.+,.+$//;
 $highest_weight += 0;
 
