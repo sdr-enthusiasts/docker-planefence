@@ -146,8 +146,8 @@ WRITEHTMLTABLE () {
 	# First, let's figure out if there are *any* Tweets or noise data
 	# If so, we need to include those columns. If not, we can leave them out
 
-	HASTWEET="false"
-	HASNOISE="false"
+	export HASTWEET="false"
+	export HASNOISE="false"
 	if [ -f "$1" ]
 	then
 		while read -r NEWLINE
@@ -840,7 +840,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 EOF
 
 # Write some extra text if NOISE data is present
-if (( MAXFIELDS > 8 ))
+if [[ "$HASNOISE" != "false" ]]
 then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
