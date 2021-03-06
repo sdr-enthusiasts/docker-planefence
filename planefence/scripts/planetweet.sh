@@ -29,7 +29,7 @@
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-HEADR=("ICAO" "Flt" "Airline" "Date" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio")
+HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
 TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
@@ -143,7 +143,7 @@ then
 			TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
 			TWEET+="${HEADR[1]}: ${RECORD[1]}"
 			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" $AIRLINETAG"
-			TWEET+="%0A${HEADR[3]}: ${RECORD[2]} - ${RECORD[3]#* }%0A"
+			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
