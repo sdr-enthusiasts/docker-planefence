@@ -212,7 +212,7 @@ EOF
 	printf "</tr>\n" >>"$2"
 
 	# Now write the table
-	COUNTER=0
+	COUNTER=1
 	while read -r NEWLINE
 	do
 		[[ "$NEWLINE" == "" ]] && continue # skip empty lines
