@@ -127,21 +127,24 @@ done < $TMPDIR/plalert.out.tmp
 sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
 mv -f /tmp/pa-new.csv "$OUTFILE"
 # the log files are now done, but we want to figure out what is new
-# so create some diff files
-rm -f /tmp/pa-diff.csv
-touch /tmp/pa-diff.csv
-#  compare the new csv file ...to the old one...     only look at lines with '>' and then strip off '> ' from them
-diff "$OUTFILE" /tmp/pa-old.csv 2>/dev/null  | grep '^[>]' | sed -e 's/^[> ]*//' >/tmp/pa-diff.csv
 
 # if testing, insert the test item into the diff to trigger tweeting
 if [[ "$TESTING" == "true" ]]
 then
-	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> /tmp/pa-diff.csv
+	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> "$OUTFILE"
 	echo /tmp/pa-diff.csv:
 	cat /tmp/pa-diff.csv
 	echo var TWITTER: $TWITTER
 	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE $TWIDFILE exists || echo var TWIDFILE $TWIDFILE does not exist
 fi
+
+# create some diff files
+rm -f /tmp/pa-diff.csv
+touch /tmp/pa-diff.csv
+#  compare the new csv file to the old one and only print the added entries
+comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
+
+
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
