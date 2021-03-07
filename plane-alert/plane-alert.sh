@@ -186,14 +186,14 @@ then
 			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
 			if [[ "$processedresult" != "" ]]
 			then
-				echo "9. Tweet error: $rawresult"
+				echo "Plane-alert Tweet error: $rawresult"
 				echo "Diagnostics:"
 				echo "Error: $processedresult"
 				echo "Twitter ID: $twitterid"
 				echo "Text: $TWITTEXT"
 				(( ERRORCOUNT++ ))
 			else
-				echo "Plane-alert tweet for ${pa_record[0]} sent successfully to $twitterid"
+				echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 			fi
 		done < "$TWIDFILE"
 	done < /tmp/pa-diff.csv
