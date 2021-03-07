@@ -36,7 +36,7 @@ sleep $LOOPTIME
 echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
 while true
 do
-
+        LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
 	          echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)"
@@ -47,7 +47,6 @@ do
                   echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
-        LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 	sleep $LOOPTIME
 	echo "[$APPNAME][$(date)] PlaneFence restarting now"
 done
