@@ -172,7 +172,6 @@ then
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
-				tail -1 /tmp/tweets.log
 			else
 				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
 			fi
