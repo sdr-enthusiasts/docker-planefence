@@ -2,7 +2,7 @@
 #shellcheck shell=bash
 
 APPNAME="planefence"
-LOOPTIME=60
+LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 PLANEFENCEDIR=/usr/share/planefence
 
 echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
@@ -47,6 +47,7 @@ do
                   echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
 fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
+        LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 	sleep $LOOPTIME
 	echo "[$APPNAME][$(date)] PlaneFence restarting now"
 done
