@@ -51,7 +51,13 @@ cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
-[[ "$PF_INTERVAL" != "" ]] && export LOOPTIME=$PF_INTERVAL || export LOOPTIME=120
+if [[ "$PF_INTERVAL" != "" ]]
+then
+        export LOOPTIME=$PF_INTERVAL
+
+else
+        export LOOPTIME=120
+fi
 #
 # PLANEFENCEDIR contains the directory where planefence.sh is location
 
