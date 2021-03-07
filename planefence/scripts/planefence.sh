@@ -912,8 +912,7 @@ LOG "Done writing history"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
-<hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server
-<a href="https://discord.gg/sTf9uYF"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>.
+<hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the icon to join: <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 $(if [[ -f /root/.buildtime ]]; then printf " Build: "; cat /root/.buildtime; fi)
 <br/>&copy; Copyright 2020, 2021 by Ram&oacute;n F. Kolb
 </div>
