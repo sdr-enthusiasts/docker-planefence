@@ -86,9 +86,10 @@ fi
 #
 # We need to write this to a grep input file that consists simply of lines with "^icao"
 
-sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
-| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
-| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
+sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
+#sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
+#| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
+#| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
 
 [ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
 
