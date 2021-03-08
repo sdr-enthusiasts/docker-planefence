@@ -63,6 +63,8 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/kx1t/docker-planefence/README-planetweet.md
 - OPTIONAL: `sudo nano ~/.planefence/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/kx1t/docker-planefence/README-nginx-rev-proxy.md).
+- OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
+
 
 #### Applying your setup
 - If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `~/.planefence/planefence.config` will be picked up automatically
@@ -72,14 +74,13 @@ In the `docker-compose.yml` file, you should configure the following:
 - Planefence build example: https://planefence.ramonk.net
 - Plane-alert build example: https://plane-alert.ramonk.net
 
-## Seeing my own setup and troubleshooting
-- Be patient. Many of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
-- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? cat
-- Check the logs: `docker logs -f planefence`
+## Seeing your own setup and troubleshooting
+- Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
+- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? Did you edit the `planefence.config` file?
+- Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself during operation. The logs will be quite explicit if there's something you need to take action about.
 - Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8081/plane-alert
 - Twitter setup is complex. [Here](https://github.com/kx1t/docker-planefence#setting-up-tweeting)'s a description on what to do.
-- If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/blob/main/README.md).
 
 ## Building my own container
 This section is for those who don't trust my container building skills (honestly, I wouldn't trust myself!) or who run on an architecture that is different than `armhf` (Raspberry Pi 3B+/4 with Raspberry OS 32 bits),`arm64` (Raspberry Pi 4 with Ubuntu 64 bits), or `amd64` (Linux PC). In that case, you may have to create your own container using these steps. This assumes that you have `git` installed. If you don't, please install it first using `sudo apt-get install git`.
@@ -95,7 +96,7 @@ This should create a container ready to use on your local system. Make sure to u
 
 
 ## Getting help
-- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message. Alternatively, you email me at kx1t@amsat.org.
+- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message. Alternatively, email me at kx1t@amsat.org.
 
 That's all!
 ![](https://media.giphy.com/media/3oKHWikxKFJhjArSXm/giphy.gif)
