@@ -24,107 +24,78 @@ In order for you to use it, here are some assumptions or prerequisites:
 - You are able to access the software and install additional components.
 - You know how to deploy Docker images to your machine. If you don't -- it's actually quite simple and makes installation of new components really easy. I advise you to read [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) on the topic, which will show you step by step what to do.
 - You use `docker-compose`. It's not hard to simply do `docker run` from a script, but this README has been written assuming `docker-compose`. If you don't have it, feel free to `apt-get install` it :)
-- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message. 
+- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message.
 
-## Deploying `docker-planefence`
+## Install PlaneFence - Prerequisites
 
-The following instructions assume that you are working on a Raspberry Pi and that you already have the `docker` application installed. If you need help with this, instructions can be found [here](https://mikenye.gitbook.io/ads-b/setting-up-the-host-system/install-docker). 
+Note - this guide assumes that `/home/pi` is your home directory. If it is not (for example, Ubuntu builds use `/home/ubuntu` as their default account), please change all occurrences of `/home/pi` to your home directory path.
 
-There are 2 ways of deploying planefence -- as a stand-alone deployment where you still need to deploy a feeder station, or as part of an already existing dockerized installation of your feeder.
+This guide assumes that you have `docker` and `docker-compose` installed. If you don't, please follow the relevant sections of [this guide](https://mikenye.gitbook.io/ads-b/setting-up-the-host-system/install-docker).
 
-### Installing stand-alone
-There is a sample `docker-compose` file and a sample `.env` file that contain all the deployment parameters you need. In addition, we need to prep a directory that will be linked to the directory ("volume") with the web and data files. This ensures that you can access them from the host machine, and that they will be super persistent across builds, so no information will get lost.
+Last, we are going to assume that you have a version of `tar1090`, `dump1090[-fa]`, or `readsb` running somewhere in reach of your Planefence machine, potentially even as a container on the same machine. --> It is important to enable SBS data on port 30003 on that instance. PlaneFence will use this to get its data. Again, Mikenye's Gitbook will help you install a container with this, if needed.
 
-Follow these commands:
+### Getting ready
+
+If you are adding this to an existing collection of docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`. If not, you should create a project directory (`sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence`) and make a new `docker-compose.yml` there.
+
+Get the template Docker-compose.yml file from here:
 ```
-sudo mkdir -d /opt/planefence/Volumes/html
-mkdir -d ~/.planefence
-sudo chown -R ${USER}: /opt/planefence
-wget -O /opt/planefence/docker-compose.yml https://raw.githubusercontent.com/kx1t/docker-planefence/main/docker-compose.yml
-wget -O /opt/planefence/.env https://raw.githubusercontent.com/kx1t/docker-planefence/main/.env-example
+curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/dev/docker-compose.yml > docker-compose.yml
 ```
-Now, and this is important, you MUST edit these two files before starting the docker container:
-- `/opt/planefence/.env` contains all the variables about your station. You MUST SET THESE TO APPROPRIATE VALUES, otherwise things won't work. At a very minimum, you must adjust these: `FEEDER_ALT_FT`, `FEEDER_ALT_M`, `FEEDER_LAT`, `FEEDER_LONG`, `FEEDER_TZ`
-- `/opt/planefence/docker-compose` contains a bunch of stuff regulating the docker container and how it communicates with the outside world. Specifically take note of these parameters and change them to your needs:
--- Under `services:` -> `planefence:`, there is a `ports` section. This has the syntax of `80:80`. The first number (left of the ":") indicates the port number the outside world sees. If you are already running a web server somewhere, you may want to change this to a different number. (Alternatively, you may forego the docker container's webservice altogether and use a web server on the host machine. See the description in the Advanced section below.)
--- If for any reason you didn't like the `/opt/planefence/Volumes/html/` directory and changed this in the command above, you should also change it in this file under `Services:` -> `Planefence:` -> `Volumes:`. Again, only change things LEFT of the ":". 
 
-Once this is done, you can start the complete docker using:
-```pushd /opt/planefence && docker-compose up -d && popd```
+### Planefence Configuration
+#### Initial docker configuration
+In the `docker-compose.yml` file, you should configure the following:
+- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: kx1t/planefence`
+- IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
+- There are 2 volumes defined. My suggestion is NOT to change these (except for updating `/home/pi/.planefence` -> `/home/ubuntu/planefence` if required). However, if you have to, you can map the HTML directory to some other location. ONLY change what is to the LEFT of the colon.
+- You can exit the editor and start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
+- Monitor the container (`docker logs -f planefence`). At first start-up, it should be complaining about not being configure. That is expected behavior.
 
-Congratulations, that's all! Browse to `http://your.ip:8088` to see the website, or browse the data in `/opt/planefence/Volumes/html/*.csv` !
+#### Planefence Settings Configuration
+- When you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work! You can check if the system recognized you've made edits by typing `docker logs planefence` - if you haven't set up the system, it *will* complain.
+- MANDATORY: First -- copy the template config file in place: `cp ~/.planefence/planefence.config-RENAME-and-EDIT-me ~/.planefence/planefence.config`
+  - ALTERNATIVE - if you have used PlaneFence in the past and created a `.env` file, you can use this file as a basis for your `planefence.config` file. You can copy it with `sudo cp /opt/planefence/.env ~/.planefence/planefence.config`. However, there are many new features and setting described in the planefence.config-RENAME-and-EDIT-me file. You should take notice and copy these in! There are some items (like the setup for the different feeders) that are not needed by `planefence.config`.
+- MANDATORY: `sudo nano ~/.planefence/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
+- OPTIONAL: `sudo nano ~/.planefence/plane-ignore.txt`. In this file, you can add things that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
+- OPTIONAL: `sudo nano ~/.planefence/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/kx1t/planefence/issues so we can add your changes to the default file.
+- OPTIONAL: If you configured Twitter support before, `sudo nano ~/.planefence/.twurlrc`. You can add your back-up TWURLRC file here, if you want.
+- OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/kx1t/docker-planefence/README-planetweet.md
+- OPTIONAL: `sudo nano ~/.planefence/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
+- OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/kx1t/docker-planefence/README-nginx-rev-proxy.md).
 
-### Adding to a previously deployed readsb[-protobuf]/dump1090[-fa] docker container or external machine
-These instructions assume that you deployed Mikenye's dockerized containers for adsb as described in his [Gitbook](https://mikenye.gitbook.io/ads-b/). If you built your own container, the text below should be enough for you to figure out how to update your docker-compose file to add Planefence
+#### Applying your setup
+- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `~/.planefence/planefence.config` will be picked up automatically
+- You can restart the Planefence container by doing: `pushd /opt/planefence && docker stop planefence && docker-compose up -d && popd` (replace `/opt/planefence` to whatever the directory is where your `docker-compose.yml` file is located
 
-1. Make sure you are running readsb or dump1090[-fa] with the option `--net-sbs-port=30003`. In a non-dockerized installation, you can edit the applicable file in `/etc/default`: either `dump1090`, or `dump1090-fa`, or `readsb`. In Mikenye's dockerized version of `readsb`, add the following to `docker-compose.yml` in the `environment:` section: `- READSB_NET_SBS_OUTPUT_PORT=30003`.
-2. Copy the relevant parts from the [`docker-compose.yml` sample file](https://raw.githubusercontent.com/kx1t/docker-planefence/main/docker-compose.yml) to your own `docker-compose.yml`. SPecifically, add `planefence:` to the `volumes:` section and add the entire `planefence:` section that is shown under `services:` in the sample file.
-3. Add the variable from the [`.env` sample file](https://raw.githubusercontent.com/kx1t/docker-planefence/main/.env-example) to your existing `.env` file, or copy the file in its entirety (and edit it!) if it doesn't already exist.
-4. Expose the port 30003 on the container that runs the feeder. This will automatically make that port available to the planefence container
-5. If you are running your feeder on a different machine (or in a different group), you will need to do two things:
--- ensure that the feeder installation exposes SBS on port 30003
--- update your `.env` file for planefence and put the hostname or IP address of the machine that provides the SBS output in the `PF_SOCK30003HOST` parameter, for example `PF_SOCK30003HOST=192.168.0.25`.
+## What does it look like when it's running?
+- Planefence build example: https://planefence.ramonk.net
+- Plane-alert build example: https://plane-alert.ramonk.net
 
+## Seeing my own setup and troubleshooting
+- Be patient. Many of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert
+- Check, check, double-check. Did you configure the correct container in `docker-compose.yml`? cat
+- Check the logs: `docker logs -f planefence`
+- Check the website: http://myip:8081 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
+- Plane-alert will appear at http://myip:8081/plane-alert
+- Twitter setup is complex. [Here](https://github.com/kx1t/docker-planefence#setting-up-tweeting)'s a description on what to do.
+- If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/blob/main/README.md).
 
-## Advanced configuration
-
-### Setting up Tweeting
-
-Planefence can send out a Tweet everytime an aircraft enters the fence. In order to do so, you need to apply for a Twitter Developer Account, create an application on your Twitter Dev account, get some keys, and run a bit of configuration. This is a one-time thing, so even it if sounds complicated, at least it needs to be done only once! Follow these steps:
-1. Go to https://apps.twitter.com/app/new . Sign in with your Twitter account, apply for a developer account, and create a new app. A couple of hints:
-
--- If you need help, [here](https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/)'s a webpage with an excellent graphical walk-through of what you need to do.
-
--- Create a new application and provide some answers. Your application will be for "hobbyist" use, it's a "bot", and just provide a description of why you'd like to tweet about planes flying over your house. 
-
--- Make sure you have a mobile phone number registered with your account. Without it, you can't get "write" (i.e., send Tweets) permissions.  If your carrier is not supported by Twitter and you are unable to add a number, contact Twitter using https://support.twitter.com/forms/platform, selecting the last checkbox. Some users have reported success adding their number using the mobile site, https://mobile.twitter.com/settings, which seems to bypass the carrier check at the moment.
-
--- Request Read, Write, and Send Direct Messages access. If you don't, the logs will full up with errors ("Error processing your OAuth request: Read-only application cannot POST").
-
--- Keep the page with your Consumer API keys open - you will need them in the next step. Copy the Consumer API Key and Consumer API Key Secret somewhere -- it's a hassle if you lose them as you'll have to regenerate them and re-authorize the application.
-
-2. Edit your /opt/planefence/.env file and make sure that PF_TWEET=ON
-
-3. Restart the container (`docker-compose up -d`)
-
-4. Remember your Twitter Consumer API Key and Consumer API Key Secret? You need them now!
-
-5. Run this from your host system's command line: `docker exec -it planefence /root/config_tweeting.sh`
-
-6. Follow the instructions. Make a BACK UP of your Cons Key / Secret and make a BACK UP of the config file.
-
-7. Make a backup of your configuration file: `docker cp planefence:/root/.twurlrc .` -- you should save the `.twurlrc` file in a safe spot.
-
-8. If you ever need to restore this file (for example, when you lose your config because you had to recreate the container), you can restore this configuration file by giving the "reverse" command: `docker cp .twurlrc planefence:/root/`
+## Building my own container
+This section is for those who don't trust my container building skills (honestly, I wouldn't trust myself!) or who run on an architecture that is different than `armhf` (Raspberry Pi 3B+/4 with Raspberry OS 32 bits),`arm64` (Raspberry Pi 4 with Ubuntu 64 bits), or `amd64` (Linux PC). In that case, you may have to create your own container using these steps. This assumes that you have `git` installed. If you don't, please install it first using `sudo apt-get install git`.
+ ```
+sudo mkdir -p /opt/planefence
+sudo chmod a+rwx /opt/planefence
+cd /opt/planefence
+git clone https://github.com/kx1t/docker-planefence
+cd docker-planefence
+docker build --compress --pull -t kx1t/planefence:mycontainer .
+```
+This should create a container ready to use on your local system. Make sure to update your `docker-compose.yml` to point the image at `kx1t/planefence:mycontainer`
 
 
-### External web service
+## Getting help
+- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please add "@ramonk" to your message. Alternatively, you email me at kx1t@amsat.org.
 
-If you want, you can use web server based on the host instead of using the web server inside the docker container. You'd do this on a machine that hosts several web pages, so you can map things like http://my.ip/tar1090 - http://my.ip/skyview - http://my.ip/planefence - etc.
-To configure this:
-1. remove the port mapping from `docker-compose.yml`. Note -- you cannot leave an empty `ports:` section in this file, you may have to remove (or comment out) that too. Also note - you can leave this in, but in that case your website will still be rendered to the port you originally set up.
-2. Map a web directory to `/opt/planefence/Volumes/html/`. If your host is using `lighttpd`, [here](https://raw.githubusercontent.com/kx1t/docker-planefence/main/planefence/88-planefence-on-host.conf) is a handy lighttpd mod with some instructions on how you can do this.
-
-### Build your own container
-This repository contains a Dockerfile that can be used to build your own.
-1. Pull the repository and issue the following command from the base directory of the repo:
-`docker build --compress --pull --no-cache -t kx1t/planefence .`
-2. Then simply restart the container with `pushd /opt/planefence && docker-compose up -d && popd`
-
-# Acknowledgements, Attributions, and License
-I would never have been able to do this without the huge contributions of [Mikenye](http://github.com/mikenye), [Fredclausen](http://github.com/fredclausen), and [Wiedehopf](http://github.com/wiedehopf). Thank you very much!
-
-## Attributions
-The package contains parts of, and modifications or derivatives to the following:
-Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
-These packages may incorporate other software and license terms.
-
-## License
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/.
-
-
-![](https://github.com/kx1t/docker-planefence/raw/main/.img/planefence-screenshot.png)
+That's all!
+![](https://media.giphy.com/media/3oKHWikxKFJhjArSXm/giphy.gif)

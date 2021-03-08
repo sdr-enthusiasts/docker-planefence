@@ -70,7 +70,7 @@ if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
 		sleep 10s
 		echo "----------------------------------------------------------"
-		echo "!!! STOP !!!! You haven't configured PlaneFence !!!!"
+		echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
 		echo "Planefence will not run unless you edit it configuration."
 		echo "You can do this by pressing CTRL-c now and typing:"
 		echo "sudo nano -l ~/.planefence/planefence.config"
@@ -102,18 +102,31 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
 [[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
-[[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf || sed -i 's/\(^\s*MY=\).*/\1\"My\"/' /usr/share/planefence/planefence.conf
 [[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf
-[[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf
+[[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*MYURL=\).*|\1|' /usr/share/planefence/planefence.conf
+[[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*REMOTENOISE=\).*|\1|' /usr/share/planefence/planefence.conf
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
-		a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
-		sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
-		sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
-		unset a
+	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
+	sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
+	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
+	unset a
+else
+	sleep 10s
+	echo "----------------------------------------------------------"
+	echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
+	echo "Planefence will not run unless you edit it configuration."
+	echo "You can do this by pressing CTRL-c now and typing:"
+	echo "sudo nano -l ~/.planefence/planefence.config"
+	echo "Once done, restart the container and this message should disappear."
+	echo "----------------------------------------------------------"
+	while true
+	do
+			sleep 99999
+	done
 fi
-[[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf
+[[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 # -----------------------------------------------------------------------------------
 #
 # same for planeheat.sh
@@ -152,7 +165,7 @@ then
 			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-                        [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
+            [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
         fi
 fi
 # -----------------------------------------------------------------------------------
@@ -170,26 +183,24 @@ do
 	[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
 done
 
-#
-
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
 		echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "Do this on the host to get a base file:"
-		echo "sudo curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
 		echo "and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
-sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf
+[[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
 # and write the rest of the parameters into their place
 [[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1'"\"false\""'|' /usr/share/plane-alert/plane-alert.conf
-[[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
 
