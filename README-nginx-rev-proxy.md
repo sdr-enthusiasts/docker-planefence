@@ -35,23 +35,8 @@ sudo certbot -n --nginx --agree-tos --redirect -m me@my-email.com -d mydomain.co
 ```
 This will create an SSL certificate for you that is valid for 90 days. For renewing and auto-renewing, see the Troubleshooting section below.
 
-5. In `/etc/nginx`, create a file called `locations.conf`. In this file, you will add your proxy redirects. Use `localhost` or `127.0.0.1` for ports on the local machine
-```
-# redirect http(s)://mywebsite/website-1/ to http://10.0.0.10:8080/website1path/ :
-location /website-1/ {
-	proxy_pass http://10.0.0.10:8080/website1path/;
-}
+5. In `/etc/nginx`, create a file called `locations.conf`. In this file, you will add your proxy redirects. Use `localhost` or `127.0.0.1` for ports on the local machine. See an example of this file below - adapt it to your own needs
 
-# redirect http(s)://mywebsite/website-2/ to http://10.0.0.11:8088/website2path/ :
-location /website-2/ {
-	proxy_pass http://10.0.0.11:8088/website2path/;
-}
-
-# ...et cetera. Make sure the location ends with a "/"
-
-# Add index.php to the list if you are using PHP
-index index.html index.htm index.nginx-debian.html;
-```
 6. Now edit /etc/nginx/sites-available/default. There will be 3 sections that start with `server {` (potentially more that are commented out).
     - The first section is for connections to the standard http port
     - The second section is for connections to the SSL (https) port
@@ -63,16 +48,9 @@ include /etc/nginx/locations.conf;
 7. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
 
 ## Troubleshooting and known issues
-- The `graphs` package for the `readsb-protobuf` container needs access to `../radar`, which is located below its own root. If you want to redirect (for example) http://graphs.mysite.com to the graphs package, you must add a second proxy_pass to `radar`. Here is an example from my own setup:
-```
-location /graphs/ {
-	proxy_pass http://10.0.0.190:8080/graphs/;
-}
-location /radar/ {
-	proxy_pass http://10.0.0.190:8080/radar/;
-	# this is needed because of URL issues with the graphs package in readsb
-}
-```
+- My page renders badly / not / partially. This is often the case because of one of these issues:
+	- The website uses absolute paths. So if the website is looking for `/index.html` instead of `index.html`, it will work at `http://mysite/index.html` but it won't work on `http://mysite/myapp/index.html`. This is a coding bug that can only be solved with some work-arounds. 
+THis is the case with the `graphs` package for the `readsb-protobuf` container needs access to `../radar`, which is located below its own root. If you want to redirect (for example) http://graphs.mysite.com to the graphs package, you must add a second proxy_pass to `radar`. See example at the end of this guide.
 
 - Your SSL certificate is only valid for 90 days and needs renewing thereafter.
 Renewal is quick and easy -- `/usr/bin/certbot renew`
@@ -83,6 +61,9 @@ $ crontab -e
 ```
 This will check daily (at noon) if your certificate needs renewing, and once there's less than 1 month left, it will auto-renew it.
 More information about using Let's Encrypt SSL certificates with nginx can be found [here](https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx).
+
+- The target website uses websockets. In this case, make sure to implement something similar to `location /acars/` as shown below in the `locations.conf` example.
+
 
 ## Example `/etc/nginx/sites-enabled/default` file
 Note - this is the file from my own setup. I have a bunch of services spread around machines and ports, and each `location` entry redirects a request from http://mysite.com/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
@@ -176,7 +157,7 @@ server {
 
 ```
 
-## Example `locations.conf` file
+## Example `/etc/nginx/locations.conf` file
 Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
 ```
 location /readsb/ {
