@@ -85,8 +85,10 @@ CLEANUP_CACHE ()
 a=$1	# get the flight number or tail number from the command line argument
 a="${a#@}"	# strip off any leading "@" signs - this is a Planefence feature
 
-# Airlinecodes has the 3-character code in field 1 and the full name in field 2:
-b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
+# Airlinecodes has the 3-character code in field 1 and the full name in field 2
+# to prevent false hits when the tall number starts with 3 letters
+# (common outside the US), only call this if the input looks like a flight number
+echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
 
 # Now, if we got nothing, then let's try the Plane-Alert database.
 # The Plane-Alert db has the tail number in field 2 and the full name in field 3:
