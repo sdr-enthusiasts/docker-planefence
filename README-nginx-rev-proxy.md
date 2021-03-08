@@ -41,11 +41,10 @@ This will create an SSL certificate for you that is valid for 90 days. For renew
     - The first section is for connections to the standard http port
     - The second section is for connections to the SSL (https) port
     - The third section rewrites any incoming "http" request into a "https" request
-
-For each `server` section, just before the closing `}`, add the following line:
-```
-include /etc/nginx/locations.conf;
-```
+    - For each `server` section, just before the closing `}`, add the following line:
+	```
+	include /etc/nginx/locations.conf;
+	```
 7. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
 
 ## Troubleshooting and known issues
