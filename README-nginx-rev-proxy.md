@@ -180,63 +180,72 @@ server {
 Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
 ```
 location /readsb/ {
-	proxy_pass http://10.0.0.190:8080/;                                                                                            
+	proxy_pass http://10.0.0.191:8080/;                                                                                                
 } 
 
 location /piaware/ {
-	proxy_pass http://10.0.0.190:8081/;                                                                                                
+	proxy_pass http://10.0.0.191:8081/;                                                                                                
 }
 
 location /tar1090/ {
-	proxy_pass http://10.0.0.190:8082/;                                                                                                
+	proxy_pass http://10.0.0.191:8082/;                                                                                                
 } 
 
 location /adsb/ {
-	proxy_pass http://10.0.0.190:8082/;                                                                                                
+	proxy_pass http://10.0.0.191:8082/;                                                                                                
 } 
 
 location /planefence/ {
-	proxy_pass http://10.0.0.190:8083/;                                                                                                
+	proxy_pass http://10.0.0.191:8083/;                                                                                                
 } 
 
 location /plane-alert/ {
-	proxy_pass http://10.0.0.190:8083/plane-alert/;                                                                                                
+	proxy_pass http://10.0.0.191:8083/plane-alert/;                                                                                                
 } 
 
 location /heatmap/ {
-	proxy_pass http://10.0.0.190:8084/;                                                                                                
+	proxy_pass http://10.0.0.191:8084/;                                                                                                
 } 
 
 location /stats/ {
-	proxy_pass http://10.0.0.190:8080/graphs/;                                                                                                
+	proxy_pass http://10.0.0.191:8080/graphs/;                                                                                                
 } 
 
 location /graphs/ {
-	proxy_pass http://10.0.0.190:8080/graphs/;                                                                                                
+	proxy_pass http://10.0.0.191:8080/graphs/;                                                                                                
 } 
 location /radar/ {
-	proxy_pass http://10.0.0.190:8080/radar/;                                                                                                
+	proxy_pass http://10.0.0.191:8080/radar/;                                                                                                
 	# this is needed because of URL issues with the graphs package in readsb
 } 
 
+
 location /acars/ {
-	proxy_pass http://10.0.0.166:80/;                                                                                                
+	proxy_pass http://10.0.0.188:80/;
+	# These extra header settings are necessary to make acars work (to enable websockets):
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Host $http_host;
 } 
 
 location /acarshub/ {
-	proxy_pass http://10.0.0.166:80/;                                                                                                
+	proxy_pass http://10.0.0.188:80/;                                                     
+	# These extra header settings are necessary to make acars work (to enable websockets):
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Host $http_host;
 } 
 
 location /acarsdb/ {
-	proxy_pass http://10.0.0.166:80/;                                                                                                
+	proxy_pass http://10.0.0.188:8080/;                                                                                                
 } 
 
 location /noise/ {
-	proxy_pass http://10.0.0.190:30088/;                                                                                                
+	proxy_pass http://10.0.0.191:30088/;                                                                                                
 } 
 
 location /noisecapt/ {
-	proxy_pass http://10.0.0.190:30088/;                                                                                                
+	proxy_pass http://10.0.0.191:30088/;                                                                                                
 } 
 
 # Add index.php to the list if you are using PHP
