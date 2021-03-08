@@ -1792,6 +1792,7 @@ GAF,German Air Force,GERMAN AIR FORCE,Germany
 GAG,Greybird Pilot Academy,GEEBIRD,Denmark
 GAH,Ga-Ma Helicoptere,GAMHELICO,France
 GAI,Moskovia Airlines,GROMOV AIRLINE,Russia
+GAJ,Wheels Up,GAMA,United States
 GAK,Global Aviation and Services Group,AVIAGROUP,Libya
 GAL,Galaxy Air,GALAXY,Kyrgyzstan
 GAM,German Army,GERMAN ARMY,Germany
@@ -4543,6 +4544,7 @@ SXA,Southern Cross Aviation,FERRY,United States
 SXC,Sky Exec Aviation Services,SKY EXEC,Nigeria
 SXD,Sunexpress Deutschland,SUNRISE,Germany
 SXE,Southeast Express Airlines,DOGWOOD EXPRESS,United States
+SXL,Skyline Flight,SKYLINE,United States
 SXM,Servicios Aéreos Especializados Mexicanos,SERVIMEX,Mexico
 SXN,SaxonAir,SAXONAIR,United Kingdom
 SXS,SunExpress,SUNEXPRESS,Turkey
