@@ -158,7 +158,7 @@ server {
 ```
 
 ## Example `/etc/nginx/locations.conf` file
-Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
+Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite.com/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
 ```
 location /readsb/ {
 	proxy_pass http://10.0.0.191:8080/;                                                                                                
