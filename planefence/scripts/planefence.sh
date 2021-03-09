@@ -129,6 +129,9 @@ then
 	LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
 	LAT_VIS="${LAT_VIS%%0*}" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
 	LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+else
+	LON_VIS="$LON"
+	LAT_VIS="$LAT"
 fi
 #
 #
@@ -808,7 +811,7 @@ h2 {text-align: center}
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
 <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
-<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$VIS_LAT&mlon=$VIS_LON#map=14/$VIS_LAT/$VIS_LON&layers=H" target=_blank>${VIS_LAT}&deg;N, ${VIS_LON}&deg;E</a>: $DISPLAYDIST $DISPLAYUNIT
+<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DISPLAYDIST $DISPLAYUNIT
 <li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
 <li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 
@@ -844,7 +847,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 EOF
 
 [ "$TRACKSERVICE" == "flightaware" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$VIS_LAT&lon=$VIS_LON&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"

@@ -53,15 +53,37 @@
         TMPVARS=$TMPDIR/planeheat-$FENCEDATE.tmp
         TMPVARSTEMPLATE="$TMPDIR/planeheat-*.tmp"
         MINTIME=60
-	VERBOSE="--verbose"
-#        VERBOSE=""
-        VERSION=0.2
+#       VERBOSE="--verbose"
+        VERBOSE=""
+        VERSION=0.3
         LOGFILE=/tmp/planefence.log
 #       LOGFILE=logger # if $LOGFILE is set to "logger", then the logs are written to /var/log/syslog. This is good for debugging purposes.
 #	LOGFILE=/dev/stdout
         CURRENT_PID=$$
         PROCESS_NAME=$(basename "$0")
         TIMELOG=$(date +%s)
+
+        # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
+        if [[ "$FUDGELOC" != "" ]]
+        then
+            if [[ "$FUDGELOC" == "2" ]]
+            then
+                printf -v LON_VIS "%.2f" $LON
+                printf -v LAT_VIS "%.2f" $LAT
+            else
+                # If $FUDGELOC != "" but also != "2", then assume it is "3"
+                printf -v LON_VIS "%.3f" $LON
+                printf -v LAT_VIS "%.3f" $LAT
+            fi
+            # clean up the strings:
+            LON_VIS="${LON_VIS%%0*}"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+            LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+            LAT_VIS="${LAT_VIS%%0*}" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+            LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+        else
+            LON_VIS="$LON"
+            LAT_VIS="$LAT"
+        fi
 # -----------------------------------------------------------------------------------
 #
 
@@ -203,13 +225,13 @@ cat <<EOF >"$PLANEHEATHTML"
 <script src="leaflet-heat.js"></script>
 <script src="planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js"></script>
 <script>
-	var map = L.map('map').setView([parseFloat("$LAT"), parseFloat("$LON")], parseInt("$HEATMAPZOOM"));
+	var map = L.map('map').setView([parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], parseInt("$HEATMAPZOOM"));
 	var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 	    attribution: '<a href="https://github.com/kx1t/docker-planefence" target="_blank">docker:kx1t/planefence</a> | <a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> | &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 	    }).addTo(map);
 	addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
 	var heat = L.heatLayer(addressPoints, {minOpacity: 1, radius: 7, maxZoom: 14, blur: 11 }).addTo(map);
-	var circle = L.circle([ parseFloat("$LAT"), parseFloat("$LON")], {
+	var circle = L.circle([ parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], {
 	    color: 'blue',
 	    fillColor: '#f03',
 	    fillOpacity: 0.1,
