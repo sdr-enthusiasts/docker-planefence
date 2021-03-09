@@ -84,6 +84,29 @@
             LON_VIS="$LON"
             LAT_VIS="$LAT"
         fi
+
+        # Now determine the conversion factor for the circle on the map
+        # The leaflet parameter wants input in meters
+        if [ "$SOCKETCONFIG" != "" ]
+        then
+        	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+        		nauticalmile)
+                # 1 NM is 1852 meters
+        		TO_METER=1852
+        		;;
+        		kilometer)
+                # 1 km is 1000 meters
+        		TO_METER=1000
+        		;;
+        		mile)
+                # 1 mi is 1609 meters
+        		TO_METER=1609
+        		;;
+        		meter)
+        		# 1 meter is 1 meters
+        		TO_METER=1
+        	esac
+        fi
 # -----------------------------------------------------------------------------------
 #
 
@@ -214,7 +237,7 @@ $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDI
 
  LOG "Returned from planeheat.pl"
 
-DISTMTS=$(bc <<< "$DIST * 1609.34")
+DISTMTS=$(bc <<< "$DIST * $TO_METER")
 
 # Now build the HTML file of the day:
 
