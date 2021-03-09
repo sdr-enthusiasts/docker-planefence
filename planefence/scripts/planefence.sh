@@ -112,6 +112,30 @@ then
 fi
 #
 #
+# Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
+if [[ "$FUDGELOC" != "" ]]
+then
+	if [[ "$FUDGELOC" == "2" ]]
+	then
+		printf -v LON_VIS "%.2f" $LON
+		printf -v LAT_VIS "%.2f" $LAT
+	else
+		# If $FUDGELOC != "" but also != "2", then assume it is "3"
+		printf -v LON_VIS "%.3f" $LON
+		printf -v LAT_VIS "%.3f" $LAT
+	fi
+	# clean up the strings:
+	LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+	LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+	LAT_VIS="$(sed 's/^00*\|00*$//g' <<< $LAT_VIS)" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+	LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+else
+	LON_VIS="$LON"
+	LAT_VIS="$LAT"
+fi
+
+#
+#
 # Functions
 #
 # Function to write to the log
@@ -788,10 +812,12 @@ h2 {text-align: center}
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
 <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
-<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT&mlon=$LON#map=14/$LAT/$LON&layers=H" target=_blank>${LAT}&deg;N, ${LON}&deg;E</a>: $DISPLAYDIST $DISPLAYUNIT
+<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DISPLAYDIST $DISPLAYUNIT
 <li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
 <li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
+
 EOF
+[[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
 
 if [[ -f "/run/planefence/filtered-$FENCEDATE" ]]
 then
@@ -822,7 +848,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 EOF
 
 [ "$TRACKSERVICE" == "flightaware" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT&lon=$LON&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"

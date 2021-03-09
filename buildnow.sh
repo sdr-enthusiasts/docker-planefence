@@ -2,19 +2,14 @@
 #
 set -x
 
-# rebuild the container
+BRANCH=dev
+[[ "$1" != "" ]] && BRANCH="$1"
+[[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
 
-pushd /etc/docker/build/docker-planefence
+# rebuild the container
+pushd ~/docker-planefence
+git checkout $BRANCH || exit 2
 
 git pull
-echo Building:
-a=$(git log -n 1 --source | head -1) ; b=$(git log -n 1 --source | tail -1| sed 's/^\s*//'); echo ${a:7:7}-$b
-time docker build --compress --pull "$@" -t kx1t/planefence .
-
-pushd /opt/planefence
-docker-compose up -d
+docker buildx build --compress --push --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
 popd
-popd
-
-echo Press control-c to stop seeing the logs...
-docker logs -f planefence
