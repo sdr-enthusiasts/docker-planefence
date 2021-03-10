@@ -23,45 +23,53 @@ def main(argv):
    tday = False
    goodcount=0
    badcount=0
+   calcdist = False
    linkservice = 'adsbx'
+   distunit="mi"
 
    now_utc = datetime.now(timezone('UTC'))
    now = now_utc.astimezone(get_localzone())
 
    try:
-      opts, args = getopt.getopt(argv,'',["h","help","?","distance=","lat=","lon=","dist=","log=","logfile=","v","verbose","outfile=","maxalt=","link=","trackservice="])
+      opts, args = getopt.getopt(argv,'',["h","help","?","distance=","lat=","lon=","dist=","log=","logfile=","v","verbose","outfile=","maxalt=","calcdist","link=","distunit=","trackservice="])
    except getopt.GetoptError:
-      print 'Usage: planefence.py [--verbose] --distance=<distance> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
+      print 'Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
       sys.exit(2)
    for opt, arg in opts:
-       if opt in ("-h", "-?", "--help", "--?") :
-           print 'Usage: planefence.py [--verbose] --distance=<distance> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
-           print 'If lat/long is omitted, then Belmont, MA (town hall) is used.'
-           print 'If distance is omitted, then 2 miles is used.'
-           print 'If outfile is omitted, then output is written to stdout. Note - if you intend to capture stdout for processing, make sure that --verbose=1 is not used.'
-           print 'If --today is used, the logfile is assumed to be the base format for logs, and we will attempt to pick today\'s log.'
-       elif opt == "--lat":
-           lat = arg
-       elif opt =="--lon":
-           lon = arg
-       elif opt in ("--logfile", "--log"):
-           logfile = arg
-       elif opt in ("--distance", "--dist"):
-           dist = float(arg)
-       elif opt in ("--v", "--verbose"):
-           verbose = 1
-       elif opt == "--outfile":
-           outfile = arg
-       elif opt == "--maxalt":
-           maxalt = float(arg)
-       elif opt == "--link":
-           linkservice = arg
-       elif opt == "--trackservice":
-           trackservice = arg
+      if opt in ("-h", "-?", "--help", "--?") :
+         print 'Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
+         print 'If lat/long is omitted, then Belmont, MA (town hall) is used.'
+	 print 'If distance is omitted, then 2 miles is used.'
+	 print 'If outfile is omitted, then output is written to stdout. Note - if you intend to capture stdout for processing, make sure that --verbose=1 is not used.'
+	 print 'If --today is used, the logfile is assumed to be the base format for logs, and we will attempt to pick today\'s log.'
+	 print 'If --calcdist is used, it will calculate the distance based on the coordinates. If it is omitted, the distance from the logfile will be used. Note that calculation of distances is very processor intensive and may dramatically slow down the processing speed of large files.'
+      elif opt == "--lat":
+         lat = arg
+      elif opt =="--lon":
+         lon = arg
+      elif opt in ("--logfile", "--log"):
+         logfile = arg
+      elif opt in ("--distance", "--dist"):
+         dist = float(arg)
+      elif opt in ("--v", "--verbose"):
+	 verbose = 1
+      elif opt == "--outfile":
+	 outfile = arg
+      elif opt == "--maxalt":
+	 maxalt = float(arg)
+      elif opt == "--calcdist":
+	 calcdist = True
+      elif opt == "--link":
+	 linkservice = arg
+      elif opt == "--distunit":
+	 distunit = arg
+      elif opt == "--trackservice":
+         trackservice = arg
+
    if verbose == 1:
       # print 'lat = ', lat
       # print 'lon = ', lon
-      print 'max distance = ', dist
+      print 'max distance = ', dist, distunit
       print 'max altitude = ', maxalt
       # print 'output is written to ', outfile
 
@@ -76,8 +84,23 @@ def main(argv):
       print "ERROR: --link parameter must be adsbx or fa"
       sys.exit(2)
 
+   if distunit != 'km' and distunit != "nm" and distunit != "mi" and distunit != "m":
+      print "ERROR: --distunit must be one of [km|nm|mi|m]"
+      sys.exit(2)
+
    lat1 = math.radians(float(lat))
    lon1 = math.radians(float(lon))
+
+   # determine the distance conversion factor from meters to the desired unit
+   if distunit == "km":
+      distconv = 1.000
+   elif distunit == "nm":
+      distconv = 1.852
+   elif distunit == "mi":
+      distconv = 1.60934
+   elif distunit == "m":
+      distconv = 0.001
+
 
 # now we open the logfile
 # and we parse through each of the lines
@@ -92,18 +115,34 @@ def main(argv):
      counter = 0
      fltcounter = 0
      for row in reader:
-       if len(row[0]) == 6:
-         # first safely convert the distance and altitude values from the row into a float.
-         # if we can't convert it into a number (e.g., it's text, not a number) then substitute it by some large number
-         try:
-             rowdist=float(row[7])
-         try:
-             rowalt=float(row[1])
+      if len(row[0]) == 6:
+       # first safely convert the distance and altitude values from the row into a float.
+       # if we can't convert it into a number (e.g., it's text, not a number) then substitute it by some large number
+       try:
+	  if calcdist == False:
+          	rowdist=float(row[7])
+	  else:
+		  # use haversine formula instead of the  distance field
+		  # this enables the use of locations other than the station itself
+		  # subject to the receiver's range of course
+		  # Please note that this calculation is rather slow, especially when repeated of 100,000s of lines
+		  lat2 = math.radians(float(row[2]))
+		  lon2 = math.radians(float(row[3]))
+		  dlat = lat2 - lat1
+		  dlon = lon2 - lon1
+		  a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+		  rowdist =  12742 * math.atan2(math.sqrt(a), math.sqrt(1 - a)) / distconv
+       except:
+          rowdist=float("999999")
+       try:
+	  rowalt=float(row[1])
+       except:
+	  rowalt=float("999999")
 
        # now check if it's a duplicate that is in range
        if row[0] in records and rowdist <= dist and rowalt <= maxalt:
 	  # first check if we already have a flight number. If we don't, there may be one in the updated record we could use?
-         if records[np.where(records == row[0])[0][0]][1] == "" and row[11].strip() != "":
+          if records[np.where(records == row[0])[0][0]][1] == "" and row[11].strip() != "":
 	     records[np.where(records == row[0])[0][0]][1] = row[11].strip()
 	     if trackservice == 'flightaware':
 	        falink = 'https://flightaware.com/live/modes/' + row[0].lower() + '/ident/' + row[11].strip() + '/redirect'
