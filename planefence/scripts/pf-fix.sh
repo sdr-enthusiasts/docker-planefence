@@ -80,12 +80,18 @@ do
 		[[ "${r[a]}" == "-999" ]] && r[a]=""
 	done
 
+    # If there is no flight or tail number, let's see if there's one in one of the socket30003 dump files:
+	if [[ "${r[1]#@}" == "" ]]
+	then
+		r[1]+=$(awk -F "," -v icao="${r[0]}" '($1 == icao && $12 != "") {print $12;exit;}') "$LOGFILEBASE"*.txt 2>/dev/null)
+		[[ "${r[1]}" != "" ]] && echo "Added ICAO from socket30003 data"
+	fi
 
 	# If the ICAO starts with "A" and there is no flight or tail number, let's algorithmically determine the tail number
 	if [[ "${r[1]#@}" == "" ]] && [[ "${r[0]:0:1}" == "A" ]]
 	then
 		r[1]+=$(/usr/share/planefence/icao2tail.py ${r[0]})
-		echo "Added ICAO"
+		[[ "${r[1]}" != "" ]] && echo "Added ICAO calculated from US Hex ID"
 	fi
 
 	# finally, write everything back into $l and write the string to a temp file:

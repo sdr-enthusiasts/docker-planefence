@@ -115,6 +115,7 @@ then
 	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
 else
+	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 	sleep 10s
 	echo "----------------------------------------------------------"
 	echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
@@ -219,6 +220,16 @@ cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane
 # directory - no recursion - just in case some idiot maps the persist directory to the host's "/"
 chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 #
+#--------------------------------------------------------------------------------
+# Check if the dist/alt/speed units haven't changed. If they have changed,
+# we need to restart socket30003 so these changes are picked up:
+# First, give the socket30003 startup routine a headstart so this doesn't compete with it:
+sleep 1
+if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
+	|| [[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
+	|| [[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]
+then
+
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
