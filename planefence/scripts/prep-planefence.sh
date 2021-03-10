@@ -69,6 +69,7 @@ mkdir -p /run/planefence
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
+		chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 		sleep 10s
 		echo "----------------------------------------------------------"
 		echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
