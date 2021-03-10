@@ -26,6 +26,7 @@ then
 	set +o allexport
 else
 	cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 fi
 #
 # -----------------------------------------------------------------------------------
