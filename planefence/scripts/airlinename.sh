@@ -110,11 +110,20 @@ then
 	[[ "$b" != "" ]] && MUSTCACHE=1
 fi
 
+
 # Add additional database lookups in the future here:
 # ---------------------------------------------------
 
 
 # ---------------------------------------------------
+
+# Still nothing - try the Planefence server as a last resort
+if [[ "$b" == "" ]]
+then
+    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
+    [[ "${b:0:1}" == "#" ]] && b="" # results starting with # are errors or not-founds
+    MUSTCACHE=1
+fi
 
 # Clean up the results
 if [[ "$b" != "" ]]
