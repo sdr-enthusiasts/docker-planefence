@@ -78,11 +78,13 @@ CLEANUP_CACHE ()
 	if [[ -f "$1" ]]
 	then
         # we could probably combine these, but... first remove the items that have expired in the cache
-		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" '{if ( $3 >= a){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
+		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
 		mv -f /tmp/namecache $1
+
+#something wrong
         # do a second run to remove items that have #NOTFOUND in their name field and that are older then $REMOTEMISSCACHE
-        awk -F ',' -v a="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( $3 >= a && $2 == "#NOTFOUND"){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
-        mv -f /tmp/namecache $1
+#        awk -F ',' -v a="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( $3 >= a && $2 == "#NOTFOUND"){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
+#        mv -f /tmp/namecache $1
 	fi
 }
 
@@ -155,7 +157,7 @@ then
 fi
 
 # Write back to cache if needed
-[[ "$MUSTCACHE" == 1 ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
+[[ "$MUSTCACHE" == "1" ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
 
 # so.... if we got no reponse from the remote server, then remove it now:
 [[ "$b" == "#NOTFOUND" ]] && b=""
