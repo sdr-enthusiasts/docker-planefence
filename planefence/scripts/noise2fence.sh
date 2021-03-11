@@ -25,7 +25,7 @@ LOGNAMEEXT=".log"
 CSVTMP=/usr/share/planefence/persist/pf-noise-csv.tmp
 NOISETMP=/usr/share/planefence/persist/pf-noise-data.tmp
 LOGFILE=/tmp/noise2fence.log
-VERBOSE=1
+VERBOSE=
 VERSION=0.1-docker
 # -----------------------------------------------------------------------------------
 # Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
@@ -71,7 +71,7 @@ fi
 
 mv -f $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
 LOG "Got $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT from $REMOTELOG"
-### FINISHED UP TO HERE
+
 NOISEFILE=$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
 
 # make sure there's no stray TMP file around, so we can directly append
