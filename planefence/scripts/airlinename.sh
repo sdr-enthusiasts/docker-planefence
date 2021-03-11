@@ -66,7 +66,8 @@ then
 	exit 2
 fi
 
-[[ "$OWNERDBCACHE" == "" ]] && OWNERDBCACHE=7
+[[ "$OWNERDBCACHE" == "" ]] && OWNERDBCACHE=7           # time in days
+[[ "$REMOTEMISSCACHE" == "" ]] && REMOTEMISSCACHE=3600  # time in seconds
 MUSTCACHE=0
 
 # Cache Cleanup Script
@@ -76,8 +77,12 @@ CLEANUP_CACHE ()
 	[[ "$2" -gt "0" ]] && CACHETIME="$2" || CACHETIME=7
 	if [[ -f "$1" ]]
 	then
+        # we could probably combine these, but... first remove the items that have expired in the cache
 		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" '{if ( $3 >= a){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
 		mv -f /tmp/namecache $1
+        # do a second run to remove items that have #NOTFOUND in their name field and that are older then $REMOTEMISSCACHE
+        awk -F ',' -v a="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( $3 >= a && $2 == "#NOTFOUND"){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
+        mv -f /tmp/namecache $1
 	fi
 }
 
@@ -121,7 +126,7 @@ fi
 if [[ "$b" == "" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
     b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
-    [[ "${b:0:1}" == "#" ]] && b="" # results starting with # are errors or not-founds
+    [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=1
 fi
 
@@ -151,6 +156,9 @@ fi
 
 # Write back to cache if needed
 [[ "$MUSTCACHE" == 1 ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
+
+# so.... if we got no reponse from the remote server, then remove it now:
+[[ "$b" == "#NOTFOUND" ]] && b=""
 
 # Lookup is done - return the result
 echo $b
