@@ -1748,6 +1748,7 @@ FSY,Algonquin Airlink,FROSTY,Canada
 FTA,Frontier Flying Service,FRONTIER-AIR,United States
 FTC,Air Affaires Tchad,AFFAIRES TCHAD,Chad
 FTE,Fotografia F3,FOTOGRAFIA,Spain
+FTH,Mountain Aviation,FOOTHILL,United States
 FTL,Flightline,FLIGHT-AVIA,Spain
 FTM,Flyteam Aviation,FLYTEAM,United Kingdom
 FTP,Keystone Aerial Surveys,FOOTPRINT,United States
