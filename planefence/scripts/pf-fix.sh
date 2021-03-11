@@ -94,6 +94,10 @@ do
 		[[ "${r[1]}" != "" ]] && echo "Added ICAO calculated from US Hex ID"
 	fi
 
+	# strip off trailing spaces
+	a=${r[1]}
+	r[1]="${a%"${a##*[![:space:]]}"}"
+
 	# finally, write everything back into $l and write the string to a temp file:
 	printf -v l '%s,' "${r[@]}"
 	l="${l%,}"

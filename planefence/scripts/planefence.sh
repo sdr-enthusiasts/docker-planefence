@@ -604,8 +604,8 @@ then
 	LINESFILTERED=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
 	then
-		# First awk removes any spaces from field 1, second awk prints only the first instance of lines where fields 1 and 2 are the same
-		awk 'BEGIN{FS=OFS=","}{gsub(/^[ \t]+/,"",$2);gsub(/[ \t]+$/,"",$2)}1' "$OUTFILECSV" | awk -F',' '!seen[$1 $2]++' > /tmp/pf-out.tmp
+		# awk prints only the first instance of lines where fields 1 and 2 are the same
+		awk -F',' '!seen[$1 $2]++' "$OUTFILECSV" > /tmp/pf-out.tmp
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
 	# rewrite LINESFILTERED to file
