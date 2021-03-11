@@ -232,7 +232,7 @@ read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59
  LOG "Start time=${REC[0]}, End time=${REC[1]}"
 
 # Now call the Heatmap Generator
-$PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${TMPLINESBASE::-1}""*"
+$PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${TMPLINESBASE::-1}""*"
 #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${TMPLINESBASE::-1}""*"
 
  LOG "Returned from planeheat.pl"

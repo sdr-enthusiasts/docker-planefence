@@ -16,7 +16,7 @@ echo "[$APPNAME][$(date)] Cleanup started as an s6 service"
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
 # LOOPTIME is the time between two runs cleanup. In our case, daily.
-LOOPTIME="1d"
+LOOPTIME="6h"
 #
 # OLDERTHAN indicates which age files can be deleted. This is in DAYS.
 # It specifically applies to files in the HTML directory.
@@ -25,7 +25,7 @@ LOOPTIME="1d"
 [[ "x$PF_DELETEAFTER" == "x" ]] && OLDERTHAN=14 || OLDERTHAN=$PF_DELETEAFTER
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
-MAXLOGLINES=5000
+MAXLOGLINES=500
 
 # this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
@@ -34,14 +34,16 @@ CLEANUP ()
   then
     echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days"
     echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day"
-    echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to 5000 lines (if needed)"
+    echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)"
     find /tmp -mindepth 1 -mtime +2 -delete 2>/dev/null
     find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
-    find /run/socket30003/*.log -mtime +$OLDERTHAN -delete 2>/dev/null
+    rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
     find /usr/share/planefence/persist/*.log -mtime +1 -delete 2>/dev/null
+    find /tmp/dump1090-pf-temp-*.tmp -mtime +1 -delete 2>/dev/null
+    rm -f /tmp/heatmap-*.log
     if [[ -f /tmp/planefence.log ]]
     then
       tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
@@ -52,10 +54,19 @@ CLEANUP ()
       tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
       mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
     fi
+    if [[ -f /tmp/planetweet.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/planetweet.log >/tmp/planetweet.log.tmp 2>/dev/null
+      mv -f /tmp/planetweet.log.tmp /tmp/planetweet.log 2>/dev/null
+    fi
+    if [[ -f /tmp/tweets.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/tweets.log >/tmp/tweets.log.tmp 2>/dev/null
+      mv -f /tmp/tweets.log.tmp /tmp/tweets.log 2>/dev/null
+    fi
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
-
   fi
 }
 #
