@@ -106,7 +106,8 @@ echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',
 if [[ "$b" == "" ]] && [[ -f "$CACHEFILE" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
 	CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
-	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2}}' $CACHEFILE)"
+	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
+	MUSTCACHE=0
 fi
 
 # Nothing? Then do an FAA DB lookup
