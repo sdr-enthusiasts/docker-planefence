@@ -147,6 +147,8 @@ then
 	b="$(echo $b|xargs)" #clean up extra spaces
 	b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
 	b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
+    b="${b% TRUSTEE}"
+    b="${b% OWNER}"
 	b="${b% INC}"
 	b="${b% LTD}"
 	b="${b% PTY}"
