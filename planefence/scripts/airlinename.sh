@@ -108,6 +108,7 @@ then
 	CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
 	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
 elif [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]] && [[ -f "$CACHEFILE" ]]
+then
     CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
     b="$(awk -F ',' -v a="${a:0:4}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
 fi
