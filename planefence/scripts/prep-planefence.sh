@@ -234,6 +234,11 @@ then
 	[[ "x$PF_SPEEDUNIT" != "x" ]] && sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ "x$PF_ALTUNIT" != "x" ]] && sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 fi
+#
+#--------------------------------------------------------------------------------
+# Check if the remote airlinename server is online
+a="$(curl -L -s https://get-airline.planefence.com/?flight="hello_from_$(grep "PF_NAME" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }' | tr -dc '[:alnum:]')" 2>&1)"
+[[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
