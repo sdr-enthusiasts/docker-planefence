@@ -26,6 +26,7 @@ then
 	set +o allexport
 else
 	cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 fi
 #
 # -----------------------------------------------------------------------------------
@@ -68,6 +69,7 @@ mkdir -p /run/planefence
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
+		chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 		sleep 10s
 		echo "----------------------------------------------------------"
 		echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
@@ -114,6 +116,7 @@ then
 	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
 else
+	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 	sleep 10s
 	echo "----------------------------------------------------------"
 	echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
@@ -218,6 +221,25 @@ cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane
 # directory - no recursion - just in case some idiot maps the persist directory to the host's "/"
 chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 #
+#--------------------------------------------------------------------------------
+# Check if the dist/alt/speed units haven't changed. If they have changed,
+# we need to restart socket30003 so these changes are picked up:
+# First, give the socket30003 startup routine a headstart so this doesn't compete with it:
+sleep 1
+if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
+	|| [[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
+	|| [[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]
+then
+	[[ "x$PF_DISTUNIT" != "x" ]] &&	sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+	[[ "x$PF_SPEEDUNIT" != "x" ]] && sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
+	[[ "x$PF_ALTUNIT" != "x" ]] && sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+fi
+#
+#--------------------------------------------------------------------------------
+# Check if the remote airlinename server is online
+a="$(curl -L -s https://get-airline.planefence.com/?flight="hello_from_$(grep "PF_NAME" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }' | tr -dc '[:alnum:]')"_bld$(TZ=UTC date -d "$(cat /root/.buildtime | cut -c 1-23)" +%y%m%m-%H%M%S)-UTC 2>&1)"
+[[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
+
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!

@@ -2,7 +2,7 @@
 #set -x
 # airlinename.sh - a Bash shell script to return an airline or owner name based on the aircraft's flight or tail number
 #
-# Usage: ./airlinename.sh <flight_or_tail_number>
+# Usage: ./airlinename.sh <flight_or_tail_number> [<Hex_ID>]
 #
 # For example:
 # $ ./airlinename.sh AAL1000
@@ -66,7 +66,8 @@ then
 	exit 2
 fi
 
-[[ "$OWNERDBCACHE" == "" ]] && OWNERDBCACHE=7
+[[ "$OWNERDBCACHE" == "" ]] && OWNERDBCACHE=7           # time in days
+[[ "$REMOTEMISSCACHE" == "" ]] && REMOTEMISSCACHE=3600  # time in seconds
 MUSTCACHE=0
 
 # Cache Cleanup Script
@@ -76,30 +77,42 @@ CLEANUP_CACHE ()
 	[[ "$2" -gt "0" ]] && CACHETIME="$2" || CACHETIME=7
 	if [[ -f "$1" ]]
 	then
-		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" '{if ( $3 >= a){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
+        # we could probably combine these, but... first remove the items that have expired in the cache
+		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
 		mv -f /tmp/namecache $1
+
+#something wrong
+        # do a second run to remove items that have #NOTFOUND in their name field and that are older then $REMOTEMISSCACHE
+#        awk -F ',' -v a="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( $3 >= a && $2 == "#NOTFOUND"){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
+#        mv -f /tmp/namecache $1
 	fi
 }
 
 # First, let's try to see if it's a regular airline by looking up the argument in our own database:
-a=$1	# get the flight number or tail number from the command line argument
+a="$1"	# get the flight number or tail number from the command line argument
 a="${a#@}"	# strip off any leading "@" signs - this is a Planefence feature
+
+[[ "$2" != "" ]] && c="$2" || c="" # C is optional ICAO
 
 # Airlinecodes has the 3-character code in field 1 and the full name in field 2
 # to prevent false hits when the tall number starts with 3 letters
 # (common outside the US), only call this if the input looks like a flight number
-echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
+echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $AIRLINECODES)" # Print flight number if we can find it
 
 # Now, if we got nothing, then let's try the Plane-Alert database.
 # The Plane-Alert db has the tail number in field 2 and the full name in field 3:
-[[ "$b" == "" ]] && [[ -f "$PLANEFILE" ]] && b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3}}' $PLANEFILE)"
+[[ "$b" == "" ]] && [[ -f "$PLANEFILE" ]] && b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3;exit;}}' $PLANEFILE)"
 
 # Still nothing? Let's see if there is a cache, and if so, if there's a match in our cache
 # The cache has the search item (probably tail number) field 1 and the full name in field 2. (Field 3 contains the time added to cache):
-if [[ "$b" == "" ]] && [[ -f "$CACHEFILE" ]]
+if [[ "$b" == "" ]] && [[ -f "$CACHEFILE" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
 	CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
-	b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($1 == a){print $2}}' $CACHEFILE)"
+	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
+elif [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]] && [[ -f "$CACHEFILE" ]]
+then
+    CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
+    b="$(awk -F ',' -v a="${a:0:4}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
 fi
 
 # Nothing? Then do an FAA DB lookup
@@ -110,11 +123,25 @@ then
 	[[ "$b" != "" ]] && MUSTCACHE=1
 fi
 
+
 # Add additional database lookups in the future here:
 # ---------------------------------------------------
 
 
 # ---------------------------------------------------
+
+# Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
+if [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
+then
+    [[ "$c" == "" ]] && b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)" || b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
+    [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
+    MUSTCACHE=2 # 2 means only cache the airline prefix
+elif [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]]
+then
+    [[ "$c" == "" ]] && b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)" || b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
+    [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
+    MUSTCACHE=2 # 2 means only cache the airline prefix
+fi
 
 # Clean up the results
 if [[ "$b" != "" ]]
@@ -122,6 +149,8 @@ then
 	b="$(echo $b|xargs)" #clean up extra spaces
 	b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
 	b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
+    b="${b% TRUSTEE}"
+    b="${b% OWNER}"
 	b="${b% INC}"
 	b="${b% LTD}"
 	b="${b% PTY}"
@@ -141,7 +170,11 @@ then
 fi
 
 # Write back to cache if needed
-[[ "$MUSTCACHE" == 1 ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
+[[ "$MUSTCACHE" == "1" ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
+[[ "$MUSTCACHE" == "2" ]] && printf "%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" >> "$CACHEFILE"
+
+# so.... if we got no reponse from the remote server, then remove it now:
+[[ "$b" == "#NOTFOUND" ]] && b=""
 
 # Lookup is done - return the result
 echo $b

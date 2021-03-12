@@ -318,7 +318,7 @@ EOF
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
 		fi
 		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
@@ -604,6 +604,7 @@ then
 	LINESFILTERED=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
 	then
+		# awk prints only the first instance of lines where fields 1 and 2 are the same
 		awk -F',' '!seen[$1 $2]++' "$OUTFILECSV" > /tmp/pf-out.tmp
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
@@ -698,20 +699,6 @@ then
 else
 	LOG "Skipped PlaneHeat"
 fi
-
-# Now, let's see if the DISTUNIT and DISPLAYUNIT are the same. If not, we need to convert to DISPLAYUNIT:
-
-# for the docker version, lets just hardcode everything to the same unit
-#if [ "$DISPLAYUNIT" == "" ]
-#then
-DISPLAYUNIT="$DISTUNIT"
-DISPLAYDIST="$DIST"
-#fi
-
-#if [ "$DISTUNIT" != "$DISPLAYUNIT" ]
-#then
-#	printf -v DISPLAYDIST "%.1f" "$(echo "$DIST * $DISTCONV" | bc -l)"
-#fi
 
 # Now let's link to the latest Spectrogram, if one was generated for today:
 
@@ -812,7 +799,8 @@ h2 {text-align: center}
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
 <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
-<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DISPLAYDIST $DISPLAYUNIT
+<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
+
 <li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
 <li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 

@@ -59,6 +59,7 @@ my $degrees;
 my $max_weight;
 my $debug = 0;
 my $verbose = 0;
+$silent = 0;
 
 GetOptions(
 	"help!"=>\$help,
@@ -69,15 +70,17 @@ GetOptions(
 	"file=s"=>\$outputdatafile,
 	"override!"=>\$override,
 	"timestamp!"=>\$timestamp,
-        "sequencenumber!"=>\$sequencenumber,
-        "longitude=s"=>\$longitude,
-        "latitude=s"=>\$latitude,
+	"sequencenumber!"=>\$sequencenumber,
+	"longitude=s"=>\$longitude,
+	"latitude=s"=>\$latitude,
 	"maxpositions=s"=>\$max_positions,
 	"resolution=s"=>\$resolution,
 	"degrees=s"=>\$degrees,
 	"maxweight=s"=>\$max_weight,
-        "debug!"=>\$debug,
-        "verbose!"=>\$verbose
+	"debug!"=>\$debug,
+	"verbose!"=>\$verbose,
+	"silent!"=>\$silent
+
 ) or exit(1);
 #
 $override        = "yes" if ($override);
@@ -99,7 +102,7 @@ my $interactive = common->InteractiveShellCheck;
 #===============================================================================
 # Log routine
 sub LOG(@){
-        common->LOG($logfile,@_);
+	if (!$silent) { common->LOG($logfile,@_); }
 }
 #
 #===============================================================================
@@ -435,7 +438,7 @@ my ($highest_weight,@rubbish)= reverse sort keys %sort;
 
 # bug fix to avoid warnings about uninitialized values
 # 06-Mar-2021 by RFK with thanks to @Wiedehopf
-if (! defined $highest_weight) { 
+if (! defined $highest_weight) {
         $highest_weight = 1;
 }
 

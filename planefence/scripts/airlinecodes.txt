@@ -1,4 +1,3 @@
-#ICAO,Airline,Call sign,Country/Region
 AAB,Abelag Aviation,ABG,Belgium
 AAC,Army Air Corps,ARMYAIR,United Kingdom
 AAD,Mann Air Ltd,Ambassador,United Kingdom
@@ -366,6 +365,7 @@ ATF,Compañía Aerotécnicas Fotográficas,AEROTECNICAS,Spain
 ATG,Aerotranscargo[6],MOLDCARGO,Moldova
 ATH,Air Travel Corp.,AIR TRAVEL,United States
 ATJ,Air Traffic GmbH,SNOOPY,Germany
+ATL,Atlas Air Service,ATLAS,Germany
 ATM,Airlines of Tasmania,AIRTAS,Australia
 ATN,Air Transport International,AIR TRANSPORT,United States
 ATP,ASTRAL Colombia - Aerotransportes Especiales Ltda.,ASTRAL,Colombia
@@ -432,6 +432,7 @@ AWQ,Indonesia AirAsia,WAGON AIR,Indonesia
 AWR,Arctic Wings And Rotors Ltd.,ARCTIC WINGS,Canada
 AWS,Arab Wings,ARAB WINGS,Jordan
 AWT,Air West,AIR WEST,Canada
+AWT,AlbaWings,,Albania
 AWU,Sylt Air GmbH,SYLT-AIR,Germany
 AWV,Airwave Transport, Inc.,AIRWAVE,Canada
 AWX,Civil Aviation Authority Directorate of Airspace Policy,ALLWEATHER,United Kingdom
@@ -905,6 +906,7 @@ CHS,Challenge Aviation,CHALLENGE AVIATION,Australia
 CHU,Church Aircraft,CHURCHAIR,United States
 CHV,Air Charter Professionals,CHARTAIR,United States
 CHW,Charter Air,CHARTER WIEN,Austria
+CHX,DRF Luftrettung,CHRISTOPH,Germany
 CHZ,Cherline,CHERL,Russia
 CIA,Civil Aviation Authority,CALIMERA,Slovakia
 CIB,Condor,CONDOR BERLIN,Germany
@@ -1414,6 +1416,7 @@ EKA,Equaflight Service,EQUAFLIGHT,Republic of the Congo
 EKC,East Kansas City Aviation,BLUE GOOSE,United States
 ELA,Eastland Air,,Australia
 ELB,Ellinair,ELLINAIR HELLAS,Greece
+ELE,Euroairlines,EUROLINE,United Kingdom
 ELH,Elilario Italia,LARIO,Italy
 ELJ,Delta Private Jets,ELITE JET,United States
 ELL,Estonian Air,ESTONIAN,Estonia
@@ -2103,6 +2106,7 @@ HKI,Hawkaire,HAWKEYE,United States
 HKL,Hak Air,HAK AIRLINE,Nigeria
 HKR,Hawk Air,AIR HAW,Argentina
 HKS,CHC Helikopter Service,HELIBUS,Norway
+HKY,USAF Rammstein,,United States
 HLA,HC Airlines,HEAVYLIFT,United Kingdom
 HLB,High-Line Airways,HIGH-LINE,Canada
 HLC,Helicap,HELICAP,France
@@ -2125,6 +2129,7 @@ HLX,Hapag-Lloyd Express (TUIfly),YELLOW CAB,Germany
 HMA,Air Tahoma,TAHOMA,United States
 HMC,Heliamerica De Mexico,HELIAMERICA,Mexico
 HMD,Charlie Hammonds Flying Service,HAMMOND,United States
+HME,Babcock MCS,HELIMED,United Kingdom
 HMF,Norrlandsflyg,LIFEGUARD SWEDEN,Sweden
 HMM,Hamra Air,HAMRA,United Arab Emirates
 HMP,Papair Terminal,PAPAIR TERMINAL,Haiti
@@ -2239,6 +2244,7 @@ IBX,Ibex Airlines,IBEX,Japan
 IBY,International Business Aircraft,CENTRAL STAGE,United States
 IBZ,International Business Air,INTERBIZ,Sweden
 ICA,Icaro,ICARFLY,Italy
+#ICAO,Airline,Call sign,Country/Region
 ICB,Icebird Airline,ICEBIRD,Iceland
 ICC,Institut Cartogràfic de Catalunya,CARTO,Spain
 ICE,Icelandair,ICEAIR,Iceland
@@ -2396,8 +2402,10 @@ IZG,Zagros Airlines,ZAGROS,Iran
 IZM,Izair,IZMIR,Turkey
 JAB,Air Bagan,AIR BAGAN,Myanmar
 JAD,Aerojal,AEROJAL,Mexico
+JAL,Japan Airlines,,Japan
 JAM,Sunline Express,SUNTRACK,Kenya
 JAR,Airlink,AIRLINK,Austria
+JAS,Jet Aviation Flight Services,,United States
 JBA,Helijet,HELIJET,Canada
 JBU,Jet Blue,JETBLUE,United States
 JCH,Trading Air Cargo,TRADING CARGO,Mauritania
@@ -2419,6 +2427,7 @@ JKA,LeTourneau University,JACKET,United States
 JKY,Helicopter & Aviation Services,JOCKEY,United Kingdom
 JLA,MIA Airlines,SALLINE,Romania
 JLH,Centro de Servicio Aeronautico,CESA,Mexico
+JLJ,Noble Air Charter,,
 JLN,Eurojet Limited,JET LINE,Malta
 JMP,Businesswings,JUMP RUN,Germany
 JMR,Alexandair,ALEXANDAIR,Canada
@@ -2435,12 +2444,14 @@ JRF,First Air Transport,,Japan
 JSP,Palmer Aviation,PALMER,United Kingdom
 JTE,National Jet Express,JETEX,Australia
 JTI,Cirrus Middle East,,Lebanon
+JTL,Jet Linx,JETLINX, United States
 JTM,Exxavia Limited,SKYMAN,Ireland
 JTR,Executive Aviation Services,JESTER,United Kingdom
 JTS,Arrendamiento de Aviones Jets,AVIONESJETS,Mexico
 JTU,Zhetysu,ZHETYSU,Kazakhstan
 JUA,Aero Juarez,JUAREZ,Mexico
 JUB,Jubba Airways,,Kenya
+JUN,Royal Navy,,United Kingdom
 JUS,USA Jet Airlines,JET USA,United States
 JZA,Air Canada Jazz,JAZZ,Canada
 KAA,Asia Aero Survey and Consulting Engineers,AASCO,Republic of Korea
@@ -2585,6 +2596,7 @@ KTN,Aeronavigaciya,AERONAVIGACIYA,Ukraine
 KTR,HT Helikoptertransport,COPTER TRANS,Sweden
 KTS,Transair-Gyraintiee,KOTAIR,Russia
 KTV,Kata Transportation,KATAVIA,Sudan
+KUG,Govt of Kuwait,,Kuwait
 KUS,National Airlines,KUSWAG,South Africa
 KVK,Olimp Air,PONTA,Kazakhstan
 KVR,Alliance Avia,KAVAIR,Kazakhstan
@@ -2614,6 +2626,7 @@ LAF,Latvian Air Force,LATVIAN AIRFORCE,Latvia
 LAG,Aviation Legacy,AVILEG,Gambia
 LAH,L A Helicopter,STAR SHIP,United States
 LAJ,British Mediterranean Airways,BEE MED,United Kingdom
+LAK,Red Wing Aeroplane Company,REDWING,United States
 LAL,Labrador Airways,LAB AIR,Canada
 LAM,Linhas Aéreas de Moçambique,MOZAMBIQUE,Mozambique
 LAN,LATAM Chile,LAN CHILE,Chile
@@ -2702,6 +2715,7 @@ LIQ,Lid Air,,Sweden
 LIR,Minsk Aircraft Overhaul Plant,LISLINE,Belarus
 LIS,Eastern Express,LARISA,Kazakhstan
 LJA,Air Jamahiriya Company,AIR JAMAHIRIYA,Libya
+LJC,Exclusive Jet Charter,,United Kingdom
 LJY,L J Aviation,ELJAY,United States
 LKA,Lao Capricorn Air,NAKLAO,Lao People's Democratic Republic
 LKD,Lignes Aeriennes Du Tchad,LATCHAD,Chad
@@ -3232,7 +3246,7 @@ NHK,Federal Aviation Administration,NIGHTHAWK,United States
 NHL,Northumbria Helicopters,NORTHUMBRIA,United Kingdom
 NHR,Nuevo Horizonte Internacional,NUEVO HORIZONTE,Mexico
 NHT,New Heights 291,NEWHEIGHTS,South Africa
-NHV,NHV Aviation,,Ghana
+NHV,NHV Helicopters,,United Kingdom
 NHZ,Nada Air Service,NADA AIR,Chad
 NIC,Northern Illinois Commuter,ILLINOIS COMMUTER,United States
 NID,Aeroni,AERONI,Mexico
@@ -4779,7 +4793,7 @@ TOH,Air Tomisko,TOMISKO CARGO,Serbia
 TOJ,TOJ Airlines,TOJ AIRLINE,Tajikistan
 TOK,Airlines PNG,BALUS,Papua New Guinea
 TOL,Tol-Air Services,TOL AIR,United States
-TOM,TUI Airways,TOMJET[52],United Kingdom
+TOM,TUI Airways,TOMJET,United Kingdom
 TON,Aero Tonala,AEROTONALA,Mexico
 TOP,Top Air,AIR TOP,Indonesia
 TOR,Toronto Airways,TORONTAIR,Canada
