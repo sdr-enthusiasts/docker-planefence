@@ -800,6 +800,7 @@ h2 {text-align: center}
 <ul>
 <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
 <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
+
 <li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
 <li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 
