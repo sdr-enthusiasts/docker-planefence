@@ -95,18 +95,18 @@ a="${a#@}"	# strip off any leading "@" signs - this is a Planefence feature
 # Airlinecodes has the 3-character code in field 1 and the full name in field 2
 # to prevent false hits when the tall number starts with 3 letters
 # (common outside the US), only call this if the input looks like a flight number
-echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2}}' $AIRLINECODES)" # Print flight number if we can find it
+echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $AIRLINECODES)" # Print flight number if we can find it
 
 # Now, if we got nothing, then let's try the Plane-Alert database.
 # The Plane-Alert db has the tail number in field 2 and the full name in field 3:
-[[ "$b" == "" ]] && [[ -f "$PLANEFILE" ]] && b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3}}' $PLANEFILE)"
+[[ "$b" == "" ]] && [[ -f "$PLANEFILE" ]] && b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3;exit;}}' $PLANEFILE)"
 
 # Still nothing? Let's see if there is a cache, and if so, if there's a match in our cache
 # The cache has the search item (probably tail number) field 1 and the full name in field 2. (Field 3 contains the time added to cache):
 if [[ "$b" == "" ]] && [[ -f "$CACHEFILE" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
 	CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
-	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $CACHEFILE)"
+	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
 fi
 
 # Nothing? Then do an FAA DB lookup
@@ -130,6 +130,12 @@ then
     b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
+elif [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]]
+then
+    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
+    [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
+    MUSTCACHE=2 # 2 means only cache the airline prefix
+
 fi
 
 # Clean up the results
