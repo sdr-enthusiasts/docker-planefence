@@ -106,8 +106,7 @@ echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',
 if [[ "$b" == "" ]] && [[ -f "$CACHEFILE" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
 	CLEANUP_CACHE $CACHEFILE $OWNERDBCACHE
-	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
-	MUSTCACHE=0
+	b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $CACHEFILE)"
 fi
 
 # Nothing? Then do an FAA DB lookup
@@ -130,7 +129,7 @@ if [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "$(echo $a | grep -e
 then
     b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
-    MUSTCACHE=1
+    MUSTCACHE=2 # 2 means only cache the airline prefix
 fi
 
 # Clean up the results
@@ -159,6 +158,7 @@ fi
 
 # Write back to cache if needed
 [[ "$MUSTCACHE" == "1" ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
+[[ "$MUSTCACHE" == "2" ]] && printf "%s,%s,%s\n" "${a:0:3}" "$b" "$(date +%s)" >> "$CACHEFILE"
 
 # so.... if we got no reponse from the remote server, then remove it now:
 [[ "$b" == "#NOTFOUND" ]] && b=""
