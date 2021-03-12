@@ -2,7 +2,7 @@
 #set -x
 # airlinename.sh - a Bash shell script to return an airline or owner name based on the aircraft's flight or tail number
 #
-# Usage: ./airlinename.sh <flight_or_tail_number>
+# Usage: ./airlinename.sh <flight_or_tail_number> [<Hex_ID>]
 #
 # For example:
 # $ ./airlinename.sh AAL1000
@@ -89,8 +89,10 @@ CLEANUP_CACHE ()
 }
 
 # First, let's try to see if it's a regular airline by looking up the argument in our own database:
-a=$1	# get the flight number or tail number from the command line argument
+a="$1"	# get the flight number or tail number from the command line argument
 a="${a#@}"	# strip off any leading "@" signs - this is a Planefence feature
+
+[[ "$2" != "" ]] && c="$2" || c="" # C is optional ICAO
 
 # Airlinecodes has the 3-character code in field 1 and the full name in field 2
 # to prevent false hits when the tall number starts with 3 letters
@@ -131,15 +133,14 @@ fi
 # Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
 if [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
-    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
+    [[ "$c" == "" ]] && b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)" || b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 elif [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]]
 then
-    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)"
+    [[ "$c" == "" ]] && b="$(curl -L -s https://get-airline.planefence.com/?flight=$a)" || b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
-
 fi
 
 # Clean up the results
