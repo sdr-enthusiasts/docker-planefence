@@ -1751,6 +1751,7 @@ FSY,Algonquin Airlink,FROSTY,Canada
 FTA,Frontier Flying Service,FRONTIER-AIR,United States
 FTC,Air Affaires Tchad,AFFAIRES TCHAD,Chad
 FTE,Fotografia F3,FOTOGRAFIA,Spain
+FTH,Mountain Aviation,FOOTHILL,United States
 FTL,Flightline,FLIGHT-AVIA,Spain
 FTM,Flyteam Aviation,FLYTEAM,United Kingdom
 FTP,Keystone Aerial Surveys,FOOTPRINT,United States
@@ -2560,6 +2561,7 @@ KOP,Servicios Aéreos Copters,COPTERS,Chile
 KOR,Air Koryo,AIR KORYO,Democratic People's Republic of Korea
 KOS,Kosova Airlines,KOSOVA,Serbia
 KOV,Orlan-2000,ORLAN,Kazakhstan
+KOW,Baker Aviation,,United States
 KOY,Araiavia,ALEKS,Kazakhstan
 KPA,Kunpeng Airlines,KUNPENG,China
 KPH,Kazan Helicopters,KAMA,Russia
@@ -3011,6 +3013,7 @@ MMH,McMahon Helicopter,NIGHT RIDER,United States
 MMJ,Macau Jet International,MACAUJET,China
 MML,Hunnu Air,TRANS MONGOLIA,Mongolia
 MMM,Aviation Company Meridian,AVIAMERIDIAN,Russia
+MMN,Pro Airways,,United States
 MMP,AMP Incorporated,AMP-INC,United States
 MMR,Musrata Air Transport,MUSRATA AIR,Libya
 MMS,SAAD (A320) Limited,MUSAAD AIR,Cayman Islands
@@ -3617,6 +3620,7 @@ PIU,43 Air School,PRIMA,South Africa
 PIV,Sokol,AEROSOKOL,Russia
 PIX,Metropix UK,METROPIX,United Kingdom
 PJA,Private Jet Management,PRIVATE FLIGHT,United States
+PJC,Pittsburgh Jet Center,,United States
 PJE,Private Jet Expeditions,PEE JAY,United States
 PJP,Princely Jets,PRINCELY JETS,Pakistan
 PKA,AST Pakistan Airways,PAKISTAN AIRWAY,Pakistan
