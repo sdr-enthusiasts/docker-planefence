@@ -21,10 +21,10 @@
 06A014,A7HHJ,Qatar Amiri Flight,Airbus ACJ319133X
 06A01C,A7HJJ,Qatar Amiri Flight,Airbus A330202
 06A021,A7HHH,Qatar Amiri Flight,Airbus A340541
-06A037,A7AAM,Qatar Amiri Flight,
+06A037,A7AAM,Qatar Amiri Flight,Bombardier BD-700-1A10 Global Express
 06A038,A7HHM,Qatar Amiri Flight,Airbus A330202
 06A05A,A7AAH,Qatar Amiri Flight,Airbus A340313X
-06A05B,A7AFE,Qatar Amiri Flight,
+06A05B,A7AFE,Qatar Amiri Flight,Airbus A310-308
 06A0A2,A7HHE,Qatar Amiri Flight,Boeing 7478KBBBJ
 06A0A3,A7MED,Qatar Amiri Flight,Airbus ACJ319133LR
 06A0A4,A7MBK,Qatar Amiri Flight,Airbus ACJ320232X
