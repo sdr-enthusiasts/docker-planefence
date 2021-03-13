@@ -237,7 +237,8 @@ fi
 #
 #--------------------------------------------------------------------------------
 # Check if the remote airlinename server is online
-a="$(curl -L -s https://get-airline.planefence.com/?flight="hello_from_$(grep "PF_NAME" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }' | tr -dc '[:alnum:]')"_bld$(TZ=UTC date -d "$(cat /root/.buildtime | cut -c 1-23)" +%y%m%m-%H%M%S)-UTC 2>&1)"
+
+a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$(cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))"
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 
 #--------------------------------------------------------------------------------
