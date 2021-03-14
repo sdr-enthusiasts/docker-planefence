@@ -173,6 +173,13 @@ fi
 [[ "$MUSTCACHE" == "1" ]] && printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"
 [[ "$MUSTCACHE" == "2" ]] && printf "%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" >> "$CACHEFILE"
 
+# prune dupes from cache
+if [[ "$MUSTCACHE" != "0" ]]
+then
+	awk -F',' '!seen[$1]++' "$CACHEFILE" >/tmp/airlinecache
+	mv -f /tmp/airlinecache "$CACHEFILE"
+fi
+
 # so.... if we got no reponse from the remote server, then remove it now:
 [[ "$b" == "#NOTFOUND" ]] && b=""
 
