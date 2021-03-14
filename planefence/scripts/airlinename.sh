@@ -174,7 +174,7 @@ fi
 [[ "$MUSTCACHE" == "2" ]] && printf "%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" >> "$CACHEFILE"
 
 # prune dupes from cache
-if [[ "$MUSTCACHE" != "0" ]]
+if [[ "$MUSTCACHE" != "0" ]] && [[ "$(awk -F',' 'seen[$1]++' $CACHEFILE 2>/dev/null |wc -l)" != "0" ]]
 then
 	awk -F',' '!seen[$1]++' "$CACHEFILE" >/tmp/airlinecache
 	mv -f /tmp/airlinecache "$CACHEFILE"
