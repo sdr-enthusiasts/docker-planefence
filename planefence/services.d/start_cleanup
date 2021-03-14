@@ -64,7 +64,17 @@ CLEANUP ()
       tail -n $MAXLOGLINES /tmp/tweets.log >/tmp/tweets.log.tmp 2>/dev/null
       mv -f /tmp/tweets.log.tmp /tmp/tweets.log 2>/dev/null
     fi
+
+    # remove empty lines from ignore file
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
+
+    # pull new version of airlinenames
+    if curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt >/tmp/airlinecodes.txt
+    then
+	[[ "$(cat /tmp/airlinecodes.txt | wc -l)" -gt "100" ]] && mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
+    fi
+
+
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
   fi
