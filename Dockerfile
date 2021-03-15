@@ -1,4 +1,3 @@
-
 FROM debian:stable-slim
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
@@ -34,8 +33,10 @@ RUN set -x && \
     TEMP_PACKAGES+=(file) && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
+    KEPT_PACKAGES+=(netcat) && \
+    KEPT_PACKAGES+=(zip) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
-    KEPT_PACKAGES+=(procps nano netcat) && \
+    KEPT_PACKAGES+=(procps nano) && \
 #
 # define packages needed for PlaneFence, including socket30003
     KEPT_PACKAGES+=(python-pip) && \
@@ -170,4 +171,3 @@ RUN set -x && \
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
-#EXPOSE 30003
