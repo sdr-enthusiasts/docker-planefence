@@ -90,7 +90,7 @@ do
     # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
 	if [[ "${r[1]#@}" == "" ]]
 	then
-		r[1]+="$(grep -i -w "${r[1]#@}" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
+		r[1]+="$(grep -i -w "${r[0]}" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
 		# note - we could have done this with only an awk command, but that takes about 4x longer to execute
 		# awk command wouldve been: awk -F "," -v icao="${r[1]#@}" '($1 == icao) {print $2;exit;}' /run/planefence/icao2plane.txt
 		[[ "${r[1]#@}" != "" ]] && echo " Added ICAO from mictronic database cache"
