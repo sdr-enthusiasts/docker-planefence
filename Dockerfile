@@ -34,7 +34,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
     KEPT_PACKAGES+=(netcat) && \
-    KEPT_PACKAGES+=(zip) && \
+    KEPT_PACKAGES+=(unzip) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano) && \
 #
