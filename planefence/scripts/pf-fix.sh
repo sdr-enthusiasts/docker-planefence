@@ -80,6 +80,8 @@ do
 		[[ "${r[a]}" == "-999" ]] && r[a]=""
 	done
 
+	# Now, a bunch of routines that help determine a flight or tail number if none is available:
+
     # If there is no flight or tail number, let's see if there's one in one of the socket30003 dump files:
 	if [[ "${r[1]#@}" == "" ]]
 	then

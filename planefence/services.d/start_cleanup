@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-APPNAME="cleanup"
+APPNAME="$(hostname)/cleanup"
 
 echo "[$APPNAME][$(date)] Cleanup started as an s6 service"
 
