@@ -69,7 +69,7 @@ CLEANUP ()
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 
     # pull new version of airlinenames
-    echo "###,pulled from github at $(date),," >/tmp/airlinecodes.txt
+    echo "###,pulled from github kx1t/planefence-airlinecodes at $(date),," >/tmp/airlinecodes.txt
     if curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt >>/tmp/airlinecodes.txt && [[ "$(cat /tmp/airlinecodes.txt | wc -l)" -gt "100" ]]
     then
 	mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
