@@ -133,7 +133,7 @@ then
 		TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) ))
 		# Entries that are previously tweeted have "@" in front of the flight number
 		# We will process those
-		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ]
+		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ] && [ "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ]
 		then
 
 			AIRLINETAG="#"

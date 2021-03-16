@@ -595,17 +595,17 @@ then
 fi
 
 # rewrite LINESFILTERED to file
-[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
+[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -r i < "/run/planefence/filtered-$FENCEDATE" || i=0
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 # if IGNOREDUPES is not empty then remove duplicates
 if [[ "$IGNOREDUPES" != "" ]]
 then
-	LINESFILTERED=$(awk -F',' 'seen[$1 $2]++' "$OUTFILECSV" 2>/dev/null | wc -l)
+	LINESFILTERED=$(awk -F',' 'seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
 	then
 		# awk prints only the first instance of lines where fields 1 and 2 are the same
-		awk -F',' '!seen[$1 $2]++' "$OUTFILECSV" > /tmp/pf-out.tmp
+		awk -F',' '!seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" > /tmp/pf-out.tmp
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
 	# rewrite LINESFILTERED to file
