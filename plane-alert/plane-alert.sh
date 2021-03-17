@@ -132,7 +132,7 @@ do
 done < $TMPDIR/plalert.out.tmp
 # I like this better but the line below sorts nicer: awk -F',' '!seen[$1 $5)]++' "$OUTFILE" > /tmp/pa-new.csv
 sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
-mv -f /tmp/pa-new.csv "$OUTFILE"
+sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date and time but keep all entries
 # the log files are now done, but we want to figure out what is new
 
 # if testing, insert the test item into the diff to trigger tweeting
@@ -186,7 +186,7 @@ then
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			[[ "${header[i]:0:1}" == "$" ]] && TWITTEXT+="#$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]') "
-			# if the header fiels start w $ ... add ...   #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
+			# if the header fields start w $ ... add ...  #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
 		done
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
