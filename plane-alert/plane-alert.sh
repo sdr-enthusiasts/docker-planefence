@@ -111,9 +111,11 @@ do
 	[ "$TESTING" == "true" ] && echo 3. Parsing line $line
 	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
+# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
+
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
 	printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
-	"$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
+	"$(awk -v a="${pa_record[0]}" '$1=a {print $1 "," $2 "," $3 "," $4 ","; exit;}' "$PLANEFILE")" \
 	"${pa_record[4]}"	`# Date first heard` \
 	"${pa_record[5]:0:8}"	`# Time first heard` \
 	"${pa_record[2]}"	`# Latitude` \
@@ -208,6 +210,30 @@ fi
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
+IFS="," read -ra header < $PLANEFILE
+# first add the fixed part of the header:
+cat <<EOF >> $TMPDIR/plalert-index.tmp
+<tr>
+	<th class="js-sort-number">No.</th>
+	<th>${header[0]#\#}</th> <!-- ICAO -->
+	<th>${header[1]#\#}</th> <!-- tail -->
+	<th>${header[2]#\#}</th> <!-- owner -->
+	<th>${header[3]#\#}</th> <!-- equipment -->
+	<th class="js-sort-date">Date/Time First Seen</th>
+	<th class="js-sort-number">Lat/Lon First Seen</th>
+	<th>Flight No.</th>
+	<th>Flight Map</th>
+EOF
+
+#print the variable headers:
+for i in {4..10}
+do
+	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+	[[ "${header[i]:0:1}" != "#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#\#}" "$i" >> $TMPDIR/plalert-index.tmp
+done
+echo "</tr>" >> $TMPDIR/plalert-index.tmp
+
+
 COUNTER=1
 while read -r line
 do
@@ -224,6 +250,11 @@ do
 		printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
 		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
+		for i in {4..10}
+		do
+			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE")" "$i" >> $TMPDIR/plalert-index.tmp
+		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 	fi
 done < "$OUTFILE"
