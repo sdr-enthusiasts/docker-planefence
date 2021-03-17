@@ -157,7 +157,9 @@ cat /tmp/pa-diff.csv
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" == "true" ]] && [[ -f "$TWIDFILE" ]]
 then
 
-	# First, loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
+	# Get the header file to understand if we need to add any hashtags:
+	IFS="," read -ra header < $PLANEFILE
+	# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
 	ERRORCOUNT=0
 	while IFS= read -r line
 	do
@@ -174,7 +176,16 @@ then
 		TWITTEXT+="Owner: ${pa_record[2]}\n"
 		TWITTEXT+="Aircraft: ${pa_record[3]}\n"
 		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
-		TWITTEXT+="$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+
+		# Add any hashtags:
+		for i in {4..10}
+		do
+			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			[[ "${header[i]:0:1}" == "$" ]] && TWITTEXT+="#$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]') "
+			# if the header fiels start w $ ... add ...   #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
+		done
+
+		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
 		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
@@ -229,7 +240,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#\#}" "$i" >> $TMPDIR/plalert-index.tmp
+	[[ "${header[i]:0:1}" != "#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#$}" "$i" >> $TMPDIR/plalert-index.tmp
 done
 echo "</tr>" >> $TMPDIR/plalert-index.tmp
 
