@@ -99,34 +99,38 @@ grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep
 | sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
 > $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 [ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
-
+# Now plalert.out.tmp contains SBS data
 
 # Create a backup of $OUTFILE so we can compare later on.
 touch "$OUTFILE" # ensure it always exists, even is there's no $OUTFILE
 cp -f "$OUTFILE" /tmp/pa-old.csv
 
-# Process the intermediate file:
+# Process the intermediate file with the SBS data
+# example:
+# 0=hex_ident,1=altitude(feet),2=latitude,3=longitude,4=date,5=time,6=angle,7=distance(kilometer),8=squawk,9=ground_speed(knotph),10=track,11=callsign
+# A0B674,750,42.29663,-71.00664,2021/03/17,16:43:52.598,122.36,30.2,0305,139,321,N145NE
 while IFS= read -r line
 do
 	[ "$TESTING" == "true" ] && echo 3. Parsing line $line
 	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
-# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
-
+	# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
-	printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
-	"$(awk -F "," -v a="${pa_record[0]}" '$1=a {print $1 "," $2 "," $3 "," $4 ","; exit;}' "$PLANEFILE")" \
-	"${pa_record[4]}"	`# Date first heard` \
-	"${pa_record[5]:0:8}"	`# Time first heard` \
-	"${pa_record[2]}"	`# Latitude` \
-	"${pa_record[3]}"	`# Longitude` \
-	"${pa_record[11]}"	`# callsign` \
-	"${pa_record[0]}"	`# ICAO for insertion into ADSBExchange link`\
-	"$(date -d "${pa_record[4]}" +%Y-%m-%d)"	`# reformatted date for insertion into ADSBExchange link`\
-	"$MAPZOOM"					  `# zoom factor of the map`\
-	>> "$OUTFILE"			`# Append this line to $OUTWRITEFILE`
+    outrec="${pa_record[0]/ */}," # ICAO (stripped spaces)
+	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $2;exit;}' "$PLANEFILE")," # tail
+	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $3;exit;}' "$PLANEFILE")," # owner name
+	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $4;exit;}' "$PLANEFILE")," # equipment
+	outrec+="${pa_record[4]},"		# Date first heard
+	outrec+="${pa_record[5]:0:8},"	# Time first heard
+	outrec+="${pa_record[2]},"		# Latitude
+	outrec+="${pa_record[3]},"		# Longitude
+	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM"	# ICAO for insertion into ADSBExchange link
+
+	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
 done < $TMPDIR/plalert.out.tmp
+# I like this better but the line below sorts nicer: awk -F',' '!seen[$1 $5)]++' "$OUTFILE" > /tmp/pa-new.csv
 sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
 mv -f /tmp/pa-new.csv "$OUTFILE"
 # the log files are now done, but we want to figure out what is new
