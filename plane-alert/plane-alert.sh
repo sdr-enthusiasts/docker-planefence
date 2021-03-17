@@ -115,7 +115,7 @@ do
 
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
 	printf "%s,%s,%s,%s,%s,%s,https://globe.adsbexchange.com/?icao=%s&showTrace=%s&zoom=%s\n" \
-	"$(awk -v a="${pa_record[0]}" '$1=a {print $1 "," $2 "," $3 "," $4 ","; exit;}' "$PLANEFILE")" \
+	"$(awk -F "," -v a="${pa_record[0]}" '$1=a {print $1 "," $2 "," $3 "," $4 ","; exit;}' "$PLANEFILE")" \
 	"${pa_record[4]}"	`# Date first heard` \
 	"${pa_record[5]:0:8}"	`# Time first heard` \
 	"${pa_record[2]}"	`# Latitude` \
