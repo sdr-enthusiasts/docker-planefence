@@ -67,6 +67,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/kx1t/docker-planefence/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
 - OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/kx1t/docker-planefence/issues/38) on how to do that.
+- OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `~/.planefence/pf_background.jpg` for Planefence and `~/.planefence/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch ~/.planefence/planefence.config` in order for these backgrounds to become effective.)
 
 
 #### Applying your setup

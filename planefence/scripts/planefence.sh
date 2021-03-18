@@ -722,7 +722,9 @@ fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <style>
-body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
+body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
+	   background-image: url('pf_background.jpg');
+     }
 a { color: #0077ff; }
 h1 {text-align: center}
 h2 {text-align: center}
