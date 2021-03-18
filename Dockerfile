@@ -107,6 +107,7 @@ RUN set -x && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     popd && \
+    cp .img/background.jpg /usr/share/planefence/stage && \
     git clone --depth=1 https://github.com/kx1t/docker-planefence /git/docker-planefence && \
     pushd /git/docker-planefence && \
        echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \

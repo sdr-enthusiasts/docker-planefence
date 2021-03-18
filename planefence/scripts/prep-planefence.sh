@@ -36,6 +36,9 @@ fi
 # overwritten by the host at start of runtime
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
+[[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf-background.jpg
+[[ ! -f /usr/share/planefence/persist/pa-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa-background.jpg
+rm -f /usr/share/planefence/html/background.jpg
 [[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
 # Copy the airlinecodes.txt file to the persist directory
@@ -251,7 +254,6 @@ a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF
 #
 #--------------------------------------------------------------------------------
 # Move web page background pictures in place
-
 [[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
 [[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
 
