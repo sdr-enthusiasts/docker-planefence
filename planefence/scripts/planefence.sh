@@ -751,12 +751,7 @@ h2 {text-align: center}
 EOF
 [[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
 
-if [[ -f "/run/planefence/filtered-$FENCEDATE" ]]
-then
-	[[ -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %s entries were filtered out today because of an ignore-list or because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
-	[[ ! -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
-	[[ -f "$IGNORELIST" ]] && [[ -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because of an ignore list\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
-fi
+[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 </ul>

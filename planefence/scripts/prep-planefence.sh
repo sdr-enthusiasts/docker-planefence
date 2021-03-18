@@ -130,7 +130,13 @@ else
 			sleep 99999
 	done
 fi
+#
+# Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
+a=$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf  | sed 's/\"//g')
+[[ "$a" != "" ]] && ln -sf $a /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
+unset a
+#
 # -----------------------------------------------------------------------------------
 #
 # same for planeheat.sh
