@@ -154,6 +154,11 @@ then
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"
 
+			# Ensure that the tweet is not more than 257 chars (allowing 23 chars for the link below)
+			# because tweets larger than 280 are rejected by Twitter:
+
+			TWEET="${TWEET:0:257}"
+
 			# Now add the last field (attribution) without title or training Newline
 			# Reason: this is a URL that Twitter reinterprets and previews on the web
 			# Also, the Newline at the end tends to mess with Twurl
