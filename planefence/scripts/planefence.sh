@@ -724,6 +724,9 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <style>
 body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
 	   background-image: url('pf_background.jpg');
+	   background-repeat: no-repeat;
+	   background-attachment: fixed;
+	   background-size: cover;
      }
 a { color: #0077ff; }
 h1 {text-align: center}
