@@ -21,7 +21,7 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
-chmod -fR go-rw /usr/share/planefence/persist/.internal
+chmod -fR go-rwx /usr/share/planefence/persist/.internal
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
@@ -47,6 +47,7 @@ rm -f /usr/share/planefence/html/background.jpg
 #
 # Copy the airlinecodes.txt file to the persist directory
 cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
+chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
 #
 #--------------------------------------------------------------------------------
 #

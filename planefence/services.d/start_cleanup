@@ -35,13 +35,17 @@ CLEANUP ()
     echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days"
     echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day"
     echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)"
+
+    #these are temp actions to facilitate the transition to the new directory structure:
+    mv -f /usr/share/planefence/persist/*.tmp /usr/share/planefence/persist/.internal
+    mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal
+    mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal
+
     find /tmp -mindepth 1 -mtime +2 -delete 2>/dev/null
     find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
-    find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
-    find /usr/share/planefence/persist/*.log -mtime +1 -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -mtime +1 -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -mtime +1 -delete 2>/dev/null
     find /tmp/dump1090-pf-temp-*.tmp -mtime +1 -delete 2>/dev/null
@@ -99,7 +103,7 @@ GET_ICAO_DB()
         fi
 
         printf "unzipping ... "
-        # unzipping *will* fail when the retrieved file is not a valid ZIP file
+        # unzipping *will* fail when the retrieve   d file is not a valid ZIP file
         unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null
         if [[ "$?" != "0" ]]
         then
