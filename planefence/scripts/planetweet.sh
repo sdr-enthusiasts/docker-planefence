@@ -133,7 +133,7 @@ then
 		TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) ))
 		# Entries that are previously tweeted have "@" in front of the flight number
 		# We will process those
-		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ]
+		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ] && [ "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ]
 		then
 
 			AIRLINETAG="#"
@@ -153,6 +153,11 @@ then
 
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"
+
+			# Ensure that the tweet is not more than 257 chars (allowing 23 chars for the link below)
+			# because tweets larger than 280 are rejected by Twitter:
+
+			TWEET="${TWEET:0:257}"
 
 			# Now add the last field (attribution) without title or training Newline
 			# Reason: this is a URL that Twitter reinterprets and previews on the web

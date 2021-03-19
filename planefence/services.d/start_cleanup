@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-APPNAME="cleanup"
+APPNAME="$(hostname)/cleanup"
 
 echo "[$APPNAME][$(date)] Cleanup started as an s6 service"
 
@@ -64,10 +64,62 @@ CLEANUP ()
       tail -n $MAXLOGLINES /tmp/tweets.log >/tmp/tweets.log.tmp 2>/dev/null
       mv -f /tmp/tweets.log.tmp /tmp/tweets.log 2>/dev/null
     fi
+
+    # remove empty lines from ignore file
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
+
+    # pull new version of airlinenames
+    echo "###,pulled from github kx1t/planefence-airlinecodes at $(date),," >/tmp/airlinecodes.txt
+    if curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt >>/tmp/airlinecodes.txt && [[ "$(cat /tmp/airlinecodes.txt | wc -l)" -gt "100" ]]
+    then
+	mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
+    fi
+
+
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
   fi
+}
+
+# GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.
+# If the existing file is older than last Monday's (or if none exists), then get a new one
+GET_ICAO_DB()
+{
+    if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
+    then
+        printf "[$APPNAME][$(date)] Retrieving ICAO to TAIL database from https://www.mictronics.de ... "
+        # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
+        curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php
+        if [[ "$?" != "0" ]]
+        then
+            echo "Failed!"
+            return 1
+        fi
+
+        printf "unzipping ... "
+        # unzipping *will* fail when the retrieved file is not a valid ZIP file
+        unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null
+        if [[ "$?" != "0" ]]
+        then
+            echo "Failed!"
+            return 1
+        fi
+
+        rm -f /tmp/icao24plus.zip
+        # now convert the text based file into a CSV file
+        printf "converting ... "
+        sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt
+        if [[ "$?" != "0" ]]
+        then
+            echo "Failed!"
+            return 1
+        fi
+
+        mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
+        printf "done!\n"
+    else
+        echo "[$APPNAME][$(date)] ICAO to TAIL database is up to date"
+    fi
 }
 #
 #Now loop forevah:
@@ -75,6 +127,7 @@ while true
 do
   echo "[$APPNAME][$(date)] Performing a cleanup run..."
   CLEANUP
+  GET_ICAO_DB
   echo "[$APPNAME][$(date)] Cleanup done. Sleeping for $LOOPTIME"
   sleep $LOOPTIME
 done

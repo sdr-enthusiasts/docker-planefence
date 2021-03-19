@@ -125,15 +125,14 @@ then
 		printf -v LAT_VIS "%.3f" $LAT
 	fi
 	# clean up the strings:
+	LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+	LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
+	LAT_VIS="$(sed 's/^00*\|00*$//g' <<< $LAT_VIS)" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+	LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
 else
-	# let's not print more than 5 digits
-	printf -v LON_VIS "%.5f" $LON
-	printf -v LAT_VIS "%.5f" $LAT
+	LON_VIS="$LON"
+	LAT_VIS="$LAT"
 fi
-LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
-LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
-LAT_VIS="$(sed 's/^00*\|00*$//g' <<< $LAT_VIS)" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
-LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
 
 #
 #
@@ -485,35 +484,92 @@ LOG "Returned from planefence.py..."
 # Only do this is there are lines in both the original and the TMP csv files
 if [ -f "$OUTFILETMP" ] && [ -f "$OUTFILECSV" ]
 then
-	while read -r newline
-	do
-		read -ra newrec <<< "$newline"
-		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
+	# Read the last line of $OUTFILECSV and compare it to the top line of $OUTFILETMP
+	LASTLINE=$(tail -n 1 "$OUTFILECSV")
+	FIRSTLINE=$(head -n 1 "$OUTFILETMP")
+
+	[ -f "$OUTFILECSV" ] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" || LOG "Before: CSV file doesn't exist"
+	LOG "Before: Last line of CSV file: $LASTLINE"
+	LOG "Before: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
+	LOG "Before: First line of PF file: $FIRSTLINE"
+
+	# Convert these into arrays so we can compare:
+	unset $LASTVALUES
+	unset $FIRSTVALUES
+	IFS=, read -ra LASTVALUES <<< "$LASTLINE"
+	IFS=, read -ra FIRSTVALUES <<< "$FIRSTLINE"
+
+	# Now, if the ICAO of the two lines are the same, then combine and write the files:
+	if [ "${LASTVALUES[0]}" == "${FIRSTVALUES[0]}" ]
+	then
+		LOG "Oldest new plane = newest old plane. Fixing..."
+		# remove the first line form the $OUTFILETMP:
+		tail --lines=+2 "$OUTFILETMP" > "$TMPDIR/pf-tmpfile" && mv "$TMPDIR/pf-tmpfile" "$OUTFILETMP"
+		LOG "Adjusted linecount of New PF file to: $(wc -l $OUTFILETMP |cut -d ' ' -f 1) lines"
+		# write all but the last line of $OUTFILECSV:
+		head --lines=-1 "$OUTFILECSV" > "$TMPDIR/pf-tmpfile" && mv "$TMPDIR/pf-tmpfile" "$OUTFILECSV"
+
+		# write the updated line:
+		printf "%s," "${LASTVALUES[0]}" >> "$OUTFILECSV"
+		printf "%s," "${LASTVALUES[1]}" >> "$OUTFILECSV"
+
+		# print the earliest start time:
+		if [ "$(date -d "${LASTVALUES[2]}" +"%s")" -lt "$(date -d "${FIRSTVALUES[2]}" +"%s")" ]
 		then
-			# there's a ICAO match between the new record and the existing file
-			# grab the last occurrence of the old record
-			oldline="$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)"
-			IFS="," read -ra oldrec <<< "$oldline"
-			if (( ${newrec[2]} - ${oldrec[3]} > COLLAPSEWITHIN ))
-			then
-				# we're outside the collapse window. Write the string to $OUTFILECSV
-				echo "$newline" >> "$OUTFILECSV"
-			else
-				# we are inside the collapse windownand need to collapse the records.
-				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
-				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
-				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
-			fi
+			printf "%s," "${LASTVALUES[2]}" >> "$OUTFILECSV"
 		else
-			# the ICAO fields did not match and we should write it to the database:
-			echo "$newline" >> "$OUTFILECSV"
+			printf "%s," "${FIRSTVALUES[2]}" >> "$OUTFILECSV"
 		fi
-	done < "$OUTFILETMP"
+
+		# print the latest end date:
+		if [ "$(date -d "${FIRSTVALUES[3]}" +"%s")" -gt "$(date -d "${LASTVALUES[3]}" +"%s")" ]
+		then
+			printf "%s," "${FIRSTVALUES[3]}" >> "$OUTFILECSV"
+		else
+			printf "%s," "${LASTVALUES[3]}" >> "$OUTFILECSV"
+		fi
+
+		# print the lowest altitude:
+		if [ "${LASTVALUES[4]}" -lt "${FIRSTVALUES[4]}" ]
+		then
+			printf "%s," "${LASTVALUES[4]}" >> "$OUTFILECSV"
+		else
+			printf "%s," "${FIRSTVALUES[4]}" >> "$OUTFILECSV"
+		fi
+
+		# print the lowest distance. A bit tricky because altitude isn't an integer:
+		if [ "$(bc <<< "${LASTVALUES[5]} < ${FIRSTVALUES[5]}")" -eq 1 ]
+		then
+			printf "%s," "${LASTVALUES[5]}" >> "$OUTFILECSV"
+		else
+			printf "%s," "${FIRSTVALUES[5]}" >> "$OUTFILECSV"
+		fi
+
+		# print the last line (link):
+		printf "%s\n" "${LASTVALUES[6]}" >> "$OUTFILECSV"
+	else
+		LOG "No match, continuing..."
+	fi
 else
-	# there's potentially no OUTFILECSV. Move OUTFILETMP to OUTFILECSV if one exists
-	[[ -f "$OUTFILETMP" ]] && mv -f "$OUTFILETMP" "$OUTFILECSV"
+	[ -f "$OUTFILECSV" ] && LOG "Before: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines" || LOG "Before: CSV file doesn't exist"
+	LOG "Before: last line of CSV file: $LASTLINE"
+	LOG "No new entries to be processed..."
 fi
-rm -f "$OUTFILETMP"
+
+[ -f "$OUTFILECSV" ] && LOG "After: CSV file has $(wc -l "$OUTFILECSV" |cut -d ' ' -f 1) lines"
+[ -f "$OUTFILECSV" ] && LOG "After: last line of CSV file: $(tail --lines=1 "$OUTFILECSV")"
+
+# now we can stitching the CSV file together:
+if [ -f "$OUTFILETMP" ]
+then
+	LOG "After: New PlaneFence file has $(wc -l "$OUTFILETMP" |cut -d ' ' -f 1) lines"
+	LOG "After: last line of PF file: $LASTLINE"
+	cat $OUTFILETMP >> "$OUTFILECSV"
+	rm $OUTFILETMP
+	LOG "Concatenated $OUTFILETMP to $OUTFILECSV"
+else
+	LOG "After: No New PlaneFence file as there were no new aircraft in reach"
+fi
 
 # Now check if we need to add noise data to the csv file
 if [[ "$NOISECAPT" == "1" ]]
@@ -722,12 +778,7 @@ fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <style>
-body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
-	   background-image: url('pf_background.jpg');
-	   background-repeat: no-repeat;
-	   background-attachment: fixed;
-	   background-size: cover;
-     }
+body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 a { color: #0077ff; }
 h1 {text-align: center}
 h2 {text-align: center}
@@ -756,7 +807,12 @@ h2 {text-align: center}
 EOF
 [[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
 
-[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
+if [[ -f "/run/planefence/filtered-$FENCEDATE" ]]
+then
+	[[ -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %s entries were filtered out today because of an ignore-list or because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
+	[[ ! -f "$IGNORELIST" ]] && [[ ! -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because they occurred within %d seconds of each other\n" "$(</run/planefence/filtered-$FENCEDATE)" "$MINTIME" >> "$OUTFILEHTMTMP"
+	[[ -f "$IGNORELIST" ]] && [[ -z "$IGNORETIME" ]] && printf "<li> %d entries were filtered out today because of an ignore list\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
+fi
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 </ul>

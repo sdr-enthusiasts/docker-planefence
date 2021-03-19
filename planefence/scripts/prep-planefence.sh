@@ -12,7 +12,7 @@
 # -----------------------------------------------------------------------------------
 #
 PLANEFENCEDIR=/usr/share/planefence
-APPNAME="planefence"
+APPNAME="$(hostname)/planefence"
 
 echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
 # Sometimes, variables are passed in through .env in the Docker-compose directory
@@ -36,6 +36,9 @@ fi
 # overwritten by the host at start of runtime
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
+[[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
+[[ ! -f /usr/share/planefence/persist/pa-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
+rm -f /usr/share/planefence/html/background.jpg
 [[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
 # Copy the airlinecodes.txt file to the persist directory
@@ -130,7 +133,13 @@ else
 			sleep 99999
 	done
 fi
+#
+# Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
+a=$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf  | sed 's/\"//g')
+[[ "$a" != "" ]] && ln -sf $a /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
+unset a
+#
 # -----------------------------------------------------------------------------------
 #
 # same for planeheat.sh
@@ -210,6 +219,8 @@ fi
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PF_PARANGE" != "x" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
+
 
 # Write the sort-table.js into the web directory as we cannot create it during build:
 cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
@@ -240,6 +251,11 @@ fi
 
 a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$(cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))"
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
+#
+#--------------------------------------------------------------------------------
+# Move web page background pictures in place
+[[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
+[[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
 
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
