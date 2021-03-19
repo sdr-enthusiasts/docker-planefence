@@ -42,6 +42,8 @@ CLEANUP ()
     find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/persist/*.tmp -mtime +1 -delete 2>/dev/null
     find /usr/share/planefence/persist/*.log -mtime +1 -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.tmp -mtime +1 -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.log -mtime +1 -delete 2>/dev/null
     find /tmp/dump1090-pf-temp-*.tmp -mtime +1 -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     if [[ -f /tmp/planefence.log ]]
