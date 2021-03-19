@@ -21,7 +21,7 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
-chmod -fR go-rwx /usr/share/planefence/persist/.internal
+chmod -f u+rwx,go-rwx /usr/share/planefence/persist/.internal
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
@@ -245,7 +245,7 @@ fi
 #--------------------------------------------------------------------------------
 # Check if the remote airlinename server is online
 
-a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$(cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))"
+[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$(cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 #
 #--------------------------------------------------------------------------------
