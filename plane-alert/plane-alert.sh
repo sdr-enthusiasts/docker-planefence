@@ -115,8 +115,6 @@ do
 	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
 	# Skip the line if it's out of range
-
-
 	awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
 
 	
@@ -163,24 +161,35 @@ cat /tmp/pa-diff.csv
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
 #
+
+# Read the header - we will need it a few times later:
+IFS="," read -ra header < $PLANEFILE
+
 # Let's tweet them, if there are any, and if twitter is enabled and set up:
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" == "true" ]] && [[ -f "$TWIDFILE" ]]
 then
-
-	# Get the header file to understand if we need to add any hashtags:
-	IFS="," read -ra header < $PLANEFILE
 	# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
 	ERRORCOUNT=0
 	while IFS= read -r line
 	do
 		XX=$(echo -n $line | tr -d '[:cntrl:]')
 		line=$XX
-		unset pa_record
 
+		unset pa_record
 		IFS=',' read -ra pa_record <<< "$line"
+
+		# add a hashtag to the item if needed:
+		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]]&& pa_record[1]="#${pa_record[1]}//[[:space:]]/" 	# tail field
+		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]]&& pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]]&& pa_record[8]="#${pa_record[8]}//[[:space:]]/" # flight nr field (connected to tail header)
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url
+
+
+
 		TWITTEXT="Aircraft of interest detected:\n"
 		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} Flight: ${pa_record[8]}\n"
 		TWITTEXT+="Owner: ${pa_record[2]}\n"
@@ -191,7 +200,11 @@ then
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" == "$" ]] && TWITTEXT+="#$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]') "
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
+			then
+				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
+				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
+			fi
 			# if the header fields start w $ ... add ...  #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
 		done
 

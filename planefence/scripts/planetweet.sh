@@ -52,6 +52,7 @@ CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
 VERBOSE=1
 CSVTMP=/tmp/planetweet2-tmp.csv
+PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
 MINTIME=200
@@ -118,6 +119,21 @@ CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
 LOG "------------------------------"
 LOG "Starting PLANETWEET"
 LOG "CSVFILE=$CSVFILE"
+
+# Get the hashtaggable headers, and figure out of there is a field with a
+# custom "$tag" header
+
+[[ -f "$PLANEFILE" ]] && IFS="," read -ra hashtag < $PLANEFILE || unset hashtag
+tagfield=""
+for ((i = 0 ; i < ${#hashtag[@]} ; i++))
+do
+	if [[ "${hashtag[i],,}" == "$tag" ]] || [[ "${hashtag[i],,}" == "#$tag" ]]
+	then
+		tagfield=$((i+1)) # number tagfield from 1 instead of 0 as we will use AWK to get it
+		break;
+	fi
+done
+
 if [ -f "$CSVFILE" ]
 then
 	while read CSVLINE
@@ -140,8 +156,8 @@ then
 			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} | tr -d '[:space:]')"
 
 			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
-			TWEET="${HEADR[0]}: ${RECORD[0]}%0A"
-			TWEET+="${HEADR[1]}: ${RECORD[1]}"
+			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
+			[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
 			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" $AIRLINETAG"
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
@@ -150,6 +166,10 @@ then
 			# If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
 			# There is more data we could tweet, but we're a bit restricted in real estate on twitter.
 			(( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
+
+			# figure out of there are custom tags that apply to this ICAO:
+			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
+			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
 
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"
