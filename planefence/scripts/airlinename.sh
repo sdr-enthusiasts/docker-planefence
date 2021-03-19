@@ -78,8 +78,8 @@ CLEANUP_CACHE ()
 	if [[ -f "$1" ]]
 	then
         # we could probably combine these, but... first remove the items that have expired in the cache
-		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' $1 >/tmp/namecache
-		mv -f /tmp/namecache $1
+		awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' $1 >/tmp/namecache 2>/dev/null
+		mv -f /tmp/namecache $1 2>/dev/null
 
 #something wrong
         # do a second run to remove items that have #NOTFOUND in their name field and that are older then $REMOTEMISSCACHE

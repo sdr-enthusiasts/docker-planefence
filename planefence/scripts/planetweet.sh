@@ -169,7 +169,7 @@ then
 
 			# figure out of there are custom tags that apply to this ICAO:
 			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
-			[[ "$customtag" != "" ]] && TWEET+="$customtag%0A"
+			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
 
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"

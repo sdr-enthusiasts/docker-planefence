@@ -186,7 +186,7 @@ then
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url
-		
+
 
 
 		TWITTEXT="Aircraft of interest detected:\n"
@@ -199,7 +199,11 @@ then
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" == "$" ]] && TWITTEXT+="#$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]') "
+			if [[ "${header[i]:0:1}" == "$" ]]
+			then
+				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
+				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
+			fi
 			# if the header fields start w $ ... add ...  #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
 		done
 
