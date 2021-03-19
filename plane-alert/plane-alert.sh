@@ -184,6 +184,7 @@ then
 		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]]&& pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
 		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]]&& pa_record[8]="#${pa_record[8]//[[:space:]]/}" # flight nr field (connected to tail header)
+
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url
