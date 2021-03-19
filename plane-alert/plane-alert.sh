@@ -199,7 +199,7 @@ then
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" == "$" ]]
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
 				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
 				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
