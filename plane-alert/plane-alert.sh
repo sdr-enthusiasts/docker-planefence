@@ -115,7 +115,10 @@ do
 	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
 	# Skip the line if it's out of range
+
 	! awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
+
+	
 
 	# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
