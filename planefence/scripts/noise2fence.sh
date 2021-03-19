@@ -20,13 +20,13 @@
 CSVDIR=/usr/share/planefence/html
 CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
-LOGNAMEBASE=/usr/share/planefence/persist/noisecapt-
+LOGNAMEBASE=/usr/share/planefence/persist/.internal/noisecapt-
 LOGNAMEEXT=".log"
-CSVTMP=/usr/share/planefence/persist/pf-noise-csv.tmp
-NOISETMP=/usr/share/planefence/persist/pf-noise-data.tmp
+CSVTMP=/usr/share/planefence/persist/.internal/pf-noise-csv.tmp
+NOISETMP=/usr/share/planefence/persist/.internal/pf-noise-data.tmp
 LOGFILE=/tmp/noise2fence.log
 VERBOSE=
-VERSION=0.1-docker
+VERSION=0.2-docker
 # -----------------------------------------------------------------------------------
 # Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
 # and is configured via the $PF_NOISECAPT variable in the .env file.

@@ -19,6 +19,9 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
+mkdir -p /usr/share/planefence/persist/.internal
+chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
+chmod -fR go-rw /usr/share/planefence/persist/.internal
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
@@ -26,7 +29,7 @@ then
 	set +o allexport
 else
 	cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
-	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
+	chmod -f a+rw /usr/share/planefence/persist/planefence.config
 fi
 #
 # -----------------------------------------------------------------------------------
@@ -34,6 +37,7 @@ fi
 # Move the jscript files from the staging directory into the html directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
+
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
@@ -72,7 +76,6 @@ mkdir -p /run/planefence
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
-		chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 		sleep 10s
 		echo "----------------------------------------------------------"
 		echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
@@ -119,7 +122,6 @@ then
 	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
 else
-	chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 	sleep 10s
 	echo "----------------------------------------------------------"
 	echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
@@ -224,13 +226,6 @@ fi
 
 # Write the sort-table.js into the web directory as we cannot create it during build:
 cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
-#
-#--------------------------------------------------------------------------------
-# Since the persist directory is mounted on the host as 'root', we want
-# to make sure that the user can write to files without using sudo:
-# trying to do this carefully so it only applies to the files, incl '.xxx' in that
-# directory - no recursion - just in case some idiot maps the persist directory to the host's "/"
-chmod -f a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 #
 #--------------------------------------------------------------------------------
 # Check if the dist/alt/speed units haven't changed. If they have changed,

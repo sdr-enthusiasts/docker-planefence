@@ -44,11 +44,11 @@
         #
         # Override $TMPDIR -- the reason is that we want the temp files of planeheat
         # to be in persistent memory so they will survive docker updates
-        TMPDIR=/usr/share/planefence/persist
+        TMPDIR=/usr/share/planefence/persist/.internal
         #
         INFILECSV=$OUTFILEBASE-$FENCEDATE.csv
-        TMPLINESBASE=dump1090-ph-temp.tmp
-        TMPLINES=$TMPDIR/$TMPLINESBASE
+        PH_LINESBASE=dump1090-ph-temp.tmp
+        PH_LINES=$TMPDIR/$PH_LINESBASE
         INFILESOCK=$LOGFILEBASE$FENCEDATE.txt
         TMPVARS=$TMPDIR/planeheat-$FENCEDATE.tmp
         TMPVARSTEMPLATE="$TMPDIR/planeheat-*.tmp"
@@ -155,16 +155,16 @@ LASTFENCE=0
 LASTLINE=0
 COUNTER=0
 
-# Clear out $TMPLINES if it exists:
-if [ -f "$TMPLINES" ] && [ ! -f "$TMPVARS" ]
+# Clear out $PH_LINES if it exists:
+if [ -f "$PH_LINES" ] && [ ! -f "$TMPVARS" ]
 then
-	 rm -f $TMPLINES
+	 rm -f $PH_LINES
 fi
 
 # delete the history if the command line arg is "reset"
 if [ "$1" == "reset" ]
 then
-	rm -f $TMPLINES 2>/dev/null
+	rm -f $PH_LINES 2>/dev/null
 	rm -f $TMPVARS 2>/dev/null
 fi
 
@@ -203,8 +203,8 @@ do
 		else
 			ENDTIME="${RECORD[3]:11:8}"
 		fi
-		awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" 'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' "$INFILESOCK.tmp" >> "$TMPLINES"
-		LOG "Now $(wc -l $TMPLINES) positions in $TMPLINES"
+		awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" 'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' "$INFILESOCK.tmp" >> "$PH_LINES"
+		LOG "Now $(wc -l $PH_LINES) positions in $PH_LINES"
 	else
 		LOG "(${RECORD[0]} was previously processed.)"
         fi
@@ -225,16 +225,16 @@ LOG "Creating Heatmap Data"
 
 # Determine the distance in degrees for a square box around the center point
 
-DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$TMPLINES")
+DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
  LOG "Dist=$DEGDIST"
 
 # determine start time and end time
-read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$TMPLINES")
+read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
  LOG "Start time=${REC[0]}, End time=${REC[1]}"
 
 # Now call the Heatmap Generator
-$PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${TMPLINESBASE::-1}""*"
-#echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${TMPLINESBASE::-1}""*"
+$PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
+#echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
 
  LOG "Returned from planeheat.pl"
 
