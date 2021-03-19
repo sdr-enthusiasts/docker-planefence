@@ -201,7 +201,7 @@ then
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
-				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
+				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
 				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
 			fi
 			# if the header fields start w $ ... add ...  #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
