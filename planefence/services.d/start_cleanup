@@ -22,10 +22,10 @@ LOOPTIME="6h"
 # It specifically applies to files in the HTML directory.
 # If $PF_DELETEAFTER is set to "0" then we never delete.
 # Note - files in /tmp will get deleted if they are older than 2 days.
-PF_DELETEAFTER=$(grep "PF_DELETEAFTER" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
+PF_DELETEAFTER=$(grep "^PF_DELETEAFTER" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
 [[ "x$PF_DELETEAFTER" == "x" ]] && OLDERTHAN=14 || OLDERTHAN=$PF_DELETEAFTER
 
-PF_CHECKREMOTEDB=$(grep "PF_CHECKREMOTEDB" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
+PF_CHECKREMOTEDB=$(grep "^PF_CHECKREMOTEDB" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
 
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
