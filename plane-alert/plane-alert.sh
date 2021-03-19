@@ -116,7 +116,7 @@ do
 
 	# Skip the line if it's out of range
 
-	! awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
+	awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
 
 	
 
