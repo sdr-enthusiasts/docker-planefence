@@ -654,6 +654,13 @@ then
 	#scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
 	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
 
+	# also create a noisegraph for the full day:
+	rm -f /tmp/noiselog 2>/dev/null
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f /usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat /usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log >> /tmp/noiselog
+	gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$(date -d "yesterday" +%s)"; end="$(date +%s)"; infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = "$(date +%Y-%m-%d)")'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+	rm -f /tmp/noiselog 2>/dev/null
+
 elif (( $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
 then
 	ln -sf $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | tail -1) $OUTFILEDIR/noisecapt-spectro-latest.png
@@ -858,6 +865,7 @@ then
 	<li>For spectrograms related to overflying aircraft, see table above
 	</ul>
 	<a href="noisecapt-spectro-latest.png" target="_blank"><img src="noisecapt-spectro-latest.png"></a>
+	$([[ -f "/usr/share/planefence/html/noiseplot-latest.jpg" ]] && echo "<a href=\"noiseplot-latest.jpg\" target=\"_blank\"><img src=\"noiseplot-latest.jpg\"></a>")
 	</details>
 	</section>
 	<hr/>
