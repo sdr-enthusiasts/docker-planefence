@@ -155,7 +155,7 @@ do
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
 	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM,"	# ICAO for insertion into ADSBExchange link
-	outrec+="${pa_record[8]}}"		# squawk
+	outrec+="${pa_record[8]}"		# squawk
 
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
@@ -210,7 +210,7 @@ then
 		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
 		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]]/}" # flight nr field (connected to tail header)
-		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]//[[:space:]]/}" # 	# squawk
+		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
 
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
