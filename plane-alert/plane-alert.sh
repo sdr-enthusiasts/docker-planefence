@@ -103,9 +103,9 @@ grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep
 
 # Let's figure out if we also need to find SQUAWKS
 rm -f $TMPDIR/patmp
-if [[ "$SQUAWK" != "" ]]
+if [[ "$SQUAWKS" != "" ]]
 then
-		IFS="," read -ra sq <<< "$SQUAWK"
+		IFS="," read -ra sq <<< "$SQUAWKS"
 		# add some zeros to the front, in case there are less than 4 chars
 		sq=( "${sq[@]/#/0000}" )
 		# Now go through $INFILE and look for each of the squawks. Put the SBS data in /tmp/patmp:
