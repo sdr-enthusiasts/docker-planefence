@@ -296,13 +296,13 @@ done < "$OUTFILE"
 cat $PLANEALERTDIR/plane-alert.footer.html >> $TMPDIR/plalert-index.tmp
 
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
-sed -i "s/##NAME##/$NAME/g" $TMPDIR/plalert-index.tmp
+sed -i "s|##NAME##|$NAME|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
-sed -i "s/##LASTUPDATE##/$LASTUPDATE/g" $TMPDIR/plalert-index.tmp
-sed -i "s/##ALERTLIST##/$ALERTLIST/g" $TMPDIR/plalert-index.tmp
-sed -i "s/##CONCATLIST##/$CONCATLIST/g" $TMPDIR/plalert-index.tmp
-sed -i "s/##HISTTIME##/$HISTTIME/g" $TMPDIR/plalert-index.tmp
-sed -i "s/##VERSION##/$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)/g" $TMPDIR/plalert-index.tmp
+sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" $TMPDIR/plalert-index.tmp
+sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
+sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
+sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
+sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
 
 #Finally, put the temp index into its place:
 mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
