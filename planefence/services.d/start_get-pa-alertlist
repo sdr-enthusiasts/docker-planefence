@@ -20,11 +20,12 @@ LOOPTIME=15m
 
 # Now let's wait a bit on the initial run to ensure that start_planefence is deployed and has finished calling prep-planefence.sh
 # this ensures that the ALERTLIST parameter in /usr/share/plane-alert/plane-alert.conf is populated
-sleep 15s
+
+# Note that on startup, get-pa-alertlist.sh is called form start_planefence so we don't need to do this right away.
 
 while true
 do
-	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
- 	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
+	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
 	sleep $LOOPTIME
-done
+	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
+ 	done

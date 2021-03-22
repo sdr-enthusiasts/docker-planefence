@@ -14,7 +14,7 @@ APPNAME="$(hostname)/get-pa-alertlist"
 # Make sure the /run directory exists
 echo "[$APPNAME][$(date)] get-pa-alertlist.sh started"
 #Get the list of alert files into ALERTLIST, or put the original file in it
-ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/plane-alert/persist/planefence.config)"
+ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 [[ "$ALERTLIST" != "" ]] && IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt")
 
 # now iterate though them an put them in sequential files:
@@ -37,6 +37,6 @@ do
 	fi
 done
 
-awk -F',' '!seen[$1]++' /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt
+awk -F',' '!seen[$1]++' /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
 #rm -f /tmp/alertlist*.txt
 echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished"
