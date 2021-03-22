@@ -46,15 +46,17 @@ CLEANUP ()
     mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
     mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
 
-    find /tmp -mindepth 1 -mtime +2 -delete 2>/dev/null
+    touch -t $(date -d "today 00:00:00" +%Y%m%d%H%M) /tmp/timestamp
     find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
     rm -f /run/socket30003/*.log
-    find /run/socket30003/*.txt -mtime +$OLDERTHAN -delete 2>/dev/null
-    find /usr/share/planefence/persist/.internal/*.tmp -mtime +1 -delete 2>/dev/null
-    find /usr/share/planefence/persist/.internal/*.log -mtime +1 -delete 2>/dev/null
-    find /tmp/dump1090-pf-temp-*.tmp -mtime +1 -delete 2>/dev/null
+    find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /tmp/dump1090-pf-temp-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
+    find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    rm -f /tmp/timestamp
     if [[ -f /tmp/planefence.log ]]
     then
       tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
