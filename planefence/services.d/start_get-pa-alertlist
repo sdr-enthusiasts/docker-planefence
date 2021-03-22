@@ -24,7 +24,7 @@ sleep 15s
 
 while true
 do
-	/etc/services/d/get-pa-alertlist/get-pa-alertlist.sh
+	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
  	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
 	sleep $LOOPTIME
 done
