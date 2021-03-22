@@ -27,9 +27,9 @@ do
 		[[ "$(curl -L -s -fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval succeeded" || echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
 	else
 		# it's a file and we need to concatenate it
-		if [[ -f "/usr/share/planefence/$ALERT" ]]
+		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
-			cp -f "/usr/share/planefence/$ALERT" /tmp/alertlist-$i.txt
+			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval succeeded"
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
