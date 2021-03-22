@@ -119,6 +119,7 @@ echo xx1 ; cat $TMPDIR/plalert.out.tmp
 
 # Let's figure out if we also need to find SQUAWKS
 rm -f $TMPDIR/patmp
+touch $TMPDIR/patmp
 if [[ "$SQUAWKS" != "" ]]
 then
 		IFS="," read -ra sq <<< "$SQUAWKS"
