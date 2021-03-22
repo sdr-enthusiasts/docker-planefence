@@ -264,9 +264,11 @@ then
 		# 8-callsign,9-adsbx_url,10-squawk
 
 		TWITTEXT="Aircraft of interest detected:\n"
-		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} Flight: ${pa_record[8]} Squawk: ${pa_record[10]}\n"
-		TWITTEXT+="Owner: ${pa_record[2]}\n"
-		TWITTEXT+="Aircraft: ${pa_record[3]}\n"
+		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]/&/_}"
+		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
 
 		# Add any hashtags:
@@ -361,7 +363,7 @@ do
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE")" "$i" >> $TMPDIR/plalert-index.tmp
+			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]")" "$i" >> $TMPDIR/plalert-index.tmp
 		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 	fi
