@@ -19,17 +19,18 @@ ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persi
 
 # now iterate though them an put them in sequential files:
 rm -f /tmp/alertlist*.txt
+i=0
 for ALERT in "${ALERTFILES[@]}"
 do
 	if [[ "${ALERT:0:5}" == "http:" ]] || [[ "${ALERT:0:6}" == "https:" ]]
 	then
 		# it's a URL and we need to CURL it
-		[[ "$(curl -L -s -fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval succeeded" || echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
+		[[ "$(curl -L -s -fail -o /tmp/alertlist-$((i++)).txt "$ALERT" ; echo $?)" == "0" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval succeeded" || echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
 	else
 		# it's a file and we need to concatenate it
 		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
-			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
+			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$((i++)).txt
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval succeeded"
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
