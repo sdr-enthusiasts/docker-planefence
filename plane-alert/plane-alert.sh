@@ -94,12 +94,28 @@ sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
 [ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
 
 # Now grep through the input file to see if we detect any planes
+# note - we reverse the input file because later items have a higher chance to contain callsign and tail info
+# the 'sort' command will put things back in order, but the '-u' option will make sure we keep the LAST item
+# rather than the FIRST item
+tac "$INFILE" | grep -f $TMPDIR/plalertgrep.tmp		`# Go through the input file and grep it agains plalertgrep.tmp` \
+	| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+	> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 
-grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep it agains plalertgrep.tmp` \
-| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+# remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
+# will cause duplicate entries down the line
+if [[ -f "$TMPDIR/plalert.out.tmp" ]]
+then
+	rm -f $TMPDIR/patmp
+	awk -F "," 'OFS="," {$9="";print}' $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
+	mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
+fi
+
 [ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 # Now plalert.out.tmp contains SBS data
+
+
+echo xx1 ; cat $TMPDIR/plalert.out.tmp
+
 
 # Let's figure out if we also need to find SQUAWKS
 rm -f $TMPDIR/patmp
@@ -117,8 +133,11 @@ then
 		done
 
 		# clean up /tmp/patmp
-		sort -t',' -k1,1 -k9,9 -u $TMPDIR/patmp  >> $TMPDIR/plalert.out.tmp
+echo xx2 ; cat $TMPDIR/patmp
+		tac $TMP/patmp | sort -t',' -k1,1 -k9,9 -u  >> $TMPDIR/plalert.out.tmp # sort this from the reverse of the file
+echo xx3 ; cat $TMPDIR/plalert.out.tmp
 		sort -t',' -k5,5 -k6,6 $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
+echo xx4 ; cat $TMPDIR/patmp
 		mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
 		# Now plalert.out.tmp may contain duplicates if there's a match on BOTH the plane-alert-db AND the Squawk
 		# Going to assume that this is OK for now even though it may result in double tweets.
@@ -155,7 +174,34 @@ do
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
 	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM,"	# ICAO for insertion into ADSBExchange link
-	outrec+="${pa_record[8]}"		# squawk
+
+	# only add squawk if its in the list
+	x=""
+	for ((i=0; i<"${#sq[@]}"; i++))
+	do
+		x+=$(awk "{if(\$1 ~ /${sq[i]}/){print}}" <<< "${pa_record[8]}")
+	done
+	echo xx5 add sq for ${pa_record[0]}:${pa_record[8]}? -$x-
+	[[ "$x" != "" ]] && outrec+="${pa_record[8]}"		# squawk
+
+	#Get a tail number if we don't have one
+	if [[ "$(awk -F "," '{print $2'} <<< "$outrec")" == "" ]]
+	then
+		icao="$(awk -F "," '{print $1'} <<< "$outrec")"
+		tail="$(grep -i -w "$icao" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
+		[[ "$tail" != "" ]] && outrec="$(awk -F "," -v tail=$tail 'OFS="," {$2=tail;print}' <<< $outrec)"
+	fi
+
+	#Get an owner if there's none, we have a tail number and we are in the US
+	if [[ "$(awk -F "," '{print $3'} <<< "$outrec")" == "" ]] && [[ "$(awk -F "," '{print $2'} <<< "$outrec")" != "" ]]
+	then
+		tail="$(awk -F "," '{print $2'} <<< "$outrec")"
+		if [[ "${tail:0:1}" == "N" ]]
+		then
+			owner="$(/usr/share/planefence/airlinename.sh $tail)"
+			[[ "$owner" != "" ]] && outrec="$(awk -F "," -v owner="$owner" 'OFS="," {$3=owner;print}' <<< $outrec)"
+		fi
+	fi
 
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
