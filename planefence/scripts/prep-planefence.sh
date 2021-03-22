@@ -224,7 +224,6 @@ fi
 [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_PARANGE" != "x" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_PA_SQUAWKS" != "x" ]] && sed -i 's|\(^\s*SQUAWKS=\).*|\1'"$PF_PA_SQUAWKS"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SQUAWKS=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
-[[ "x$PF_ALERTLIST" != "x" ]] && sed -i 's|\(^\s*ALERTLIST=\).*|\1'"$PF_ALERTLIST"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*ALERTLIST=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
 
 # Write the sort-table.js into the web directory as we cannot create it during build:
 cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
