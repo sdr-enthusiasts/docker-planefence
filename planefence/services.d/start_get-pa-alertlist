@@ -15,9 +15,6 @@ echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service"
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
 # These packages may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
-#
-# Make sure the /run directory exists
-mkdir -p /run/get-pa-alertlist
 
 LOOPTIME=15m
 
@@ -27,38 +24,7 @@ sleep 15s
 
 while true
 do
-	echo "[$APPNAME][$(date)] Get-PA-Alertlist started"
-	#Get the list of alert files into ALERTLIST, or put the original file in it
-	ALERTLIST="$(sed -n 's|^\s*ALERTLIST=\(.*\)|\1|p' /usr/share/plane-alert/plane-alert.conf)"
-	[[ "$ALERTLIST" != "" ]] && IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt")
-
-	# now iterate though them an put them in sequential files:
-	rm -f /tmp/alertlist*.txt
-	for ((i=0; i<"${#ALERTFILES[@]}"; i++))
-	do
-		if [[ "${ALERTFILES[i]:0:5}" == "http:" ]] || [[ "${ALERTFILES[i]:0:6}" == "https:" ]]
-		then
-			# it's a URL and we need to CURL it
-			[[ "$(curl -L -s -fail -o /tmp/alertlist-$i.txt "${ALERTFILES[i]}" ; echo $?)" == "0" ]] && echo "[$APPNAME][$(date)] ALERTLIST ${ALERTFILES[i]} retrieval succeeded" || echo "[$APPNAME][$(date)] ALERTLIST ${ALERTFILES[i]} retrieval failed"
-		else
-			# it's a file and we need to concatenate it
-			if [[ -f "/usr/share/planefence/persist/${ALERTFILES[i]}" ]]
-			then
-				cp -f "/usr/share/planefence/persist/${ALERTFILES[i]}" /tmp/alertlist-$i.txt
-				echo "[$APPNAME][$(date)] ALERTLIST ${ALERTFILES[i]} retrieval succeeded"
-			else
-				echo "[$APPNAME][$(date)] ALERTLIST ${ALERTFILES[i]} retrieval failed"
-			fi
-		fi
-	done
-<<<<<<< HEAD
-	cat /tmp/alertlist*.txt | awk -F',' '!seen[$1]++' > /usr/share/planefence/persist/.internal/plane-alert-db.txt
-=======
-
-	cat /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt
->>>>>>> c816b8a5c3ae7901e6f2693615d929437fc289ad
-	#uncomment this for production: rm -f /tmp/alertlist*.txt
-
- 	echo "[$APPNAME][$(date)] Get-PA-Alertlist has finished. Restarting in $LOOPTIME"
+	/etc/services/d/get-pa-alertlist/get-pa-alertlist.sh
+ 	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
 	sleep $LOOPTIME
 done
