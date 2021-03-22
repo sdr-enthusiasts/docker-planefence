@@ -37,5 +37,10 @@ do
 	fi
 done
 
+<<<<<<< HEAD
 awk -F',' '!seen[$1]++' /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt
 #rm -f /tmp/alertlist*.txt
+=======
+cat /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt
+rm -f /tmp/alertlist*.txt
+>>>>>>> c816b8a5c3ae7901e6f2693615d929437fc289ad
