@@ -114,7 +114,7 @@ fi
 # Now plalert.out.tmp contains SBS data
 
 
-echo xx1 ; cat $TMPDIR/plalert.out.tmp
+# echo xx1 ; cat $TMPDIR/plalert.out.tmp
 
 
 # Let's figure out if we also need to find SQUAWKS
@@ -134,11 +134,11 @@ then
 		done
 
 		# clean up /tmp/patmp
-echo xx2 ; cat $TMPDIR/patmp
+# echo xx2 ; cat $TMPDIR/patmp
 		tac $TMPDIR/patmp | sort -t',' -k1,1 -k9,9 -u  >> $TMPDIR/plalert.out.tmp # sort this from the reverse of the file
-echo xx3 ; cat $TMPDIR/plalert.out.tmp
+# echo xx3 ; cat $TMPDIR/plalert.out.tmp
 		sort -t',' -k5,5 -k6,6 $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
-echo xx4 ; cat $TMPDIR/patmp
+# echo xx4 ; cat $TMPDIR/patmp
 		mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
 		# Now plalert.out.tmp may contain duplicates if there's a match on BOTH the plane-alert-db AND the Squawk
 		# Going to assume that this is OK for now even though it may result in double tweets.
