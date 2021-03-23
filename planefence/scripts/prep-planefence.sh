@@ -57,7 +57,6 @@ chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
 mkdir -p /usr/share/planefence/html/plane-alert
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
-ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
 if [[ "$PF_INTERVAL" != "" ]]

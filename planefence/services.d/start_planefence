@@ -40,7 +40,7 @@ do
     LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
-	          echo "[$APPNAME][$(date)]$($PLANEFENCEDIR/planefence.sh)"
+	      $PLANEFENCEDIR/planefence.sh
               echo "[$APPNAME][$(date)] PlaneFence run successful. Running again in $LOOPTIME"
         else
               echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
