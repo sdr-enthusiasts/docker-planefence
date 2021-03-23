@@ -162,7 +162,6 @@ do
 	# Skip the line if it's out of range
 	awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
 
-
 	# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
     outrec="${pa_record[0]/ */}," # ICAO (stripped spaces)
@@ -182,7 +181,6 @@ do
 	do
 		x+=$(awk "{if(\$1 ~ /${sq[i]}/){print}}" <<< "${pa_record[8]}")
 	done
-	echo xx5 add sq for ${pa_record[0]}:${pa_record[8]}? -$x-
 	[[ "$x" != "" ]] && outrec+="${pa_record[8]}"		# squawk
 
 	#Get a tail number if we don't have one
@@ -318,6 +316,9 @@ fi
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
+# let's see if we need the Squawk column:
+
+
 IFS="," read -ra header < $PLANEFILE
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
@@ -330,7 +331,7 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
-	<th>Squawk</th>
+	$(awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && echo "<th>Squawk</th>"))
 	<!-- th>Flight Map</th -->
 EOF
 
@@ -379,6 +380,9 @@ sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
+
+
+echo "<!-- ALERTLIST = $ALERTLIST -->
 
 #Finally, put the temp index into its place:
 mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
