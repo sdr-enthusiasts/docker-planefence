@@ -382,7 +382,7 @@ sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
 
 
-echo "<!-- ALERTLIST = $ALERTLIST -->
+echo "<!-- ALERTLIST = $ALERTLIST -->" >> $TMPDIR/plalert-index.tmp
 
 #Finally, put the temp index into its place:
 mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
