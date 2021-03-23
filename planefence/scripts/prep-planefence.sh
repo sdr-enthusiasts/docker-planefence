@@ -21,7 +21,7 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
-chmod -f u+rwx,go-rwx /usr/share/planefence/persist/.internal
+chmod -f u=rwx,go=rx /usr/share/planefence/persist/.internal
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
