@@ -342,6 +342,10 @@ EOF
 fi
 
 IFS="," read -ra header < $PLANEFILE
+
+# figure out if there are squawks:
+awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
+
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
 <table border="1" class="js-sort-table">
@@ -354,7 +358,7 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
-	$(awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && echo "<th>Squawk</th>")
+	$([[ "$sq" == "true" ]] && echo "<th>Squawk</th>")
 	<!-- th>Flight Map</th -->
 EOF
 
@@ -383,7 +387,7 @@ do
 		# printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
 		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE with link to adsbexchange
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
-		printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Squawk
+		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
 		for i in {4..10}
 		do
