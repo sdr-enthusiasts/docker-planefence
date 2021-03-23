@@ -316,12 +316,35 @@ fi
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
-# let's see if we need the Squawk column:
-
+SB="$(sed -n 's|^\s*SPORTSBADGER=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+if [[ "$SB" != "" ]]
+then
+	cat <<EOF >> $TMPDIR/plalert-index.tmp
+<!-- special feature for @Sportsbadger only -->
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	<article>
+        	<details>
+                	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
+			<h2>Per special request of @SportsBadger, here's the initial implementation of the "PlaneLatte" feature</h2>
+            Unfortunately, the IFTTT integration between the home espresso machine and PlaneLatte is still under development and will probably never be implemented. In the meantime, feel free to
+            pre-order your favo(u)rite drink at a Starbucks nearby. Future features will include a choice of Starbucks, Costa, and Pret-a-Manger, as well
+            as the local New England favorite: Dunkin' Donuts.
+            <ul>
+                <li><a href="https://www.starbucks.com/menu/product/407/hot?parent=%2Fdrinks%2Fhot-coffees%2Flattes" target="_blank">Caffe Latte</a>
+                <li><a href="https://www.starbucks.com/menu/product/409/hot?parent=%2Fdrinks%2Fhot-coffees%2Fcappuccinos" target="_blank">Cappuccino</a>
+				<li><a href="https://www.starbucks.com/menu/product/462/iced?parent=%2Fdrinks%2Ficed-teas%2Ficed-herbal-teas" target="_blank">Iced Passion Tango&reg; Tea Lemonade</a>, handshaken with ice, lemonade and, of course, passion.
+				<li>Additional beverages available upon request
+			</ul>
+		</details>
+	</article>
+</section>
+EOF
+fi
 
 IFS="," read -ra header < $PLANEFILE
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
+<table border="1" class="js-sort-table">
 <tr>
 	<th class="js-sort-number">No.</th>
 	<th>${header[0]#\#}</th> <!-- ICAO -->
