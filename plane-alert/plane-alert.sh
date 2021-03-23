@@ -354,7 +354,7 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
-	$(awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && echo "<th>Squawk</th>"))
+	$(awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && echo "<th>Squawk</th>")
 	<!-- th>Flight Map</th -->
 EOF
 
