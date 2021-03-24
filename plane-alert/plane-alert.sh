@@ -262,7 +262,8 @@ then
 		# 8-callsign,9-adsbx_url,10-squawk
 
 		TWITTEXT="Aircraft of interest detected:\n"
-		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} "
+		TWITTEXT+="ICAO: ${pa_record[0]} "
+		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
 		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]/&/_}"
@@ -323,8 +324,8 @@ then
 <!-- special feature for @Sportsbadger only -->
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 	<article>
-        	<details>
-                	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
+        <details>
+            <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
 			<h2>Per special request of @SportsBadger, here's the initial implementation of the "PlaneLatte" feature</h2>
             Unfortunately, the IFTTT integration between the home espresso machine and PlaneLatte is still under development and will probably never be implemented. In the meantime, feel free to
             pre-order your favo(u)rite drink at a Starbucks nearby. Future features will include a choice of Starbucks, Costa, and Pret-a-Manger, as well
