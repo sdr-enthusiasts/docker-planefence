@@ -251,6 +251,7 @@ then
 
 		# add a hashtag to the item if needed:
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
+
 		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]]/}" 	# tail field
 		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
@@ -408,7 +409,6 @@ sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
-
 
 echo "<!-- ALERTLIST = $ALERTLIST -->" >> $TMPDIR/plalert-index.tmp
 
