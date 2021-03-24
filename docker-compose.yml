@@ -34,7 +34,7 @@ services:
       # want to use an external http daemon (lighttpd, nginx, etc)
       - /opt/planefence/Volumes/html:/usr/share/planefence/html
     tmpfs:
-      - /run:rw,nosuid,nodev,exec,relatime,size=128M
+      - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
 
   # the readsb entry pulls in a readsb container to get adsb data. If you want to

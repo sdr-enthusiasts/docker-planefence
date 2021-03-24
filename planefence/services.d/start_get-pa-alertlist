@@ -1,0 +1,31 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/get-pa-alertlist"
+
+echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service"
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/planefence4docker/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+
+LOOPTIME=15m
+
+# Now let's wait a bit on the initial run to ensure that start_planefence is deployed and has finished calling prep-planefence.sh
+# this ensures that the ALERTLIST parameter in /usr/share/plane-alert/plane-alert.conf is populated
+
+# Note that on startup, get-pa-alertlist.sh is called form start_planefence so we don't need to do this right away.
+
+while true
+do
+	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
+	sleep $LOOPTIME
+	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
+ 	done

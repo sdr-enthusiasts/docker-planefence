@@ -94,12 +94,57 @@ sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
 [ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
 
 # Now grep through the input file to see if we detect any planes
+# note - we reverse the input file because later items have a higher chance to contain callsign and tail info
+# the 'sort' command will put things back in order, but the '-u' option will make sure we keep the LAST item
+# rather than the FIRST item
+tac "$INFILE" | grep -f $TMPDIR/plalertgrep.tmp		`# Go through the input file and grep it agains plalertgrep.tmp` \
+	| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+	> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 
-grep -f $TMPDIR/plalertgrep.tmp "$INFILE"		`# Go through the input file and grep it agains plalertgrep.tmp` \
-| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+# remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
+# will cause duplicate entries down the line
+if [[ -f "$TMPDIR/plalert.out.tmp" ]]
+then
+	rm -f $TMPDIR/patmp
+	awk -F "," 'OFS="," {$9="";print}' $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
+	mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
+fi
+
 [ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
 # Now plalert.out.tmp contains SBS data
+
+
+# echo xx1 ; cat $TMPDIR/plalert.out.tmp
+
+
+# Let's figure out if we also need to find SQUAWKS
+rm -f $TMPDIR/patmp
+touch $TMPDIR/patmp
+if [[ "$SQUAWKS" != "" ]]
+then
+		IFS="," read -ra sq <<< "$SQUAWKS"
+		# add some zeros to the front, in case there are less than 4 chars
+		sq=( "${sq[@]/#/0000}" )
+		# Now go through $INFILE and look for each of the squawks. Put the SBS data in /tmp/patmp:
+		for ((i=0; i<"${#sq[@]}"; i++))
+		do
+			sq[i]="${sq[i]: -4}"	# get the right-most 4 characters
+			sq[i]="${sq[i]/x/.}"	# replace x with dot-wildcard
+			awk -F "," "{if(\$9 ~ /${sq[i]}/){print}}" "$INFILE" >>$TMPDIR/patmp
+		done
+
+		# clean up /tmp/patmp
+# echo xx2 ; cat $TMPDIR/patmp
+		tac $TMPDIR/patmp | sort -t',' -k1,1 -k9,9 -u  >> $TMPDIR/plalert.out.tmp # sort this from the reverse of the file
+# echo xx3 ; cat $TMPDIR/plalert.out.tmp
+		sort -t',' -k5,5 -k6,6 $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
+# echo xx4 ; cat $TMPDIR/patmp
+		mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
+		# Now plalert.out.tmp may contain duplicates if there's a match on BOTH the plane-alert-db AND the Squawk
+		# Going to assume that this is OK for now even though it may result in double tweets.
+		# Although -- twitter may reject the second tweet.
+fi
+
 
 # Create a backup of $OUTFILE so we can compare later on.
 touch "$OUTFILE" # ensure it always exists, even is there's no $OUTFILE
@@ -117,9 +162,8 @@ do
 	# Skip the line if it's out of range
 	awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
 
-	
 	# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
-	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url
+	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
     outrec="${pa_record[0]/ */}," # ICAO (stripped spaces)
 	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $2;exit;}' "$PLANEFILE")," # tail
 	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $3;exit;}' "$PLANEFILE")," # owner name
@@ -129,13 +173,40 @@ do
 	outrec+="${pa_record[2]},"		# Latitude
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
-	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM"	# ICAO for insertion into ADSBExchange link
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM,"	# ICAO for insertion into ADSBExchange link
+
+	# only add squawk if its in the list
+	x=""
+	for ((i=0; i<"${#sq[@]}"; i++))
+	do
+		x+=$(awk "{if(\$1 ~ /${sq[i]}/){print}}" <<< "${pa_record[8]}")
+	done
+	[[ "$x" != "" ]] && outrec+="${pa_record[8]}"		# squawk
+
+	#Get a tail number if we don't have one
+	if [[ "$(awk -F "," '{print $2'} <<< "$outrec")" == "" ]]
+	then
+		icao="$(awk -F "," '{print $1'} <<< "$outrec")"
+		tail="$(grep -i -w "$icao" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
+		[[ "$tail" != "" ]] && outrec="$(awk -F "," -v tail=$tail 'OFS="," {$2=tail;print}' <<< $outrec)"
+	fi
+
+	#Get an owner if there's none, we have a tail number and we are in the US
+	if [[ "$(awk -F "," '{print $3'} <<< "$outrec")" == "" ]] && [[ "$(awk -F "," '{print $2'} <<< "$outrec")" != "" ]]
+	then
+		tail="$(awk -F "," '{print $2'} <<< "$outrec")"
+		if [[ "${tail:0:1}" == "N" ]]
+		then
+			owner="$(/usr/share/planefence/airlinename.sh $tail)"
+			[[ "$owner" != "" ]] && outrec="$(awk -F "," -v owner="$owner" 'OFS="," {$3=owner;print}' <<< $outrec)"
+		fi
+	fi
 
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
 done < $TMPDIR/plalert.out.tmp
 # I like this better but the line below sorts nicer: awk -F',' '!seen[$1 $5)]++' "$OUTFILE" > /tmp/pa-new.csv
-sort -t',' -k5,5  -k1,1 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries. Use an intermediate file so we dont overwrite the file we are reading from
+sort -t',' -k5,5  -k1,1 -k11,11 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries based on ICAO, date, and squawk. Use an intermediate file so we dont overwrite the file we are reading from
 sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date and time but keep all entries
 # the log files are now done, but we want to figure out what is new
 
@@ -180,21 +251,24 @@ then
 
 		# add a hashtag to the item if needed:
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
-		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]]&& pa_record[1]="#${pa_record[1]//[[:space:]]/}" 	# tail field
-		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]]&& pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]]/}" 	# tail field
+		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
-		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]]&& pa_record[8]="#${pa_record[8]//[[:space:]]/}" # flight nr field (connected to tail header)
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]]/}" # flight nr field (connected to tail header)
+		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
 
 		# First build the text of the tweet: reminder:
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
-		# 8-callsign,9-adsbx_url
-
-
+		# 8-callsign,9-adsbx_url,10-squawk
 
 		TWITTEXT="Aircraft of interest detected:\n"
-		TWITTEXT+="ICAO: ${pa_record[0]} Tail: ${pa_record[1]} Flight: ${pa_record[8]}\n"
-		TWITTEXT+="Owner: ${pa_record[2]}\n"
-		TWITTEXT+="Aircraft: ${pa_record[3]}\n"
+		TWITTEXT+="ICAO: ${pa_record[0]} "
+		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]/&/_}"
+		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
 
 		# Add any hashtags:
@@ -206,7 +280,6 @@ then
 				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
 				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
 			fi
-			# if the header fields start w $ ... add ...  #                ^ search for ICAO^    ^return fld i^ ^if ICAO in fld1 print fld i and exit^   ^strip any non alnum^
 		done
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
@@ -245,9 +318,39 @@ fi
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
+SB="$(sed -n 's|^\s*SPORTSBADGER=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+if [[ "$SB" != "" ]]
+then
+	cat <<EOF >> $TMPDIR/plalert-index.tmp
+<!-- special feature for @Sportsbadger only -->
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	<article>
+        <details>
+            <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
+			<h2>Per special request of @SportsBadger, here's the initial implementation of the "PlaneLatte" feature</h2>
+            Unfortunately, the IFTTT integration between the home espresso machine and PlaneLatte is still under development and will probably never be implemented. In the meantime, feel free to
+            pre-order your favo(u)rite drink at a Starbucks nearby. Future features will include a choice of Starbucks, Costa, and Pret-a-Manger, as well
+            as the local New England favorite: Dunkin' Donuts.
+            <ul>
+                <li><a href="https://www.starbucks.com/menu/product/407/hot?parent=%2Fdrinks%2Fhot-coffees%2Flattes" target="_blank">Caffe Latte</a>
+                <li><a href="https://www.starbucks.com/menu/product/409/hot?parent=%2Fdrinks%2Fhot-coffees%2Fcappuccinos" target="_blank">Cappuccino</a>
+				<li><a href="https://www.starbucks.com/menu/product/462/iced?parent=%2Fdrinks%2Ficed-teas%2Ficed-herbal-teas" target="_blank">Iced Passion Tango&reg; Tea Lemonade</a>, handshaken with ice, lemonade and, of course, passion.
+				<li>Additional beverages available upon request
+			</ul>
+		</details>
+	</article>
+</section>
+EOF
+fi
+
 IFS="," read -ra header < $PLANEFILE
+
+# figure out if there are squawks:
+awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
+
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
+<table border="1" class="js-sort-table">
 <tr>
 	<th class="js-sort-number">No.</th>
 	<th>${header[0]#\#}</th> <!-- ICAO -->
@@ -257,7 +360,8 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
-	<th>Flight Map</th>
+	$([[ "$sq" == "true" ]] && echo "<th>Squawk</th>")
+	<!-- th>Flight Map</th -->
 EOF
 
 #print the variable headers:
@@ -282,13 +386,15 @@ do
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
 		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
 		printf "    %s%s%s\n" "<td>" "${pa_record[4]} ${pa_record[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time
-		printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
+		# printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE
+		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: LatN, LonE with link to adsbexchange
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
-		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td>" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
+		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Squawk
+		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE")" "$i" >> $TMPDIR/plalert-index.tmp
+			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]")" "$i" >> $TMPDIR/plalert-index.tmp
 		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 	fi
@@ -303,6 +409,8 @@ sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
+
+echo "<!-- ALERTLIST = $ALERTLIST -->" >> $TMPDIR/plalert-index.tmp
 
 #Finally, put the temp index into its place:
 mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html

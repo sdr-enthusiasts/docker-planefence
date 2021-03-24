@@ -122,6 +122,12 @@ RUN set -x && \
     cp /planefence/services.d/start_cleanup /etc/services.d/cleanup/run && \
     chmod a+x /etc/services.d/cleanup/run && \
 #
+# Install the get-pa--alertlist service that ensures that the Plane Alert alertlist is up to date:
+    mkdir -p /etc/services.d/get-pa-alertlist && \
+    cp /planefence/services.d/start_get-pa-alertlist /etc/services.d/get-pa-alertlist/run && \
+    cp /planefence/services.d/get-pa-alertlist.sh /etc/services.d/get-pa-alertlist/get-pa-alertlist.sh && \
+    chmod a+x /etc/services.d/get-pa-alertlist/* && \
+#
 # Configure lighttpd to start and work with planefence:
     # move the s6 service in place:
        mkdir -p /etc/services.d/lighttpd && \

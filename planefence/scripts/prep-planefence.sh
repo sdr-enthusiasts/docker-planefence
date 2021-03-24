@@ -21,7 +21,7 @@ echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the containe
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
-chmod -f u+rwx,go-rwx /usr/share/planefence/persist/.internal
+chmod -f u=rwx,go=rx /usr/share/planefence/persist/.internal
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
@@ -57,7 +57,6 @@ chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
 mkdir -p /usr/share/planefence/html/plane-alert
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
-ln -sf /usr/share/planefence/persist/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
 if [[ "$PF_INTERVAL" != "" ]]
@@ -214,6 +213,8 @@ fi
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 [[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
+# Go get the plane-alert-db files:
+/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
@@ -223,7 +224,7 @@ fi
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_PARANGE" != "x" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
-
+[[ "x$PF_PA_SQUAWKS" != "x" ]] && sed -i 's|\(^\s*SQUAWKS=\).*|\1'"$PF_PA_SQUAWKS"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SQUAWKS=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
 
 # Write the sort-table.js into the web directory as we cannot create it during build:
 cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
