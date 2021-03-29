@@ -46,7 +46,7 @@ CLEANUP ()
     mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
     mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
 
-    touch -t $(date -d "today 00:00:00" +%Y%m%d%H%M) /tmp/timestamp
+    touch -t $(date -d "yesterday 00:00:00" +%Y%m%d%H%M) /tmp/timestamp
     find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
     find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
     rm -f /run/socket30003/*.log
