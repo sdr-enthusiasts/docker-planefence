@@ -294,7 +294,31 @@ then
 			[[ "$TESTING" == "true" ]] && echo
 			echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 			[[ "$twitterid" == "" ]] && continue
-			rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+
+			# Get a screenshot if there's one available!
+			rm -f /tmp/pasnapshot.png
+			TWIMG="false"
+			if curl -s -L --fail $http://screenshot:5042/snap/$RECORD[0] -o "/tmp/pasnapshot.png"
+			then
+				# If the curl call succeeded, we have a snapshot.png file saved!
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+			#else
+				# this entire ELSE statement is test code and should be removed
+			#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+			#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+			fi
+
+			# send a tweet and read the link to the tweet into ${LINK[1]}
+			if [[ "$TWIMG" == "true" ]]
+			then
+				rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+			#	LINK=$(echo `twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+			else
+				rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
+			fi
+
+
 			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
 			if [[ "$processedresult" != "" ]]
 			then

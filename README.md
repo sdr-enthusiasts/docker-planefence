@@ -68,6 +68,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
 - OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/kx1t/docker-planefence/issues/38) on how to do that.
 - OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `~/.planefence/pf_background.jpg` for Planefence and `~/.planefence/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch ~/.planefence/planefence.config` in order for these backgrounds to become effective.)
+- OPTIONAL: Add images of tar1090 to your Tweets in Planefence and Plane-Alert. In order to enable this, simply add the `pf-screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`Docker-compose.yml`](https://github.com/kx1t/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `pf-screenshot` and that it's reachable under that name from the Planefence container stack.
 
 
 #### Applying your setup
