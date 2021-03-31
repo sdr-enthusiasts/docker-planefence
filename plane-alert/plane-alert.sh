@@ -312,7 +312,7 @@ then
 
 			# send a tweet.
 			# the conditional makes sure that tweets can be sent with or without image:
-			if [[ "$TWIMG" != "true" ]]
+			if [[ "$TWIMG" == "true" ]]
 			then
 				rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
 			else
