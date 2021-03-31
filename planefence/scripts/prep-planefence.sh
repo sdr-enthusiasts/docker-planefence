@@ -198,7 +198,9 @@ do
 	[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
 done
 
-
+# place the screenshotting URL in place:
+[[ "x$PF_SCREENSHOTURL" != "x" ]] && sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1\"\"|' /usr/share/planefence/planefence.conf
+[[ "x$PF_SCREENSHOTURL" != "x" ]] && sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1\"\"|' /usr/share/plane-alert/plane-alert.conf
 
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
