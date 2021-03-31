@@ -58,10 +58,11 @@ services:
     container_name: screenshot
     hostname: screenshot
     restart: always
+    shm_size: 1gb
     environment:
-      - MAP_ARGS='zoom=13&hideSidebar&hideButtons&mapDim=0'
+      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0&monochromeMarkers=ffff55&monochromeTracks=010101&outlineColor=505050
       - LOAD_SLEEP_TIME=3
-      - BASE_URL='tar1090'
+      - BASE_URL=http://tar1090
   #
   # the readsb entry pulls in a readsb container to get adsb data. If you want to
   # use your own, you can remove this one. Just make sure you expose port
