@@ -60,8 +60,8 @@ services:
     restart: always
     shm_size: 1gb
     environment:
-      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0&monochromeMarkers=ffff55&monochromeTracks=010101&outlineColor=505050
-      - LOAD_SLEEP_TIME=3
+      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0&monochromeMarkers=00066&monochromeTracks=010101&outlineColor=505050
+      - LOAD_SLEEP_TIME=6
       - BASE_URL=http://tar1090
   #
   # the readsb entry pulls in a readsb container to get adsb data. If you want to
