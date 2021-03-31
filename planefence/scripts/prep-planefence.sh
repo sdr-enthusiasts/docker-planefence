@@ -199,9 +199,12 @@ do
 done
 
 # place the screenshotting URL in place:
-[[ "x$PF_SCREENSHOTURL" != "x" ]] && sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1\"\"|' /usr/share/planefence/planefence.conf
-[[ "x$PF_SCREENSHOTURL" != "x" ]] && sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1\"\"|' /usr/share/plane-alert/plane-alert.conf
 
+if [[ "x$PF_SCREENSHOTURL" != "x" ]]
+then
+	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/planefence/planefence.conf
+	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/plane-alert/plane-alert.conf
+fi
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
