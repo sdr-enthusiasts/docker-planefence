@@ -60,7 +60,7 @@ services:
     restart: always
     shm_size: 1gb
     environment:
-      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0&monochromeMarkers=00066&monochromeTracks=010101&outlineColor=505050
+      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0.1&monochromeMarkers=00066&monochromeTracks=010101&outlineColor=505050&iconScale=1.5
       - LOAD_SLEEP_TIME=6
       - BASE_URL=http://tar1090
   #
