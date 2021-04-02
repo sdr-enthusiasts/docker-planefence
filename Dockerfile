@@ -69,6 +69,7 @@ RUN set -x && \
 # Copy the planefence and plane-alert program files in place:
 COPY planefence/ /planefence
 COPY plane-alert/ /plane-alert
+COPY ATTRIBUTION.md /planefence
 
 RUN set -x && \
 #
@@ -102,6 +103,7 @@ RUN set -x && \
        cp jscript/* /usr/share/planefence/stage && \
        cp planefence.config /usr/share/planefence/stage && \
        cp planefence-ignore.txt /usr/share/planefence/stage && \
+       cp ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt && \
        cp services.d/start_planefence /etc/services.d/planefence/run && \
        chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
        ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
@@ -112,7 +114,6 @@ RUN set -x && \
     pushd /git/docker-planefence && \
        echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
        cp .img/background.jpg /usr/share/planefence/stage && \
-       cp ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt && \
     popd && \
     rm -rf /git/docker-planefence
 
