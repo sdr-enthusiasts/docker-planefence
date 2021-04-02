@@ -81,14 +81,6 @@ CLEANUP ()
     # remove empty lines from ignore file
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 
-    # pull new version of airlinenames
-    echo "###,pulled from github kx1t/planefence-airlinecodes at $(date),," >/tmp/airlinecodes.txt
-    if curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt >>/tmp/airlinecodes.txt && [[ "$(cat /tmp/airlinecodes.txt | wc -l)" -gt "100" ]]
-    then
-	mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
-    fi
-
-
   else
     echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
   fi
@@ -96,7 +88,7 @@ CLEANUP ()
 
 # GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.
 # If the existing file is older than last Monday's (or if none exists), then get a new one
-GET_ICAO_DB()
+GET_ICAO_DB ()
 {
     if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
     then
@@ -135,12 +127,44 @@ GET_ICAO_DB()
     fi
 }
 #
+# GET_AIRLINE_DB retrieves the list of airline names from 2 sources:
+# - https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+# - https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv
+# ad merges these with the preloaded list.
+GET_AIRLINE_DB ()
+{
+    rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
+    curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt
+    curl -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv
+
+    #convert JBroutier's DB into our format:
+    if [[ -f /tmp/airlines.csv ]]
+    then
+        read -ra header < /tmp/airlines.csv
+        # get the field number for the icao and airline name fields
+        for ((i=0; i<${#header[@]}; i++)); do if [[ "${header[$i]}" == "icao_code" ]]; then icao=$i; break; fi; done
+        for ((i=0; i<${#header[@]}; i++)); do if [[ "${header[$i]}" == "name" ]]; then name=$i; break; fi; done
+        for ((i=0; i<${#header[@]}; i++)); do if [[ "${header[$i]}" == "country" ]]; then country=$i; break; fi; done
+        for ((i=0; i<${#header[@]}; i++)); do if [[ "${header[$i]}" == "callsign" ]]; then callsign=$i; break; fi; done
+        if [[ ! -z "$icao" ]] && [[ ! -z "$name" ]] && [[ ! -z "$country" ]] && [[ ! -z "$callsign" ]]
+        then
+            tail -n +2 /tmp/airlines.csv | awk -F "," -v icao=$(( icao + 1 )) -v name=$(( name + 1 )) -v country=$(( country + 1 )) -v callsign=$(( callsign + 1 )) '{print $icao "," $name "," $callsign "," $country}' >> /tmp/airlinecodes.txt.tmp
+            [[ -f /tmp/airlinecodes.txt ]] && cat /tmp/airlinecodes.txt /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2 || cat /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2
+            awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 >/tmp/airlinecodes.txt
+        fi
+    fi
+    mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
+    rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp/tmp/airlinecodes.txt.tmp2
+
+}
+
 #Now loop forevah:
 while true
 do
   echo "[$APPNAME][$(date)] Performing a cleanup run..."
   CLEANUP
   GET_ICAO_DB
+  GET_AIRLINE_DB
   echo "[$APPNAME][$(date)] Cleanup done. Sleeping for $LOOPTIME"
   sleep $LOOPTIME
 done
