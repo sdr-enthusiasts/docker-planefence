@@ -131,8 +131,12 @@ GET_ICAO_DB ()
 # - https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
 # - https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv
 # ad merges these with the preloaded list.
+<<<<<<< HEAD
 GET_AIRLINE_DB ()
 {
+=======
+GET_AIRLINE_DB() {
+>>>>>>> 848306ea2179fd57efefb2260361b7459c8cd04a
     rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
     curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt
     curl -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv
