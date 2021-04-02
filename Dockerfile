@@ -108,6 +108,7 @@ RUN set -x && \
        ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
        curl -s -L -o scripts/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
     popd && \
+    cp /ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt && \
     git clone --depth=1 https://github.com/kx1t/docker-planefence /git/docker-planefence && \
     pushd /git/docker-planefence && \
        echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
