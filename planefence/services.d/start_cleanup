@@ -159,7 +159,7 @@ GET_AIRLINE_DB ()
         fi
     fi
     mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
-    rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp/tmp/airlinecodes.txt.tmp2
+    rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp /tmp/airlinecodes.txt.tmp2
     echo "[$APPNAME][$(date)] Airlinecodes database update complete"
 }
 
