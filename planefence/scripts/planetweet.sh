@@ -160,7 +160,7 @@ then
 			then
 				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
 			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG/&/_}"
+			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\']/_}"
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"

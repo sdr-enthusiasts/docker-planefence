@@ -267,7 +267,7 @@ then
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
-		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]/&/_}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
 
@@ -278,7 +278,13 @@ then
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
 				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
-				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
+				if [[ "${tag:0:4}" == "http" ]]
+				then
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag")"
+				elif [[ "$tag" != "" ]]
+				then
+					TWITTEXT+="#$tag "
+				fi
 			fi
 		done
 
