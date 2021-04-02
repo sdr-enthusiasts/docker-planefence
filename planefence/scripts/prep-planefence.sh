@@ -115,6 +115,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*MYURL=\).*|\1|' /usr/share/planefence/planefence.conf
 [[ "x$PF_NOISECAPT" != "x" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*REMOTENOISE=\).*|\1|' /usr/share/planefence/planefence.conf
 [[ "x$PF_FUDGELOC" != "x" ]] && sed -i 's|\(^\s*FUDGELOC=\).*|\1'"\"$PF_FUDGELOC\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*FUDGELOC=\).*|\1|' /usr/share/planefence/planefence.conf
+[[ "$PF_OPENAIP_LAYER" == "ON" ]] && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
