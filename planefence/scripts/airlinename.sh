@@ -62,7 +62,7 @@ fi
 if [[ "$1" == "" ]]
 then
         echo Missing argument
-        echo "Usage: $0 <flight_or_tail_number>"
+        echo "Usage: $0 <flight_or_tail_number> [<ICAO>]"
         exit 2
 fi
 
@@ -136,12 +136,12 @@ fi
 # Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
 if [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
-    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
+    b="$(curl -L -s "https://get-airline.planefence.com/?flight=$a&icao=$c")"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 elif [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]]
 then
-    b="$(curl -L -s https://get-airline.planefence.com/?flight=$a&icao=$c)"
+    b="$(curl -L -s "https://get-airline.planefence.com/?flight=$a&icao=$c")"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 fi
