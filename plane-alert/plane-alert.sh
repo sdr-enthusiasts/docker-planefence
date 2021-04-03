@@ -304,7 +304,7 @@ then
 			# Get a screenshot if there's one available!
 			rm -f /tmp/pasnapshot.png
 			TWIMG="false"
-			if curl -L -s --max-time 30 --fail $SCREENSHOTURL/snap/${pa_record[0]} -o "/tmp/pasnapshot.png"
+			if curl -L -s --max-time 60 --fail $SCREENSHOTURL/snap/${pa_record[0]} -o "/tmp/pasnapshot.png"
 			then
 				# If the curl call succeeded, we have a snapshot.png file saved!
 				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
