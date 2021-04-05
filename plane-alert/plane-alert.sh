@@ -277,13 +277,13 @@ then
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
-				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
+				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE")"
 				if [[ "${tag:0:4}" == "http" ]]
 				then
-					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag")"
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
 				elif [[ "$tag" != "" ]]
 				then
-					TWITTEXT+="#$tag "
+					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
 				fi
 			fi
 		done
@@ -398,7 +398,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#$}" "$i" >> $TMPDIR/plalert-index.tmp
+	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#$}" "$i" >> $TMPDIR/plalert-index.tmp
 done
 echo "</tr>" >> $TMPDIR/plalert-index.tmp
 
@@ -424,7 +424,12 @@ do
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]")" "$i" >> $TMPDIR/plalert-index.tmp
+			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
+			then
+				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};")"
+				[[ ${tag:0:4} == "http" ]] && tag="<a href=\"$tag\" target=\"_blank\">$tag</a>"
+				printf '    <td>%s</td>  <!-- custom field %d -->\n' "$tag" "$i" >> $TMPDIR/plalert-index.tmp
+			fi
 		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 	fi
