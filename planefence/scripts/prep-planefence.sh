@@ -208,6 +208,11 @@ then
 	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/planefence/planefence.conf
 	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/plane-alert/plane-alert.conf
 fi
+if [[ "x$PF_SCREENSHOT_TIMEOUT" != "x" ]]
+then
+	sed -i 's|\(^\s*SCREENSHOT_TIMEOUT=\).*|\1'"\"$PF_SCREENSHOT_TIMEOUT\""'|' /usr/share/planefence/planefence.conf
+	sed -i 's|\(^\s*SCREENSHOT_TIMEOUT=\).*|\1'"\"$PF_SCREENSHOT_TIMEOUT\""'|' /usr/share/plane-alert/plane-alert.conf
+fi
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
