@@ -385,10 +385,10 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 <table border="1" class="js-sort-table">
 <tr>
 	<th class="js-sort-number">No.</th>
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< ${header[0]})</th> <!-- ICAO -->
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< ${header[1]})</th> <!-- tail -->
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< ${header[2]})</th> <!-- owner -->
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< ${header[3]})</th> <!-- equipment -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[3]}")</th> <!-- equipment -->
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
@@ -400,7 +400,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$$(sed 's/^[#$]*\(.*\)/\1/g' <<< ${header[i]})" "$i" >> $TMPDIR/plalert-index.tmp
+	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >> $TMPDIR/plalert-index.tmp
 done
 echo "</tr>" >> $TMPDIR/plalert-index.tmp
 
