@@ -50,5 +50,5 @@ awk -F',' '!seen[$1]++' /tmp/alertlist*.txt >/usr/share/planefence/persist/.inte
 chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 
-#rm -f /tmp/alertlist*.txt
+rm -f /tmp/alertlist*.txt
 echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished"

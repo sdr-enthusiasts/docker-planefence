@@ -52,7 +52,9 @@ CSVTMP=/tmp/planetweet2-tmp.csv
 PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
-MINTIME=100
+
+[[ "$TWEET_MINTIME" > 0 ]] && MINTIME=$TWEET_MINTIME || MINTIME=100
+
 # $ATTRIB contains the attribution line at the bottom of the tweet
 [[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
 
@@ -143,7 +145,9 @@ then
 		# LOG "${#RECORD[*]} records in the current line: (${RECORD[*]})"
 		# $TIMEDIFF contains the difference in seconds between the current record and "now".
 		# We want this to be at least $MINDIFF to avoid tweeting before all noise data is captured
-		TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) ))
+		# $TWEET_BEHAVIOR determines if we are looking at the end time (POST -> RECORD[3]) or at the
+		# start time (not POST -> RECORD[2]) of the observation time
+		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
 		# Entries that are previously tweeted have "@" in front of the flight number
 		# We will process those
 		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ] && [ "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ]
@@ -158,7 +162,7 @@ then
 			then
 				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
 			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG/&/_}"
+			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\']/_}"
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
@@ -197,7 +201,7 @@ then
 				# First, let's get a screenshot if there's one available!
 				rm -f /tmp/snapshot.png
 				TWIMG="false"
-				if curl -s -L --fail --max-time 30 $SCREENSHOTURL/snap/${RECORD[0]} -o "/tmp/snapshot.png"
+				if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
 					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')

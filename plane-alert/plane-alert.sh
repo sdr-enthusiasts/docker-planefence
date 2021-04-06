@@ -74,6 +74,9 @@ then
 #else
 #	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
 fi
+
+[[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
+
 #
 # Now let's start
 #
@@ -85,7 +88,6 @@ fi
 # 42001,3CONM,GovernmentofEquatorialGuinea,DassaultFalcon900B
 #
 # We need to write this to a grep input file that consists simply of lines with "^icao"
-
 sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
 #sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
 #| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
@@ -267,7 +269,7 @@ then
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
-		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]/&/_}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
 
@@ -277,8 +279,14 @@ then
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
-				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc '[:alnum:]')"
-				[[ "$tag" != "" ]] && TWITTEXT+="#$tag "
+				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE")"
+				if [[ "${tag:0:4}" == "http" ]]
+				then
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
+				elif [[ "$tag" != "" ]]
+				then
+					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
+				fi
 			fi
 		done
 
@@ -298,7 +306,7 @@ then
 			# Get a screenshot if there's one available!
 			rm -f /tmp/pasnapshot.png
 			TWIMG="false"
-			if curl -L -s --max-time 30 --fail $SCREENSHOTURL/snap/${pa_record[0]} -o "/tmp/pasnapshot.png"
+			if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
 			then
 				# If the curl call succeeded, we have a snapshot.png file saved!
 				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
@@ -377,10 +385,10 @@ cat <<EOF >> $TMPDIR/plalert-index.tmp
 <table border="1" class="js-sort-table">
 <tr>
 	<th class="js-sort-number">No.</th>
-	<th>${header[0]#\#}</th> <!-- ICAO -->
-	<th>${header[1]#\#}</th> <!-- tail -->
-	<th>${header[2]#\#}</th> <!-- owner -->
-	<th>${header[3]#\#}</th> <!-- equipment -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
+	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[3]}")</th> <!-- equipment -->
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
@@ -392,7 +400,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "${header[i]#$}" "$i" >> $TMPDIR/plalert-index.tmp
+	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >> $TMPDIR/plalert-index.tmp
 done
 echo "</tr>" >> $TMPDIR/plalert-index.tmp
 
@@ -418,7 +426,12 @@ do
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			[[ "${header[i]:0:1}" != "#" ]] && printf '    <td>%s</td>  <!-- custom field %d -->\n' "$( (( j=i+1 )) && awk -F "," -v a="${pa_record[0]}" -v i="$j" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]")" "$i" >> $TMPDIR/plalert-index.tmp
+			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
+			then
+				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};")"
+				[[ ${tag:0:4} == "http" ]] && tag="<a href=\"$tag\" target=\"_blank\">$tag</a>"
+				printf '    <td>%s</td>  <!-- custom field %d -->\n' "$tag" "$i" >> $TMPDIR/plalert-index.tmp
+			fi
 		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
 	fi
