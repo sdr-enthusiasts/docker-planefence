@@ -52,7 +52,9 @@ CSVTMP=/tmp/planetweet2-tmp.csv
 PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
+
 [[ "$TWEET_MINTIME" > 0 ]] && MINTIME=$TWEET_MINTIME || MINTIME=100
+
 # $ATTRIB contains the attribution line at the bottom of the tweet
 [[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
 
