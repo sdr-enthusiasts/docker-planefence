@@ -271,7 +271,7 @@ then
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
 		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-		TWITTEXT+="First heard: ${pa_record[4]} ${pa_record[5]}\n"
+		TWITTEXT+="First heard: ${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")"\n"
 
 		# Add any hashtags:
 		for i in {4..10}
@@ -291,6 +291,9 @@ then
 		done
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+
+		# clean TWITTEXT from any left-over control chars:
+		TWITTEXT=$(tr -d '[:cntrl:]' <<< "$TWITTEXT")
 
 		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
