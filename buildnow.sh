@@ -8,7 +8,7 @@ set -x
 [[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
 
 # rebuild the container
-pushd ~/docker-planefence
+pushd ~/git/docker-planefence
 git checkout $BRANCH || exit 2
 
 git pull
