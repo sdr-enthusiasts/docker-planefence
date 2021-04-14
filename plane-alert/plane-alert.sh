@@ -382,7 +382,7 @@ awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="fals
 
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
-<table border="1" class="js-sort-table">
+<table border="1" class="js-sort-table" id="mytable">
 <tr>
 	<th class="js-sort-number">No.</th>
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
