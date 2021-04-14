@@ -254,10 +254,10 @@ then
 		# add a hashtag to the item if needed:
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
 
-		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]]/}" 	# tail field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
 		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
-		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]]/}" # flight nr field (connected to tail header)
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
 		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
 
 		# First build the text of the tweet: reminder:
@@ -271,7 +271,7 @@ then
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
 		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-		TWITTEXT+="First heard: ${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")"\n"
+		TWITTEXT+="First heard: ${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
 
 		# Add any hashtags:
 		for i in {4..10}
@@ -291,9 +291,6 @@ then
 		done
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
-
-		# clean TWITTEXT from any left-over control chars:
-		TWITTEXT=$(tr -d '[:cntrl:]' <<< "$TWITTEXT")
 
 		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
