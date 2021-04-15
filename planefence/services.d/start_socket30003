@@ -76,7 +76,7 @@ do
 	 else
 		 # if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
 		 # we do this inside this endless loop so it will show in the logs regularly
-		 if [[ $(timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 2>/dev/null && echo $?) ]]
+		 if [[ "$(timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 2>/dev/null ; echo $?)" != "0" ]]
 		 then
 		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl) exited with code $?"
 		 else
