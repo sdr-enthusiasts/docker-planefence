@@ -8,12 +8,15 @@ set -x
 [[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
 
 # rebuild the container
-pushd ~/docker-planefence
+pushd ~/git/docker-planefence
 git checkout $BRANCH || exit 2
 
 git pull
 mv planefence/scripts/airlinecodes.txt /tmp
 curl -s -L -o planefence/scripts/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+
+export DOCKER_BUILDKIT=1
+
 docker buildx build --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
 mv /tmp/airlinecodes.txt planefence/scripts/
 popd

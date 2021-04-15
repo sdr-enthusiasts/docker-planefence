@@ -46,7 +46,7 @@ do
 done
 
 touch /usr/share/planefence/persist/.internal/plane-alert-db.txt
-awk -F',' '!seen[$1]++' /tmp/alertlist*.txt >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
+cat /tmp/alertlist*.txt | tr -dc '[:print:]\n' | awk -F',' '!seen[$1]++'  >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
 chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 
