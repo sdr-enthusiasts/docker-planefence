@@ -86,7 +86,7 @@ do
 	if [[ "${r[1]#@}" == "" ]]
 	then
 		r[1]+="$(awk -F "," -v icao="${r[0]}" '($1 == icao && $12 != "") {print $12;exit;}' "$LOGFILEBASE"*.txt 2>/dev/null)"
-		[[ "${r[1]#@}" != "" ]] && echo "  ${r[0]} = ${r[1]#@} (from socket30003 data)"
+		[[ "${r[1]#@}" != "" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "  ${r[0]} = ${r[1]#@} (from socket30003 data)"
 	fi
 
     # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
@@ -95,14 +95,14 @@ do
 		r[1]+="$(grep -i -w "${r[0]}" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
 		# note - we could have done this with only an awk command, but that takes about 4x longer to execute
 		# awk command wouldve been: awk -F "," -v icao="${r[1]#@}" '($1 == icao) {print $2;exit;}' /run/planefence/icao2plane.txt
-		[[ "${r[1]#@}" != "" ]] && echo " ${r[0]} = ${r[1]#@} (from mictronic database cache)"
+		[[ "${r[1]#@}" != "" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo " ${r[0]} = ${r[1]#@} (from mictronic database cache)"
 	fi
 
 	# If the ICAO starts with "A" and there is no flight or tail number, let's algorithmically determine the tail number
 	if [[ "${r[1]#@}" == "" ]] && [[ "${r[0]:0:1}" == "A" ]]
 	then
 		r[1]+=$(/usr/share/planefence/icao2tail.py ${r[0]})
-		[[ "${r[1]#@}" != "" ]] && echo "  ${r[0]} = ${r[1]#@} (from US Hex ID)"
+		[[ "${r[1]#@}" != "" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "  ${r[0]} = ${r[1]#@} (from US Hex ID)"
 	fi
 
 	# strip off trailing spaces

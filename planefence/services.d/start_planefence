@@ -32,7 +32,7 @@ source /usr/share/planefence/prep-planefence.sh
 #
 #
 #
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..."
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..." || echo "[$APPNAME][$(date)] LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
 sleep $LOOPTIME
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
 while true
