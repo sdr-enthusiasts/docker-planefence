@@ -30,6 +30,9 @@ PF_CHECKREMOTEDB=$(grep "^PF_CHECKREMOTEDB" /usr/share/planefence/persist/planef
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
+#
+# MAXLOGTIME contains the max number of seconds that we will keep in any of the socket30003 logs
+MAXLOGTIME=10800    # 10800 secs = 3 hours
 
 # this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
@@ -57,6 +60,26 @@ CLEANUP ()
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
+    for f in /run/socket30003/*.txt
+    do
+        fdate=${f: -10:6}   # get the date component from the file name
+        # remove anything older than yesterday:
+        (( fdate < $(date -d yesterday +%y%m%d) )) && rm -f %f
+        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T)" +%s) > MAXLOGTIME ))
+        then
+            # If we're longer than MAXLOGTIME into today, then also remove yesterday's file
+            rm -f %f
+        elif [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]]
+        then
+            # We're less than MAXLOGTIME into today, so prune yesterday's file
+            tmpfile=$(mktemp)
+            TIMELIMIT=$(( 104400 + $(date -d "1970-01-01 $(date +%T)" +%s) - MAXLOGTIME ))
+            [[ "$TIMELIMIT" -le 104400 ]] && awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
+            [[ "$(wc -l $tmpfile)" -gt 0 ]] && mv -f $tmpfile $f || rm -f $tmpfile $f
+        fi
+    done
+            
+
     if [[ -f /tmp/planefence.log ]]
     then
       tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
