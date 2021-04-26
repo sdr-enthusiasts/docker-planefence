@@ -60,8 +60,9 @@ CLEANUP ()
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
-    for f in /run/socket30003/*.txt
+    shopt -s nullglob && for f in /run/socket30003/*.txt
     do
+        [[ "$f" == "" ]]
         fdate=${f: -10:6}   # get the date component from the file name
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -f %f
@@ -124,7 +125,7 @@ GET_ICAO_DB ()
             return 1
         fi
 
-        [ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] unzipping ... "
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] unzipping ... "
         # unzipping *will* fail when the retrieved file is not a valid ZIP file
         unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null
         if [[ "$?" != "0" ]]
@@ -135,7 +136,7 @@ GET_ICAO_DB ()
 
         rm -f /tmp/icao24plus.zip
         # now convert the text based file into a CSV file
-        [ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] converting ... "
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] converting ... "
         sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt
         if [[ "$?" != "0" ]]
         then
@@ -144,7 +145,7 @@ GET_ICAO_DB ()
         fi
 
         mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
-        [ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] done!"
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] done!"
     else
         [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ICAO to TAIL database is up to date"
     fi
