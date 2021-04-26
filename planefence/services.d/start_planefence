@@ -5,8 +5,8 @@ APPNAME="$(hostname)/planefence"
 LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 PLANEFENCEDIR=/usr/share/planefence
 
-echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
-echo "[$APPNAME][$(date)] PlaneFence build: $(cat /root/.buildtime)"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence build: $(cat /root/.buildtime)"
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -32,9 +32,9 @@ source /usr/share/planefence/prep-planefence.sh
 #
 #
 #
-echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..."
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..."
 sleep $LOOPTIME
-echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
 while true
 do
     LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
@@ -43,7 +43,7 @@ do
               starttime=$(date +%s)
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
-              echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d "+$LOOPTIME seconds" +"%Y/%m/%d %H:%M:%S")."
+              [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d "+$LOOPTIME seconds" +"%Y/%m/%d %H:%M:%S")."
         else
               echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
               echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"

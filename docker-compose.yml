@@ -24,9 +24,11 @@ services:
     # will take priority over those in .env. Uncomment the line below if you
     # really want to continue to use your pre-existing .env file.
     # Also, update TZ=America/New_York to your own timezone.
-    # env_file: .env
+    #
+    # LOGLEVEL can be "INFO" (default - all logs) or "ERROR" (only errors)
     environment:
       - TZ=America/New_York
+      - LOGLEVEL=INFO
     volumes:
       # adopt this one to point at your home directory if it is not /home/pi
       - /home/pi/.planefence:/usr/share/planefence/persist
