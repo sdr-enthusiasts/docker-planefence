@@ -11,16 +11,15 @@ If you think that we included parts of your software but we didn't attribute you
   This program is (C) by Ted Sluis, and can be found at https://github.com/kx1t/dump1090.socket30003
   Any modification to dump1090.socket30003 are Copyright by their respective owners
 
-- Maps are generated thanks to OpenStreetMap. OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) by the OpenStreetMap Foundation (OSMF).
-  More information, including license terms, can be found here: https://www.openstreetmap.org/copyright
+- Maps are generated thanks to OpenStreetMap. OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) by the OpenStreetMap Foundation (OSMF). More information, including license terms, can be found here: https://www.openstreetmap.org/copyright
 
-- Leaflet.js, a mapping overlay java script, is Copyright (c) 2010-2021, Vladimir Agafonkin, Copyright (c) 2010-2011, CloudMade, All rights reserved.
-  The license terms can be found here: https://github.com/Leaflet/Leaflet/blob/master/LICENSE
+- Leaflet.js, a mapping overlay java script, is Copyright (c) 2010-2021, Vladimir Agafonkin, Copyright (c) 2010-2011, CloudMade, All rights reserved. The license terms can be found here: https://github.com/Leaflet/Leaflet/blob/master/LICENSE
 
-- OpenAIP map overlays are part of openAIP Data, which can be downloaded and used by anybody for non commercial purposes under the conditions of a special license. openAIP Data is licensed under the CC BY-NC-SA license.
-  More details can be found here: https://www.openaip.net/legal
+- OpenAIP map overlays are part of openAIP Data, which can be downloaded and used by anybody for non commercial purposes under the conditions of a special license. openAIP Data is licensed under the CC BY-NC-SA license. More details can be found here: https://www.openaip.net/legal
 
 - Part of the code, especially the Docker skeleton, was contributed by @Mikenye and @fredclausen. Although they have not asserted any rights over this, I would like to acknowledge their contribution to this project.
+
+- Many thanks to @Wiedehopf, @Mikenye and @fredclausen for all of their coding advice and troubleshooting. Without them the learning curve would have been much steeper!
 
 - Sorttable.js  is Copyright (c) 2013 Tyler Uebele. Released under the MIT license.  See included LICENSE.txt or http://opensource.org/licenses/MIT.
   The latest version is available at https://github.com/tyleruebele/sort-table
@@ -32,5 +31,7 @@ If you think that we included parts of your software but we didn't attribute you
   This effort is led by @sportsbadger, who can be found at https://github.com/Sportsbadger
 
 - ICAO to Tail data is contributed by Mictronic, who appears to be distributing this data under the GNU General Public License, version 3. See https://github.com/Mictronics/readsb-protobuf/blob/dev/webapp/src/db/README and https://www.mictronics.de/aircraft-database/export.php
+
+- Shane S (@Shorty) of http://plane.watch who selflessly helped providing a hosted virtual machine to run our web lookups
 
 - Last, this Planefence package itself is available under the GNU General Public License, version 3. If this license doesn't work for you, feel free to reach out to kx1t@amsat.org to see if we can mutually agree on a license structure that better suits your needs. In any case, since this project was written by a non-professional hobbyist programmer, under no circumstances will we waive the Disclaimer of Warranty and the Limitation of Liability set forth in the license terms.

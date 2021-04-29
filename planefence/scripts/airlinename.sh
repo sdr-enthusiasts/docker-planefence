@@ -39,13 +39,10 @@
 # -----------------------------------------------------------------------------------
 #
 CACHEFILE="/usr/share/planefence/persist/.internal/planeownerscache.txt"
-# REMOTEURL="https://get-airline.planefence.com"
-REMOTEURL="http://planefence.plane.watch"
 #
 # get the plane-alert configuration before the planefence configuration
 # so that any values redefined in planefence prevail over plane-alert
 [[ -f "/usr/share/plane-alert/plane-alert.conf" ]] && source "/usr/share/plane-alert/plane-alert.conf"
-
 # get the planefence.conf configuration:
 if [ -f "/usr/share/planefence/planefence.conf" ]
 then
