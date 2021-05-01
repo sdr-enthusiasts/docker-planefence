@@ -3,7 +3,7 @@
 
 APPNAME="$(hostname)/socket30003"
 
-echo "[$APPNAME][$(date)] Socket30003 started as an s6 service"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Socket30003 started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -65,7 +65,7 @@ fi
 
 #--------------------------------------------------------------------------------
 # Now start dump1090.socket30003 in a loop that restarts it $LOOPTIME seconds after it exits or crashes:
-echo "[$APPNAME][$(date)] socket30003 starting its initial run now"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 starting its initial run now"
 while true
 do
 
@@ -76,16 +76,16 @@ do
 	 else
 		 # if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
 		 # we do this inside this endless loop so it will show in the logs regularly
-		 if [[ $(timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 2>/dev/null && echo $?) ]]
+		 if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 >/dev/null 2>&1
 		 then
-		  	echo "[$APPNAME][$(date)] $(/usr/share/socket30003/socket30003.pl) exited with code $?"
+			! /usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
 		 else
-	  	  echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
-				echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
-				echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
+	  	  	echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
+			echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
+			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
 		 fi
 	 fi
 	 echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
 	 sleep $LOOPTIME
-	 echo "[$APPNAME][$(date)] socket30003 restarting now"
+	 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 restarting now"
 done

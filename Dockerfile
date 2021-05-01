@@ -112,7 +112,8 @@ RUN set -x && \
     popd && \
     git clone --depth=1 https://github.com/kx1t/docker-planefence /git/docker-planefence && \
     pushd /git/docker-planefence && \
-       echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
+       echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
+       #echo $(date +"%Y-%m-%d %H:%M:%S %Z") \($(git show --oneline | head -1)\) > /root/.buildtime && \
        cp .img/background.jpg /usr/share/planefence/stage && \
     popd && \
     rm -rf /git/docker-planefence

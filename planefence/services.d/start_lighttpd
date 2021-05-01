@@ -7,7 +7,7 @@ CONFIGPATH="/etc/lighttpd/lighttpd.conf"
 OWNER=www-data
 GROUP=www-data
 
-echo "[$APPNAME][$(date)] Lighttpd started as an s6 service"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Lighttpd started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions

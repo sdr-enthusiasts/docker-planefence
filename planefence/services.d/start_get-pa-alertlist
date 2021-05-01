@@ -3,7 +3,7 @@
 
 APPNAME="$(hostname)/get-pa-alertlist"
 
-echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service"
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -25,7 +25,7 @@ LOOPTIME=15m
 
 while true
 do
-	echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
+	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Restarting in $LOOPTIME"
 	sleep $LOOPTIME
 	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
  	done

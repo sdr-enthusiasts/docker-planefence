@@ -43,7 +43,6 @@ CACHEFILE="/usr/share/planefence/persist/.internal/planeownerscache.txt"
 # get the plane-alert configuration before the planefence configuration
 # so that any values redefined in planefence prevail over plane-alert
 [[ -f "/usr/share/plane-alert/plane-alert.conf" ]] && source "/usr/share/plane-alert/plane-alert.conf"
-
 # get the planefence.conf configuration:
 if [ -f "/usr/share/planefence/planefence.conf" ]
 then
@@ -136,12 +135,12 @@ fi
 # Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
 if [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "$(echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]
 then
-    b="$(curl -L -s "https://get-airline.planefence.com/?flight=$a&icao=$c")"
+    b="$(curl -L -s "$REMOTEURL/?flight=$a&icao=$c")"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 elif [[ "$CHECKREMOTEDB" == "ON" ]] && [[ "$b" == "" ]] && [[ "${a:0:4}" == "HMED" ]]
 then
-    b="$(curl -L -s "https://get-airline.planefence.com/?flight=$a&icao=$c")"
+    b="$(curl -L -s "$REMOTEURL/?flight=$a&icao=$c")"
     [[ "${b:0:1}" == "#" ]] && b="#NOTFOUND" # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 fi

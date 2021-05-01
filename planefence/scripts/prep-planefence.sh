@@ -13,8 +13,9 @@
 #
 PLANEFENCEDIR=/usr/share/planefence
 APPNAME="$(hostname)/planefence"
+REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
-echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
+[[ "$LOGLEVEL" != "ERROR" ]] && "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
@@ -77,13 +78,13 @@ mkdir -p /run/planefence
 if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
 		sleep 10s
-		echo "----------------------------------------------------------"
-		echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
-		echo "Planefence will not run unless you edit it configuration."
-		echo "You can do this by pressing CTRL-c now and typing:"
-		echo "sudo nano -l ~/.planefence/planefence.config"
-		echo "Once done, restart the container and this message should disappear."
-		echo "----------------------------------------------------------"
+		echo "[$APPNAME][$(date)] ----------------------------------------------------------"
+		echo "[$APPNAME][$(date)] !!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
+		echo "[$APPNAME][$(date)] Planefence will not run unless you edit it configuration."
+		echo "[$APPNAME][$(date)] You can do this by pressing CTRL-c now and typing:"
+		echo "[$APPNAME][$(date)] sudo nano -l ~/.planefence/planefence.config"
+		echo "[$APPNAME][$(date)] Once done, restart the container and this message should disappear."
+		echo "[$APPNAME][$(date)] ----------------------------------------------------------"
 		while true
 		do
 				sleep 99999
@@ -106,8 +107,8 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # -----------------------------------------------------------------------------------
 #
 # read the environment variables and put them in the planefence.conf file:
-[[ "x$FEEDER_LAT" != "x" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; while :; do sleep 2073600; done; }
-[[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { echo "Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
+[[ "x$FEEDER_LAT" != "x" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { echo "[$APPNAME][$(date)] Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; while :; do sleep 2073600; done; }
+[[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { echo "[$APPNAME][$(date)] Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
 [[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf || sed -i 's/\(^\s*MY=\).*/\1\"My\"/' /usr/share/planefence/planefence.conf
@@ -127,13 +128,13 @@ then
 	unset a
 else
 	sleep 10s
-	echo "----------------------------------------------------------"
-	echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
-	echo "Planefence will not run unless you edit it configuration."
-	echo "You can do this by pressing CTRL-c now and typing:"
-	echo "sudo nano -l ~/.planefence/planefence.config"
-	echo "Once done, restart the container and this message should disappear."
-	echo "----------------------------------------------------------"
+	echo "[$APPNAME][$(date)] ----------------------------------------------------------"
+	echo "[$APPNAME][$(date)] !!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
+	echo "[$APPNAME][$(date)] Planefence will not run unless you edit it configuration."
+	echo "[$APPNAME][$(date)] You can do this by pressing CTRL-c now and typing:"
+	echo "[$APPNAME][$(date)] sudo nano -l ~/.planefence/planefence.config"
+	echo "[$APPNAME][$(date)] Once done, restart the container and this message should disappear."
+	echo "[$APPNAME][$(date)] ----------------------------------------------------------"
 	while true
 	do
 			sleep 99999
@@ -218,10 +219,10 @@ fi
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEALERT" == "ON" ]]
 then
-		echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
-		echo "Do this on the host to get a base file:"
-		echo "curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
-		echo "and then restart this docker container"
+		echo "[$APPNAME][$(date)] Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
+		echo "[$APPNAME][$(date)] Do this on the host to get a base file:"
+		echo "[$APPNAME][$(date)] curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "[$APPNAME][$(date)] and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
 
@@ -260,7 +261,8 @@ fi
 #--------------------------------------------------------------------------------
 # Check if the remote airlinename server is online
 
-[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$(cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
+#[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/build ]] && cat /usr/share/planefence/build || cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
+[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s $REMOTEURL/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 #
 #--------------------------------------------------------------------------------
