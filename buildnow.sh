@@ -16,8 +16,9 @@ curl -s -L -o planefence/scripts/airlinecodes.txt https://raw.githubusercontent.
 
 export DOCKER_BUILDKIT=1
 
-echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > planefence/branch
+echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > planefence/scripts/branch
 
 docker buildx build --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
 mv /tmp/airlinecodes.txt planefence/scripts/
+rm -f planefence/scripts/branch
 popd
