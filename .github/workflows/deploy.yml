@@ -10,7 +10,7 @@ on:
 
   # Build and deploy the image nightly (to ensure we pick up any security updates)
   schedule:
-    - cron: "0 10 * * *"
+    - cron: "0 8 * * *"
 
 
 jobs:
