@@ -878,9 +878,13 @@ LOG "Done writing history"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
-<hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the icon to join: <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
-$(if [[ -f /root/.buildtime ]]; then printf " Build: "; cat /root/.buildtime; fi)
-<br/>&copy; Copyright 2020, 2021 by Ram&oacute;n F. Kolb. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to all contributors and open source packages used.
+<hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
+$(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
+<br/>&copy; Copyright 2020, 2021 by Ram&oacute;n F. Kolb. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/><a href="https://github.com/kx1t/docker-planefence/actions?query=workflow%3A%22Deploy+to+Docker+Hub%22" target="_blank"><img src="https://img.shields.io/github/workflow/status/kx1t/docker-planefence/Deploy%20to%20Docker%20Hub"></a>
+<a href="https://hub.docker.com/r/k1xt/planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
+<a href="https://hub.docker.com/r/kx1t/planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
+<a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 </div>
 </body>
 </html>
