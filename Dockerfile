@@ -64,8 +64,8 @@ RUN set -x && \
 RUN set -x && \
 #
 # First install the TEMP_PACKAGES. We do this here, so we can delete them again from the layer once installation is complete
-apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests\
-    ${TEMP_PACKAGES[@]} && \
+    TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
+    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} && \
 git config --global advice.detachedHead false && \
 # Install dump1090.socket30003:
     pushd "/src/socket30003" && \
