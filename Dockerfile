@@ -54,10 +54,10 @@ RUN set -x && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \
 #
-# Install all these packages:
+# Install all the KEPT packages (+ pkgconfig):
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests\
-        pkgconfig ${KEPT_PACKAGES[@]}&& \
+        pkg-config ${KEPT_PACKAGES[@]}&& \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl
 
