@@ -4,14 +4,6 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Copy needs to be here to prevent github actions from failing.
-# SSL Certs are pre-loaded into the rootfs via a job in github action:
-# See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
-COPY rootfs/ /
-
-# Copy the planefence and plane-alert program files in place:
-COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
-
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
@@ -60,6 +52,14 @@ RUN set -x && \
         pkg-config ${KEPT_PACKAGES[@]}&& \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl
+
+# Copy needs to be here to prevent github actions from failing.
+# SSL Certs are pre-loaded into the rootfs via a job in github action:
+# See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
+COPY rootfs/ /
+
+# Copy the planefence and plane-alert program files in place:
+COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 
 RUN set -x && \
 #
