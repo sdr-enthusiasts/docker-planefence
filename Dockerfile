@@ -68,7 +68,7 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} && \
 git config --global advice.detachedHead false && \
 # Install dump1090.socket30003:
-    pushd "/src/socket30003" && \
+    pushd "/src/dump1090.socket30003" && \
        ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
        chmod a+x /usr/share/socket30003/*.pl && \
     popd && \
