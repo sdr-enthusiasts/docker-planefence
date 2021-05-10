@@ -68,10 +68,10 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} && \
 git config --global advice.detachedHead false && \
 # Install dump1090.socket30003:
-    pushd /src/dump1090.socket30003 && \
-       ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
-       chmod a+x /usr/share/socket30003/*.pl && \
-    popd && \
+##    pushd /src/dump1090.socket30003 && \
+##       ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
+##       chmod a+x /usr/share/socket30003/*.pl && \
+##    popd && \
 #
 # Remove the temporary files because we are done with them:
     rm -rf /run/socket30003/install-* && \
@@ -103,7 +103,7 @@ git config --global advice.detachedHead false && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf \
-	     /src/* \
+#	     /src/* \
 	     /tmp/* \
 	     /var/lib/apt/lists/* \
 	     /.dockerenv \
