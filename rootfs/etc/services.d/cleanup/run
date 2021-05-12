@@ -56,7 +56,7 @@ CLEANUP ()
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    find /tmp/dump1090-pf-temp-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
