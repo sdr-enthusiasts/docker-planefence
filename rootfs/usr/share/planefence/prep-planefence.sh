@@ -15,7 +15,7 @@ PLANEFENCEDIR=/usr/share/planefence
 APPNAME="$(hostname)/planefence"
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
+[[ "$LOGLEVEL" != "ERROR" ]] && "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
@@ -56,6 +56,7 @@ chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
 # only called synchronously from planefence (if enabled)
 #
 mkdir -p /usr/share/planefence/html/plane-alert
+[[ ! -f /usr/share/planefence/html/plane-alert/index.html ]] && cp /usr/share/plane-alert/html/index.html /usr/share/planefence/html/plane-alert/
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #
