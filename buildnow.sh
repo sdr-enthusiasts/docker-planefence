@@ -11,14 +11,14 @@ set -x
 pushd ~/git/docker-planefence
 git checkout $BRANCH || exit 2
 git pull
-mv planefence/scripts/airlinecodes.txt /tmp
-curl -s -L -o planefence/scripts/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+mv rootfs/usr/share/planefence/airlinecodes.txt /tmp
+curl -s -L -o rootfs/usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
 
 export DOCKER_BUILDKIT=1
 
-echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > planefence/scripts/branch
+echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > rootfs/usr/share/planefence/branch
 
 docker buildx build --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
-mv /tmp/airlinecodes.txt planefence/scripts/
-rm -f planefence/scripts/branch
+mv /tmp/airlinecodes.txt rootfs/usr/share/planefence/
+rm -f rootfs/usr/share/planefence/branch
 popd
