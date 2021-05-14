@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<!--
+# You are taking an interest in this code! Great!
+# I'm not a professional programmer, and your suggestions and contributions
+# are always welcome. Join me at the GitHub link shown below, or via email
+# at kx1t (at) amsat (dot) org.
+#
+# Copyright 2021 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/plane-alert/
+#
+# The package contains parts of, links to, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# Summary of License Terms
+# This program is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see https://www.gnu.org/licenses/.
+-->
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-171737107-1"></script>
+    <script type="text/javascript" src="sort-table.js"></script>
+    <title>Plane-Alert</title>
+    <style>
+        body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
+               background-image: url('pa_background.jpg');
+               background-repeat: no-repeat;
+               background-attachment: fixed;
+               background-size: cover;
+             }
+        a { color: #0077ff; }
+	h1 {text-align: center}
+	h2 {text-align: center}
+	.planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+	.history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
+	.footer{ border: none; margin: 0; padding: 0; font: 10px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+
+    </style>
+</head>
+
+<body onload="sortTable(document.getElementById('mytable'), 5, -1);">
+
+<h1>Plane Alert</h1>
+   <h2>This website shows a list of aircraft of interest that were heard by <a href="##ADSBLINK##" target="_blank">##NAME##</a>'s ADS-B station</h2>
+
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	<article>
+        	<details open>
+                	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
+			<ul>
+				<li>Last update: ##LASTUPDATE##
+				<li>Click <a href="##ALERTLIST##" target="_blank">here</a> for the list of monitored aircraft
+				<li>Right-click <a href="##CONCATLIST##" target="_blank">this link</a> to save a CSV version of the table below.
+				<li>Aircraft are listed in reverse chronological order. Click the header of a column to resort.
+				<li>Note that for each aircraft, only the first observation of the day is listed. Additional flights, if any, can be seen on the Flight Map link.
+                <li>Only aircraft that have been seen in the last ##HISTTIME## days will be displayed below. The CSV version contains the complete history.
+                <li>Click on the Transponder ID to see the aircraft history on ADSBExchange
+                <li>Click on the Tail number to see the flight history, potentially with routing information, on FlightAware
+			</ul>
+		</details>
+	</article>
+</section>
+
+
+
+<!-- special feature for @Sportsbadger only -->

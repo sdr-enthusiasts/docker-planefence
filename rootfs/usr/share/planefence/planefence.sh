@@ -315,8 +315,8 @@ EOF
 
 		printf "<tr>\n" >>"$2"
 		printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
-		printf "   <td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >>"$2" # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
 			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
@@ -454,6 +454,12 @@ then
 else
 	READLINES=0
 fi
+if [ -f "$TOTLINES" ]
+then
+	read -r TOTALLINES < "$TOTLINES"
+else
+	TOTALLINES=0
+fi
 
 # delete some of the existing TMP files, so we don't leave any garbage around
 # this is less relevant for today's file as it will be overwritten below, but this will
@@ -463,12 +469,25 @@ rm "$OUTFILETMP" 2>/dev/null
 
 # before anything else, let's determine our current line count and write it back to the temp file
 # We do this using 'wc -l', and then strip off all character starting at the first space
-[ -f "$LOGFILEBASE$FENCEDATE.txt" ] && CURRCOUNT=$(wc -l $LOGFILEBASE$FENCEDATE.txt |cut -d ' ' -f 1) || CURRCOUNT=0
+[[ -f "$LOGFILEBASE$FENCEDATE.txt" ]] && CURRCOUNT=$(wc -l $LOGFILEBASE$FENCEDATE.txt |cut -d ' ' -f 1) || CURRCOUNT=0
+
+if [[ "$READLINES" -gt "$CURRCOUNT" ]]
+then
+	# Houston, we have a problem. READLINES is an earlier snapshot of the number of records, which should always be GE CURRCOUNT.
+	# If it's not, this means most probably that the socket30003 logfile got reset, (again) probably because the container was restarted.
+	# In this case, we want to use all lines from the socket30003 logfile.
+	# There are some chances that we may process records we've already processed before, but this is improbably and we will take the risk.
+	READLINES=0
+fi
 
 # Now write the $CURRCOUNT back to the TMP file for use next time PlaneFence is invoked:
 echo "$CURRCOUNT" > "$TMPLINES"
 
-LOG "Current run starts at line $READLINES of $CURRCOUNT"
+# update TOTALLINES and write it back to the file
+(( TOTALLINES += CURRCOUNT - READLINES ))
+echo "$TOTALLINES" > "$TOTLINES"
+
+LOG "Current run starts at line $READLINES of $CURRCOUNT, with $TOTALLINES lines for today"
 
 # Now create a temp file with the latest logs
 tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
@@ -686,12 +705,12 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence4docker/
+# https://github.com/kx1t/docker-planefence/
 #
-# The package contains parts of, links to, and modifications or derivatives to the following:
-# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
-# OpenStreetMap: https://www.openstreetmap.org
-# These packages may incorporate other software and license terms.
+# The package contains contributions from several other packages, that may be licensed
+# under different terms. Attributions and our thanks can be found at
+# https://github.com/kx1t/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
+# using the same base URL as you used to get to this web page.
 #
 # Summary of License Terms
 # This program is free software: you can redistribute it and/or modify it under the terms of
@@ -758,7 +777,7 @@ h2 {text-align: center}
 <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
 
 <li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
-<li>Data extracted from $(printf "%'.0d" $CURRCOUNT) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
+<li>Data extracted from $(printf "%'.0d" $TOTALLINES) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 
 EOF
 [[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
@@ -786,8 +805,8 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-[ "$TRACKSERVICE" == "flightaware" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"

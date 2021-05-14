@@ -56,6 +56,7 @@ chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
 # only called synchronously from planefence (if enabled)
 #
 mkdir -p /usr/share/planefence/html/plane-alert
+[[ ! -f /usr/share/planefence/html/plane-alert/index.html ]] && cp /usr/share/plane-alert/html/index.html /usr/share/planefence/html/plane-alert/
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #

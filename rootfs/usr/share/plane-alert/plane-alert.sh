@@ -228,8 +228,7 @@ touch /tmp/pa-diff.csv
 #  compare the new csv file to the old one and only print the added entries
 comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 
-[[ "$(cat /tmp/pa-diff.csv | wc -l)" -gt "0" ]] && echo " Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:"
-cat /tmp/pa-diff.csv
+[[ "$(cat /tmp/pa-diff.csv | wc -l)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
@@ -413,8 +412,10 @@ do
 	then
 		printf "%s\n" "<tr>" >> $TMPDIR/plalert-index.tmp
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >> $TMPDIR/plalert-index.tmp # column: Number
-		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
-		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${pa_record[9]}")" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
+		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
+		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
 		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
 		printf "    %s%s%s\n" "<td>" "${pa_record[4]} ${pa_record[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time
@@ -445,7 +446,8 @@ sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##VERSION##|$(if [[ -f /root/.buildtime ]]; then printf "Build: "; cat /root/.buildtime; fi)|g" $TMPDIR/plalert-index.tmp
+sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  $TMPDIR/plalert-index.tmp
+sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" $TMPDIR/plalert-index.tmp
 
 echo "<!-- ALERTLIST = $ALERTLIST -->" >> $TMPDIR/plalert-index.tmp
 
