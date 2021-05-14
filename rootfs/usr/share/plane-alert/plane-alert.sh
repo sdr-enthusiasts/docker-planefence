@@ -412,8 +412,10 @@ do
 	then
 		printf "%s\n" "<tr>" >> $TMPDIR/plalert-index.tmp
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >> $TMPDIR/plalert-index.tmp # column: Number
-		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
-		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${pa_record[9]}")" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
+		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: ICAO
+		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Owner
 		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Plane Type
 		printf "    %s%s%s\n" "<td>" "${pa_record[4]} ${pa_record[5]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Date Time

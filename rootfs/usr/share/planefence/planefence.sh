@@ -315,8 +315,8 @@ EOF
 
 		printf "<tr>\n" >>"$2"
 		printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
-		printf "   <td>%s</td>\n" "${NEWVALUES[0]}" >>"$2" # ICAO
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >>"$2" # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
 			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
@@ -805,8 +805,8 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-[ "$TRACKSERVICE" == "flightaware" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-[ "$TRACKSERVICE" == "adsbexchange" ] && printf "<li>Click on the flight number to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
