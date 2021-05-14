@@ -1,4 +1,4 @@
-ROM debian:stable-slim
+FROM debian:stable-slim
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
