@@ -58,7 +58,7 @@ echo Press ENTER to continue the configuration or CTRL-C to abort. Any existing 
 read
 [[ -f ~/.twurlrc ]] && mv -f ~/.twurlrc ~/.twurlrc.backup
 echo
-twurl authorize --consumer-key $KEY --consumer-secret $SECRET
+iftwurl authorize --consumer-key $KEY --consumer-secret $SECRET
 unset KEY
 unset SECRET
 cp -f ~/.twurlrc /usr/share/planefence/persist
@@ -69,10 +69,10 @@ echo \"docker cp planefence:/root/.twurlrc .\"
 echo If you recreate the container and lose the file somehow, you can always restore it by typing:
 echo \"docker cp .twurlrc planefence:/root/.twurlrc\"
 echo
-read -p "Do you want tweeting to be enabled for this session [Y/n]?" -r question
+read -p "Do you want tweeting to be enabled for this session [Y/n]?" -r QUESTION
 if [[ "$(tr '[:upper:]' '[:lower:]' <<< ${QUESTION:0:1})" == "y" ]] || [[ "$QUESTION" == "" ]]
 then
   sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
   echo "Tweeting is enabled for this session only. If you want to make it permanent after reboot or rebuild of the container,"
-  echo "set \"PF_TWEET\" in \".env\" to \"ON\"."
+  echo "set \"PF_TWEET\" in \"~/.planefence/planefence.config\" to \"ON\"."
 fi
