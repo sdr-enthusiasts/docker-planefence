@@ -506,14 +506,14 @@ if [ -f "$OUTFILETMP" ] && [ -f "$OUTFILECSV" ]
 then
 	while read -r newline
 	do
-		read -ra newrec <<< "$newline"
+		IFS="," read -ra newrec <<< "$newline"
 		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
 		then
 			# there's a ICAO match between the new record and the existing file
 			# grab the last occurrence of the old record
 			oldline="$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)"
 			IFS="," read -ra oldrec <<< "$oldline"
-			if (( ${newrec[2]} - ${oldrec[3]} > COLLAPSEWITHIN ))
+			if (( $(date -d "${newrec[2]}" +%s) - $(date -d "${oldrec[3]}" +%s) > COLLAPSEWITHIN ))
 			then
 				# we're outside the collapse window. Write the string to $OUTFILECSV
 				echo "$newline" >> "$OUTFILECSV"
