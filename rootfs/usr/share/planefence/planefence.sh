@@ -518,10 +518,16 @@ then
 				# we're outside the collapse window. Write the string to $OUTFILECSV
 				echo "$newline" >> "$OUTFILECSV"
 			else
-				# we are inside the collapse windownand need to collapse the records.
+				# we are inside the collapse window and need to collapse the records.
 				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
-				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
-				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
+				# we also need to take the smallest altitude and distance
+				(( newrec[4] < oldrec[4] )) && NEWALT=${newrec[4]} || NEWALT=${oldrec[4]}
+				(( newrec[5] < oldrec[5] )) && NEWDIST=${newrec[5]} || NEWDIST=${oldrec[5]}
+				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9,]\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|" "$OUTFILECSV"
+				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^ alt    ^   ^dist^    ^rest^
+				#               \1              \2              \3                \4          \5         \6        \7
+				#sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
+				#            ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
 			fi
 		else
 			# the ICAO fields did not match and we should write it to the database:
