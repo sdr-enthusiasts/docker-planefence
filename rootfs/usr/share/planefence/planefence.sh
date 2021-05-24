@@ -561,8 +561,8 @@ fi
 [[ -f /run/planefence/filtered-$FENCEDATE ]] && read -r i < "/run/planefence/filtered-$FENCEDATE" || i=0
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
-# if IGNOREDUPES is not empty then remove duplicates
-if [[ "$IGNOREDUPES" != "" ]]
+# if IGNOREDUPES is ON then remove duplicates
+if [[ "$IGNOREDUPES" == "ON" ]]
 then
 	LINESFILTERED=$(awk -F',' 'seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))

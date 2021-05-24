@@ -58,7 +58,7 @@ echo Press ENTER to continue the configuration or CTRL-C to abort. Any existing 
 read
 [[ -f ~/.twurlrc ]] && mv -f ~/.twurlrc ~/.twurlrc.backup
 echo
-iftwurl authorize --consumer-key $KEY --consumer-secret $SECRET
+twurl authorize --consumer-key $KEY --consumer-secret $SECRET
 unset KEY
 unset SECRET
 cp -f ~/.twurlrc /usr/share/planefence/persist
