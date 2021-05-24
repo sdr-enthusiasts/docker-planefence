@@ -509,6 +509,7 @@ then
 		IFS="," read -ra newrec <<< "$newline"
 		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
 		then
+#debug echo -n "There is a matching ICAO... ${newrec[1]} "
 			# there's a ICAO match between the new record and the existing file
 			# grab the last occurrence of the old record
 			oldline="$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)"
@@ -517,20 +518,25 @@ then
 			then
 				# we're outside the collapse window. Write the string to $OUTFILECSV
 				echo "$newline" >> "$OUTFILECSV"
+#debug echo "outside COLLAPSE window: old end=${oldrec[3]} new start=${newrec[2]}"
 			else
 				# we are inside the collapse window and need to collapse the records.
 				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
 				# we also need to take the smallest altitude and distance
-				(( newrec[4] < oldrec[4] )) && NEWALT=${newrec[4]} || NEWALT=${oldrec[4]}
-				(( newrec[5] < oldrec[5] )) && NEWDIST=${newrec[5]} || NEWDIST=${oldrec[5]}
-				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9,]\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|" "$OUTFILECSV"
+				(( $(echo "${newrec[4]} < ${oldrec[4]}" | bc -l) )) && NEWALT=${newrec[4]} || NEWALT=${oldrec[4]}
+				(( $(echo "${newrec[5]} < ${oldrec[5]}" | bc -l) )) || NEWDIST=${oldrec[5]}
+				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|" "$OUTFILECSV"
 				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^ alt    ^   ^dist^    ^rest^
 				#               \1              \2              \3                \4          \5         \6        \7
 				#sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
 				#            ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
+#debug echo "COLLAPSE: inside collapse window: old end=${oldrec[3]} new end=${newrec[3]}"
+#debug echo "sed line:"
+#debug echo "sed -i \"s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|\" \"$OUTFILECSV\""
 			fi
 		else
 			# the ICAO fields did not match and we should write it to the database:
+#debug echo "${newrec[1]}: no matching ICAO / no collapsing considered"
 			echo "$newline" >> "$OUTFILECSV"
 		fi
 	done < "$OUTFILETMP"
