@@ -23,11 +23,9 @@ cp --no-dereference /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
 cp --no-dereference /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
 cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/mozilla
 
-export DOCKER_BUILDKIT=1
-
 echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > rootfs/usr/share/planefence/branch
 
-docker buildx build --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
+DOCKER_BUILDKIT=1 docker buildx build --progress=plain --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
 mv /tmp/airlinecodes.txt rootfs/usr/share/planefence/
 rm -f rootfs/usr/share/planefence/branch
 rm -rf ./root_certs
