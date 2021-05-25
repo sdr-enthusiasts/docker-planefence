@@ -319,7 +319,15 @@ EOF
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 if [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && [[ "$(sed "s/[A-Za-z][0-9].*/true/" <<< "${NEWVALUES[1]#@}")" == "true" ]]
+			 then
+				 printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[1]#@}" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2"
+			 elif [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]]
+			 then
+				 printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 else
+				 printf "   <td></td>\n" >>"$2"
+			 fi
 		fi
 		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
@@ -666,7 +674,7 @@ else
 fi
 
 # And see if we need to run PLANEHEAT
-if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]
+if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
 then
 	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
