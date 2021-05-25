@@ -144,7 +144,11 @@ LOG ()
 # -----------------------------
 
 # check if the CSV file exists, if not, exit
-[ ! -f "$INFILECSV" ] && INFILE=true || INFILE=false
+if [ ! -f "$INFILECSV" ]
+then
+	LOG "\"$INFILECSV\" does not exist"
+	exit 1
+fi
 
 #  Define some vars:
 LASTFENCE=0
@@ -178,42 +182,39 @@ LOG "Starting: Previously processed planes=$LASTFENCE and last line processed=$L
 tail --lines=+"$((LASTLINE + 1))" "$INFILESOCK" > "$INFILESOCK".tmp
 
 # Now let's iterate through the entries in the file
-if [[ -f "$INFILECSV" ]]
-then
-    while read -r CSVLINE
-    do
+while read -r CSVLINE
+do
         # Now clean the line from any control characters (like stray \r's) and read the line into an array:
         IFS="," read -r -aRECORD <<< "$(echo -n $CSVLINE | tr -d '[:cntrl:]')"
-        (( COUNTER++ ))
-        LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
+	(( COUNTER++ ))
+	LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
 
-        # changed the IF statement below. Skipping over already processed entities doesn't really slow down the script too much
-        # if it is executed every, say hour or so, and this will enable collecting more data if the log rolled over just when we did the
-        # last iteration.
-        #       if (( ${#RECORD[@]} != 0 )) && (( $COUNTER > $LASTFENCE ))
+	# changed the IF statement below. Skipping over already processed entities doesn't really slow down the script too much
+	# if it is executed every, say hour or so, and this will enable collecting more data if the log rolled over just when we did the
+	# last iteration.
+#       if (( ${#RECORD[@]} != 0 )) && (( $COUNTER > $LASTFENCE ))
         if (( ${#RECORD[@]} != 0 ))
         then
-            # first make sure there are at least $MINTIME samples that are being considered
-            if (( $(date -d ${RECORD[3]:11:8} +%s) - $(date -d ${RECORD[2]:11:8} +%s) < MINTIME ))
-            then
-                ENDTIME=$(date -d @$(( $(date -d ${RECORD[2]:11:8} +%s) + MINTIME)) +%T)
-                LOG "(Corrected ENDTIME to $ENDTIME)"
-            else
-                ENDTIME="${RECORD[3]:11:8}"
-            fi
-            awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" 'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' "$INFILESOCK.tmp" >> "$PH_LINES"
-            LOG "Now $(wc -l $PH_LINES) positions in $PH_LINES"
-        else
-            LOG "(${RECORD[0]} was previously processed.)"
+		# first make sure there are at least $MINTIME samples that are being considered
+		if (( $(date -d ${RECORD[3]:11:8} +%s) - $(date -d ${RECORD[2]:11:8} +%s) < MINTIME ))
+		then
+			ENDTIME=$(date -d @$(( $(date -d ${RECORD[2]:11:8} +%s) + MINTIME)) +%T)
+			LOG "(Corrected ENDTIME to $ENDTIME)"
+		else
+			ENDTIME="${RECORD[3]:11:8}"
+		fi
+		awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" 'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' "$INFILESOCK.tmp" >> "$PH_LINES"
+		LOG "Now $(wc -l $PH_LINES) positions in $PH_LINES"
+	else
+		LOG "(${RECORD[0]} was previously processed.)"
         fi
-    done < "$INFILECSV"
-fi
+done < "$INFILECSV"
 
 # rewrite the latest to $TMPVARS
-rm -f "$TMPVARSTEMPLATE" 2>/dev/null
+rm "$TMPVARSTEMPLATE" 2>/dev/null
 ((  LASTLINE = LASTLINE + $(wc -l < "$INFILESOCK".tmp) ))
 printf "%s,%s\n" "$COUNTER" "$LASTLINE" > "$TMPVARS"
-rm -f "$INFILESOCK".tmp
+rm "$INFILESOCK".tmp
 
 LOG "Creating Heatmap Data"
 
@@ -232,15 +233,10 @@ read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59
  LOG "Start time=${REC[0]}, End time=${REC[1]}"
 
 # Now call the Heatmap Generator
-if [[ -f "$INFILECSV" ]]
-then
-    $PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
-    #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
-    LOG "Returned from planeheat.pl"
-else
-    echo "var addressPoints = [,,];" >$OUTFILEDIR/planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js
-fi
+$PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
+#echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
 
+ LOG "Returned from planeheat.pl"
 
 DISTMTS=$(bc <<< "$DIST * $TO_METER")
 

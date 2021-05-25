@@ -509,7 +509,7 @@ then
 		IFS="," read -ra newrec <<< "$newline"
 		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
 		then
-#echo -n "There is a matching ICAO... ${newrec[1]} "
+echo -n "There is a matching ICAO... ${newrec[1]} "
 			# there's a ICAO match between the new record and the existing file
 			# grab the last occurrence of the old record
 			oldline=$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)
@@ -518,7 +518,7 @@ then
 			then
 				# we're outside the collapse window. Write the string to $OUTFILECSV
 				echo "$newline" >> "$OUTFILECSV"
-#echo "outside COLLAPSE window: old end=${oldrec[3]} new start=${newrec[2]}"
+echo "outside COLLAPSE window: old end=${oldrec[3]} new start=${newrec[2]}"
 			else
 				# we are inside the collapse window and need to collapse the records.
 				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
@@ -530,13 +530,13 @@ then
 				#               \1              \2              \3                \4          \5         \6        \7
 				#sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
 				#            ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
-#echo "COLLAPSE: inside collapse window: old end=${oldrec[3]} new end=${newrec[3]}"
-#echo "sed line:"
-#echo "sed -i \"s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|\" \"$OUTFILECSV\""
+echo "COLLAPSE: inside collapse window: old end=${oldrec[3]} new end=${newrec[3]}"
+echo "sed line:"
+echo "sed -i \"s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|\" \"$OUTFILECSV\""
 			fi
 		else
 			# the ICAO fields did not match and we should write it to the database:
-#echo "${newrec[1]}: no matching ICAO / no collapsing considered"
+echo "${newrec[1]}: no matching ICAO / no collapsing considered"
 			echo "$newline" >> "$OUTFILECSV"
 		fi
 	done < "$OUTFILETMP"
@@ -666,7 +666,7 @@ else
 fi
 
 # And see if we need to run PLANEHEAT
-if [ -f "$PLANEHEATSCRIPT" ] && [ -f "$OUTFILECSV" ]
+if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]
 then
 	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
