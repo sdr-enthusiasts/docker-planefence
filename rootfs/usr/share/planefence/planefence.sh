@@ -827,6 +827,7 @@ EOF
 
 printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
 printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
