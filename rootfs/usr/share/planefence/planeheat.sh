@@ -238,7 +238,7 @@ then
     #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
     LOG "Returned from planeheat.pl"
 else
-    echo "var addressPoints = [,,];" >$OUTFILEDIR/planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js
+    echo "var addressPoints = [ ];" >$OUTFILEDIR/planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js
 fi
 
 
