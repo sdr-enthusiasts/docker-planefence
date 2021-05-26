@@ -122,6 +122,8 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "$PF_TWEET_BEHAVIOR" == "PRE" ]] && sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1PRE|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1POST|' /usr/share/planefence/planefence.conf
 [[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PA_LINK=\).*|\1\"'"$PF_PA_LINK"'\"|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_LINK=\).*|\1|' /usr/share/planefence/planefence.conf
 sed -i 's|\(^\s*PF_LINK=\).*|\1\"'"$PA_PF_LINK"'\"|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PA_HISTTIME" != "x" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
+
 
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
