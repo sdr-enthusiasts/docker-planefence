@@ -319,7 +319,15 @@ EOF
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 if [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && [[ "$(sed "s/[A-Za-z][0-9].*/true/" <<< "${NEWVALUES[1]#@}")" == "true" ]]
+			 then
+				 printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[1]#@}" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2"
+			 elif [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]]
+			 then
+				 printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
+			 else
+				 printf "   <td></td>\n" >>"$2"
+			 fi
 		fi
 		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
@@ -506,25 +514,37 @@ if [ -f "$OUTFILETMP" ] && [ -f "$OUTFILECSV" ]
 then
 	while read -r newline
 	do
-		read -ra newrec <<< "$newline"
+		IFS="," read -ra newrec <<< "$newline"
 		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
 		then
+#debug echo -n "There is a matching ICAO... ${newrec[1]} "
 			# there's a ICAO match between the new record and the existing file
 			# grab the last occurrence of the old record
-			oldline="$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)"
+			oldline=$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)
 			IFS="," read -ra oldrec <<< "$oldline"
-			if (( ${newrec[2]} - ${oldrec[3]} > COLLAPSEWITHIN ))
+			if (( $(date -d "${newrec[2]}" +%s) - $(date -d "${oldrec[3]}" +%s) > COLLAPSEWITHIN ))
 			then
 				# we're outside the collapse window. Write the string to $OUTFILECSV
 				echo "$newline" >> "$OUTFILECSV"
+#debug echo "outside COLLAPSE window: old end=${oldrec[3]} new start=${newrec[2]}"
 			else
-				# we are inside the collapse windownand need to collapse the records.
+				# we are inside the collapse window and need to collapse the records.
 				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
-				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
-				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
+				# we also need to take the smallest altitude and distance
+				(( $(echo "${newrec[4]} < ${oldrec[4]}" | bc -l) )) && NEWALT=${newrec[4]} || NEWALT=${oldrec[4]}
+				(( $(echo "${newrec[5]} < ${oldrec[5]}" | bc -l) )) && NEWDIST=${newrec[5]} || NEWDIST=${oldrec[5]}
+				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|" "$OUTFILECSV"
+				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^ alt    ^   ^dist^    ^rest^
+				#               \1              \2              \3                \4          \5         \6        \7
+				#sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
+				#            ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
+#debug echo "COLLAPSE: inside collapse window: old end=${oldrec[3]} new end=${newrec[3]}"
+#debug echo "sed line:"
+#debug echo "sed -i \"s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|\" \"$OUTFILECSV\""
 			fi
 		else
 			# the ICAO fields did not match and we should write it to the database:
+#debug echo "${newrec[1]}: no matching ICAO / no collapsing considered"
 			echo "$newline" >> "$OUTFILECSV"
 		fi
 	done < "$OUTFILETMP"
@@ -561,8 +581,8 @@ fi
 [[ -f /run/planefence/filtered-$FENCEDATE ]] && read -r i < "/run/planefence/filtered-$FENCEDATE" || i=0
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
-# if IGNOREDUPES is not empty then remove duplicates
-if [[ "$IGNOREDUPES" != "" ]]
+# if IGNOREDUPES is ON then remove duplicates
+if [[ "$IGNOREDUPES" == "ON" ]]
 then
 	LINESFILTERED=$(awk -F',' 'seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
@@ -654,7 +674,7 @@ else
 fi
 
 # And see if we need to run PLANEHEAT
-if [ -f "$PLANEHEATSCRIPT" ] && [ -f "$OUTFILECSV" ]
+if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
 then
 	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
@@ -782,7 +802,7 @@ h2 {text-align: center}
 EOF
 [[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
 
-[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
+[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" $IGNORELIST) > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 </ul>
@@ -807,6 +827,7 @@ EOF
 
 printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
 printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)" >> "$OUTFILEHTMTMP"
 
 [ "$PLANETWEET" != "" ] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [ "$PLANETWEET" != "" ] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
