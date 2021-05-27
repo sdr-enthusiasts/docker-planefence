@@ -148,9 +148,9 @@ then
 		# $TWEET_BEHAVIOR determines if we are looking at the end time (POST -> RECORD[3]) or at the
 		# start time (not POST -> RECORD[2]) of the observation time
 		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
-		# Entries that are previously tweeted have "@" in front of the flight number
-		# We will process those
-		if [ "${RECORD[1]:0:1}" != "@" ] && [ $TIMEDIFF -gt $MINTIME ] && [ "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ]
+
+		if [[ "${RECORD[1]:0:1}" != "@" ]] && [[ $TIMEDIFF -gt $MINTIME ]] && [[ ( "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ) || "$TWEETEVERY" == "true" ]]
+		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeter^ ...or...                     ^$TWEETEVERY is true^
 		then
 
 			AIRLINETAG="#"
