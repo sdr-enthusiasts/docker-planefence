@@ -238,7 +238,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 IFS="," read -ra header < $PLANEFILE
 
 # Let's tweet them, if there are any, and if twitter is enabled and set up:
-if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" == "true" ]] && [[ -f "$TWIDFILE" ]]
+if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" != "false" ]]
 then
 	# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
 	ERRORCOUNT=0
@@ -294,9 +294,66 @@ then
 		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
 
-		# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
-		while IFS= read -r twitterid
-		do
+
+		if [[ "$TWITTER" == "DM" ]]
+		then
+			# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
+			while IFS= read -r twitterid
+			do
+				# tweet and add the processed output to $result:
+				[[ "$TESTING" == "true" ]] && echo
+				echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+				[[ "$twitterid" == "" ]] && continue
+
+				# Get a screenshot if there's one available!
+				rm -f /tmp/pasnapshot.png
+				TWIMG="false"
+				if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+				then
+					# If the curl call succeeded, we have a snapshot.png file saved!
+					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+					#else
+					# this entire ELSE statement is test code and should be removed
+					#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+					#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+				fi
+				[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
+
+				# send a tweet.
+				# the conditional makes sure that tweets can be sent with or without image:
+				if [[ "$TWIMG" == "true" ]] && [[ "$TWITTER" == "DM" ]] && [[ -f "$TWIDFILE" ]]
+				then
+					# Tweet a DM with a screenshot:
+					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
+				elif [[ "$TWITTER" == "DM" ]] && [[ -f "$TWIDFILE" ]]
+				then
+					# Tweet a DM without a screenshot:
+					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+				elif [[ "$TWIMG" == "true" ]] && [[ "$TWITTER" == "TWEET" ]]
+				then
+					# Tweet a regular message with a screenshot:
+					rawresult=$($TWURL -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
+				else
+					# Tweet a regular message without a screenshot:
+					rawresult=$($TWURL -r "status=$TWEET" /1.1/statuses/update.json)
+				fi
+
+				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+				if [[ "$processedresult" != "" ]]
+				then
+					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+					echo "Diagnostics:"
+					echo "Error: $processedresult"
+					echo "Twitter ID: $twitterid"
+					echo "Text: $TWITTEXT"
+					(( ERRORCOUNT++ ))
+				else
+					echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+				fi
+			done < "$TWIDFILE"	# done with the DM tweeting
+		elif [[ "$TWITTER" == "TWEET" ]]
+		then
 			# tweet and add the processed output to $result:
 			[[ "$TESTING" == "true" ]] && echo
 			echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
@@ -310,10 +367,10 @@ then
 				# If the curl call succeeded, we have a snapshot.png file saved!
 				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-			#else
+				#else
 				# this entire ELSE statement is test code and should be removed
-			#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-			#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 			fi
 			[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
 
@@ -321,9 +378,11 @@ then
 			# the conditional makes sure that tweets can be sent with or without image:
 			if [[ "$TWIMG" == "true" ]]
 			then
-				rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
+				# Tweet a regular message with a screenshot:
+				rawresult=$($TWURL -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
 			else
-				rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
+				# Tweet a regular message without a screenshot:
+				rawresult=$($TWURL -r "status=$TWEET" /1.1/statuses/update.json)
 			fi
 
 			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
@@ -338,8 +397,9 @@ then
 			else
 				echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 			fi
-		done < "$TWIDFILE"
+		fi
 	done < /tmp/pa-diff.csv
+
 fi
 
 (( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
