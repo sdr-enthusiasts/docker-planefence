@@ -355,9 +355,7 @@ then
 		elif [[ "$TWITTER" == "TWEET" ]]
 		then
 			# tweet and add the processed output to $result:
-			[[ "$TESTING" == "true" ]] && echo
-			echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
-			[[ "$twitterid" == "" ]] && continue
+			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
 
 			# Get a screenshot if there's one available!
 			rm -f /tmp/pasnapshot.png
@@ -367,10 +365,6 @@ then
 				# If the curl call succeeded, we have a snapshot.png file saved!
 				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-				#else
-				# this entire ELSE statement is test code and should be removed
-				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 			fi
 			[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
 
