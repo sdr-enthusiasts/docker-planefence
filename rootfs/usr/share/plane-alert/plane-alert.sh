@@ -356,6 +356,10 @@ then
 		then
 			# tweet and add the processed output to $result:
 			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
+			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
+			# also replace \/ by a regular /
+			TWEET="$(sed 's/\\n/%0A/g' <<< "$TWEET")"
+			TWEET="$(sed 's|\\/|/|g' <<< "$TWEET")"
 
 			# Get a screenshot if there's one available!
 			rm -f /tmp/pasnapshot.png
