@@ -263,14 +263,14 @@ then
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url,10-squawk
 
-		TWITTEXT="Aircraft of interest detected:\n"
+		TWITTEXT="Plane Alert: "
 		TWITTEXT+="ICAO: ${pa_record[0]} "
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
-		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flight: ${pa_record[8]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
 		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-		TWITTEXT+="First heard: ${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
+		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
 
 		# Add any hashtags:
 		for i in {4..10}
@@ -351,14 +351,10 @@ then
 			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
 			# also replace \/ by a regular /
 			(( ${#TWITTEXT} > 258 )) && echo "Warning: tweet length is ${#TWITTEXT} > 258: tweet will be truncated!"
-			echo "debug step 1: before: $TWITTEXT"
 			TWITTEXT="${TWITTEXT//\\n/%0A}"
-			echo "debug step 2: bsl-n replacement: $TWITTEXT"
-			# TWITTEXT="$(sed 's|\\n|%0A|g' <<< "$TWITTEXT")"
+			TWITTEXT="${TWITTEXT//\\n/%0A}"
 			TWITTEXT="$(sed 's|\\/|/|g' <<< "$TWITTEXT")"
-			echo "debug step 3: bsl-fsl replacement: $TWITTEXT"
 			TWITTEXT="${TWITTEXT:0:257}"
-			echo "debug step 4: truncation: $TWITTEXT"
 
 
 			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
