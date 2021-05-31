@@ -322,21 +322,14 @@ then
 
 				# send a tweet.
 				# the conditional makes sure that tweets can be sent with or without image:
-				if [[ "$TWIMG" == "true" ]] && [[ "$TWITTER" == "DM" ]] && [[ -f "$TWIDFILE" ]]
+				if [[ "$TWIMG" == "true" ]] && [[ -f "$TWIDFILE" ]]
 				then
 					# Tweet a DM with a screenshot:
 					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
-				elif [[ "$TWITTER" == "DM" ]] && [[ -f "$TWIDFILE" ]]
+				elif [[ -f "$TWIDFILE" ]]
 				then
 					# Tweet a DM without a screenshot:
 					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
-				elif [[ "$TWIMG" == "true" ]] && [[ "$TWITTER" == "TWEET" ]]
-				then
-					# Tweet a regular message with a screenshot:
-					rawresult=$($TWURL -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
-				else
-					# Tweet a regular message without a screenshot:
-					rawresult=$($TWURL -r "status=$TWEET" /1.1/statuses/update.json)
 				fi
 
 				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
@@ -357,15 +350,15 @@ then
 			# tweet and add the processed output to $result:
 			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
 			# also replace \/ by a regular /
-			(( ${#TWEET} > 258 )) && echo "Warning: tweet length is ${#TWEET} > 258: tweet will be truncated!"
-			echo "debug step 1: before: $TWEET"
-			TWEET="${TWEET//\\n/%0A}"
-			echo "debug step 2: bsl-n replacement: $TWEET"
-			# TWEET="$(sed 's|\\n|%0A|g' <<< "$TWEET")"
-			TWEET="$(sed 's|\\/|/|g' <<< "$TWEET")"
-			echo "debug step 3: bsl-fsl replacement: $TWEET"
-			TWEET="${TWEET:0:257}"
-			echo "debug step 4: truncation: $TWEET"
+			(( ${#TWITTEXT} > 258 )) && echo "Warning: tweet length is ${#TWITTEXT} > 258: tweet will be truncated!"
+			echo "debug step 1: before: $TWITTEXT"
+			TWITTEXT="${TWITTEXT//\\n/%0A}"
+			echo "debug step 2: bsl-n replacement: $TWITTEXT"
+			# TWITTEXT="$(sed 's|\\n|%0A|g' <<< "$TWITTEXT")"
+			TWITTEXT="$(sed 's|\\/|/|g' <<< "$TWITTEXT")"
+			echo "debug step 3: bsl-fsl replacement: $TWITTEXT"
+			TWITTEXT="${TWITTEXT:0:257}"
+			echo "debug step 4: truncation: $TWITTEXT"
 
 
 			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
@@ -387,10 +380,10 @@ then
 			if [[ "$TWIMG" == "true" ]]
 			then
 				# Tweet a regular message with a screenshot:
-				rawresult=$($TWURL -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
+				rawresult=$($TWURL -r "status=$TWITTEXT&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
 			else
 				# Tweet a regular message without a screenshot:
-				rawresult=$($TWURL -r "status=$TWEET" /1.1/statuses/update.json)
+				rawresult=$($TWURL -r "status=$TWITTEXT" /1.1/statuses/update.json)
 			fi
 
 			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
