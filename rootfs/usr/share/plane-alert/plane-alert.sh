@@ -358,10 +358,15 @@ then
 			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
 			# also replace \/ by a regular /
 			(( ${#TWEET} > 258 )) && echo "Warning: tweet length is ${#TWEET} > 258: tweet will be truncated!"
+			echo "debug step 1: before: $TWEET"
 			TWEET="${TWEET//\\n/%0A}"
+			echo "debug step 2: bsl-n replacement: $TWEET"
 			# TWEET="$(sed 's|\\n|%0A|g' <<< "$TWEET")"
 			TWEET="$(sed 's|\\/|/|g' <<< "$TWEET")"
+			echo "debug step 3: bsl-fsl replacement: $TWEET"
 			TWEET="${TWEET:0:257}"
+			echo "debug step 4: truncation: $TWEET"
+
 
 			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
 
