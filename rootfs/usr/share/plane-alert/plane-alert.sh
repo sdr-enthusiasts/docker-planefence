@@ -351,13 +351,19 @@ then
 			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
 			# also replace \/ by a regular /
 			(( ${#TWITTEXT} > 258 )) && echo "Warning: tweet length is ${#TWITTEXT} > 258: tweet will be truncated!"
-			TWITTEXT="${TWITTEXT//\\n/%0A}"
-			TWITTEXT="${TWITTEXT//\\n/%0A}"
-			TWITTEXT="$(sed 's|\\/|/|g' <<< "$TWITTEXT")"
-			TWITTEXT="${TWITTEXT:0:257}"
+			TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
+			TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
 
+			# let's do some calcs on the actual tweet length, so we strip the minimum:
+			teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
+			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
+			tweetlength=$(( ${#teststring} - 1 ))
+			(( tweetlength > 280 )) && echo "Warning: PA tweet length is $tweetlength > 280: tweet will be truncated!"
+			(( tweetlength > 280 )) && maxlength=$(( ${#TWITTEXT} + 280 - tweetlength )) || maxlength=280
 
-			echo Tweeting a regular message with the following data: \"$TWITTEXT\"
+			TWITTEXT="${TWITTEXT:0:$maxlength}"
+
+			echo Tweeting a regular tweet with the following data: \"$TWITTEXT\"
 
 
 			# Get a screenshot if there's one available!

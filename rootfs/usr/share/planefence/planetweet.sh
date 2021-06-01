@@ -178,10 +178,14 @@ then
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"
 
-			# Ensure that the tweet is not more than 257 chars (allowing 23 chars for the link below)
-			# because tweets larger than 280 are rejected by Twitter:
+			# let's do some calcs on the actual tweet length, so we strip the minimum:
+			teststring="${TWEET//%0A/ }" # replace newlines with a single character
+			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
+			tweetlength=$(( ${#teststring} - 1 ))
+			(( tweetlength > 280 )) && echo "Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
+			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
 
-			TWEET="${TWEET:0:257}"
+			TWEET="${TWEET:0:$maxlength}"
 
 			# Now add the last field (attribution) without title or training Newline
 			# Reason: this is a URL that Twitter reinterprets and previews on the web
