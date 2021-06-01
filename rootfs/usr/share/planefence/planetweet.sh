@@ -154,7 +154,7 @@ then
 		then
 
 			AIRLINETAG="#"
-			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} | tr -d '[:space:]')"
+			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} | tr -d '[:space:]-')"
 
 			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
 			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
