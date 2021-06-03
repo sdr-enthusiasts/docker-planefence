@@ -505,15 +505,25 @@ do
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Flight No
 		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >> $TMPDIR/plalert-index.tmp # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >> $TMPDIR/plalert-index.tmp # column: ADSBX link
-		for i in {4..10}
+
+		IFS="," read -ra TAGLINE <<< "$(grep -e "^${pa_record[0]}" $PLANEFILE)"
+		#for i in {4..10}
+		for (( i=4; i<${#header[@]}; i++ ))
 		do
-			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
 			then
-				[[ "$BASETIME" != "" ]] && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - getting custom tags for ${pa_record[0]}"
-				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};")"
-				[[ ${tag:0:4} == "http" ]] && tag="<a href=\"$tag\" target=\"_blank\">$tag</a>"
-				printf '    <td>%s</td>  <!-- custom field %d -->\n' "$tag" "$i" >> $TMPDIR/plalert-index.tmp
+				#[[ "$BASETIME" != "" ]] && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - getting custom tags for ${pa_record[0]}"
+				#tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};")"
+				# tag="$(tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};" <<< "${TAGLINE[i]}")"
+				#[[ "${tag:0:4}" == "http" ]] && tag="<a href=\"$tag\" target=\"_blank\">$tag</a>"
+
+				if [[ "${TAGLINE[i]:0:4}" == "http" ]]
+				then
+					printf '    <td><a href=\"%s\" target=\"_blank\">%s</a></td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "${TAGLINE[i]}" "$i" >> $TMPDIR/plalert-index.tmp
+				else
+					printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >> $TMPDIR/plalert-index.tmp
+				fi
 			fi
 		done
 		printf "%s\n" "</tr>" >> $TMPDIR/plalert-index.tmp
