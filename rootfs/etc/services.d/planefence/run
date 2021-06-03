@@ -35,12 +35,15 @@ source /usr/share/planefence/prep-planefence.sh
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..." || echo "[$APPNAME][$(date)] Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
 sleep $LOOPTIME
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
+
 while true
 do
     LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
               starttime=$(date +%s)
+              # BASETIME is used for run time measurements
+              [[ "$TIMING" != "" ]] && export BASETIME=$(date +%s.%2N) || unset BASETIME
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
               [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d "+$LOOPTIME seconds" +"%Y/%m/%d %H:%M:%S")."

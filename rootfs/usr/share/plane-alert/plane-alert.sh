@@ -77,6 +77,8 @@ fi
 
 [[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
 
+[[ "$BASETIME" != "" ]] && echo "10a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start processing grep list"
+
 #
 # Now let's start
 #
@@ -156,6 +158,9 @@ cp -f "$OUTFILE" /tmp/pa-old.csv
 # example:
 # 0=hex_ident,1=altitude(feet),2=latitude,3=longitude,4=date,5=time,6=angle,7=distance(kilometer),8=squawk,9=ground_speed(knotph),10=track,11=callsign
 # A0B674,750,42.29663,-71.00664,2021/03/17,16:43:52.598,122.36,30.2,0305,139,321,N145NE
+
+[[ "$BASETIME" != "" ]] && echo "10b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start processing new data"
+
 while IFS= read -r line
 do
 	[ "$TESTING" == "true" ] && echo 3. Parsing line $line
@@ -194,6 +199,7 @@ do
 	fi
 
 	#Get an owner if there's none, we have a tail number and we are in the US
+	[[ "$BASETIME" != "" ]] && echo "10b1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: get airline name for $tail"
 	if [[ "$(awk -F "," '{print $3'} <<< "$outrec")" == "" ]] && [[ "$(awk -F "," '{print $2'} <<< "$outrec")" != "" ]]
 	then
 		tail="$(awk -F "," '{print $2'} <<< "$outrec")"
@@ -203,6 +209,7 @@ do
 			[[ "$owner" != "" ]] && outrec="$(awk -F "," -v owner="$owner" 'OFS="," {$3=owner;print}' <<< $outrec)"
 		fi
 	fi
+	[[ "$BASETIME" != "" ]] && echo "10b2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: return from get airline name for $tail"
 
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
@@ -211,6 +218,8 @@ done < $TMPDIR/plalert.out.tmp
 sort -t',' -k5,5  -k1,1 -k11,11 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries based on ICAO, date, and squawk. Use an intermediate file so we dont overwrite the file we are reading from
 sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date and time but keep all entries
 # the log files are now done, but we want to figure out what is new
+
+[[ "$BASETIME" != "" ]] && echo "10c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done processing new data"
 
 # if testing, insert the test item into the diff to trigger tweeting
 if [[ "$TESTING" == "true" ]]
@@ -237,6 +246,8 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 # Read the header - we will need it a few times later:
 IFS="," read -ra header < $PLANEFILE
 
+[[ "$BASETIME" != "" ]] && echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run"
+
 # Let's tweet them, if there are any, and if twitter is enabled and set up:
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] && [[ "$TWITTER" != "false" ]]
 then
@@ -249,6 +260,8 @@ then
 
 		unset pa_record
 		IFS=',' read -ra pa_record <<< "$line"
+
+		[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}"
 
 		# add a hashtag to the item if needed:
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
@@ -405,6 +418,8 @@ then
 
 fi
 
+[[ "$BASETIME" != "" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage"
+
 (( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
 
 # Now everything is in place, let's update the website
@@ -517,3 +532,4 @@ echo "<!-- ALERTLIST = $ALERTLIST -->" >> $TMPDIR/plalert-index.tmp
 
 #Finally, put the temp index into its place:
 mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
+[[ "$BASETIME" != "" ]] && echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert"
