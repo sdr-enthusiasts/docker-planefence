@@ -457,6 +457,8 @@ IFS="," read -ra header < $PLANEFILE
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
 
+[[ "$BASETIME" != "" ]] && echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers"
+
 # first add the fixed part of the header:
 cat <<EOF >> $TMPDIR/plalert-index.tmp
 <table border="1" class="js-sort-table" id="mytable">
@@ -481,6 +483,7 @@ do
 done
 echo "</tr>" >> $TMPDIR/plalert-index.tmp
 
+[[ "$BASETIME" != "" ]] && echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content"
 
 COUNTER=1
 while read -r line
@@ -507,6 +510,7 @@ do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
 			then
+				[[ "$BASETIME" != "" ]] && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - getting custom tags for ${pa_record[0]}"
 				tag="$(awk -F "," -v a="${pa_record[0]}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE" | tr -dc "[:alnum:][:blank:]:/?&=%\$\\\[\].,\{\};")"
 				[[ ${tag:0:4} == "http" ]] && tag="<a href=\"$tag\" target=\"_blank\">$tag</a>"
 				printf '    <td>%s</td>  <!-- custom field %d -->\n' "$tag" "$i" >> $TMPDIR/plalert-index.tmp
