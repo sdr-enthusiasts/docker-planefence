@@ -122,7 +122,7 @@ def main(argv):
                   pass
 
               try:
-                  rowalt=float(row[1])-altcorr
+                  rowalt=float(row[1])-float(altcorr)
               except:
                   pass
 
