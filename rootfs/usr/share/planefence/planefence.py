@@ -26,6 +26,7 @@ def main(argv):
    calcdist = False
    trackservice = 'adsbexchange'
    distunit="mi"
+   altcorr = 0
 
    now_utc = datetime.now(timezone('UTC'))
    now = now_utc.astimezone(get_localzone())
@@ -64,6 +65,8 @@ def main(argv):
            distunit = arg
        elif opt == "--trackservice":
            trackservice = arg
+       elif opt == "-altcorr":
+           altcorr = arg
 
    if verbose == 1:
       # print 'lat = ', lat
@@ -85,6 +88,10 @@ def main(argv):
 
    if distunit != 'km' and distunit != "nm" and distunit != "mi" and distunit != "m":
       print "ERROR: --distunit must be one of [km|nm|mi|m]"
+      sys.exit(2)
+
+   if altcorr < 0:
+      print "ERROR: --altcorr must be a non-negative integer"
       sys.exit(2)
 
    lat1 = math.radians(float(lat))
@@ -115,7 +122,7 @@ def main(argv):
                   pass
 
               try:
-                  rowalt=float(row[1])
+                  rowalt=float(row[1])-altcorr
               except:
                   pass
 
@@ -140,7 +147,8 @@ def main(argv):
 
                # only replace the lowest altitude if it's smaller than what we had before
                if rowalt < float(records[np.where(records == row[0])[0][0]][4]):
-                   records[np.where(records == row[0])[0][0]][4] = row[1]
+                   # records[np.where(records == row[0])[0][0]][4] = row[1]
+                   records[np.where(records == row[0])[0][0]][4] = rowalt
 
                # only replace the smallest distance if it's smaller than what we had before
                if rowdist < float(records[np.where(records == row[0])[0][0]][5]):
@@ -159,7 +167,7 @@ def main(argv):
                    # format example: https://globe.adsbexchange.com/?icao=a4a567&lat=42.397&lon=-71.177&zoom=12.0&showTrace=2020-08-12
                    falink = 'https://globe.adsbexchange.com/?icao='  + row[0].lower() + '&lat=' + str(lat) + '&lon=' + str(lon) + '&zoom=12&showTrace=' + row[4][0:4] + '-' + row[4][5:7] + '-' + row[4][8:10]
 
-               records=np.vstack([records, np.array([row[0],row[11].strip(), row[4] + ' ' + row[5][:8], row[4] + ' ' + row[5][:8],row[1],"{:.1f}".format(rowdist),falink.strip() ])])
+               records=np.vstack([records, np.array([row[0],row[11].strip(), row[4] + ' ' + row[5][:8], row[4] + ' ' + row[5][:8],rowalt,"{:.1f}".format(rowdist),falink.strip() ])])
                fltcounter = fltcounter + 1
 
            elif row[0] in records and records[np.where(records == row[0])[0][0]][1] == "" and row[11].strip() != "":

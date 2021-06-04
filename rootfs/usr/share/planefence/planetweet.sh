@@ -88,6 +88,10 @@ then
 	esac
 fi
 
+# determine if altitude is ASL or AGL
+(( ALTCORR > 0 )) && ALTPARAM="AGL" || ALTPARAM="MSL"
+
+
 # -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
 #
@@ -164,7 +168,7 @@ then
 			fi
 			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\']/_}"
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
-			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT%0A"
+			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
 			# If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
