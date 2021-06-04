@@ -32,7 +32,7 @@ def main(argv):
    now = now_utc.astimezone(get_localzone())
 
    try:
-      opts, args = getopt.getopt(argv,'',["h","help","?","distance=","lat=","lon=","dist=","log=","logfile=","v","verbose","outfile=","maxalt=","calcdist","distunit=","trackservice="])
+      opts, args = getopt.getopt(argv,'',["h","help","?","distance=","lat=","lon=","dist=","log=","logfile=","v","verbose","outfile=","maxalt=","calcdist","distunit=","trackservice=","altcorr="])
    except getopt.GetoptError:
       print 'Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
       sys.exit(2)
@@ -65,7 +65,7 @@ def main(argv):
            distunit = arg
        elif opt == "--trackservice":
            trackservice = arg
-       elif opt == "-altcorr":
+       elif opt == "--altcorr":
            altcorr = arg
 
    if verbose == 1:
