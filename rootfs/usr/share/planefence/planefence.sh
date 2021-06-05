@@ -144,22 +144,24 @@ LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> 
 # Function to write to the log
 LOG ()
 {
-	if [ -n "$1" ]
-	then
-		IN="$1"
-	else
-		read IN # This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	fi
-
-	if [ "$VERBOSE" != "" ]
-	then
-		if [ "$LOGFILE" == "logger" ]
-		then
-			printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
-		else
-			printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> $LOGFILE
+	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
+	while [ -n "$1" ] || read IN; do
+		if [ -n "$1" ]; then
+			IN="$1"
 		fi
-	fi
+		if [ "$VERBOSE" != "" ]
+		then
+			if [ "$LOGFILE" == "logger" ]
+			then
+				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
+			else
+				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> $LOGFILE
+			fi
+		fi
+		if [ -n "$1" ]; then
+			break
+		fi
+	done
 }
 LOG "-----------------------------------------------------"
 # Function to write an HTML table from a CSV file
@@ -238,12 +240,27 @@ EOF
 	fi
 	printf "</tr>\n" >>"$2"
 
+	# cache file for airline names
+	ANAME_CACHEFILE="/tmp/airlinename_cachefile.txt"
+	# associative array for airline names
+	declare -A CACHEDNAMES
+	if [[ -f $ANAME_CACHEFILE ]]; then
+		while read -r NEWLINE; do
+			IFS=, read -ra NEWVALUES <<< "$NEWLINE"
+			CACHEDNAMES[${NEWVALUES[0]}]="${NEWVALUES[1]}"
+			#echo "${NEWVALUES[0]}=${NEWVALUES[1]}"
+		done < "$ANAME_CACHEFILE"
+	fi
+
+	# associative array of airline names we write to the cache when done
+	declare -A NEWNAMES
+
 	# Now write the table
 	COUNTER=1
 	while read -r NEWLINE
 	do
 		[[ "$NEWLINE" == "" ]] && continue # skip empty lines
-		[[ "${NEWVALUES::1}" == "#" ]] && continue #skip lines that start with a "#"
+		[[ "${NEWLINE::1}" == "#" ]] && continue #skip lines that start with a "#"
 
 		IFS=, read -ra NEWVALUES <<< "$NEWLINE"
 
@@ -315,21 +332,44 @@ EOF
 		# --------------------------------------------------------------
 		# Now, we're ready to start putting things in the table:
 
+		CALLSIGN="${NEWVALUES[1]#@}"
+
 		printf "<tr>\n" >>"$2"
 		printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >>"$2" # ICAO
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${CALLSIGN}/redirect" "${CALLSIGN}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 if [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && [[ "$(sed "s/[A-Za-z][0-9].*/true/" <<< "${NEWVALUES[1]#@}")" == "true" ]]
-			 then
-				 printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[1]#@}" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2"
-			 elif [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]]
-			 then
-				 printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
-			 else
-				 printf "   <td></td>\n" >>"$2"
-			 fi
+			if [[ "${CALLSIGN}" != "" ]] && [[ "${CALLSIGN}" != "link" ]]; then
+
+				# look up callsign in associative array to get the airline name
+				CACHEDNAME="${CACHEDNAMES["${CALLSIGN}"]}"
+
+				# if it's not in the cache, look it up with the appropriate shell script
+				if [[ -z $CACHEDNAME ]]; then
+					AIRLINENAME=$(/usr/share/planefence/airlinename.sh ${CALLSIGN} ${NEWVALUES[0]})
+					#echo ${CALLSIGN} ${AIRLINENAME}
+				elif [[ $CACHEDNAME == "UNKNOWN" ]]; then
+					AIRLINENAME=""
+				else
+					AIRLINENAME="$CACHEDNAME"
+				fi
+
+				# update associative array to be written to disk
+				if [[ -z ${AIRLINENAME} ]]; then
+					NEWNAMES[${CALLSIGN}]="UNKNOWN"
+				else
+					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
+				fi
+
+				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]]; then
+					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >>"$2"
+				else
+					printf "   <td>%s</td>\n" "${AIRLINENAME}" >>"$2" || printf "   <td></td>\n" >>"$2"
+				fi
+			else
+				printf "   <td></td>\n" >>"$2"
+			fi
 		fi
 		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
 		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
@@ -397,6 +437,12 @@ EOF
 		printf "</tr>\n" >>"$2"
 
 	done < "$1"
+
+	rm -f "$ANAME_CACHEFILE"
+	for key in "${!NEWNAMES[@]}"; do
+		echo "${key},${NEWNAMES[$key]}" >> "$ANAME_CACHEFILE"
+	done
+
 	printf "</table>\n" >>"$2"
 }
 
