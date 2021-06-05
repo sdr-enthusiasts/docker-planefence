@@ -28,6 +28,8 @@
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
 
+trap 'echo -e "[ERROR] Line $LINENO when executing: $BASH_COMMAND"' ERR
+
 # We need to define the directory where the config file is located:
 
 [[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started PlaneFence"
@@ -144,22 +146,24 @@ LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> 
 # Function to write to the log
 LOG ()
 {
-	if [ -n "$1" ]
-	then
-		IN="$1"
-	else
-		read IN # This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	fi
-
-	if [ "$VERBOSE" != "" ]
-	then
-		if [ "$LOGFILE" == "logger" ]
-		then
-			printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
-		else
-			printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> $LOGFILE
+	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
+	while [ -n "$1" ] || read IN; do
+		if [ -n "$1" ]; then
+			IN="$1"
 		fi
-	fi
+		if [ "$VERBOSE" != "" ]
+		then
+			if [ "$LOGFILE" == "logger" ]
+			then
+				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
+			else
+				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> $LOGFILE
+			fi
+		fi
+		if [ -n "$1" ]; then
+			break
+		fi
+	done
 }
 LOG "-----------------------------------------------------"
 # Function to write an HTML table from a CSV file
@@ -188,6 +192,12 @@ WRITEHTMLTABLE () {
 		return 1
 	fi
 
+	# put input file into a variable
+	INPUT=$(<"$1")
+
+	# open file for writing as fd 3
+	exec 3>>"$2"
+
 	# debug code: echo HASTWEET=$HASTWEET and HASNOISE=$HASNOISE
 
 	# see if there is an airlinecodes.txt database
@@ -196,7 +206,7 @@ WRITEHTMLTABLE () {
 
 	# Now write the HTML table header
 
-	cat <<EOF >>"$2"
+	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
 	<table border="1" class="js-sort-table">
 	<tr>
@@ -213,7 +223,7 @@ EOF
 	if [[ "$HASNOISE" == "true" ]]
 	then
 		# print the headers for the standard noise columns
-		cat <<EOF >>"$2"
+		cat >&3 <<EOF
 		<th class="js-sort-number">Loudness</th>
 		<th class="js-sort-number">Peak RMS sound</th>
 		<th class="js-sort-number">1 min avg</th>
@@ -236,21 +246,43 @@ EOF
 		# print a header for the Tweeted column
 		printf "	<th>Tweeted</th>\n" >> "$2"
 	fi
-	printf "</tr>\n" >>"$2"
+	printf "</tr>\n" >&3
+
+	# cache file for airline names
+	ANAME_CACHEFILE="/tmp/airlinename_cachefile.txt"
+	# associative array for airline names
+	declare -A CACHEDNAMES
+	if [[ -f $ANAME_CACHEFILE ]]; then
+		while read -r NEWLINE; do
+			IFS=, read -ra NEWVALUES <<< "$NEWLINE"
+			CACHEDNAMES[${NEWVALUES[0]}]="${NEWVALUES[1]}"
+			#echo "${NEWVALUES[0]}=${NEWVALUES[1]}"
+		done < "$ANAME_CACHEFILE"
+	fi
+
+	# associative array of airline names we write to the cache when done
+	declare -A NEWNAMES
+
+	# determine this now, spawning a subshell for every processed line is slow
+	ALTREFERENCE="$( (( ALTCORR != 0 )) && echo -n AGL || echo -n MSL )"
+
+	# do this for the whole INPUT at once, doing it for every line is slow (subshell, sed initialization)
+	# Step 1/5. Replace the map zoom by whatever $HEATMAPZOOM contains
+	[[ -n "$HEATMAPZOOM" ]] && INPUT=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "$INPUT")
 
 	# Now write the table
 	COUNTER=1
 	while read -r NEWLINE
 	do
 		[[ "$NEWLINE" == "" ]] && continue # skip empty lines
-		[[ "${NEWVALUES::1}" == "#" ]] && continue #skip lines that start with a "#"
+		[[ "${NEWLINE::1}" == "#" ]] && continue #skip lines that start with a "#"
 
 		IFS=, read -ra NEWVALUES <<< "$NEWLINE"
 
 		# Do some prep work:
 		# --------------------------------------------------------------
 		# Step 1/5. Replace the map zoom by whatever $HEATMAPZOOM contains
-		[[ -z "$HEATMAPZOOM" ]] && NEWVALUES[6]=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "${NEWVALUES[6]}")
+		# this used to not work (-z instead of -n), to speed it up now, do it on the whole INPUT at once instead per line
 
 		# Step 2/5. If there is no flight number, insert the word "link"
 		[[ "${NEWVALUES[1]#@}" == "" ]] && NEWVALUES[1]+="link"
@@ -315,26 +347,51 @@ EOF
 		# --------------------------------------------------------------
 		# Now, we're ready to start putting things in the table:
 
-		printf "<tr>\n" >>"$2"
-		printf "   <td>%s</td>\n" "$((COUNTER++))" >>"$2" # table index number
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >>"$2" # ICAO
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${NEWVALUES[1]#@}/redirect" "${NEWVALUES[1]#@}" >>"$2" # Flight number; strip "@" if there is any at the beginning of the record
+		CALLSIGN="${NEWVALUES[1]#@}"
+
+		printf "<tr>\n" >&3
+		printf "   <td>%s</td>\n" "$((COUNTER++))" >&3 # table index number
+		#printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >&3 # ICAO
+		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]}" "${NEWVALUES[0]}" >&3 # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${CALLSIGN}/redirect" "${CALLSIGN}" >&3 # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]
 		then
-			 if [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]] && [[ "$(sed "s/[A-Za-z][0-9].*/true/" <<< "${NEWVALUES[1]#@}")" == "true" ]]
-			 then
-				 printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[1]#@}" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2"
-			 elif [[ "${NEWVALUES[1]#@}" != "" ]] && [[ "${NEWVALUES[1]#@}" != "link" ]]
-			 then
-				 printf "   <td>%s</td>\n" "$(/usr/share/planefence/airlinename.sh ${NEWVALUES[1]#@} ${NEWVALUES[0]})" >>"$2" || printf "   <td></td>\n" >>"$2"
-			 else
-				 printf "   <td></td>\n" >>"$2"
-			 fi
+			if [[ "${CALLSIGN}" != "" ]] && [[ "${CALLSIGN}" != "link" ]]; then
+
+				# look up callsign in associative array to get the airline name
+				CACHEDNAME="${CACHEDNAMES["${CALLSIGN}"]}"
+
+				# if it's not in the cache, look it up with the appropriate shell script
+				if [[ -z $CACHEDNAME ]]; then
+					AIRLINENAME=$(/usr/share/planefence/airlinename.sh ${CALLSIGN} ${NEWVALUES[0]})
+					#echo ${CALLSIGN} ${AIRLINENAME}
+				elif [[ $CACHEDNAME == "UNKNOWN" ]]; then
+					AIRLINENAME=""
+				else
+					AIRLINENAME="$CACHEDNAME"
+				fi
+
+				# update associative array to be written to disk
+				if [[ -z ${AIRLINENAME} ]]; then
+					NEWNAMES[${CALLSIGN}]="UNKNOWN"
+				else
+					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
+				fi
+
+				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]]; then
+					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
+				else
+					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3 || printf "   <td></td>\n" >&3
+				fi
+			else
+				printf "   <td></td>\n" >&3
+			fi
 		fi
-		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >>"$2" # time first seen
-		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >>"$2" # time last seen
-		printf "   <td>%s %s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" "$( (( ALTCORR != 0 )) && echo -n AGL || echo -n MSL )" >>"$2" # min altitude
-		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >>"$2" # min distance
+		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >&3 # time first seen
+		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >&3 # time last seen
+		printf "   <td>%s %s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
+		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >&3 # min distance
 
 		# Print the noise values if we have determined that there is data
 		if [[ "$HASNOISE" == "true" ]]
@@ -344,21 +401,21 @@ EOF
 			then
 				if [[ "$NOISEGRAPHLINK" != "" ]]
 				then
-					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >>"$2"
+					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >&3
 				else
-					printf "   <td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >>"$2"
+					printf "   <td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >&3
 				fi
 			else
-				printf "   <td></td>\n" >>"$2" # print an empty field
+				printf "   <td></td>\n" >&3 # print an empty field
 			fi
 
 			for i in {7..11}
 			do
 				if [[ "${NEWVALUES[i]}" != "" ]]
 				then
-					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[i]}" >>"$2" # print actual value with "dBFS" unit
+					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[i]}" >&3 # print actual value with "dBFS" unit
 				else
-					printf "   <td></td>\n" >>"$2" # print an empty field
+					printf "   <td></td>\n" >&3 # print an empty field
 				fi
 			done
 
@@ -367,9 +424,9 @@ EOF
 			then
 				if [[ -f "$OUTFILEDIR/$SPECTROFILE" ]]
 				then
-					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >>"$2"
+					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >&3
 				else
-					printf "   <td></td>\n" >>"$2"
+					printf "   <td></td>\n" >&3
 				fi
 			fi
 		fi
@@ -383,21 +440,28 @@ EOF
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
 				then
-					printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >>"$2"
+					printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
-					printf "   <td>yes</td>\n" >>"$2"
+					printf "   <td>yes</td>\n" >&3
 				fi
 			else
 				# If there were tweet, but not for this record, then print "no"
-				printf "   <td>no</td>\n" >>"$2"
+				printf "   <td>no</td>\n" >&3
 			fi
 			# There were no tweets at all, so don't even print a field
 		fi
 
-		printf "</tr>\n" >>"$2"
+		printf "</tr>\n" >&3
 
-	done < "$1"
-	printf "</table>\n" >>"$2"
+	done <<< "$INPUT"
+
+	rm -f "$ANAME_CACHEFILE"
+	for key in "${!NEWNAMES[@]}"; do
+		echo "${key},${NEWNAMES[$key]}" >> "$ANAME_CACHEFILE"
+	done
+
+	printf "</table>\n" >&3
+	exec 3>&-
 }
 
 # Function to write the PlaneFence history file
@@ -476,8 +540,8 @@ fi
 # delete some of the existing TMP files, so we don't leave any garbage around
 # this is less relevant for today's file as it will be overwritten below, but this will
 # also delete previous days' files that may have left behind
-rm "$TMPLINES" 2>/dev/null
-rm "$OUTFILETMP" 2>/dev/null
+rm -f "$TMPLINES"
+rm -f "$OUTFILETMP"
 
 # before anything else, let's determine our current line count and write it back to the temp file
 # We do this using 'wc -l', and then strip off all character starting at the first space
@@ -508,7 +572,7 @@ tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
 
 # First, run planefence.py to create the CSV file:
 LOG "Invoking planefence.py..."
-$PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --altcorr=$ALTCORR --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1
+$PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --altcorr=$ALTCORR --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1 | LOG
 # without ALTCORR: $PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1 | LOG
 LOG "Returned from planefence.py..."
 
