@@ -91,21 +91,34 @@ fi
 # for example:
 # 42001,3CONM,GovernmentofEquatorialGuinea,DassaultFalcon900B
 #
-# We need to write this to a grep input file that consists simply of lines with "^icao"
-sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
-#sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
-#| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
-#| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
 
-[ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
+# create an associative array / dictionary from the plane alert list
 
-# Now grep through the input file to see if we detect any planes
+declare -A ALERT_DICT
+
+ALERT_ENTRIES=0
+while read -r line; do
+	IFS=',' read -ra pa_record <<< "$line"
+    ALERT_DICT["${pa_record[0]}"]="$line"
+    ALERT_ENTRIES+=1
+done < "$PLANEFILE"
+
+[ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
+
+# Now search through the input file to see if we detect any planes in the alert list
 # note - we reverse the input file because later items have a higher chance to contain callsign and tail info
 # the 'sort' command will put things back in order, but the '-u' option will make sure we keep the LAST item
 # rather than the FIRST item
-tac "$INFILE" | grep -f $TMPDIR/plalertgrep.tmp		`# Go through the input file and grep it agains plalertgrep.tmp` \
-	| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-	> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+
+tac "$INFILE" | {
+    while IFS= read -r line; do
+        IFS=',' read -r hex <<< "$line"
+        if [[ -n ${ALERT_DICT["${hex}"]} ]]; then
+            echo "${line}"
+        fi
+    done
+}   | sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+    > $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 
 # remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
 # will cause duplicate entries down the line
@@ -347,7 +360,7 @@ then
 					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
 				fi
 
-				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
 				if [[ "$processedresult" != "" ]]
 				then
 					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
@@ -381,7 +394,7 @@ then
 			echo Tweeting a regular tweet with the following data: \"$TWITTEXT\"
 
 
-			# Get a screenshot if there's one available!
+			# Get a screenshot if there\'s one available!
 			rm -f /tmp/pasnapshot.png
 			TWIMG="false"
 			if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
@@ -424,7 +437,7 @@ fi
 
 (( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
 
-# Now everything is in place, let's update the website
+# Now everything is in place, let\'s update the website
 
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
@@ -493,6 +506,7 @@ echo "</tr>" >&3
 COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
 
+OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
 while read -r line
 do
 	IFS=',' read -ra pa_record <<< "$line"
@@ -500,7 +514,7 @@ do
 	then
 		printf "%s\n" "<tr>" >&3
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${pa_record[9]}")" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
@@ -513,7 +527,10 @@ do
 		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
 
-		IFS="," read -ra TAGLINE <<< "$(grep -e "^${pa_record[0]}" $PLANEFILE)"
+
+        # get appropriate entry from dictionary
+        PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		#for i in {4..10}
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
@@ -528,7 +545,7 @@ do
 		done
 		printf "%s\n" "</tr>" >&3
 	fi
-done < "$OUTFILE"
+done <<< "$OUTSTRING"
 
 [[ "$BASETIME" != "" ]] && echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content"
 
