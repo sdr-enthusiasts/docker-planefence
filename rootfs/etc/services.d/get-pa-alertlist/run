@@ -1,6 +1,11 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
+# redirect stderr to stdout so it's picked up in the docker logs
+exec 2>&1
+# all errors will show a line number and the command used to produce the error
+trap 'echo -e "[ERROR] $0 in line $LINENO when executing: $BASH_COMMAND"' ERR
+
 APPNAME="$(hostname)/get-pa-alertlist"
 
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service"
