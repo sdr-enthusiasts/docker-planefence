@@ -25,7 +25,7 @@ do
 	if [[ "${ALERT:0:5}" == "http:" ]] || [[ "${ALERT:0:6}" == "https:" ]]
 	then
 		# it's a URL and we need to CURL it
-		if [[ "$(curl -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]]
+		if [[ "$(curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]]
 		then
 			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded"
 			((i++))

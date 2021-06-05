@@ -228,7 +228,7 @@ if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEA
 then
 		echo "[$APPNAME][$(date)] Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "[$APPNAME][$(date)] Do this on the host to get a base file:"
-		echo "[$APPNAME][$(date)] curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "[$APPNAME][$(date)] curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
 		echo "[$APPNAME][$(date)] and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi

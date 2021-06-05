@@ -12,7 +12,7 @@ pushd ~/git/docker-planefence
 git checkout $BRANCH || exit 2
 git pull
 mv rootfs/usr/share/planefence/airlinecodes.txt /tmp
-curl -s -L -o rootfs/usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+curl --compressed -s -L -o rootfs/usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
 
 # make the build certs root_certs folder:
 # Note that this is normally done as part of the github actions - we don't have those here, so we need to do it ourselves before building:
