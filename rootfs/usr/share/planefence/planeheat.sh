@@ -180,10 +180,11 @@ tail --lines=+"$((LASTLINE + 1))" "$INFILESOCK" > "$INFILESOCK".tmp
 # Now let's iterate through the entries in the file
 if [[ -f "$INFILECSV" ]]
 then
+    # Now clean the line from any control characters (like stray \r's) and read the line into an array:
+    INPUT=$(tr -d -c '[:print:]\n' <"$INFILECSV")
     while read -r CSVLINE
     do
-        # Now clean the line from any control characters (like stray \r's) and read the line into an array:
-        IFS="," read -r -aRECORD <<< "$(echo -n $CSVLINE | tr -d '[:cntrl:]')"
+        IFS="," read -r -aRECORD <<< "$CSVLINE"
         (( COUNTER++ ))
         LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
 
@@ -206,7 +207,7 @@ then
         else
             LOG "(${RECORD[0]} was previously processed.)"
         fi
-    done < "$INFILECSV"
+    done <<< "$INPUT"
 fi
 
 # rewrite the latest to $TMPVARS

@@ -117,7 +117,7 @@ echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',
 # Nothing? Then do an FAA DB lookup
 if [[ "$b" == "" ]] && [[ "${a:0:1}" == "N" ]]
 then
-        b="$(timeout 3 curl -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+        b="$(timeout 3 curl --compressed -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
         # If we got something, make sure it will get added to the cache:
         [[ "$b" != "" ]] && MUSTCACHE=1
         [[ "$b" != "" ]] && [[ "$q" == "" ]] && q="faa"

@@ -1,6 +1,12 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
+# redirect stderr to stdout so it's picked up in the docker logs
+exec 2>&1
+# all errors will show a line number and the command used to produce the error
+SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)$(basename "$0")"
+trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
+
 APPNAME="$(hostname)/cleanup"
 
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup started as an s6 service"
@@ -159,8 +165,8 @@ GET_AIRLINE_DB ()
 {
     [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Updating airline names database..."
     rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
-    curl -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes"
-    curl -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got jbroutier/whatisflying-db"
+    curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes"
+    curl --compressed -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got jbroutier/whatisflying-db"
 
     #convert JBroutier's DB into our format:
     if [[ -f /tmp/airlines.csv ]]

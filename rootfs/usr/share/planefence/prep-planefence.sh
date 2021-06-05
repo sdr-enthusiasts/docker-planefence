@@ -39,6 +39,7 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 
+mkdir -p /usr/share/planefence/html
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
@@ -228,7 +229,7 @@ if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEA
 then
 		echo "[$APPNAME][$(date)] Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "[$APPNAME][$(date)] Do this on the host to get a base file:"
-		echo "[$APPNAME][$(date)] curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "[$APPNAME][$(date)] curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
 		echo "[$APPNAME][$(date)] and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi

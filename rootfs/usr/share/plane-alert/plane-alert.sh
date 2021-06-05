@@ -37,6 +37,8 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 #
 #
 
+# all errors will show a line number and the command used to produce the error
+trap 'echo -e "[ERROR] $(basename $0) in line $LINENO when executing: $BASH_COMMAND"' ERR
 
 function cleanup
 {
