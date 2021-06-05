@@ -91,21 +91,34 @@ fi
 # for example:
 # 42001,3CONM,GovernmentofEquatorialGuinea,DassaultFalcon900B
 #
-# We need to write this to a grep input file that consists simply of lines with "^icao"
-sed -n 's|^\([0-9A-F]\{6\}\),.*|\^\1|p' "$PLANEFILE" > $TMPDIR/plalertgrep.tmp
-#sed -n '/^[\^#]/!p' $PLANEFILE `# ignore any lines that start with "#"` \
-#| awk 'BEGIN { FS = "," } ; { print "^", $1 }' `# add "^" to the beginning of each line and only print ICAO` \
-#| tr -d '[:blank:]' > $TMPDIR/plalertgrep.tmp `# strip any blank characters and write to file`
 
-[ "$TESTING" == "true" ] && echo 1. $TMPDIR/plalertgrep.tmp contains $(cat $TMPDIR/plalertgrep.tmp|wc -l) lines
+# create an associative array / dictionary from the plane alert list
 
-# Now grep through the input file to see if we detect any planes
+declare -A ALERT_DICT
+
+ALERT_ENTRIES=0
+while read -r line; do
+	IFS=',' read -ra pa_record <<< "$line"
+    ALERT_DICT["${pa_record[0]}"]="$line"
+    ALERT_ENTRIES+=1
+done < "$PLANEFILE"
+
+[ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
+
+# Now search through the input file to see if we detect any planes in the alert list
 # note - we reverse the input file because later items have a higher chance to contain callsign and tail info
 # the 'sort' command will put things back in order, but the '-u' option will make sure we keep the LAST item
 # rather than the FIRST item
-tac "$INFILE" | grep -f $TMPDIR/plalertgrep.tmp		`# Go through the input file and grep it agains plalertgrep.tmp` \
-	| sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-	> $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+
+tac "$INFILE" | {
+    while IFS= read -r line; do
+        IFS=',' read -r hex <<< "$line"
+        if [[ -n ${ALERT_DICT["${hex}"]} ]]; then
+            echo "${line}"
+        fi
+    done
+}   | sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+    > $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
 
 # remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
 # will cause duplicate entries down the line
@@ -492,13 +505,6 @@ echo "</tr>" >&3
 
 COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
-
-declare -A ALERT_DICT
-
-while read -r line; do
-	IFS=',' read -ra pa_record <<< "$line"
-    ALERT_DICT["${pa_record[0]}"]="$line"
-done < "$PLANEFILE"
 
 OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
 while read -r line
