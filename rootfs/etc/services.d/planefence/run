@@ -44,6 +44,7 @@ sleep $LOOPTIME
 while true
 do
     LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
+	sleep $LOOPTIME &
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
               starttime=$(date +%s)
@@ -51,13 +52,13 @@ do
               [[ "$TIMING" != "" ]] && export BASETIME=$(date +%s.%2N) || unset BASETIME
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
-              [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d "+$LOOPTIME seconds" +"%Y/%m/%d %H:%M:%S")."
+              [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( $starttime + $LOOPTIME )) +"%Y/%m/%d %H:%M:%S")."
         else
               echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
               echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
               echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
     fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
-	sleep $LOOPTIME
+    wait
 	# echo "[$APPNAME][$(date)] PlaneFence process running..."
 done
