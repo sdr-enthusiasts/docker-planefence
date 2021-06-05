@@ -28,6 +28,8 @@
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
 
+trap 'echo -e "[ERROR] Line $LINENO when executing: $BASH_COMMAND"' ERR
+
 # We need to define the directory where the config file is located:
 
 [[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started PlaneFence"
@@ -554,7 +556,7 @@ tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
 
 # First, run planefence.py to create the CSV file:
 LOG "Invoking planefence.py..."
-$PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --altcorr=$ALTCORR --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1
+$PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --altcorr=$ALTCORR --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1 | LOG
 # without ALTCORR: $PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE 2>&1 | LOG
 LOG "Returned from planefence.py..."
 
