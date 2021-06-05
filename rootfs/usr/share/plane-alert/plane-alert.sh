@@ -347,7 +347,7 @@ then
 					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
 				fi
 
-				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
 				if [[ "$processedresult" != "" ]]
 				then
 					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
@@ -381,7 +381,7 @@ then
 			echo Tweeting a regular tweet with the following data: \"$TWITTEXT\"
 
 
-			# Get a screenshot if there's one available!
+			# Get a screenshot if there\'s one available!
 			rm -f /tmp/pasnapshot.png
 			TWIMG="false"
 			if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
@@ -424,7 +424,7 @@ fi
 
 (( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
 
-# Now everything is in place, let's update the website
+# Now everything is in place, let\'s update the website
 
 cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
@@ -493,6 +493,14 @@ echo "</tr>" >&3
 COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
 
+declare -A ALERT_DICT
+
+while read -r line; do
+	IFS=',' read -ra pa_record <<< "$line"
+    ALERT_DICT["${pa_record[0]}"]="$line"
+done < "$PLANEFILE"
+
+OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
 while read -r line
 do
 	IFS=',' read -ra pa_record <<< "$line"
@@ -500,7 +508,7 @@ do
 	then
 		printf "%s\n" "<tr>" >&3
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${pa_record[9]}")" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
@@ -513,7 +521,10 @@ do
 		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
 
-		IFS="," read -ra TAGLINE <<< "$(grep -e "^${pa_record[0]}" $PLANEFILE)"
+
+        # get appropriate entry from dictionary
+        PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		#for i in {4..10}
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
@@ -528,7 +539,7 @@ do
 		done
 		printf "%s\n" "</tr>" >&3
 	fi
-done < "$OUTFILE"
+done <<< "$OUTSTRING"
 
 [[ "$BASETIME" != "" ]] && echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content"
 
