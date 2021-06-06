@@ -97,10 +97,10 @@ fi
 declare -A ALERT_DICT
 
 ALERT_ENTRIES=0
-while read -r line; do
-	IFS=',' read -ra pa_record <<< "$line"
-    ALERT_DICT["${pa_record[0]}"]="$line"
-    ((ALERT_ENTRIES=ALERT_ENTRIES+1))
+while IFS="" read -r line; do
+	read -d , -r hex <<< "$line"
+	ALERT_DICT["${hex}"]="$line"
+	((ALERT_ENTRIES=ALERT_ENTRIES+1))
 done < "$PLANEFILE"
 
 [ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
@@ -111,14 +111,14 @@ done < "$PLANEFILE"
 # rather than the FIRST item
 
 tac "$INFILE" | {
-    while IFS= read -r line; do
-        IFS=',' read -r hex <<< "$line"
+    while IFS="" read -r line; do
+        read -d , -r hex <<< "$line"
         if [[ -n ${ALERT_DICT["${hex}"]} ]]; then
             echo "${line}"
         fi
     done
-}   | sort -t',' -k1,1 -k5,5  -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-    > $TMPDIR/plalert.out.tmp			`# write the result to a tmp file`
+}   | sort -t',' -k1,1 -k5,5 -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
+	> $TMPDIR/plalert.out.tmp		`# write the result to a tmp file`
 
 # remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
 # will cause duplicate entries down the line
