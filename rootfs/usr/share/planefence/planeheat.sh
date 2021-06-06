@@ -223,14 +223,18 @@ LOG "Creating Heatmap Data"
 # $DIST contains the radius of the map, and $LON/$LAT contain the coordinates of the map's center
 #
 
-# Determine the distance in degrees for a square box around the center point
+if [[ -f $PH_LINES ]]; then
 
-DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
- LOG "Dist=$DEGDIST"
+    # Determine the distance in degrees for a square box around the center point
 
-# determine start time and end time
-read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
- LOG "Start time=${REC[0]}, End time=${REC[1]}"
+    DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
+    LOG "Dist=$DEGDIST"
+
+    # determine start time and end time
+    read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
+    LOG "Start time=${REC[0]}, End time=${REC[1]}"
+
+fi
 
 # Now call the Heatmap Generator
 if [[ -f "$INFILECSV" ]]
