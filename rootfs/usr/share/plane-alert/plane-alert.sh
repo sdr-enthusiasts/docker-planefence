@@ -274,6 +274,7 @@ then
 
 		[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
 
+		ICAO="${pa_record[0]}"
 		# add a hashtag to the item if needed:
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
 
@@ -296,7 +297,7 @@ then
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
 
-		PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+		PLANELINE="${ALERT_DICT["${ICAO}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		# Add any hashtags:
 		for i in {4..10}
@@ -414,7 +415,7 @@ then
 				rawresult=$($TWURL -r "status=$TWITTEXT" /1.1/statuses/update.json)
 			fi
 
-			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null) # parse the output through JQ and if there's an error, provide the text to $result
+			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
 			if [[ "$processedresult" != "" ]]
 			then
 				echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
