@@ -191,7 +191,7 @@ do
 	ICAO="${pa_record[0]/ */}" # ICAO (stripped spaces)
 	outrec="${ICAO},"
 
-	TAIL="${TAGLINE[2]}"
+	TAIL="${TAGLINE[1]}"
 	#Get a tail number if we don't have one
 	if [[ $TAIL == "" ]]; then
 		TAIL="$(grep -i -w "$ICAO" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
@@ -199,14 +199,14 @@ do
 	outrec+="${TAIL}," # tail
 
 	#Get an owner if there's none, we have a tail number and we are in the US
-	OWNER="${TAGLINE[3]}"
+	OWNER="${TAGLINE[2]}"
 	if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
 		if [[ "${TAIL:0:1}" == "N" ]]; then
 			OWNER="$(/usr/share/planefence/airlinename.sh $TAIL)"
 		fi
 	fi
 	outrec+="${OWNER}," # owner name
-	outrec+="${TAGLINE[4]}," # equipment
+	outrec+="${TAGLINE[3]}," # equipment
 	outrec+="${pa_record[4]},"		# Date first heard
 	outrec+="${pa_record[5]:0:8},"	# Time first heard
 	outrec+="${pa_record[2]},"		# Latitude
