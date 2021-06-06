@@ -1038,7 +1038,7 @@ ln -sf "${OUTFILEHTML##*/}" index.html
 popd > /dev/null
 
 # VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ]
+if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]]
 then
 	sed -i -e :a -e '$q;N;8000,$D;ba' "$LOGFILE"
 fi
