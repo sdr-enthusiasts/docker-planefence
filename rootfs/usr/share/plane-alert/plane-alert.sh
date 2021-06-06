@@ -100,7 +100,7 @@ ALERT_ENTRIES=0
 while read -r line; do
 	IFS=',' read -ra pa_record <<< "$line"
     ALERT_DICT["${pa_record[0]}"]="$line"
-    ALERT_ENTRIES+=1
+    ((ALERT_ENTRIES=ALERT_ENTRIES+1))
 done < "$PLANEFILE"
 
 [ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
@@ -184,12 +184,29 @@ do
 	# Skip the line if it's out of range
 	awk "BEGIN{ exit (${pa_record[7]} < $RANGE) }" && continue
 
-	# "$(grep "^${pa_record[0]}" $PLANEFILE | head -1 | tr -d '[:cntrl:]')" `# First instance of the entire string from the template` \
+	PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+	IFS="," read -ra TAGLINE <<< "$PLANELINE"
 	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
-    outrec="${pa_record[0]/ */}," # ICAO (stripped spaces)
-	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $2;exit;}' "$PLANEFILE")," # tail
-	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $3;exit;}' "$PLANEFILE")," # owner name
-	outrec+="$(awk -F "," -v a="${pa_record[0]}" '$1 == a {print $4;exit;}' "$PLANEFILE")," # equipment
+
+	ICAO="${pa_record[0]/ */}" # ICAO (stripped spaces)
+	outrec="${ICAO},"
+
+	TAIL="${TAGLINE[2]}"
+	#Get a tail number if we don't have one
+	if [[ $TAIL == "" ]]; then
+		TAIL="$(grep -i -w "$ICAO" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
+	fi
+	outrec+="${TAIL}," # tail
+
+	#Get an owner if there's none, we have a tail number and we are in the US
+	OWNER="${TAGLINE[3]}"
+	if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
+		if [[ "${TAIL:0:1}" == "N" ]]; then
+			OWNER="$(/usr/share/planefence/airlinename.sh $TAIL)"
+		fi
+	fi
+	outrec+="${OWNER}," # owner name
+	outrec+="${TAGLINE[4]}," # equipment
 	outrec+="${pa_record[4]},"		# Date first heard
 	outrec+="${pa_record[5]:0:8},"	# Time first heard
 	outrec+="${pa_record[2]},"		# Latitude
@@ -205,27 +222,6 @@ do
 	done
 	[[ "$x" != "" ]] && outrec+="${pa_record[8]}"		# squawk
 
-	#Get a tail number if we don't have one
-	if [[ "$(awk -F "," '{print $2'} <<< "$outrec")" == "" ]]
-	then
-		icao="$(awk -F "," '{print $1'} <<< "$outrec")"
-		tail="$(grep -i -w "$icao" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
-		[[ "$tail" != "" ]] && outrec="$(awk -F "," -v tail=$tail 'OFS="," {$2=tail;print}' <<< $outrec)"
-	fi
-
-	#Get an owner if there's none, we have a tail number and we are in the US
-	[[ "$BASETIME" != "" ]] && echo "10b1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: get airline name for $tail" || true
-	if [[ "$(awk -F "," '{print $3'} <<< "$outrec")" == "" ]] && [[ "$(awk -F "," '{print $2'} <<< "$outrec")" != "" ]]
-	then
-		tail="$(awk -F "," '{print $2'} <<< "$outrec")"
-		if [[ "${tail:0:1}" == "N" ]]
-		then
-			owner="$(/usr/share/planefence/airlinename.sh $tail)"
-			[[ "$owner" != "" ]] && outrec="$(awk -F "," -v owner="$owner" 'OFS="," {$3=owner;print}' <<< $outrec)"
-		fi
-	fi
-	[[ "$BASETIME" != "" ]] && echo "10b2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: return from get airline name for $tail" || true
-
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
 done < $TMPDIR/plalert.out.tmp
@@ -240,8 +236,8 @@ sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date 
 if [[ "$TESTING" == "true" ]]
 then
 	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> "$OUTFILE"
-	echo /tmp/pa-diff.csv:
-	cat /tmp/pa-diff.csv
+	#echo /tmp/pa-diff.csv:
+	#cat /tmp/pa-diff.csv
 	echo var TWITTER: $TWITTER
 	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE $TWIDFILE exists || echo var TWIDFILE $TWIDFILE does not exist
 fi
@@ -300,13 +296,15 @@ then
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
 
+		PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		# Add any hashtags:
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
 			then
-				tag="$(awk -F "," -v a="${pa_record[0]#\#}" -v i="$((i+1))" '$1 == a {print $i;exit;}' "$PLANEFILE")"
+				tag="${TAGLINE[i]}"
 				if [[ "${tag:0:4}" == "http" ]]
 				then
 					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
@@ -470,7 +468,7 @@ then
 EOF
 fi
 
-IFS="," read -ra header < $PLANEFILE
+IFS="," read -ra header <<< "$(head -n1 < "$PLANEFILE")"
 
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
