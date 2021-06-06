@@ -33,7 +33,7 @@ trap 'echo -e "[ERROR] $(basename $0) in line $LINENO when executing: $BASH_COMM
 
 # We need to define the directory where the config file is located:
 
-[[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started PlaneFence"
+[[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started PlaneFence" || true
 
 PLANEFENCEDIR=/usr/share/planefence
 
@@ -190,7 +190,7 @@ WRITEHTMLTABLE () {
 		done < "$1"
 	else
 		# Return silently without writing the table as there's no data to be written
-		return 1
+		return 0
 	fi
 
 	# put input file into a variable
@@ -522,7 +522,7 @@ then
 	LOG "File cache reset- doing full run for $FENCEDATE"
 fi
 
-[[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- start prune socket30003 data"
+[[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- start prune socket30003 data" || true
 
 # find out the number of lines previously read
 if [ -f "$TMPLINES" ]
@@ -569,7 +569,7 @@ LOG "Current run starts at line $READLINES of $CURRCOUNT, with $TOTALLINES lines
 # Now create a temp file with the latest logs
 tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
 
-[[ "$BASETIME" != "" ]] && echo "2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- invoking planefence.py"
+[[ "$BASETIME" != "" ]] && echo "2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- invoking planefence.py" || true
 
 # First, run planefence.py to create the CSV file:
 LOG "Invoking planefence.py..."
@@ -582,7 +582,7 @@ LOG "Returned from planefence.py..."
 # Compare the last line of the previous CSV file with the first line of the new CSV file and combine them if needed
 # Only do this is there are lines in both the original and the TMP csv files
 
-[[ "$BASETIME" != "" ]] && echo "3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- returned from planefence.py, start pruning duplicates"
+[[ "$BASETIME" != "" ]] && echo "3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- returned from planefence.py, start pruning duplicates" || true
 
 if [ -f "$OUTFILETMP" ] && [ -f "$OUTFILECSV" ]
 then
@@ -628,7 +628,7 @@ else
 fi
 rm -f "$OUTFILETMP"
 
-[[ "$BASETIME" != "" ]] && echo "4. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done pruning duplicates, invoking noise2fence"
+[[ "$BASETIME" != "" ]] && echo "4. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done pruning duplicates, invoking noise2fence" || true
 
 # Now check if we need to add noise data to the csv file
 if [[ "$NOISECAPT" == "1" ]]
@@ -639,12 +639,12 @@ else
 	LOG "Info: Noise2Fence not enabled"
 fi
 
-[[ "$BASETIME" != "" ]] && echo "5. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking noise2fence, applying dirty fixes"
+[[ "$BASETIME" != "" ]] && echo "5. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking noise2fence, applying dirty fixes" || true
 
 #Dirty fix -- sometimes the CSV file needs fixing
 $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 
-[[ "$BASETIME" != "" ]] && echo "6. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying dirty fixes, applying filters"
+[[ "$BASETIME" != "" ]] && echo "6. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying dirty fixes, applying filters" || true
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
 sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
@@ -745,7 +745,7 @@ fi
 #----end implementation of ignore list---#
 # And see if we need to invoke PlaneTweet:
 
-[[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet"
+[[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
 if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
 then
@@ -755,7 +755,7 @@ else
 	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
-[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking PlaneTweet, invoking PlaneHeat"
+[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking PlaneTweet, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
 if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
@@ -768,11 +768,11 @@ else
 fi
 
 # Now let's link to the latest Spectrogram, if one was generated for today:
-[[ "$BASETIME" != "" ]] && echo "9. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking invoking PlaneHeat, getting NoiseCapt stuff"
+[[ "$BASETIME" != "" ]] && echo "9. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking invoking PlaneHeat, getting NoiseCapt stuff" || true
 
 if [ "$NOISECAPT" == "1" ]
 then
-	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram"
+	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram" || true
 	# get the latest spectrogram from the remote server
 	curl --fail -s $REMOTENOISE/noisecapt-spectro-latest.png >$OUTFILEDIR/noisecapt-spectro-latest.png
 	# was - wget now using curl to save disk space wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
@@ -780,7 +780,7 @@ then
 	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
 
 	# also create a noisegraph for the full day:
-	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph"
+	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph" || true
 	rm -f /tmp/noiselog 2>/dev/null
 	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f /usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log /tmp/noiselog
 	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat /usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log >> /tmp/noiselog
@@ -794,14 +794,14 @@ else
 	rm -f $OUTFILEDIR/noisecapt-spectro-latest.png 2>/dev/null
 fi
 
-[[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh"
+[[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh" || true
 # If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
-[ "$PLANEALERT" == "ON" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP" ; $PLALERTFILE $INFILETMP )
+[ "$PLANEALERT" == "ON" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"; $PLALERTFILE $INFILETMP; )
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
 
-[[ "$BASETIME" != "" ]] && echo "11. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking plane-alert.sh, starting to build the webpage"
+[[ "$BASETIME" != "" ]] && echo "11. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking plane-alert.sh, starting to build the webpage" || true
 
 cat <<EOF >"$OUTFILEHTMTMP"
 <!DOCTYPE html>
@@ -928,11 +928,11 @@ printf "<li>Click on the Owner Information to see the FAA record for this plane 
 printf "<li> Press the header of any of the columns to sort by that column.\n"  >> "$OUTFILEHTMTMP"
 printf "</ul>\n"  >> "$OUTFILEHTMTMP"
 
-[[ "$BASETIME" != "" ]] && echo "12. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the PF table to the website"
+[[ "$BASETIME" != "" ]] && echo "12. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the PF table to the website" || true
 
 WRITEHTMLTABLE "$OUTFILECSV" "$OUTFILEHTMTMP"
 
-[[ "$BASETIME" != "" ]] && echo "13. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done writing the PF table to the website"
+[[ "$BASETIME" != "" ]] && echo "13. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done writing the PF table to the website" || true
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 </details>
@@ -1008,10 +1008,10 @@ then
 EOF
 fi
 
-[[ "$BASETIME" != "" ]] && echo "14. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the history line to the website"
+[[ "$BASETIME" != "" ]] && echo "14. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the history line to the website" || true
 WRITEHTMLHISTORY "$OUTFILEDIR" "$OUTFILEHTMTMP"
 LOG "Done writing history"
-[[ "$BASETIME" != "" ]] && echo "15. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done writing the history line to the website"
+[[ "$BASETIME" != "" ]] && echo "15. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done writing the history line to the website" || true
 
 
 cat <<EOF >>"$OUTFILEHTMTMP"
@@ -1030,7 +1030,7 @@ EOF
 
 # Last thing we need to do, is repoint INDEX.HTML to today's file
 
-[[ "$BASETIME" != "" ]] && echo "16. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting final cleanup"
+[[ "$BASETIME" != "" ]] && echo "16. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting final cleanup" || true
 
 pushd "$OUTFILEDIR" > /dev/null
 mv -f "$OUTFILEHTMTMP" "$OUTFILEHTML"
@@ -1047,4 +1047,4 @@ fi
 # This could probably have been done more elegantly. If you have changes to contribute, I'll be happy to consider them for addition
 # to the GIT repository! --Ramon
 LOG "Finishing PlaneFence... sayonara!"
-[[ "$BASETIME" != "" ]] && echo "17. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done final cleanup"
+[[ "$BASETIME" != "" ]] && echo "17. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done final cleanup" || true
