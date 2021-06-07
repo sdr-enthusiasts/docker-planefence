@@ -7,7 +7,24 @@ from datetime import datetime
 from datetime import datetime
 from pytz import timezone
 from tzlocal import get_localzone
+import calendar
 
+def get_ax_link(row, lat, lon):
+    # format example: https://globe.adsbexchange.com/?icao=a4a567&lat=42.397&lon=-71.177&zoom=12.0&showTrace=2020-08-12
+    try:
+        falink = 'https://globe.adsbexchange.com/?icao='  + row[0].lower() + '&lat=' + str(lat) + '&lon=' + str(lon) + '&zoom=12'
+        dt_string = row[4] + ' ' + row[5][:-4]
+        naive = datetime.strptime(dt_string, "%Y/%m/%d %H:%M:%S")
+        local_dt = get_localzone().localize(naive)
+        utc_tuple = local_dt.utctimetuple()
+        falink = falink + '&showTrace=' + str(utc_tuple[0]) + '-' + str.zfill(str(utc_tuple[1]), 2) + '-' + str.zfill(str(utc_tuple[2]), 2)
+        epoch_seconds = calendar.timegm(utc_tuple)
+        falink = falink + '&timestamp=' + str(epoch_seconds)
+
+    except:
+        falink = falink + '&showTrace=' + row[4][0:4] + '-' + row[4][5:7] + '-' + row[4][8:10]
+
+    return falink
 
 def main(argv):
 
@@ -138,7 +155,7 @@ def main(argv):
 
                if trackservice == 'adsbexchange':
                    # format example: https://globe.adsbexchange.com/?icao=a4a567&lat=42.397&lon=-71.177&zoom=12.0&showTrace=2020-08-12
-                   falink = 'https://globe.adsbexchange.com/?icao='  + row[0].lower() + '&lat=' + str(lat) + '&lon=' + str(lon) + '&zoom=12&showTrace=' + row[4][0:4] + '-' + row[4][5:7] + '-' + row[4][8:10]
+                   falink = get_ax_link(row, lat, lon)
 
                records[np.where(records == row[0])[0][0]][6] = falink.strip()
 
@@ -164,8 +181,7 @@ def main(argv):
                    falink = 'https://flightaware.com/live/modes/' + row[0].lower() + '/ident/' + row[11].strip() + '/redirect'
 
                if trackservice == 'adsbexchange':
-                   # format example: https://globe.adsbexchange.com/?icao=a4a567&lat=42.397&lon=-71.177&zoom=12.0&showTrace=2020-08-12
-                   falink = 'https://globe.adsbexchange.com/?icao='  + row[0].lower() + '&lat=' + str(lat) + '&lon=' + str(lon) + '&zoom=12&showTrace=' + row[4][0:4] + '-' + row[4][5:7] + '-' + row[4][8:10]
+                   falink = get_ax_link(row, lat, lon)
 
                records=np.vstack([records, np.array([row[0],row[11].strip(), row[4] + ' ' + row[5][:8], row[4] + ' ' + row[5][:8],"{:.0f}".format(rowalt),"{:.1f}".format(rowdist),falink.strip() ])])
                fltcounter = fltcounter + 1
