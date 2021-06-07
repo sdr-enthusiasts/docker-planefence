@@ -212,7 +212,7 @@ do
 	outrec+="${pa_record[2]},"		# Latitude
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
-	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM,"	# ICAO for insertion into ADSBExchange link
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]},"	# ICAO for insertion into ADSBExchange link
 
 	# only add squawk if its in the list
 	x=""
