@@ -79,7 +79,7 @@ fi
 
 [[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
 
-[[ "$BASETIME" != "" ]] && echo "10a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start processing grep list" || true
+[[ "$BASETIME" != "" ]] && echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: parse alert list into dictionary" || true
 
 #
 # Now let's start
@@ -98,12 +98,15 @@ declare -A ALERT_DICT
 
 ALERT_ENTRIES=0
 while IFS="" read -r line; do
-	read -d , -r hex <<< "$line"
-	ALERT_DICT["${hex}"]="$line"
+	read -d , -r hex <<< "$line" || continue
+	[[ -n "$hex" ]] && ALERT_DICT["${hex}"]="$line" || echo "hey badger, bad alert-list entry: \"$line\"" && continue
 	((ALERT_ENTRIES=ALERT_ENTRIES+1))
 done < "$PLANEFILE"
 
 [ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
+
+[[ "$BASETIME" != "" ]] && echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: check input for hex numbers on alert list" || true
+
 
 # Now search through the input file to see if we detect any planes in the alert list
 # note - we reverse the input file because later items have a higher chance to contain callsign and tail info
@@ -212,7 +215,9 @@ do
 	outrec+="${pa_record[2]},"		# Latitude
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
-	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]},"	# ICAO for insertion into ADSBExchange link
+
+	epoch_sec="$(date -d"${pa_record[4]} ${pa_record[5]}" +%s)"
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=$(date -u -d@${epoch_sec} "+%Y-%m-%d")&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]}&timestamp=${epoch_sec},"	# ICAO for insertion into ADSBExchange link
 
 	# only add squawk if its in the list
 	x=""
