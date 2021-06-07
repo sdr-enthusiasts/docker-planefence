@@ -255,7 +255,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 #
 
 # Read the header - we will need it a few times later:
-IFS="," read -ra header < $PLANEFILE
+IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/#$/$#/')"
 
 [[ "$BASETIME" != "" ]] && echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run" || true
 
@@ -303,7 +303,7 @@ then
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
 			then
 				tag="${TAGLINE[i]}"
 				if [[ "${tag:0:4}" == "http" ]]
@@ -480,8 +480,6 @@ then
 EOF
 fi
 
-IFS="," read -ra header <<< "$(head -n1 < "$PLANEFILE")"
-
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
 
@@ -507,7 +505,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
+	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
 done
 echo "</tr>" >&3
 
@@ -545,10 +543,10 @@ do
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
 			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
+			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
 			then
 				printf '    <td><a href=\"%s\" target=\"_blank\">%s</a></td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "${TAGLINE[i]}" "$i" >&3
-			elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
+			elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]]
 			then
 				printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >&3
 			fi
