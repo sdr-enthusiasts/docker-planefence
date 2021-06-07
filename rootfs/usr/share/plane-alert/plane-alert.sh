@@ -212,7 +212,7 @@ do
 	outrec+="${pa_record[2]},"		# Latitude
 	outrec+="${pa_record[3]},"		# Longitude
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
-	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM,"	# ICAO for insertion into ADSBExchange link
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=${pa_record[4]//\//-}&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]},"	# ICAO for insertion into ADSBExchange link
 
 	# only add squawk if its in the list
 	x=""
@@ -255,7 +255,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 #
 
 # Read the header - we will need it a few times later:
-IFS="," read -ra header < $PLANEFILE
+IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/#$/$#/')"
 
 [[ "$BASETIME" != "" ]] && echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run" || true
 
@@ -293,7 +293,7 @@ then
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
 		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
-		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
 
@@ -303,7 +303,7 @@ then
 		for i in {4..10}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == "#$" ]]
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
 			then
 				tag="${TAGLINE[i]}"
 				if [[ "${tag:0:4}" == "http" ]]
@@ -332,7 +332,7 @@ then
 				echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 				[[ "$twitterid" == "" ]] && continue
 
-				# Get a screenshot if there's one available!
+				# Get a screenshot if there\'s one available!
 				rm -f /tmp/pasnapshot.png
 				TWIMG="false"
 				if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
@@ -377,20 +377,31 @@ then
 			# tweet and add the processed output to $result:
 			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
 			# also replace \/ by a regular /
-			(( ${#TWITTEXT} > 258 )) && echo "Warning: tweet length is ${#TWITTEXT} > 258: tweet will be truncated!"
 			TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
 			TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
+			TWITTEXT="${TWITTEXT//\&/%26}" # replace & by %26
 
-			# let's do some calcs on the actual tweet length, so we strip the minimum:
-			teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
-			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "Warning: PA tweet length is $tweetlength > 280: tweet will be truncated!"
-			(( tweetlength > 280 )) && maxlength=$(( ${#TWITTEXT} + 280 - tweetlength )) || maxlength=280
+			# let\'s do some calcs on the actual tweet length, so we only strip as much as necessary
+			# this problem is non trivial, so just cut 1 char at a time and loop until our teststring is short enough
+			truncated=0
+			while true; do
+				teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
+				teststring="${teststring//%26/_}" # replace %26 (&) with single char
+				teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
+				tweetlength=$(( ${#teststring} ))
+				if (( tweetlength > 280 )); then
+					truncated=$((truncated + 1))
+					TWITTEXT="${TWITTEXT:0:-1}"
+				else
+					break
+				fi
+			done
+			if (( truncated > 0 )); then
+				TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
+				echo "[WARNING]: Tweet has been truncated, cut $truncated characters at the end!"
+			fi
 
-			TWITTEXT="${TWITTEXT:0:$maxlength}"
-
-			echo Tweeting a regular tweet with the following data: \"$TWITTEXT\"
+			echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
 
 
 			# Get a screenshot if there\'s one available!
@@ -469,8 +480,6 @@ then
 EOF
 fi
 
-IFS="," read -ra header <<< "$(head -n1 < "$PLANEFILE")"
-
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
 
@@ -496,7 +505,7 @@ EOF
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
+	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
 done
 echo "</tr>" >&3
 
@@ -534,10 +543,10 @@ do
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
 			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
+			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
 			then
 				printf '    <td><a href=\"%s\" target=\"_blank\">%s</a></td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "${TAGLINE[i]}" "$i" >&3
-			elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != "$#" ]]
+			elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]]
 			then
 				printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >&3
 			fi
