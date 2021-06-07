@@ -12,7 +12,7 @@ APPNAME="$(hostname)/get-pa-alertlist"
 # -----------------------------------------------------------------------------------
 #
 # Make sure the /run directory exists
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh started"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh started" || true
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 [[ "$ALERTLIST" != "" ]] && IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt")
@@ -27,7 +27,7 @@ do
 		# it's a URL and we need to CURL it
 		if [[ "$(curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]]
 		then
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded"
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
 			((i++))
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
@@ -37,7 +37,7 @@ do
 		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
 			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded"
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
 			((i++))
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
@@ -51,4 +51,4 @@ chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 
 rm -f /tmp/alertlist*.txt
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished" || true

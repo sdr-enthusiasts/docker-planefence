@@ -19,9 +19,9 @@ curl --compressed -s -L -o rootfs/usr/share/planefence/airlinecodes.txt https://
 #ls -la /etc/ssl/certs/
 mkdir -p ./root_certs/etc/ssl/certs
 mkdir -p ./root_certs/usr/share/ca-certificates/mozilla
-cp --no-dereference /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
-cp --no-dereference /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
-cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/mozilla
+cp -P /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
+cp -P /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
+cp -P /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/mozilla
 
 echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > rootfs/usr/share/planefence/branch
 

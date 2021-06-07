@@ -4,12 +4,12 @@
 # redirect stderr to stdout so it's picked up in the docker logs
 exec 2>&1
 # all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)$(basename "$0")"
+SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
 trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
 
 APPNAME="$(hostname)/cleanup"
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup started as an s6 service"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup started as an s6 service" || true
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
@@ -45,9 +45,9 @@ CLEANUP ()
 {
   if (( OLDERTHAN > 0 ))
   then
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days"
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day"
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)"
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days" || true
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day" || true
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
 
     #these are temp actions to facilitate the transition to the new directory structure:
     mkdir -p /usr/share/planefence/persist/.internal
@@ -112,7 +112,7 @@ CLEANUP ()
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 
   else
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped"
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped" || true
   fi
 }
 
@@ -122,7 +122,7 @@ GET_ICAO_DB ()
 {
     if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
     then
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Retrieving ICAO to TAIL database from https://www.mictronics.de ... "
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
         # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
         curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php
         if [[ "$?" != "0" ]]
@@ -131,7 +131,7 @@ GET_ICAO_DB ()
             return 1
         fi
 
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] unzipping ... "
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] unzipping ... " || true
         # unzipping *will* fail when the retrieved file is not a valid ZIP file
         unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null
         if [[ "$?" != "0" ]]
@@ -142,7 +142,7 @@ GET_ICAO_DB ()
 
         rm -f /tmp/icao24plus.zip
         # now convert the text based file into a CSV file
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] converting ... "
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] converting ... " || true
         sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt
         if [[ "$?" != "0" ]]
         then
@@ -151,9 +151,9 @@ GET_ICAO_DB ()
         fi
 
         mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] done!"
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] done!" || true
     else
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ICAO to TAIL database is up to date"
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ICAO to TAIL database is up to date" || true
     fi
 }
 #
@@ -163,10 +163,10 @@ GET_ICAO_DB ()
 # ad merges these with the preloaded list.
 GET_AIRLINE_DB ()
 {
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Updating airline names database..."
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Updating airline names database..." || true
     rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
-    curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes"
-    curl --compressed -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got jbroutier/whatisflying-db"
+    curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes" || true
+    curl --compressed -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got jbroutier/whatisflying-db" || true
 
     #convert JBroutier's DB into our format:
     if [[ -f /tmp/airlines.csv ]]
@@ -184,22 +184,22 @@ GET_AIRLINE_DB ()
         then
             tail -n +2 /tmp/airlines.csv | awk -F "," -v icao=$(( icao + 1 )) -v name=$(( name + 1 )) -v country=$(( country + 1 )) -v callsign=$(( callsign + 1 )) '{print $icao "," $name "," $callsign "," $country}' >> /tmp/airlinecodes.txt.tmp
             [[ -f /tmp/airlinecodes.txt ]] && cat /tmp/airlinecodes.txt /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2 || cat /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2
-	        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Removed $(awk -F',' 'seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) overlapping entries, left $(awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) entries in place"
+	        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Removed $(awk -F',' 'seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) overlapping entries, left $(awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) entries in place" || true
             awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 >/tmp/airlinecodes.txt
         fi
     fi
     mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
     rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp /tmp/airlinecodes.txt.tmp2
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database update complete"
+    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database update complete" || true
 }
 
 #Now loop forevah:
 while true
 do
-  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Performing a cleanup run..."
+  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Performing a cleanup run..." || true
   CLEANUP
   GET_ICAO_DB
   GET_AIRLINE_DB
-  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup done. Sleeping for $LOOPTIME"
+  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup done. Sleeping for $LOOPTIME" || true
   sleep $LOOPTIME
 done
