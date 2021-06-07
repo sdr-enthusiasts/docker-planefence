@@ -380,6 +380,7 @@ then
 			(( ${#TWITTEXT} > 258 )) && echo "Warning: tweet length is ${#TWITTEXT} > 258: tweet will be truncated!"
 			TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
 			TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
+			TWITTEXT="${TWITTEXT//\&/%26}" # replace & by %26
 
 			# let's do some calcs on the actual tweet length, so we strip the minimum:
 			teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
