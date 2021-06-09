@@ -33,5 +33,5 @@ while true
 do
 	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Restarting in $LOOPTIME" || true
 	sleep $LOOPTIME
-	/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
+	/usr/share/plane-alert/get-pa-alertlist.sh
  	done
