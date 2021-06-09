@@ -185,6 +185,7 @@ then
     while read -r CSVLINE
     do
         IFS="," read -r -aRECORD <<< "$CSVLINE"
+
         (( COUNTER++ ))
         LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
 
@@ -208,6 +209,7 @@ then
             LOG "(${RECORD[0]} was previously processed.)"
         fi
     done <<< "$INPUT"
+
 fi
 
 # rewrite the latest to $TMPVARS
