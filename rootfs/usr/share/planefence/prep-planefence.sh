@@ -15,7 +15,7 @@ PLANEFENCEDIR=/usr/share/planefence
 APPNAME="$(hostname)/planefence"
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected."
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
@@ -39,6 +39,7 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 
+mkdir -p /usr/share/planefence/html
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
@@ -112,6 +113,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$FEEDER_LONG" != "x" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { echo "[$APPNAME][$(date)] Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
 [[ "x$PF_MAXALT" != "x" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAXDIST" != "x" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
+[[ "x$PF_ELEVATION" != "x" ]] && sed -i 's/\(^\s*ALTCORR=\).*/\1'"\"$PF_ELEVATION\""'/' /usr/share/planefence/planefence.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf || sed -i 's/\(^\s*MY=\).*/\1\"My\"/' /usr/share/planefence/planefence.conf
 [[ "x$PF_TRACKSVC" != "x" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*MYURL=\).*|\1|' /usr/share/planefence/planefence.conf
@@ -120,6 +122,11 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "$PF_OPENAIP_LAYER" == "ON" ]] && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_TWEET_MINTIME" != "x" ]] && sed -i 's|\(^\s*TWEET_MINTIME=\).*|\1'"$PF_TWEET_MINTIME"'|' /usr/share/planefence/planefence.conf
 [[ "$PF_TWEET_BEHAVIOR" == "PRE" ]] && sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1PRE|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1POST|' /usr/share/planefence/planefence.conf
+[[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PA_LINK=\).*|\1\"'"$PF_PA_LINK"'\"|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_LINK=\).*|\1|' /usr/share/planefence/planefence.conf
+[[ "$PF_TWEETEVERY" == "true" ]] && sed -i 's|\(^\s*TWEETEVERY=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEETEVERY=\).*|\1false|' /usr/share/planefence/planefence.conf
+[[ "x$PA_HISTTIME" != "x" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
+
+
 
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
@@ -197,12 +204,15 @@ fi
 [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/planefence/planefence.conf
 #
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
-for i in /usr/share/planefence/html/planefence-??????.html
-do
-	[[ "x$PF_MAPWIDTH" != "x" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' $i
-	[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' $i
-	[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
-done
+if find /usr/share/planefence/html/planefence-??????.html >/dev/null 2>&1
+then
+	for i in /usr/share/planefence/html/planefence-??????.html
+	do
+		[[ "x$PF_MAPWIDTH" != "x" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' $i
+		[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' $i
+		[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
+	done
+fi
 
 # place the screenshotting URL in place:
 
@@ -222,7 +232,7 @@ if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && [[ "$PF_PLANEA
 then
 		echo "[$APPNAME][$(date)] Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
 		echo "[$APPNAME][$(date)] Do this on the host to get a base file:"
-		echo "[$APPNAME][$(date)] curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		echo "[$APPNAME][$(date)] curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
 		echo "[$APPNAME][$(date)] and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
@@ -230,15 +240,17 @@ fi
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 [[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 # Go get the plane-alert-db files:
-/etc/services.d/get-pa-alertlist/get-pa-alertlist.sh
+/usr/share/plane-alert/get-pa-alertlist.sh
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
 # and write the rest of the parameters into their place
-[[ "x$PF_PA_TWID" != "x" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1'"\"true\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1'"\"false\""'|' /usr/share/plane-alert/plane-alert.conf
+[[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
-[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
+# removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_PARANGE" != "x" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_PA_SQUAWKS" != "x" ]] && sed -i 's|\(^\s*SQUAWKS=\).*|\1'"$PF_PA_SQUAWKS"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SQUAWKS=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
 

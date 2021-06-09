@@ -83,7 +83,7 @@ git config --global advice.detachedHead false && \
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /etc/services.d/planefence/run && \
     ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
     ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
-    curl -s -L -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
+    curl --compressed -s -L -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
     echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
 #
 # Ensure the planefence and plane-alert config is available for lighttpd:
@@ -95,7 +95,7 @@ git config --global advice.detachedHead false && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc && \
 #
 # install S6 Overlay
-    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
+    curl --compressed -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
 #
 # Clean up
     TEMP_PACKAGES="$(</tmp/vars.tmp)" && \

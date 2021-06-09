@@ -180,10 +180,12 @@ tail --lines=+"$((LASTLINE + 1))" "$INFILESOCK" > "$INFILESOCK".tmp
 # Now let's iterate through the entries in the file
 if [[ -f "$INFILECSV" ]]
 then
+    # Now clean the line from any control characters (like stray \r's) and read the line into an array:
+    INPUT=$(tr -d -c '[:print:]\n' <"$INFILECSV")
     while read -r CSVLINE
     do
-        # Now clean the line from any control characters (like stray \r's) and read the line into an array:
-        IFS="," read -r -aRECORD <<< "$(echo -n $CSVLINE | tr -d '[:cntrl:]')"
+        IFS="," read -r -aRECORD <<< "$CSVLINE"
+
         (( COUNTER++ ))
         LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
 
@@ -206,7 +208,8 @@ then
         else
             LOG "(${RECORD[0]} was previously processed.)"
         fi
-    done < "$INFILECSV"
+    done <<< "$INPUT"
+
 fi
 
 # rewrite the latest to $TMPVARS
@@ -222,14 +225,18 @@ LOG "Creating Heatmap Data"
 # $DIST contains the radius of the map, and $LON/$LAT contain the coordinates of the map's center
 #
 
-# Determine the distance in degrees for a square box around the center point
+if [[ -f $PH_LINES ]]; then
 
-DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
- LOG "Dist=$DEGDIST"
+    # Determine the distance in degrees for a square box around the center point
 
-# determine start time and end time
-read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
- LOG "Start time=${REC[0]}, End time=${REC[1]}"
+    DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
+    LOG "Dist=$DEGDIST"
+
+    # determine start time and end time
+    read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
+    LOG "Start time=${REC[0]}, End time=${REC[1]}"
+
+fi
 
 # Now call the Heatmap Generator
 if [[ -f "$INFILECSV" ]]

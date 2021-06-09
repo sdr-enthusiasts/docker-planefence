@@ -1,12 +1,18 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
+# redirect stderr to stdout so it's picked up in the docker logs
+exec 2>&1
+# all errors will show a line number and the command used to produce the error
+SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
+trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
+
 APPNAME="$(hostname)/planefence"
 LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
 PLANEFENCEDIR=/usr/share/planefence
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence started as an s6 service"
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence started as an s6 service" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)" || true
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -32,24 +38,28 @@ source /usr/share/planefence/prep-planefence.sh
 #
 #
 #
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..." || echo "[$APPNAME][$(date)] Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..." || echo "[$APPNAME][$(date)] Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs." || true
 sleep $LOOPTIME
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now" || true
+
 while true
 do
     LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
+	sleep $LOOPTIME &
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
               starttime=$(date +%s)
+              # BASETIME is used for run time measurements
+              [[ "$TIMING" != "" ]] && export BASETIME=$(date +%s.%2N) || unset BASETIME
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
-              [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d "+$LOOPTIME seconds" +"%Y/%m/%d %H:%M:%S")."
+              [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( $starttime + $LOOPTIME )) +"%Y/%m/%d %H:%M:%S")." || true
         else
               echo "[$APPNAME][$(date)] /run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
               echo "[$APPNAME][$(date)] If this continues to happen after 5-10 minutes, check this:"
               echo "[$APPNAME][$(date)] Is \"socket30003\" running? Is your feeder producing data?"
     fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
-	sleep $LOOPTIME
+    wait
 	# echo "[$APPNAME][$(date)] PlaneFence process running..."
 done

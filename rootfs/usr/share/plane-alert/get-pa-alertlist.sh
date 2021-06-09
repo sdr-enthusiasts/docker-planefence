@@ -12,7 +12,7 @@ APPNAME="$(hostname)/get-pa-alertlist"
 # -----------------------------------------------------------------------------------
 #
 # Make sure the /run directory exists
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh started"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh started" || true
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 [[ "$ALERTLIST" != "" ]] && IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt")
@@ -20,24 +20,26 @@ ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persi
 # now iterate though them an put them in sequential files:
 rm -f /tmp/alertlist*.txt
 i=0
+inhibit_update="false"
 for ALERT in "${ALERTFILES[@]}"
 do
 	if [[ "${ALERT:0:5}" == "http:" ]] || [[ "${ALERT:0:6}" == "https:" ]]
 	then
 		# it's a URL and we need to CURL it
-		if [[ "$(curl -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT" ; echo $?)" == "0" ]]
+		if curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT"
 		then
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded"
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
 			((i++))
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
+			inhibit_update="true"
 		fi
 	else
 		# it's a file and we need to concatenate it
 		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
 			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded"
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
 			((i++))
 		else
 			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
@@ -45,10 +47,14 @@ do
 	fi
 done
 
-touch /usr/share/planefence/persist/.internal/plane-alert-db.txt
-cat /tmp/alertlist*.txt | tr -dc '[:print:]\n' | awk -F',' '!seen[$1]++'  >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
-chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
-ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+if [[ $inhibit_update == "false" ]]; then
+	touch /usr/share/planefence/persist/.internal/plane-alert-db.txt
+	cat /tmp/alertlist*.txt |  tr -dc "[:alnum:][:blank:]:/?&=%#\$\\\[\].,\{\};-_\n" | awk -F',' '!seen[$1]++'  >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
+	chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
+	ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+else
+	echo "[$APPNAME][$(date)] At least one http retrieval failed, using old list!"
+fi
 
 rm -f /tmp/alertlist*.txt
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished"
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished" || true
