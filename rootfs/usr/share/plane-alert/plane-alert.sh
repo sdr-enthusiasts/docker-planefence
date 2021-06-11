@@ -260,7 +260,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 #
 
 # Read the header - we will need it a few times later:
-IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/#$/$#/')"
+IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/\#\$/$#/g')"
 
 [[ "$BASETIME" != "" ]] && echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run" || true
 
@@ -293,7 +293,7 @@ then
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url,10-squawk
 
-		TWITTEXT="Plane Alert: "
+		TWITTEXT="#PlaneAlert "
 		TWITTEXT+="ICAO: ${pa_record[0]} "
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
