@@ -293,7 +293,7 @@ then
 		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
 		# 8-callsign,9-adsbx_url,10-squawk
 
-		TWITTEXT="Plane Alert: "
+		TWITTEXT="#PlaneAlert "
 		TWITTEXT+="ICAO: ${pa_record[0]} "
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
