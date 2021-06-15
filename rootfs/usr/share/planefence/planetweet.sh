@@ -164,9 +164,9 @@ then
 			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
 			if [[ "${RECORD[1]}" != "" ]]
 			then
-				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
+				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]//-/}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
 			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\']/_}"
+			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}"
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
