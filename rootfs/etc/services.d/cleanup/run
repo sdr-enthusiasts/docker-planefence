@@ -68,7 +68,7 @@ CLEANUP ()
     rm -f /tmp/timestamp
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
-        [[ "$f" == "" ]]
+        [[ "$f" == "" ]] && continue || true
         fdate=${f: -10:6}   # get the date component from the file name
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -f %f
