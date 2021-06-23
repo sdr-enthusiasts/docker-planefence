@@ -72,7 +72,7 @@ CLEANUP ()
         fdate=${f: -10:6}   # get the date component from the file name
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -f %f
-        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T)" +%s) > MAXLOGTIME ))
+        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > MAXLOGTIME ))
         then
             # If we're longer than MAXLOGTIME into today, then also remove yesterday's file
             rm -f %f
@@ -80,8 +80,8 @@ CLEANUP ()
         then
             # We're less than MAXLOGTIME into today, so prune yesterday's file
             tmpfile=$(mktemp)
-            TIMELIMIT=$(( 104400 + $(date -d "1970-01-01 $(date +%T)" +%s) - MAXLOGTIME ))
-            [[ "$TIMELIMIT" -le 104400 ]] && awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
+            TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
+            awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
             [[ "$(wc -l $tmpfile)" -gt 0 ]] && mv -f $tmpfile $f || rm -f $tmpfile $f
         fi
     done
