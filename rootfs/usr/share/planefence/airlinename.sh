@@ -172,6 +172,7 @@ then
         b="${b% NV}"
         b="${b/Government of/Govt}"
         b="${b/Ministry of Finance/MinFinance}"
+        b="$(xargs -0 <<< "${b/&/}")"   # remove any ampersands from the name
 
 fi
 
