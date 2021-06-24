@@ -66,8 +66,8 @@ CLEANUP ()
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
-    shopt -s nullglob && for f in /run/socket30003/*.txt
     tmpfile=$(mktemp)
+    shopt -s nullglob && for f in /run/socket30003/*.txt
     do
         [[ "$f" == "" ]] && continue || true
         fdate=${f: -10:6}   # get the date component from the file name
