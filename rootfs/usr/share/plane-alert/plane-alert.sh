@@ -537,9 +537,9 @@ do
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
-		IMGURL="../silhouettes/"
-		[[ "$ICAO_INDEX" != "-1" ]] && [[ -f /usr/share/planefence/html/silhouettes/${TAGLINE[$ICAO_INDEX]^^}.bmp ]] && IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp || IMGURL+="BLNK.bmp"
-		[[ -f /usr/share/planefence/html/silhouettes/$IMGURL ]] && printf "    %s%s%s\n" "<td>" "<img src=\"$IMGURL\">" "</td>" >&3 || printf "    %s%s\n" "<td>" "" "</td>" >&3 # aircraft icon
+		IMGURL="silhouettes/"
+		[[ "$ICAO_INDEX" != "-1" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]] && IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp || IMGURL+="BLNK.bmp"
+		[[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]] && printf "    %s%s%s\n" "<td>" "<img src=\"$IMGURL\">" "</td>" >&3 || printf "    %s%s\n" "<td>" "" "</td>" >&3 # aircraft icon
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
