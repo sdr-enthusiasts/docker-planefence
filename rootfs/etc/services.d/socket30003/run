@@ -88,7 +88,7 @@ do
 			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
 		fi
 	fi
-	if [[ ! -f touch /tmp/socket-cleanup ]]
+	if [[ ! -f /tmp/socket-cleanup ]]
 	then
 		echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
 		sleep $LOOPTIME
