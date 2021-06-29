@@ -495,6 +495,7 @@ cat <<EOF >&3
 <table border="1" class="js-sort-table" id="mytable">
 <tr>
 	<th class="js-sort-number">No.</th>
+	<th>Icon</th>
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
@@ -507,10 +508,13 @@ cat <<EOF >&3
 EOF
 
 #print the variable headers:
+ICAO_INDEX=-1
 for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
+	[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
+
 done
 echo "</tr>" >&3
 
@@ -518,17 +522,26 @@ echo "</tr>" >&3
 
 COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
-
 OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
+
 while read -r line
 do
 	IFS=',' read -ra pa_record <<< "$line"
 	if [[ "${pa_record[0]}" != "" ]] && [[ "${pa_record[4]} ${pa_record[5]}" > "$REFDATE" ]]
 	then
+		# prep-work for later use:
+        PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+
 		printf "%s\n" "<tr>" >&3
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
+
+		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
+		IMGURL="../silhouettes/"
+		[[ "$ICAO_INDEX" != "-1" ]] && [[ -f /usr/share/planefence/html/silhouettes/${TAGLINE[$ICAO_INDEX]^^}.bmp ]] && IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp || IMGURL+="BLNK.bmp"
+		[[ -f /usr/share/planefence/html/silhouettes/$IMGURL ]] && printf "    %s%s%s\n" "<td>" "<img src=\"$IMGURL\">" "</td>" >&3 || printf "    %s%s\n" "<td>" "" "</td>" >&3 # aircraft icon
+		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
+		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
@@ -542,8 +555,7 @@ do
 
 
         # get appropriate entry from dictionary
-        PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
-		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+
 		#for i in {4..10}
 		for (( i=4; i<${#header[@]}; i++ ))
 		do

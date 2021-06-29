@@ -34,14 +34,11 @@ mkdir -p /run/socket30003
 # screaming all over the logs by now.
 if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
-		while true
-		do
-				sleep 99999
-		done
+	sleep infinity
 fi
 # $LOOPTIME is used to delay a restart after socket30003 exits for any reason, as not to
 # spam the system with restarts:
-LOOPTIME=30
+LOOPTIME=15
 #
 # set params in socket30003.conf
 sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
@@ -75,23 +72,29 @@ fi
 while true
 do
 
-	 # First make sure that $PF_SOCK30003HOST is defined
-	 if [[ "x$PF_SOCK30003HOST" == "x" ]]
-	 then
-		 echo "[$APPNAME][$(date)] \$PF_SOCK30003HOST is not set in the .env or docker-compose.yml file. Cannot run! Please update and restart the container."
-	 else
-		 # if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
-		 # we do this inside this endless loop so it will show in the logs regularly
-		 if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 >/dev/null 2>&1
-		 then
-			! /usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
-		 else
-	  	  	echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
+	# First make sure that $PF_SOCK30003HOST is defined
+	if [[ "x$PF_SOCK30003HOST" == "x" ]]
+	then
+		echo "[$APPNAME][$(date)] \$PF_SOCK30003HOST is not set in the .env or docker-compose.yml file. Cannot run! Please update and restart the container."
+	else
+		# if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
+		# we do this inside this endless loop so it will show in the logs regularly
+		if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 >/dev/null 2>&1
+		then
+			! /usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && [[ ! -f /tmp/socket-cleanup ]] && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
+		else
+			echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
 			echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
 			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
-		 fi
-	 fi
-	 echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
-	 sleep $LOOPTIME
-	 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 restarting now" || true
+		fi
+	fi
+	if [[ ! -f touch /tmp/socket-cleanup ]]
+	then
+		echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
+		sleep $LOOPTIME
+	else
+		sleep 1s
+		rm -f /tmp/socket-cleanup
+	fi
+	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 restarting now" || true
 done

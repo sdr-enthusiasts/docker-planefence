@@ -39,7 +39,9 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 
-mkdir -p /usr/share/planefence/html
+mkdir -p /usr/share/planefence/html/silhouettes
+mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
+
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
