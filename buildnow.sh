@@ -7,6 +7,8 @@ set -x
 
 [[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
 
+PLATFORMS=linux/armhf,linux/arm64,linux/amd64,linux/x86_64
+
 # rebuild the container
 pushd ~/git/docker-planefence
 git checkout $BRANCH || exit 2
@@ -26,7 +28,7 @@ cp -P /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certifi
 
 echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > rootfs/usr/share/planefence/branch
 
-DOCKER_BUILDKIT=1 docker buildx build --progress=plain --compress --push $2 --platform linux/armhf,linux/arm64 --tag kx1t/planefence:$TAG .
+DOCKER_BUILDKIT=1 docker buildx build --progress=plain --compress --push $2 --platform $PLATFORMS --tag kx1t/planefence:$TAG .
 mv /tmp/airlinecodes.txt rootfs/usr/share/planefence/
 rm -f rootfs/usr/share/planefence/branch
 rm -rf ./root_certs
