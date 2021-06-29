@@ -15,7 +15,7 @@ APPNAME="$(hostname)/get-silhouettes"
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-silhouettes.sh started" || true
 # Get the link to the silhouettes file, or add the default if empty.
 # it it's set to OFF, then don't do any
-LINK="$(sed -n 's|^\s*PF_SILHOUETTES_LINK=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+LINK="$(sed -n 's|^\s*PA_SILHOUETTES_LINK=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 [[ "$LINK" == "" ]] && LINK="https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip"
 [[ "${LINK^^}" == "OFF" ]] && inhibit_update="true" || inhibit_update="false"
 
