@@ -244,6 +244,7 @@ fi
 [[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 # Go get the plane-alert-db files:
 /usr/share/plane-alert/get-pa-alertlist.sh
+/usr/share/plane-alert/get-silhouettes.sh
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
