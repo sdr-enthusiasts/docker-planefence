@@ -132,7 +132,7 @@ CLEANUP ()
   else
     [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped" || true
   fi
-  [[ "$tmpfile" != "" ]] && rm -f $tmpfile
+  [[ "$tmpfile" != "" ]] && rm -f $tmpfile || true
 }
 
 # GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.
