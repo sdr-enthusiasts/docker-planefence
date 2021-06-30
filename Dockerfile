@@ -29,7 +29,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(ca-certificates) && \
     KEPT_PACKAGES+=(netcat) && \
     KEPT_PACKAGES+=(unzip) && \
-    KEPT_PACAKGES+=(psmisc) && \
+    KEPT_PACKAGES+=(psmisc) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano) && \
 #
