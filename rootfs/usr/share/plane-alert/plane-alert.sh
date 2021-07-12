@@ -260,6 +260,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 #
 
 # Read the header - we will need it a few times later:
+
 [[ "$PF_ALERTHEADER" != "" ]] && IFS="," read -ra header <<< "$(sed 's/\#\$/$#/g' <<< "$PF_ALERTHEADER")" || IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/\#\$/$#/g')"
 # if PF_ALERTHEADER is set, then use that one instead of
 
