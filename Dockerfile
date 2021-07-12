@@ -29,6 +29,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(ca-certificates) && \
     KEPT_PACKAGES+=(netcat) && \
     KEPT_PACKAGES+=(unzip) && \
+    KEPT_PACKAGES+=(psmisc) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano) && \
 #
@@ -84,6 +85,7 @@ git config --global advice.detachedHead false && \
     ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
     ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     curl --compressed -s -L -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
+    curl --compressed -s -L -o /usr/share/planefence/stage/Silhouettes.zip https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip && \
     echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
 #
 # Ensure the planefence and plane-alert config is available for lighttpd:

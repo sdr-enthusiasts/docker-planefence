@@ -39,7 +39,9 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 
-mkdir -p /usr/share/planefence/html
+mkdir -p /usr/share/planefence/html/silhouettes
+mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
+
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
@@ -151,6 +153,7 @@ fi
 #
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
+[[ "x$PF_COLLAPSEWITHIN" != "x" ]] && sed -i 's|\(^\s*COLLAPSEWITHIN=\).*|\1'"$PF_COLLAPSEWITHIN"'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1300|' /usr/share/planefence/planefence.conf
 a=$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf  | sed 's/\"//g')
 [[ "$a" != "" ]] && ln -sf $a /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
@@ -241,6 +244,7 @@ fi
 [[ "$PF_PLANEALERT" == "ON" ]] && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
 # Go get the plane-alert-db files:
 /usr/share/plane-alert/get-pa-alertlist.sh
+/usr/share/plane-alert/get-silhouettes.sh
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
 [[ "x$PF_PA_TWID" != "x" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid

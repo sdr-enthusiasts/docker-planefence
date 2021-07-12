@@ -21,8 +21,8 @@ APPNAME="$(hostname)/cleanup"
 # Feel free to make changes to the variables between these two lines. However, it is
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
-# LOOPTIME is the time between two runs cleanup. In our case, daily.
-LOOPTIME="6h"
+# LOOPTIME is the time between two runs cleanup. In our case, every 3 hours.
+LOOPTIME="3h"
 #
 # OLDERTHAN indicates which age files can be deleted. This is in DAYS.
 # It specifically applies to files in the HTML directory.
@@ -66,24 +66,42 @@ CLEANUP ()
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
+    tmpfile=$(mktemp)
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
-        [[ "$f" == "" ]]
+        [[ "$f" == "" ]] && continue || true
         fdate=${f: -10:6}   # get the date component from the file name
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -f %f
-        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T)" +%s) > MAXLOGTIME ))
+        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > MAXLOGTIME ))
         then
             # If we're longer than MAXLOGTIME into today, then also remove yesterday's file
             rm -f %f
         elif [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]]
         then
             # We're less than MAXLOGTIME into today, so prune yesterday's file
-            tmpfile=$(mktemp)
-            TIMELIMIT=$(( 104400 + $(date -d "1970-01-01 $(date +%T)" +%s) - MAXLOGTIME ))
-            [[ "$TIMELIMIT" -le 104400 ]] && awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
+            TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
+            awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
             [[ "$(wc -l $tmpfile)" -gt 0 ]] && mv -f $tmpfile $f || rm -f $tmpfile $f
         fi
+
+        # reverting this out for now. Socket30003 doesn't like it if we delete or prune the file underneith an active deployment.
+
+        # also prune today's file
+        if [[ "$fdate" == "$(date +%y%m%d)" ]]
+        then
+            TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
+            awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
+            if [[ "$(wc -l $tmpfile)" -gt 0 ]]
+            then
+                mv -f $tmpfile $f
+            else
+                # restart Socket30003 to ensure that things run smoothly:
+                touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
+                killall /usr/bin/perl && rm -f $tmpfile $f
+            fi
+        fi
+
     done
 
 
@@ -114,6 +132,7 @@ CLEANUP ()
   else
     [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped" || true
   fi
+  [[ "$tmpfile" != "" ]] && rm -f $tmpfile || true
 }
 
 # GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.

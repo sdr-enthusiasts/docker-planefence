@@ -34,4 +34,5 @@ do
 	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Restarting in $LOOPTIME" || true
 	sleep $LOOPTIME
 	/usr/share/plane-alert/get-pa-alertlist.sh
+	/usr/share/plane-alert/get-silhouettes.sh
  	done
