@@ -39,7 +39,7 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 
-mkdir -p /usr/share/planefence/html/silhouettes
+mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 
 cp -n /usr/share/planefence/stage/* /usr/share/planefence/html

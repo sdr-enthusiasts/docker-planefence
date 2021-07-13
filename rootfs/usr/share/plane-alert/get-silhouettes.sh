@@ -27,16 +27,20 @@ then
 		echo "[$APPNAME][$(date)] Retrieval of silhouettes from $LINK failed, using the existing list."
 		echo "[$APPNAME][$(date)] To fix, in planefence.config, please set PF_SILHOUETTES_LINK to OFF or to the correct retrieval URL."
 		cp -f /tmp/silhouettes-org.zip /tmp/silhouettes.zip
+	else
+		[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got $LINK"
 	fi
 else
 	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Retrieval of silhouettes is disabled, using the existing list."
 fi
 
-# Unzip only the newer files to the target directory
+# Unzip files to the target directory
 mkdir -p /usr/share/planefence/html/silhouettes # probably not necessary, but making sure the dir exists "just in case"
-if ! unzip -u -qq -o -d /usr/share/planefence/html/plane-alert/silhouettes /tmp/silhouettes.zip
+if ! unzip -qq -o -d /usr/share/planefence/html/plane-alert/silhouettes /tmp/silhouettes.zip
 then
 	echo "[$APPNAME][$(date)] Unzipping of silhouettes from $LINK failed. Could the URL source be corrupt? Using the existing list."
+else
+	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Unzipped silhouettes to /usr/share/planefence/html/plane-alert/silhouettes"
 fi
 
 rm -f /tmp/silhouettes.zip

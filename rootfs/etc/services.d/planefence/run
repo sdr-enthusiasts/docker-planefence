@@ -8,7 +8,8 @@ SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
 trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
 
 APPNAME="$(hostname)/planefence"
-LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
+LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
+[[ "$LOOPTIME" == "" ]] && LOOPTIME=60
 PLANEFENCEDIR=/usr/share/planefence
 
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence started as an s6 service" || true
@@ -44,7 +45,8 @@ sleep $LOOPTIME
 
 while true
 do
-    LOOPTIME=$(grep "PF_INTERVAL" /usr/share/planefence/persist/planefence.config | awk -F "=" '{ print $2 }')
+    LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
+    [[ "$LOOPTIME" == "" ]] && LOOPTIME=60
 	sleep $LOOPTIME &
 	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
         then
