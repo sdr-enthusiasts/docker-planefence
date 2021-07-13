@@ -537,7 +537,12 @@ do
         PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 
-		printf "%s\n" "<tr>" >&3
+		if [[ "${pa_record[10]}" == "7700" ]]
+		then
+			printf "%s\n" "<tr style=\"vertical-align: middle; color:#D9EBF9; height:20px; line-height:20px; background:#7F0000;\">" >&3
+		else
+			printf "%s\n" "<tr>" >&3
+		fi
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
@@ -591,10 +596,7 @@ do
 						SQCOLOR="#000000"
 					;;
 				esac
-
-
-				#printf "    %s%s%s%s\n" "<td><div style=\"text-align:center; font-weight:bold; background:$SQCOLOR; color:#D9EBF9\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
-							printf "    %s%s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
+				printf "    %s%s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
 			else
 				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
 			fi
