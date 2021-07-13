@@ -42,11 +42,11 @@ trap 'echo -e "[ERROR] $(basename $0) in line $LINENO when executing: $BASH_COMM
 
 function cleanup
 {
-	# do some final clean-up before exiting - this funciton is called by a trap on receiving the EXIT signal
+	# do some final clean-up before exiting - this function is called by a trap on receiving the EXIT signal
 	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
 	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
 	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
-	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv
+	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv /tmp/patmp
 	[ "$TESTING" == "true" ] && echo 11. Finished.
 	if [[ "$TESTING" == "true" ]] && [[ "$hextext" != "" ]]
 	then
@@ -299,7 +299,7 @@ then
 		TWITTEXT+="ICAO: ${pa_record[0]} "
 		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
-		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="Squawk: ${pa_record[10]}"
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
 		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
@@ -526,6 +526,8 @@ COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
 OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
 
+IMGBASE="silhouettes/"
+
 while read -r line
 do
 	IFS=',' read -ra pa_record <<< "$line"
@@ -535,13 +537,72 @@ do
         PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 
-		printf "%s\n" "<tr>" >&3
+		if [[ "${pa_record[10]}" == "7700" ]]
+		then
+			printf "%s\n" "<tr style=\"vertical-align: middle; color:#D9EBF9; height:20px; line-height:20px; background:#7F0000;\">" >&3
+		else
+			printf "%s\n" "<tr>" >&3
+		fi
 		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
-		IMGURL="silhouettes/"
-		[[ "$ICAO_INDEX" != "-1" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]] && IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp || IMGURL+="BLNK.bmp"
-		[[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]] && printf "    %s%s%s\n" "<td>" "<img src=\"$IMGURL\">" "</td>" >&3 || printf "    %s%s\n" "<td>" "" "</td>" >&3 # aircraft icon
+		IMGURL="$IMGBASE"
+
+		# If there's a squawk, use it to determine the image:
+		if [[ "${pa_record[10]}" != "" ]]
+		then
+			if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${pa_record[10]}.bmp ]]
+			then
+				IMGURL+="${pa_record[10]}.bmp"
+			else
+				IMGURL+="SQUAWK.bmp"
+			fi
+		else
+			# there is no squawk. If there's an ICAO_INDEX value, then try to get the image URL
+			if [[ "$ICAO_INDEX" != "-1" ]]
+			then
+				if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]]
+				then
+					IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp
+				else
+					IMGURL+="BLNK.bmp"
+				fi
+			else
+				# there is no squawk and no known image, so use the blank
+				IMGURL+="BLNK.bmp"
+			fi
+		fi
+
+		if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]
+		then
+			# print aircraft silhouette or Squawk
+			if [[ "${pa_record[10]}" != "" ]]
+			then
+				# determine text color for squawk
+				case "${pa_record[10]}" in
+					"7700")
+						SQCOLOR="#7F0000"
+					;;
+					"7600")
+						SQCOLOR="#FF6A00"
+					;;
+					"7500")
+						SQCOLOR="#00194C"
+					;;
+					"7400")
+						SQCOLOR="#2D3F00"
+					;;
+					*)
+						SQCOLOR="#000000"
+					;;
+				esac
+				printf "    %s%s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
+			else
+				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
+			fi
+		else
+			printf "    %s%s\n" "<td>" "" "</td>" >&3
+		fi
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
