@@ -174,7 +174,6 @@ then
 			done <<< $TMPDIR/patmp
 			mv -f $TMPDIR/patmp2 $TMPDIR/patmp
 		fi
-		IFS="," read firstrecord
 
 		# clean up /tmp/patmp
 		tac $TMPDIR/patmp | sort -t',' -k1,1 -k9,9 -u  >> $TMPDIR/plalert.out.tmp # sort this from the reverse of the file
