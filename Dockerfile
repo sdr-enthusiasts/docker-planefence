@@ -1,4 +1,4 @@
-FROM debian:stable-slim
+FROM debian:buster-20210816-slim
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
