@@ -374,13 +374,15 @@ EOF
 				fi
 
 				# update associative array to be written to disk
-				if [[ -z ${AIRLINENAME} ]]; then
+				if [[ -z ${AIRLINENAME} ]]
+                                then
 					NEWNAMES[${CALLSIGN}]="UNKNOWN"
 				else
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]]; then
+				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]] && [[ "${a:0:4}" != "NATO" ]]
+                                then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
 					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3 || printf "   <td></td>\n" >&3
