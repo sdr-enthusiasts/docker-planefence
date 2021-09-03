@@ -89,13 +89,14 @@ a="${a#@}"      # strip off any leading "@" signs - this is a Planefence feature
 [[ "$2" != "" ]] && c="$2" || c="" # C is optional ICAO
 
 #echo "debug: called $0 $1=$a $2=$c"
-
-[[ "${a:0:4}" == "HMED" ]] && b="Medevac Bristol"
+# add a few exceptions:
+[[ "${a:0:4}" == "HMED" ]] && b=" Medevac Bristol"
+[[ "${a:0:4}" == "NATO" ]] && b=" NATO"
 
 # Airlinecodes has the 3-character code in field 1 and the full name in field 2
 # to prevent false hits when the tall number starts with 3 letters
 # (common outside the US), only call this if the input looks like a flight number
-echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $AIRLINECODES)" # Print flight number if we can find it
+[[ "$b" != "" ]] && echo $a | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $AIRLINECODES)" # Print flight number if we can find it
 [[ "$b" != "" ]] && [[ "$q" == "" ]] && q="aln"
 
 # Now, if we got nothing, then let's try the Plane-Alert database.
