@@ -882,7 +882,7 @@ top: 0;
 </style>
 </head>
 
-<body onload="sortTable(document.getElementById('mytable'), 0, -1);">>
+<body onload="sortTable(document.getElementById('mytable'), 5, -1);">>
 
 
 <h1>PlaneFence</h1>
