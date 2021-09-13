@@ -872,6 +872,13 @@ h2 {text-align: center}
 .planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+/* Sticky table header */
+table thead tr th {
+background-color: #f0f6f6;
+position: sticky;
+z-index: 100;
+top: 0;
+}
 </style>
 </head>
 
@@ -879,7 +886,7 @@ h2 {text-align: center}
 
 
 <h1>PlaneFence</h1>
-<h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B PiAware station for a specific day</h2>
+<h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
