@@ -209,7 +209,7 @@ WRITEHTMLTABLE () {
 
 	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
-	<table border="1" class="js-sort-table">
+	<table border="1" class="js-sort-table" id="mytable">
 	<tr>
 	<th class="js-sort-number">No.</th>
 	<th>Transponder ID</th>
@@ -381,7 +381,7 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]] && [[ "${a:0:4}" != "NATO" ]]
+				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${a:0:4}" != "NATO" ]]
                                 then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
@@ -882,7 +882,7 @@ top: 0;
 </style>
 </head>
 
-<body>
+<body onload="sortTable(document.getElementById('mytable'), 1, -1);">>
 
 
 <h1>PlaneFence</h1>
