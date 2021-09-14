@@ -222,7 +222,8 @@ do
 	#Get an owner if there's none, we have a tail number and we are in the US
 	OWNER="${TAGLINE[2]}"
 	if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
-		if [[ "${TAIL:0:1}" == "N" ]]; then
+		#if [[ "${TAIL:0:1}" == "N" ]]; then
+		if [[ $TAIL =~ ^N[0-9][0-9a-zA-Z]+$ ]]; then
 			OWNER="$(/usr/share/planefence/airlinename.sh $TAIL)"
 		fi
 	fi

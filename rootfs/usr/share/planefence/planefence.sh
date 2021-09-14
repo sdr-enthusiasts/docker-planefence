@@ -209,7 +209,7 @@ WRITEHTMLTABLE () {
 
 	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
-	<table border="1" class="js-sort-table">
+	<table border="1" class="js-sort-table" id="mytable">
 	<tr>
 	<th class="js-sort-number">No.</th>
 	<th>Transponder ID</th>
@@ -381,7 +381,7 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				if [[ $CALLSIGN =~ ^N[0-9a-zA-Z]+$ ]] && [[ "${a:0:4}" != "NATO" ]]
+				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]
                                 then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
@@ -872,10 +872,17 @@ h2 {text-align: center}
 .planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+/* Sticky table header */
+table thead tr th {
+background-color: #f0f6f6;
+position: sticky;
+z-index: 100;
+top: 0;
+}
 </style>
 </head>
 
-<body>
+<body onload="sortTable(document.getElementById('mytable'), 5, -1);">
 
 
 <h1>PlaneFence</h1>
