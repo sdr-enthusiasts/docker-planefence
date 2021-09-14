@@ -381,7 +381,7 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${a:0:4}" != "NATO" ]]
+				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]
                                 then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
