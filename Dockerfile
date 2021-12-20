@@ -45,6 +45,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
+    KEPT_PACKAGES+=(php-cgi) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \

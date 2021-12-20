@@ -37,6 +37,10 @@ GROUP=www-data
 [[ ! -d /var/run/lighttpd ]] &&	install -d -o $OWNER -g $GROUP -m 0750 "/var/run/lighttpd"
 #
 # -----------------------------------------------------------------------------------
+# Enable PHP / FastCGI:
+lighttpd-enable-mod fastcgi fastcgi-php
+#
+# -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:
 #
 $APPPATH -tt -f $CONFIGPATH || exit $?
