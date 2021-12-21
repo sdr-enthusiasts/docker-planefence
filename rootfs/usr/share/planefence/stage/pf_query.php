@@ -31,6 +31,7 @@
 	echo "(C)opyright 2021 by kx1t, available under GPL3 as defined at <a href=https://github.com/kx1t/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
 	echo "</body></html>";
   } else {
+  header('Content-Type: application/json');
 	system("/usr/share/planefence/pf_query.sh " . escapeshellarg($hex) . " " . escapeshellarg($call) . " " . escapeshellarg($start) . " " . escapeshellarg($end) . " file=/usr/share/planefence/html/*.csv | sed 's|$|<br />|'", $return_value );
 	($return_value == 0) or die("#php error returned an error: $return_value");
   }
