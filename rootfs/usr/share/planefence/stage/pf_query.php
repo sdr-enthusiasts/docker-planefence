@@ -32,7 +32,7 @@
 	echo "</body></html>";
   } else {
   header('Content-Type: application/json');
-	system("/usr/share/planefence/pf_query.sh " . escapeshellarg($hex) . " " . escapeshellarg($call) . " " . escapeshellarg($start) . " " . escapeshellarg($end) . " file=/usr/share/planefence/html/*.csv | sed 's|$|<br />|'", $return_value );
+	system("/usr/share/planefence/pf_query.sh " . escapeshellarg($hex) . " " . escapeshellarg($call) . " " . escapeshellarg($start) . " " . escapeshellarg($end) . " file=/usr/share/planefence/html/*.csv", $return_value );
 	($return_value == 0) or die("#php error returned an error: $return_value");
   }
 ?>
