@@ -31,12 +31,13 @@ do
 	[[ "${i:0:6}" == "start=" ]] && start="${i:6}"
 	[[ "${i:0:4}" == "end=" ]] && end="${i:4}"
 	[[ "${i:0:5}" == "file=" ]] && file="${i:5}"
+  [[ "${i:0:5}" == "type=" ]] && output_type="${i:5}"
 done
 
 # If the command line didn't include any valid args, or if the arg is --help or -?, then show them the way:
 if [[ "$hex$call$start$end" == "" ]] || [[ "$file" == "" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
 then
-  echo "Usage: $0 [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>"
+  echo "Usage: $0 [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles> type=csv|json"
   echo "The file argument is always required and at least 1 additional argument is required."
 	echo "The arguments can contain plain text or be a regex that is used with the \`awk\` command."
 	echo ""
@@ -44,7 +45,6 @@ then
 	echo ""
 	echo "For example:"
 	echo "$0 hex=\"^A[DE]\" file=\"*.csv\""
-	echo "<br><br>$0 $@<br>"
   exit 1
 else
 #	echo  Now we get the data and print to the stdout:
@@ -76,8 +76,12 @@ else
 	printf -v h "%s," "${header[@]}"
 	header=${h:0:-1}
 
-	# now AWK the required lines and convert the output to JSON using JQ:
-	printf "$header\n$(awk -F ',' -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)" \
-		| jq -Rs 'split("\n")|map(split(",")|to_entries)|.[0] as $header|.[1:]|map(reduce .[] as $item ({};.[$header[$item.key].value]=$item.value))'
-
+	# now AWK the required lines and optionally convert the output to JSON using JQ:
+  if [[ "$output_type" == "csv" ]]
+  then
+    printf "$header\n$(awk -F ',' -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)"
+  else
+	   printf "$header\n$(awk -F ',' -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)" \
+		   | jq -Rs 'split("\n")|map(split(",")|to_entries)|.[0] as $header|.[1:]|map(reduce .[] as $item ({};.[$header[$item.key].value]=$item.value))'
+  fi
 fi
