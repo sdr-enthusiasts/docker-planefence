@@ -62,7 +62,7 @@ else
 	header[6]="adsbx_link"
 
 	# Next header positions are variable, if they exist at all. We will take the first line of the first file to figure this out
-	read -r LINE <<< $(cat html/*.csv | head -1)
+	read -r LINE <<< $(cat $file | head -1)
 	IFS=, read -ra RECORD <<< "$LINE"
 	[[ "${RECORD[7]:0:1}" == "-" ]] &&  header[7]="audio_peak"
 	[[ "${RECORD[8]:0:1}" == "-" ]] &&  header[8]="audio_1min_avg"
