@@ -79,9 +79,9 @@ else
 	# now AWK the required lines and optionally convert the output to JSON using JQ:
   if [[ "$output_type" == "csv" ]]
   then
-    printf "$header\n$(awk -F ',' -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)"
+    printf "$header\n$(awk -F ',' -v "IGNORECASE=1" -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)"
   else
-	   printf "$header\n$(awk -F ',' -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)" \
+	   printf "$header\n$(awk -F ',' -v "IGNORECASE=1" -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)" \
 		   | jq -Rs 'split("\n")|map(split(",")|to_entries)|.[0] as $header|.[1:]|map(reduce .[] as $item ({};.[$header[$item.key].value]=$item.value))'
   fi
 fi

@@ -77,9 +77,24 @@ In the `docker-compose.yml` file, you should configure the following:
 - You can restart the Planefence container by doing: `pushd /opt/planefence && docker stop planefence && docker-compose up -d && popd`
 
 ## What does it look like when it's running?
-- Planefence build example: https://planefence.ramonk.net
-- Plane-alert build example: https://plane-alert.ramonk.net
+- Planefence deployment example: https://planefence.com/planefence
+- Plane-Alert deployment example: https://planefence.com/plane-alert
 - Planefence tweets: https://twitter.com/planeboston
+
+## API access to your data
+### Introduction
+Planefence and Plane-Alert keep a limited amount of data available. By default, PlaneFence keeps 2 weeks of data around, while Plane-Alert isn't time limited. This data is accessible using a REST interface that makes use of HTTP GET. You can access this API from the directory where your Planefence or Plane-Alert web pages are deployed. For example:
+- If Planefence is available at https://planefence.com/planefence, then you can reach the Planefence API at https://planefence.com/planefence/pf-query.php
+- If Plane-Alert is available at https://planefence.com/plane-alert, then you can reach the Plane-Alert API at https://planefence.com/plane-alert/pa-query.php
+### API parameters and usage examples
+The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Querie arguments are case-insensitive: looking for `n` or for `N` yield the same results.
+Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
+#### Planefence Query parameters
+
+
+
+
+
 
 ## Troubleshooting
 - Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert. This includes the planes table and the heatmap.
