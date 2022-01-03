@@ -42,8 +42,9 @@ fi
 mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 
-cp -n /usr/share/planefence/stage/* /usr/share/planefence/html
+cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
 rm -f /usr/share/planefence/html/planefence.config
+mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
 [[ ! -f /usr/share/planefence/persist/pa-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
 rm -f /usr/share/planefence/html/background.jpg

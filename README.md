@@ -77,9 +77,39 @@ In the `docker-compose.yml` file, you should configure the following:
 - You can restart the Planefence container by doing: `pushd /opt/planefence && docker stop planefence && docker-compose up -d && popd`
 
 ## What does it look like when it's running?
-- Planefence build example: https://planefence.ramonk.net
-- Plane-alert build example: https://plane-alert.ramonk.net
+- Planefence deployment example: https://planefence.com/planefence
+- Plane-Alert deployment example: https://planefence.com/plane-alert
 - Planefence tweets: https://twitter.com/planeboston
+
+## API access to your data
+### Introduction
+Planefence and Plane-Alert keep a limited amount of data available. By default, PlaneFence keeps 2 weeks of data around, while Plane-Alert isn't time limited. This data is accessible using a REST interface that makes use of HTTP GET. You can access this API from the directory where your Planefence or Plane-Alert web pages are deployed. For example:
+- If Planefence is available at https://planefence.com/planefence, then you can reach the Planefence API at https://planefence.com/planefence/pf-query.php
+- If Plane-Alert is available at https://planefence.com/plane-alert, then you can reach the Plane-Alert API at https://planefence.com/plane-alert/pa-query.php
+### API parameters and usage examples
+The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Querie arguments are case-insensitive: looking for `n` or for `N` yield the same results.
+Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
+Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if the entry was tweeted. So make sure to start your `call` query with `^@?` to include both tweeted an non-tweeted calls.
+#### Planefence Query parameters
+| Parameter | Description | Example |
+|---|---|---|
+| `hex` | Hex ID to return | https://planeboston.com/planefence/pf_query.php?hex=^A[AB][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits |
+| `tail` | Call sign (flight number or tail) to return | https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if the entry was tweeted, in which case the `tweet_url` field contains a link to the tweet.) |
+| `start` | Start time, format `yyyy/MM/dd hh:mm:ss` | https://planeboston.com/planefence/pf_query.php?start=2021/12/19.*&type=csv returns all entries that started on Dec 19, 2021. |
+| `end` | End time, format `yyyy/MM/dd hh:mm:ss` | https://planeboston.com/planefence/pf_query.php?end=2021/12/19.*&type=csv returns all entries that ended on Dec 19, 2021. |
+
+#### Plane-Alert Query parameters
+| Parameter | Description | Example |
+|---|---|---|
+| `hex` | Hex ID to return | https://planeboston.com/plane-alert/pa_query.php?hex=^A[EF][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by E or F, followed by 0 or more hexadecimal digits. (Note - this query returns most US military planes!) |
+| `tail` | Tail number of the aircraft | https://planeboston.com/plane-alert/pa_query.php?tail=N14[0-9]NE&type=csv returns any records of which the tail starts with "N14", followed by 1 digit, followed by "NE". |
+| `name` | Aircraft owner's name | https://planeboston.com/plane-alert/pa_query.php?name=%20Life\|%20MedFlight&type=csv returns any records that have " Life" or " MedFlight" in the owner's name. |
+| `equipment` | Equipment make and model | https://planeboston.com/plane-alert/pa_query.php?equipment=EuroCopter returns any records of which the equipment contains the word "EuroCopter" |
+| `timestamp` | Time first seen, format `yyyy/MM/dd hh:mm:ss` | https://planeboston.com/plane-alert/pa_query.php?timestamp=2022/01/03 returns any records from Jan 3, 2022. |
+| `call` | Callsign as reported by aircraft | https://planeboston.com/plane-alert/pa_query.php?call=SAM returns any records of which the callsign contains "SAM". |
+| `lat` | Latitude first observation, in decimal degrees | https://planeboston.com/plane-alert/pa_query.php?lat=^43 returns any records of which the latitude starts with "43" (i.e., 43 deg N) |
+| `lon` | Longitude first observation, in decimal degrees | https://planeboston.com/plane-alert/pa_query.php?lon=^-68 returns any records of which the longitude starts with "-68" (i.e., 68 deg W) |
+
 
 ## Troubleshooting
 - Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert. This includes the planes table and the heatmap.
