@@ -39,6 +39,9 @@ def load_alerts(alerts_file):
     with open(alerts_file) as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
+            # Skip header
+            if len(row) < 10:
+                continue
             # CSV format is:
             #      ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
             alerts.append({
@@ -58,11 +61,11 @@ def load_alerts(alerts_file):
 
 
 def main():
-    if len(sys.argv) != 1:
+    if len(sys.argv) != 2:
         print("No input file passed\n\tUsage: ./send-discord-alert.py <inputfile>")
         sys.exit(1)
 
-    input_file = sys.argv[0]
+    input_file = sys.argv[1]
     token = os.getenv('DISCORD_TOKEN')
     server_id = int(os.getenv('DISCORD_SERVER_ID', 0))
     channel_id = int(os.getenv('DISCORD_CHANNEL_ID', 0))
@@ -82,6 +85,8 @@ def main():
         sys.exit(1)
 
     print(f"Server: {server_id}, Channel: {channel_id}")
+
+    # TODO: Move alert generation out here.
 
     @client.event
     async def on_ready():
@@ -104,7 +109,8 @@ def main():
 
             embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
 
-            # Get a screenshot to attach
+            # Get a screenshot to attach if configured
+            screenshot = None
             tmp = None
             if screenshot_url is not None:
                 print(f"Getting Screenshot for {plane['icao']}...")
@@ -116,9 +122,14 @@ def main():
                         snap_response.raw.decode_content = True
                         shutil.copyfileobj(snap_response.raw, f)
 
-            screenshot = discord.File(tmp.name)
+                        screenshot = discord.File(tmp.name)
+
+            # Send the message
             await channel.send(embed=embed, file=screenshot)
-            tmp.close()
+
+            # Cleanup
+            if tmp is not None:
+                tmp.close()
 
         await client.close()
 
