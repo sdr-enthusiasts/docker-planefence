@@ -291,7 +291,7 @@ then
   # Send Discord alerts if that's enabled
   if [[ "$DISCORD" != "false" ]]
   then
-    python3 send-discord-alert.py /tmp/pa-diff.csv
+    python3 $PLANEALERTDIR/send-discord-alert.py /tmp/pa-diff.csv
   fi
 
   # Send Twitter alerts if that's enabled
