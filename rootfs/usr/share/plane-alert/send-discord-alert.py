@@ -34,6 +34,12 @@ import discord
 import requests
 
 
+def testmsg(msg):
+    if os.getenv('TESTING') == 'true':
+        print(msg)
+
+
+# Read the alerts in the input file
 def load_alerts(alerts_file):
     alerts = []
     with open(alerts_file) as csvfile:
@@ -57,10 +63,13 @@ def load_alerts(alerts_file):
                 "adsbx_url": row[9],
                 "squawk": row[10]
             })
+
+    testmsg(f"Loaded {len(alerts)} alerts")
     return alerts
 
 
 def main():
+    # Load configuration
     if len(sys.argv) != 2:
         print("No input file passed\n\tUsage: ./send-discord-alert.py <inputfile>")
         sys.exit(1)
@@ -70,8 +79,8 @@ def main():
     server_id = int(os.getenv('DISCORD_SERVER_ID', 0))
     channel_id = int(os.getenv('DISCORD_CHANNEL_ID', 0))
     screenshot_url = os.getenv('SCREENSHOTURL')
-    client = discord.Client()
 
+    # Validate configuration
     if token is None:
         print("Missing DISCORD_TOKEN")
         sys.exit(1)
@@ -84,20 +93,21 @@ def main():
         print("Missing DISCORD_CHANNEL_ID")
         sys.exit(1)
 
-    print(f"Server: {server_id}, Channel: {channel_id}")
-
     # TODO: Move alert generation out here.
+
+    # Set up the Discord client
+    client = discord.Client()
 
     @client.event
     async def on_ready():
-        guild = discord.utils.get(client.guilds, id=server_id)
+        server = discord.utils.get(client.guilds, id=server_id)
 
-        print(f"{client.user.name} has connected to {guild.name}")
-        channel = guild.get_channel(channel_id)
+        testmsg(f"{client.user.name} has connected to {server.name}")
+        channel = server.get_channel(channel_id)
 
         alerts = load_alerts(input_file)
         for plane in alerts:
-
+            # Build the Embed object with the sighting details
             embed = discord.Embed(title=f"Plane Alert - {plane['plane_desc']}", color=0x007bff, description=f"[Tracking Link]({plane['adsbx_url']})")
             embed.add_field(name="ICAO", value=f"{plane['icao']}", inline=True)
             embed.add_field(name="Tail Number", value=f"{plane['tail_num']}", inline=True)
@@ -113,9 +123,9 @@ def main():
             screenshot = None
             tmp = None
             if screenshot_url is not None:
-                print(f"Getting Screenshot for {plane['icao']}...")
+                testmsg(f"Getting Screenshot for {plane['icao']}...")
                 snap_response = requests.get(f"{screenshot_url}/snap/{plane['icao']}", stream=True, timeout=45.0)
-                print("Screenshot Got!")
+                testmsg("Screenshot Got!")
                 if snap_response.status_code == 200:
                     tmp = tempfile.NamedTemporaryFile(suffix=".png")
                     with open(tmp.name, 'wb') as f:
@@ -123,6 +133,7 @@ def main():
                         shutil.copyfileobj(snap_response.raw, f)
 
                         screenshot = discord.File(tmp.name)
+                    testmsg(f"Screenshot written to {tmp.name}")
 
             # Send the message
             await channel.send(embed=embed, file=screenshot)
@@ -133,6 +144,7 @@ def main():
 
         await client.close()
 
+    # Connect to Discord and send the messages
     client.run(token)
 
     print(f"Done sending alerts to Discord")
