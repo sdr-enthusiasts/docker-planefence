@@ -45,8 +45,8 @@ def load_alerts(alerts_file):
     with open(alerts_file) as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            # Skip header
-            if len(row) < 10:
+            # Skip header and invalid lines
+            if len(row) < 10 or row[0].startswith("#"):
                 continue
             # CSV format is:
             #      ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
@@ -61,7 +61,7 @@ def load_alerts(alerts_file):
                 "long": row[7],
                 "callsign": row[8],
                 "adsbx_url": row[9],
-                "squawk": row[10]
+                "squawk": row[10] if len(row) > 10 else ""
             })
 
     testmsg(f"Loaded {len(alerts)} alerts")
@@ -97,52 +97,55 @@ def main():
 
     # Set up the Discord client
     client = discord.Client()
+    alerts = load_alerts(input_file)
 
     @client.event
     async def on_ready():
         server = discord.utils.get(client.guilds, id=server_id)
-
-        testmsg(f"{client.user.name} has connected to {server.name}")
         channel = server.get_channel(channel_id)
 
-        alerts = load_alerts(input_file)
-        for plane in alerts:
-            # Build the Embed object with the sighting details
-            embed = discord.Embed(title=f"Plane Alert - {plane['plane_desc']}", color=0x007bff, description=f"[Tracking Link]({plane['adsbx_url']})")
-            embed.add_field(name="ICAO", value=f"{plane['icao']}", inline=True)
-            embed.add_field(name="Tail Number", value=f"{plane['tail_num']}", inline=True)
-            embed.add_field(name="Callsign", value=f"{plane['callsign']}", inline=True)
-            embed.add_field(name="Owner", value=f"{plane['owner']}", inline=True)
-            embed.add_field(name="Seen At", value=f"{plane['date']} {plane['time']}", inline=True)
-            if plane.get('squawk', "") != "":
-                embed.add_field(name="Squawk", value=f"{plane['squawk']}", inline=True)
+        testmsg(f"{client.user.name} has connected to {server.name}")
 
-            embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
+        try:
+            for plane in alerts:
+                # Build the Embed object with the sighting details
+                embed = discord.Embed(title=f"Plane Alert - {plane['plane_desc']}", color=0x007bff, description=f"[Tracking Link]({plane['adsbx_url']})")
+                embed.add_field(name="ICAO", value=f"{plane['icao']}", inline=True)
+                embed.add_field(name="Tail Number", value=f"{plane['tail_num']}", inline=True)
+                if plane.get('callsign', "") != "":
+                    embed.add_field(name="Callsign", value=f"{plane['callsign']}", inline=True)
+                if plane.get('owner', "") != "":
+                    embed.add_field(name="Owner", value=f"{plane['owner']}", inline=True)
+                embed.add_field(name="Seen At", value=f"{plane['date']} {plane['time']}", inline=True)
+                if plane.get('squawk', "") != "":
+                    embed.add_field(name="Squawk", value=f"{plane['squawk']}", inline=True)
 
-            # Get a screenshot to attach if configured
-            screenshot = None
-            tmp = None
-            if screenshot_url is not None:
-                testmsg(f"Getting Screenshot for {plane['icao']}...")
-                snap_response = requests.get(f"{screenshot_url}/snap/{plane['icao']}", stream=True, timeout=45.0)
-                testmsg("Screenshot Got!")
-                if snap_response.status_code == 200:
-                    tmp = tempfile.NamedTemporaryFile(suffix=".png")
-                    with open(tmp.name, 'wb') as f:
-                        snap_response.raw.decode_content = True
-                        shutil.copyfileobj(snap_response.raw, f)
+                embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
 
-                        screenshot = discord.File(tmp.name)
-                    testmsg(f"Screenshot written to {tmp.name}")
+                # Get a screenshot to attach if configured
+                screenshot = None
+                tmp = None
+                if screenshot_url is not None:
+                    testmsg(f"Getting Screenshot for {plane['icao']}...")
+                    snap_response = requests.get(f"{screenshot_url}/snap/{plane['icao']}", stream=True, timeout=45.0)
+                    testmsg("Screenshot Got!")
+                    if snap_response.status_code == 200:
+                        tmp = tempfile.NamedTemporaryFile(suffix=".png")
+                        with open(tmp.name, 'wb') as f:
+                            snap_response.raw.decode_content = True
+                            shutil.copyfileobj(snap_response.raw, f)
 
-            # Send the message
-            await channel.send(embed=embed, file=screenshot)
+                            screenshot = discord.File(tmp.name)
+                        testmsg(f"Screenshot written to {tmp.name}")
 
-            # Cleanup
-            if tmp is not None:
-                tmp.close()
+                # Send the message
+                await channel.send(embed=embed, file=screenshot)
 
-        await client.close()
+                # Cleanup
+                if tmp is not None:
+                    tmp.close()
+        finally:
+            await client.close()
 
     # Connect to Discord and send the messages
     client.run(token)
