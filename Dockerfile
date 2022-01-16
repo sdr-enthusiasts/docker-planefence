@@ -11,6 +11,7 @@ RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
     KEPT_PIP_PACKAGES=() && \
+    KEPT_PIP3_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
     # Required for building multiple packages.
     TEMP_PACKAGES+=(pkg-config) && \
@@ -46,7 +47,11 @@ RUN set -x && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
+    KEPT_PACKAGES+=(python3) && \
+    KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
+    KEPT_PIP3_PACKAGES+=(discord) && \
+    KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \
 #
@@ -55,6 +60,7 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests\
         pkg-config ${KEPT_PACKAGES[@]}&& \
     pip install ${KEPT_PIP_PACKAGES[@]} && \
+    pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
     gem install twurl
 
 # Copy needs to be here to prevent github actions from failing.
