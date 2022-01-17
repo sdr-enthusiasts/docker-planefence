@@ -64,12 +64,13 @@ def load_alerts(alerts_file):
             }
             alerts.append(alert)
 
-    pf.testmsg(f"Loaded {len(alerts)} alerts")
+    pf.log(f"Loaded {len(alerts)} fence alerts")
     return alerts
 
 
 async def process_alerts(config, channel, alerts):
     for plane in alerts:
+        pf.log(f"Building discord message for {plane['icao']}")
         # Build the Embed object with the sighting details
         embed = discord.Embed(title=f"Plane Fence", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
         embed.add_field(name="ICAO", value=plane['icao'], inline=True)
@@ -86,10 +87,6 @@ async def process_alerts(config, channel, alerts):
 
         # Send the message
         await channel.send(embed=embed, file=screenshot)
-
-        # Cleanup
-        if tmp is not None:
-            tmp.close()
 
 
 def main():

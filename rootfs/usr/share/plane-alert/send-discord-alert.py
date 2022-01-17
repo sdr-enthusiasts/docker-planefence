@@ -58,7 +58,7 @@ def load_alerts(alerts_file):
                 "squawk": row[10] if len(row) > 10 else ""
             })
 
-    pf.testmsg(f"Loaded {len(alerts)} alerts")
+    pf.log(f"Loaded {len(alerts)} alerts")
     return alerts
 
 
@@ -85,10 +85,6 @@ async def process_alerts(config, channel, alerts):
 
         # Send the message
         await channel.send(embed=embed, file=screenshot)
-
-        # Cleanup
-        if tmp is not None:
-            tmp.close()
 
 
 def main():

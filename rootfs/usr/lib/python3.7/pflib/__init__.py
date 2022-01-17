@@ -1,4 +1,4 @@
-# Python3 module of functions for Plane Fence and Plane Alert
+# Python3 module of utilities for Plane Fence and Plane Alert
 #
 # Copyright 2022 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -59,7 +59,7 @@ def load_discord_config():
         "channel_id": int(os.getenv("DISCORD_CHANNEL_ID", 0)),  # TODO: Safer conversion
         "screenshot_url": os.getenv("SCREENSHOTURL")
     }
-    
+
     # Validate configuration
     if config["token"] is None:
         log("Missing DISCORD_TOKEN")
@@ -93,9 +93,11 @@ def run_client(callback, *cbargs):
         log(f"{client.user.name} has connected to {server.name}")
 
         try:
-            callback(config, channel, *cbargs)
+            await callback(config, channel, *cbargs)
         finally:
             await client.close()
+
+    client.run(config['token'])
 
 
 def get_screenshot_file(config, icao):
