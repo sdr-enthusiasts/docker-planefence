@@ -1,6 +1,6 @@
 #!/bin/bash
-# PLANETWEET - a Bash shell script to render heatmaps from modified sock30003
-# heatmap data
+# PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
+# user-defined fence area.
 #
 # Usage: ./planetweet.sh
 #
@@ -49,6 +49,7 @@ CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
 VERBOSE=1
 CSVTMP=/tmp/planetweet2-tmp.csv
+DISCORDTMP=/tmp/plantweet-discord.tmp
 PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
@@ -202,6 +203,12 @@ then
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
+      # Wedge the Discord integration in here so it doesn't have to worry about state management
+      # TODO: If config value
+      # Output the current record to a temp csv
+      ( IFS=','; echo "${RECORD[*]}" > "$DISCORDTMP" )
+      python3 $PLANEFENCEDIR/send-discord-alert.py $DISCORDTMP
+      rm $DISCORDTMP
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
