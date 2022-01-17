@@ -26,11 +26,11 @@
 # If not, see https://www.gnu.org/licenses/.
 
 import sys
-import pflib as pf
-
 import csv
 
 import discord
+import pflib as pf
+pf.init_pf.log("plane-alert/send-discord-alert")
 
 
 # Read the alerts in the input file
@@ -64,6 +64,7 @@ def load_alerts(alerts_file):
 
 async def process_alerts(config, channel, alerts):
     for plane in alerts:
+        pf.log(f"Building Discord alert for {icao}")
         # Build the Embed object with the sighting details
         embed = discord.Embed(title=f"Plane Alert - {plane['plane_desc']}", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
         embed.add_field(name="ICAO", value=f"{plane['icao']}", inline=True)
@@ -96,7 +97,7 @@ def main():
     input_file = sys.argv[1]
     alerts = load_alerts(input_file)
 
-    pf.run_client(process_alerts, alerts)
+    pf.connect_discord(process_alerts, alerts)
 
     pf.log(f"Done sending alerts to Discord")
 

@@ -26,12 +26,12 @@
 # If not, see https://www.gnu.org/licenses/.
 
 import sys
-import pflib as pf
+import csv
 from datetime import date
 
-import csv
-
 import discord
+import pflib as pf
+pf.init_log("planefence/send-discord-alert")
 
 # Dev Notes:
 # Plane Alert DB contains mapping of ICAO code to tags: /usr/share/planefence/persist/plane-alert-db.txt
@@ -41,7 +41,6 @@ import discord
 # ICAO,Registration,FirstSeen,LastSeen,Alt,MinDist,adsbx_url,,,,,,tweet_url
 #         Fields after adsbx_url are optional
 #   If FlightNum has an @ prefixing the number it was tweeted
-
 
 # Read the alerts in the input file
 def load_alerts(alerts_file):
@@ -64,13 +63,13 @@ def load_alerts(alerts_file):
             }
             alerts.append(alert)
 
-    pf.log(f"Loaded {len(alerts)} fence alerts")
+    log(f"Loaded {len(alerts)} fence alerts")
     return alerts
 
 
 async def process_alerts(config, channel, alerts):
     for plane in alerts:
-        pf.log(f"Building discord message for {plane['icao']}")
+        log(f"Building discord message for {plane['icao']}")
         # Build the Embed object with the sighting details
         embed = discord.Embed(title=f"Plane Fence", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
         embed.add_field(name="ICAO", value=plane['icao'], inline=True)
@@ -98,9 +97,9 @@ def main():
     input_file = sys.argv[1]
     alerts = load_alerts(input_file)
 
-    pf.run_client(process_alerts, alerts)
+    pf.connect_discord(process_alerts, alerts)
 
-    pf.log(f"Done sending alerts to Discord")
+    log(f"Done sending alerts to Discord")
 
 
 if __name__ == "__main__":

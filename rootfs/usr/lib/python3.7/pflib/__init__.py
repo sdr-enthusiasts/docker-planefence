@@ -37,11 +37,18 @@ def testmsg(msg):
     if os.getenv("TESTING") == "true":
         print(msg)
 
+# Initialize a 'log' variable for scripts to use
+# Call `pflib.initlog("system_name")` to set a custom system name
+log = None
 
-def log(msg):
-    # TODO: Setup proper logging
-    print(msg)
+def initlog(system):
+    def systemlog(msg):
+        timestamp = datetime.now().strftime('%c')
+        print(f"[{system}][{timestamp}] {msg})
+    global log = systemlog
 
+# Initialize a fallback logger incase the caller forgets to call initlog
+log = initlog("pflib/client")
 
 def load_discord_config():
     """
@@ -76,8 +83,11 @@ def load_discord_config():
     return config
 
 
-def run_client(callback, *cbargs):
+def connect_discord(callback, *cbargs):
     """
+    Connects to Discord and calls the passed-in callback.
+    After the callback completes the connection to Discord is closed.
+
     :param callback: function(config, channel, ...)
     :param cbargs: Any arguments that you want passed in to the callback.
     :return: None
@@ -101,7 +111,7 @@ def run_client(callback, *cbargs):
 
 
 def get_screenshot_file(config, icao):
-    testmsg(f"Getting Screenshot for {icao}...")
+    log(f"Getting Screenshot for {icao}...")
     snap_response = requests.get(f"{config['screenshot_url']}/snap/{icao}", stream=True, timeout=45.0)
     testmsg("Screenshot Got!")
 
@@ -111,7 +121,7 @@ def get_screenshot_file(config, icao):
             snap_response.raw.decode_content = True
             shutil.copyfileobj(snap_response.raw, f)
 
-        testmsg(f"Screenshot written to {tmp.name}")
+        log(f"Screenshot for {icao} written to {tmp.name}")
         return discord.File(tmp.name)
     else:
         log(f"[Error] - Non-200 response from screenshot container: {snap_response.status_code}")

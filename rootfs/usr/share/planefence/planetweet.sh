@@ -207,7 +207,8 @@ then
       # TODO: If config value
       # Output the current record to a temp csv
       ( IFS=','; echo "${RECORD[*]}" > "$DISCORDTMP" )
-      python3 $PLANEFENCEDIR/send-discord-alert.py $DISCORDTMP
+      # TODO: Figure out a better way to get the screenshot URL to the script
+      SCREENSHOTURL=$SCREENSHOTURL python3 $PLANEFENCEDIR/send-discord-alert.py $DISCORDTMP
       rm $DISCORDTMP
 
 			# And now, let's tweet!
