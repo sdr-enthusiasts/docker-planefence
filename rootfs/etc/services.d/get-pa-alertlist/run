@@ -22,7 +22,7 @@ APPNAME="$(hostname)/get-pa-alertlist"
 # These packages may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 
-LOOPTIME=15m
+LOOPTIME=6h
 
 # Now let's wait a bit on the initial run to ensure that start_planefence is deployed and has finished calling prep-planefence.sh
 # this ensures that the ALERTLIST parameter in /usr/share/plane-alert/plane-alert.conf is populated
