@@ -31,16 +31,8 @@ from datetime import date
 
 import discord
 import pflib as pf
-pf.init_log("planefence/send-discord-alert")
+log = pf.init_log("planefence/send-discord-alert")
 
-# Dev Notes:
-# Plane Alert DB contains mapping of ICAO code to tags: /usr/share/planefence/persist/plane-alert-db.txt
-# Seems the input files are in: /usr/share/planefence/html
-#   A new file every day named: planefence-yymmdd.csv
-# Format:
-# ICAO,Registration,FirstSeen,LastSeen,Alt,MinDist,adsbx_url,,,,,,tweet_url
-#         Fields after adsbx_url are optional
-#   If FlightNum has an @ prefixing the number it was tweeted
 
 # Read the alerts in the input file
 def load_alerts(alerts_file):
@@ -69,10 +61,15 @@ def load_alerts(alerts_file):
 
 async def process_alerts(config, channel, alerts):
     for plane in alerts:
-        log(f"Building discord message for {plane['icao']}")
+        icao = plane['icao'].removeprefix('@')
+        log(f"Building discord message for {icao}")
+
+        dbinfo = pf.get_plane_info(icao)
+        print(f"DEBUG PLANEDB INFO: {dbinfo}")
+
         # Build the Embed object with the sighting details
         embed = discord.Embed(title=f"Plane Fence", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
-        embed.add_field(name="ICAO", value=plane['icao'], inline=True)
+        embed.add_field(name="ICAO", value=icao, inline=True)
         embed.add_field(name="Tail Number", value=plane['tail_num'], inline=True)
         embed.add_field(name="First Seen", value=plane['first_seen'], inline=True)
         embed.add_field(name="Last Seen", value=plane['last_seen'], inline=True)

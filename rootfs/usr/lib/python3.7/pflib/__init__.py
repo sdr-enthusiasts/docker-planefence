@@ -24,9 +24,12 @@
 import os
 import tempfile
 import shutil
+from datetime import datetime
+import csv
 
 import discord
 import requests
+
 
 
 class InvalidConfigException(Exception):
@@ -37,18 +40,19 @@ def testmsg(msg):
     if os.getenv("TESTING") == "true":
         print(msg)
 
-# Initialize a 'log' variable for scripts to use
-# Call `pflib.initlog("system_name")` to set a custom system name
-log = None
 
-def initlog(system):
+def init_log(system):
+    global log
+
     def systemlog(msg):
         timestamp = datetime.now().strftime('%c')
-        print(f"[{system}][{timestamp}] {msg})
-    global log = systemlog
+        print(f"[{system}][{timestamp}] {msg}")
+    log = systemlog
 
-# Initialize a fallback logger incase the caller forgets to call initlog
-log = initlog("pflib/client")
+
+# Global variables
+planedb = {}
+
 
 def load_discord_config():
     """
@@ -64,7 +68,8 @@ def load_discord_config():
         "token": os.getenv("DISCORD_TOKEN"),
         "server_id": int(os.getenv("DISCORD_SERVER_ID", 0)),  # TODO: Safer conversion 
         "channel_id": int(os.getenv("DISCORD_CHANNEL_ID", 0)),  # TODO: Safer conversion
-        "screenshot_url": os.getenv("SCREENSHOTURL")
+        "screenshot_url": os.getenv("SCREENSHOTURL"),
+        "planefile": os.getenv("PLANEFILE", '/usr/share/planefence/persist/.internal/plane-alert-db.txt')
     }
 
     # Validate configuration
@@ -79,6 +84,8 @@ def load_discord_config():
     if config["channel_id"] == 0:
         log("Missing DISCORD_CHANNEL_ID")
         raise InvalidConfigException
+
+    load_planefile()
 
     return config
 
@@ -126,3 +133,39 @@ def get_screenshot_file(config, icao):
     else:
         log(f"[Error] - Non-200 response from screenshot container: {snap_response.status_code}")
         return None
+
+
+def load_planefile(config):
+    global planedb
+
+    planedb = {}
+    with open(config['planefile']) as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            #  $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link
+            # Example line:
+            #  A51316,N426NA,NASA,Lockheed P-3B Orion,P3,Gov,Sce To Aux,Airborne Science,Wallops Flight Facility,Distinctive,https://www.nasa.gov
+            # Skip header and invalid lines
+            if row[0].startswith("#"):
+                continue
+
+            plane = {
+                "icao": row[0],
+                "tail_num": row[1],
+                "owner": row[2],
+                "type": row[3],
+                "icao_type": row[4],
+                "authority": row[5],
+                "tag1": row[6],
+                "tag2": row[7],
+                "tag3": row[8],
+                "category": row[9],
+                "link": row[10] if len(row) > 10 else ""
+            }
+            planedb[plane["icao"]] = plane
+
+    log(f"Loaded {len(planedb)} entries into plane-db")
+
+
+def get_plane_info(icao):
+    return planedb.get(icao, {})
