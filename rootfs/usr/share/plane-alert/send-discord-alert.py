@@ -28,9 +28,7 @@
 import sys
 import csv
 
-import discord
 import pflib as pf
-pf.init_log("plane-alert/send-discord-alert")
 
 
 # Read the alerts in the input file
@@ -55,7 +53,7 @@ def load_alerts(alerts_file):
                 "long": row[7],
                 "callsign": row[8],
                 "adsbx_url": row[9],
-                "squawk": row[10] if len(row) > 10 else ""
+                "squawk": row[10] if len(row) > 10 else "",
             })
 
     pf.log(f"Loaded {len(alerts)} alerts")
@@ -65,19 +63,44 @@ def load_alerts(alerts_file):
 async def process_alerts(config, channel, alerts):
     for plane in alerts:
         pf.log(f"Building Discord alert for {plane['icao']}")
-        # Build the Embed object with the sighting details
-        embed = discord.Embed(title=f"Plane Alert - {plane['plane_desc']}", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
-        embed.add_field(name="ICAO", value=f"{plane['icao']}", inline=True)
-        embed.add_field(name="Tail Number", value=f"{plane['tail_num']}", inline=True)
-        if plane.get('callsign', "") != "":
-            embed.add_field(name="Callsign", value=f"{plane['callsign']}", inline=True)
-        if plane.get('owner', "") != "":
-            embed.add_field(name="Owner", value=f"{plane['owner']}", inline=True)
-        embed.add_field(name="Seen At", value=f"{plane['date']} {plane['time']}", inline=True)
-        if plane.get('squawk', "") != "":
-            embed.add_field(name="Squawk", value=f"{plane['squawk']}", inline=True)
 
-        embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
+        dbinfo = pf.get_plane_info(plane['icao'])
+
+        title = f"Plane Alert - {plane['plane_desc']}"
+        color = 0xf2e718
+        squawk = plane.get('squawk', "")
+        if squawk in ('7700', '7600', '7500'):
+            title = f"Emergency! {plane['tail_num']} squawked {squawk}"
+            color = 0xff0000
+
+        description = f""
+        if plane.get('owner', "") != "":
+            description = f"Operated by {plane.get('owner')}"
+        description += f"\n[Track on ADS-B Exchange]({plane['adsbx_url']})"
+
+        embed = pf.embed.build(title, description, color=color)
+
+        # Attach data fields
+        pf.embed.field(embed, "ICAO", plane['icao'])
+        pf.embed.field(embed, "Tail Number", plane['tail_num'])
+
+        if plane.get('callsign', "") != "":
+            pf.embed.field(embed, "Callsign", plane['callsign'])
+
+        if dbinfo.get('category', "") != "":
+            pf.embed.field(embed, "Category", dbinfo['category'])
+
+        if dbinfo.get('tag1', "") != "":
+            pf.embed.field(embed, "Tag", dbinfo['tag1'])
+
+        if dbinfo.get('tag2', "") != "":
+            pf.embed.field(embed, "Tag", dbinfo['tag2'])
+
+        if dbinfo.get('tag3', "") != "":
+            pf.embed.field(embed, "Tag", dbinfo['tag3'])
+
+        if dbinfo.get('link', "") != "":
+            pf.embed.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
         # Get a screenshot to attach if configured
         screenshot = None
@@ -89,6 +112,8 @@ async def process_alerts(config, channel, alerts):
 
 
 def main():
+    pf.init_log("plane-alert/send-discord-alert")
+
     # Load configuration
     if len(sys.argv) != 2:
         print("No input file passed\n\tUsage: ./send-discord-alert.py <inputfile>")

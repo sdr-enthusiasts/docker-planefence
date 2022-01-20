@@ -30,6 +30,7 @@ import csv
 import discord
 import requests
 
+from pflib import embed
 
 
 class InvalidConfigException(Exception):
@@ -51,6 +52,7 @@ def init_log(system):
 
 
 # Global variables
+log = None
 planedb = {}
 
 
@@ -85,7 +87,7 @@ def load_discord_config():
         log("Missing DISCORD_CHANNEL_ID")
         raise InvalidConfigException
 
-    load_planefile()
+    load_planefile(config)
 
     return config
 

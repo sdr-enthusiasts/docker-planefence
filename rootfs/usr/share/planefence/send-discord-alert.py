@@ -31,7 +31,6 @@ from datetime import date
 
 import discord
 import pflib as pf
-log = pf.init_log("planefence/send-discord-alert")
 
 
 # Read the alerts in the input file
@@ -55,48 +54,62 @@ def load_alerts(alerts_file):
             }
             alerts.append(alert)
 
-    log(f"Loaded {len(alerts)} fence alerts")
+    pf.log(f"Loaded {len(alerts)} fence alerts")
     return alerts
 
 
-async def process_alerts(config, channel, alerts):
-    for plane in alerts:
-        icao = plane['icao'].removeprefix('@')
-        log(f"Building discord message for {icao}")
+async def process_alert(config, channel, plane):
+    pf.log(f"Building discord message for {plane['icao']}")
 
-        dbinfo = pf.get_plane_info(icao)
-        print(f"DEBUG PLANEDB INFO: {dbinfo}")
+    name = plane['tail_num']
+    if plane["airline"] != "":
+        name = plane['airline']
 
-        # Build the Embed object with the sighting details
-        embed = discord.Embed(title=f"Plane Fence", color=0x007bff, description=f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
-        embed.add_field(name="ICAO", value=icao, inline=True)
-        embed.add_field(name="Tail Number", value=plane['tail_num'], inline=True)
-        embed.add_field(name="First Seen", value=plane['first_seen'], inline=True)
-        embed.add_field(name="Last Seen", value=plane['last_seen'], inline=True)
+    altstr = "{:,}".format(int(plane['alt'])) # TODO: Safer conversion
 
-        embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
+    embed = pf.embed.build(
+        f"{name} is overhead at {altstr} MSL",
+        f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
-        # Get a screenshot to attach if configured
-        screenshot = None
-        if config['screenshot_url'] is not None:
-            screenshot = pf.get_screenshot_file(config, plane['icao'])
+    # Attach data fields
+    pf.embed.field(embed, "ICAO", plane['icao'])
+    if plane["airline"] != "":
+        pf.embed.field(embed, "Tail Number", plane['tail_num'])
+    pf.embed.field(embed, "Distance", f"{plane['min_dist']}nm")  # TODO: DISTUNIT
+    pf.embed.field(embed, "First Seen", plane['first_seen'].split(" ")[1])
 
-        # Send the message
-        await channel.send(embed=embed, file=screenshot)
+    # Get a screenshot to attach if configured
+    screenshot = None
+    if config['screenshot_url'] is not None:
+        screenshot = pf.get_screenshot_file(config, plane['icao'])
+
+    # Send the message
+    await channel.send(embed=embed, file=screenshot)
 
 
 def main():
+    pf.init_log("planefence/send-discord-alert")
+
     # Load configuration
-    if len(sys.argv) != 2:
-        print("No input file passed\n\tUsage: ./send-discord-alert.py <inputfile>")
+    if len(sys.argv) < 2:
+        print("No input file passed\n\tUsage: ./send-discord-alert.py <csvline> <airline?>")
         sys.exit(1)
 
-    input_file = sys.argv[1]
-    alerts = load_alerts(input_file)
+    record = sys.argv[1].split(',')
 
-    pf.connect_discord(process_alerts, alerts)
+    alert = {
+        "icao": record[0],
+        "tail_num": record[1].lstrip("@"),
+        "first_seen": record[2],
+        "last_seen": record[3],
+        "alt": record[4],
+        "min_dist": record[5],
+        "adsbx_url": record[6],
+        "airline": sys.argv[2] if len(sys.argv) == 3 else ""
+    }
+    pf.connect_discord(process_alert, alert)
 
-    log(f"Done sending alerts to Discord")
+    pf.log(f"Done sending alerts to Discord")
 
 
 if __name__ == "__main__":

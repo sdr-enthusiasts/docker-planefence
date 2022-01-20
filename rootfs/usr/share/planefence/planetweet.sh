@@ -49,7 +49,6 @@ CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
 VERBOSE=1
 CSVTMP=/tmp/planetweet2-tmp.csv
-DISCORDTMP=/tmp/plantweet-discord.tmp
 PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
@@ -158,8 +157,9 @@ then
 		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeter^ ...or...                     ^$TWEETEVERY is true^
 		then
 
+			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
 			AIRLINETAG="#"
-			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} | tr -d '[:space:]-')"
+			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
 
 			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
 			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
@@ -203,13 +203,9 @@ then
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
-      # Wedge the Discord integration in here so it doesn't have to worry about state management
+      # Inject the Discord integration in here so it doesn't have to worry about state management
       # TODO: If config value
-      # Output the current record to a temp csv
-      ( IFS=','; echo "${RECORD[*]}" > "$DISCORDTMP" )
-      # TODO: Figure out a better way to get the screenshot URL to the script
-      SCREENSHOTURL=$SCREENSHOTURL python3 $PLANEFENCEDIR/send-discord-alert.py $DISCORDTMP
-      rm $DISCORDTMP
+      python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
