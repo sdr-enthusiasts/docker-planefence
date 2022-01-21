@@ -297,147 +297,75 @@ then
 	# Send Twitter alerts if that's enabled
 	if [[ "$TWITTER" != "false" ]]
 	then
-		# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
-		ERRORCOUNT=0
-		while IFS= read -r line
+	# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
+	ERRORCOUNT=0
+	while IFS= read -r line
+	do
+		XX=$(echo -n $line | tr -d '[:cntrl:]')
+		line=$XX
+
+		unset pa_record
+		IFS=',' read -ra pa_record <<< "$line"
+
+		[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
+
+		ICAO="${pa_record[0]}"
+		# add a hashtag to the item if needed:
+		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
+
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
+		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
+		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
+
+		# First build the text of the tweet: reminder:
+		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
+		# 8-callsign,9-adsbx_url,10-squawk
+
+		TWITTEXT="#PlaneAlert "
+		TWITTEXT+="ICAO: ${pa_record[0]} "
+		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
+		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
+		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
+
+		PLANELINE="${ALERT_DICT["${ICAO}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+		# Add any hashtags:
+		for i in {4..10}
 		do
-			XX=$(echo -n $line | tr -d '[:cntrl:]')
-			line=$XX
-
-			unset pa_record
-			IFS=',' read -ra pa_record <<< "$line"
-
-			[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
-
-			ICAO="${pa_record[0]}"
-			# add a hashtag to the item if needed:
-			[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
-
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
-			[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
-			[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
-			[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
-
-			# First build the text of the tweet: reminder:
-			# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
-			# 8-callsign,9-adsbx_url,10-squawk
-
-			TWITTEXT="#PlaneAlert "
-			TWITTEXT+="ICAO: ${pa_record[0]} "
-			[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
-			[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
-			[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
-			[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
-			TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-			TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
-
-			PLANELINE="${ALERT_DICT["${ICAO}"]}"
-			IFS="," read -ra TAGLINE <<< "$PLANELINE"
-			# Add any hashtags:
-			for i in {4..10}
-			do
-				(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-				if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
+			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
+			then
+				tag="${TAGLINE[i]}"
+				if [[ "${tag:0:4}" == "http" ]]
 				then
-					tag="${TAGLINE[i]}"
-					if [[ "${tag:0:4}" == "http" ]]
-					then
-						TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
-					elif [[ "$tag" != "" ]]
-					then
-						TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
-					fi
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
+				elif [[ "$tag" != "" ]]
+				then
+					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
 				fi
-			done
+			fi
+		done
 
-			TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
-			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
-			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
+		[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
+		[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
 
 
-			if [[ "$TWITTER" == "DM" ]]
-			then
-				# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
-				while IFS= read -r twitterid
-				do
-					# tweet and add the processed output to $result:
-					[[ "$TESTING" == "true" ]] && echo
-					echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
-					[[ "$twitterid" == "" ]] && continue
-
-					# Get a screenshot if there\'s one available!
-					rm -f /tmp/pasnapshot.png
-					TWIMG="false"
-					if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
-					then
-						# If the curl call succeeded, we have a snapshot.png file saved!
-						TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-						#else
-						# this entire ELSE statement is test code and should be removed
-						#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-					fi
-					[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
-
-					# send a tweet.
-					# the conditional makes sure that tweets can be sent with or without image:
-					if [[ "$TWIMG" == "true" ]] && [[ -f "$TWIDFILE" ]]
-					then
-						# Tweet a DM with a screenshot:
-						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
-					elif [[ -f "$TWIDFILE" ]]
-					then
-						# Tweet a DM without a screenshot:
-						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
-					fi
-
-					processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
-					if [[ "$processedresult" != "" ]]
-					then
-						echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-						echo "Diagnostics:"
-						echo "Error: $processedresult"
-						echo "Twitter ID: $twitterid"
-						echo "Text: $TWITTEXT"
-						(( ERRORCOUNT++ ))
-					else
-						echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
-					fi
-				done < "$TWIDFILE"	# done with the DM tweeting
-			elif [[ "$TWITTER" == "TWEET" ]]
-			then
+		if [[ "$TWITTER" == "DM" ]]
+		then
+			# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
+			while IFS= read -r twitterid
+			do
 				# tweet and add the processed output to $result:
-				# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
-				# also replace \/ by a regular /
-				TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
-				TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
-				TWITTEXT="${TWITTEXT//\&/%26}" # replace & by %26
-
-				# let\'s do some calcs on the actual tweet length, so we only strip as much as necessary
-				# this problem is non trivial, so just cut 1 char at a time and loop until our teststring is short enough
-				truncated=0
-				while true; do
-					teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
-					teststring="${teststring//%26/_}" # replace %26 (&) with single char
-					teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-					tweetlength=$(( ${#teststring} ))
-					if (( tweetlength > 280 )); then
-						truncated=$((truncated + 1))
-						TWITTEXT="${TWITTEXT:0:-1}"
-					else
-						break
-					fi
-				done
-				if (( truncated > 0 )); then
-					TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
-					echo "[WARNING]: Tweet has been truncated, cut $truncated characters at the end!"
-				fi
-
-				echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
-
+				[[ "$TESTING" == "true" ]] && echo
+				echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+				[[ "$twitterid" == "" ]] && continue
 
 				# Get a screenshot if there\'s one available!
 				rm -f /tmp/pasnapshot.png
@@ -447,21 +375,26 @@ then
 					# If the curl call succeeded, we have a snapshot.png file saved!
 					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+					#else
+					# this entire ELSE statement is test code and should be removed
+					#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+					#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 				[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
 
 				# send a tweet.
 				# the conditional makes sure that tweets can be sent with or without image:
-				if [[ "$TWIMG" == "true" ]]
+				if [[ "$TWIMG" == "true" ]] && [[ -f "$TWIDFILE" ]]
 				then
-					# Tweet a regular message with a screenshot:
-					rawresult=$($TWURL -r "status=$TWITTEXT&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
-				else
-					# Tweet a regular message without a screenshot:
-					rawresult=$($TWURL -r "status=$TWITTEXT" /1.1/statuses/update.json)
+					# Tweet a DM with a screenshot:
+					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
+				elif [[ -f "$TWIDFILE" ]]
+				then
+					# Tweet a DM without a screenshot:
+					rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
 				fi
 
-				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
+				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
 				if [[ "$processedresult" != "" ]]
 				then
 					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
@@ -473,9 +406,76 @@ then
 				else
 					echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 				fi
+			done < "$TWIDFILE"	# done with the DM tweeting
+		elif [[ "$TWITTER" == "TWEET" ]]
+		then
+			# tweet and add the processed output to $result:
+			# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
+			# also replace \/ by a regular /
+			TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
+			TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
+			TWITTEXT="${TWITTEXT//\&/%26}" # replace & by %26
+
+			# let\'s do some calcs on the actual tweet length, so we only strip as much as necessary
+			# this problem is non trivial, so just cut 1 char at a time and loop until our teststring is short enough
+			truncated=0
+			while true; do
+				teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
+				teststring="${teststring//%26/_}" # replace %26 (&) with single char
+				teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
+				tweetlength=$(( ${#teststring} ))
+				if (( tweetlength > 280 )); then
+					truncated=$((truncated + 1))
+					TWITTEXT="${TWITTEXT:0:-1}"
+				else
+					break
+				fi
+			done
+			if (( truncated > 0 )); then
+				TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
+				echo "[WARNING]: Tweet has been truncated, cut $truncated characters at the end!"
 			fi
-		done < /tmp/pa-diff.csv
-	fi
+
+			echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
+
+
+			# Get a screenshot if there\'s one available!
+			rm -f /tmp/pasnapshot.png
+			TWIMG="false"
+			if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+			then
+				# If the curl call succeeded, we have a snapshot.png file saved!
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+			fi
+			[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
+
+			# send a tweet.
+			# the conditional makes sure that tweets can be sent with or without image:
+			if [[ "$TWIMG" == "true" ]]
+			then
+				# Tweet a regular message with a screenshot:
+				rawresult=$($TWURL -r "status=$TWITTEXT&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
+			else
+				# Tweet a regular message without a screenshot:
+				rawresult=$($TWURL -r "status=$TWITTEXT" /1.1/statuses/update.json)
+			fi
+
+			processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
+			if [[ "$processedresult" != "" ]]
+			then
+				echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+				echo "Diagnostics:"
+				echo "Error: $processedresult"
+				echo "Twitter ID: $twitterid"
+				echo "Text: $TWITTEXT"
+				(( ERRORCOUNT++ ))
+			else
+				echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+			fi
+		fi
+	done < /tmp/pa-diff.csv
+
 fi
 
 [[ "$BASETIME" != "" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage" || true
