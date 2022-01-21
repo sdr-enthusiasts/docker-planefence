@@ -9,7 +9,7 @@ We'll go into the details of each step below.
 
 ## Prerequisites
 
-- You'll need a Discord server to invite the bot to. Anyone can create their own server for free. Follow [these instructions](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-) on Discord's support sitee.
+- You'll need a Discord server to invite the bot to. Anyone can create their own server for free. Follow [these instructions](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-) on Discord's support site.
 
 This is part of the [kx1t/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
 
@@ -31,7 +31,7 @@ This is part of the [kx1t/docker-planefence] docker container. Nothing in this d
 
 - Once you click that you'll get a new list of Bot Permissions. We only need "Send Messages" at the top of the middle column.
 
-- At the bottom of the page find the "Generated URL". Copy and pate that into your browser's address bar.
+- At the bottom of the page find the "Generated URL". Copy and paste that into your browser's address bar.
 
 - Select the server you'd like to receive alerts in and then "Continue" and "Authorize".
 
@@ -39,7 +39,7 @@ This is part of the [kx1t/docker-planefence] docker container. Nothing in this d
 
 ## Configure Planefence
 
-- If you haven't already save thed token from the first step into your `.env` file be sure to do that.
+- If you haven't already save the token from the first step into your `.env` file be sure to do that.
 
 - We also need to tell Planefence what Server and Channel to send to. Open the Preferences of your Discord client and go to the "Advanced" page (towards the bottom). Enable "Developer Mode"
 
