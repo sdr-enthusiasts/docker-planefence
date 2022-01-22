@@ -206,7 +206,16 @@ fi
 # enable or disable discord:
 #
 [[ "x$PF_DISCORD" == "xOFF" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1/' /usr/share/planefence/planefence.conf
-[[ "$PF_DISCORD" == "ON" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
+if [[ "$PF_DISCORD" == "ON" ]]
+then
+	sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_TOKEN" != "x" ]] && sed -i 's/\(^\s*DISCORD_TOKEN=\).*/\1/' /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_TOKEN" != "x" ]] && sed -i "s/\(^\s*DISCORD_TOKEN=\).*/\1${DISCORD_TOKEN}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_SERVER_ID" != "x" ]] && sed -i 's/\(^\s*DISCORD_SERVER_ID=\).*/\1/' /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_SERVER_ID" != "x" ]] && sed -i "s/\(^\s*DISCORD_SERVER_ID=\).*/\1${DISCORD_SERVER_ID}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_CHANNEL_ID" != "x" ]] && sed -i 's/\(^\s*DISCORD_CHANNEL_ID=\).*/\1/' /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_CHANNEL_ID" != "x" ]] && sed -i "s/\(^\s*DISCORD_CHANNEL_ID=\).*/\1${DISCORD_CHANNEL_ID}/" /usr/share/planefence/planefence.conf
+fi
 [[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
 # -----------------------------------------------------------------------------------
 #

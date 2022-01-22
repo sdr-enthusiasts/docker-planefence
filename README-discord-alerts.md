@@ -25,7 +25,7 @@ This is part of the [kx1t/docker-planefence] docker container. Nothing in this d
 
 ## Bring your bot into a server
 
-- In the left-hand sidebar of your Application's plage click the "OAuth 2" button and then "URL Generator" below that.
+- In the left-hand sidebar of your Application's page click the "OAuth 2" button and then "URL Generator" below that.
 
 - In the Scopes list we only need to check the "bot" box. It should be in the middle row, 5th entry down.
 
@@ -39,11 +39,11 @@ This is part of the [kx1t/docker-planefence] docker container. Nothing in this d
 
 ## Configure Planefence
 
-- If you haven't already save the token from the first step into your `.env` file be sure to do that.
+- If you haven't already saved the token from the first step into your `.env` file be sure to do so.
 
 - We also need to tell Planefence what Server and Channel to send to. Open the Preferences of your Discord client and go to the "Advanced" page (towards the bottom). Enable "Developer Mode"
 
-- Right click on your server in the list on the far-left of the application and click "Copy ID" at the bottom. Paste that into `planefence.config` as `DISCORD_SERVER_ID=<paste>`.
+- Right click on your server and click "Copy ID" at the bottom. Paste that into `planefence.config` as `DISCORD_SERVER_ID=<paste>`.
 
 - With your server selected right-click the channel you want the messages to be posted in and click "Copy ID" at the bottom. Paste this into `planefence.config` as `DISCORD_CHANNEL_ID=<paste>`
 

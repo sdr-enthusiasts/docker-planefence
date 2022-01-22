@@ -79,7 +79,8 @@ def load_config():
                 if line.strip().startswith("#"):
                     continue
                 split = line.split("=")
-                config[split[0].strip()] = split[1].strip()
+                if len(split) == 2:
+                    config[split[0].strip()] = split[1].strip()
 
     # Validate configuration
     if config.get("DISCORD_TOKEN") is None:
