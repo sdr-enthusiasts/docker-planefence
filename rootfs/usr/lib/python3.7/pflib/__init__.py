@@ -206,7 +206,7 @@ def altitude_str(config, alt):
         alt_actual = alt - elevation
         alt_type = "AGL"
 
-    altstr = '{:,}'.format(altactual)
+    altstr = '{:,}'.format(alt_actual)
     return f"{altstr}{alt_unit} {alt_type}"
 
 def distance_unit(config):
