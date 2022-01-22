@@ -106,7 +106,7 @@ async def process_alerts(config, channel, alerts):
 
         # Get a screenshot to attach if configured
         screenshot = None
-        if config.get("PF_SCREENSHOTURL", "") != "":
+        if config.get("SCREENSHOTURL", "") != "":
             screenshot = pf.get_screenshot_file(config, plane['icao'])
 
         # Send the message
