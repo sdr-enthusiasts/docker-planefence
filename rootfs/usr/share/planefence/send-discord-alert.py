@@ -64,18 +64,16 @@ async def process_alert(config, channel, plane):
     if plane["airline"] != "":
         name = plane['airline']
 
-    altstr = "{:,}".format(int(plane['alt']))  # TODO: Safer conversion
-
-    fa_link = f"https://flightaware.com/live/modes/{plane['icao']}/ident/{plane['tail_num']}]/redirect"
+    fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
     embed = pf.embed.build(
-        f"{name} is overhead at {altstr} MSL",  # TODO: ALTUNIT
+        f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
     # Attach data fields
     pf.embed.field(embed, "ICAO", plane['icao'])
     pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
-    pf.embed.field(embed, "Distance", f"{plane['min_dist']}nm")  # TODO: DISTUNIT
+    pf.embed.field(embed, "Distance", f"{plane['min_dist']}{pf.distance_unit(config)}")
     pf.embed.field(embed, "First Seen", plane['first_seen'].split(" ")[1])
 
     # Get a screenshot to attach if configured

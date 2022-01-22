@@ -749,7 +749,7 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-  if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
+if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
 then
 	LOG "Invoking PlaneTweet!"
 	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"

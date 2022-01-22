@@ -82,6 +82,9 @@ def load_config():
                 if len(split) == 2:
                     config[split[0].strip()] = split[1].strip()
 
+    if os.getenv("DEBUG", "") == "ON":
+        from pprint import pprint; pprint(config)
+
     # Validate configuration
     if config.get("DISCORD_TOKEN") is None:
         log("Missing DISCORD_TOKEN")
@@ -186,3 +189,39 @@ def load_planefile(config):
 
 def get_plane_info(icao):
     return planedb.get(icao, {})
+
+def altitude_str(config, alt):
+    alt_actual = alt
+    alt_type = "MSL"
+    alt_unit = "ft"
+
+    if config.get("PF_ALTUNIT", "") == "meter":
+        alt_unit = "m"
+
+    elevation = 0
+    if config.get("PF_ELEVATION", "").isdigit():
+        elevation = int(config["PF_ELEVATION"])
+
+    if elevation > 0:
+        alt_actual = alt - elevation
+        alt_type = "AGL"
+
+    altstr = '{:,}'.format(altactual)
+    return f"{altstr}{alt_unit} {alt_type}"
+
+def distance_unit(config):
+    cdu = config.get("PF_DISTUNIT", "")
+
+    if cdu == "nauticalmile":
+        return "nm"
+    if cdu == "kilometer":
+        return "km"
+    if cdu == "meter":
+        return "m"
+    return "mi"
+
+def flightaware_link(icao, tail_num):
+    return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}]/redirect"
+
+def is_emergency(squawk):
+    return squawk in ('7700', '7600', '7500')

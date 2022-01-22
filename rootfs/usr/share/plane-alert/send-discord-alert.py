@@ -66,12 +66,12 @@ async def process_alerts(config, channel, alerts):
 
         dbinfo = pf.get_plane_info(plane['icao'])
 
-        fa_link = f"https://flightaware.com/live/modes/{plane['icao']}/ident/{plane['tail_num']}]/redirect"
+        fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
         title = f"Plane Alert - {plane['plane_desc']}"
         color = 0xf2e718
         squawk = plane.get('squawk', "")
-        if squawk in ('7700', '7600', '7500'):
+        if pf.is_emergency(squawk):
             title = f"Air Emergency! {plane['tail_num']} squawked {squawk}"
             color = 0xff0000
 
@@ -106,7 +106,7 @@ async def process_alerts(config, channel, alerts):
 
         # Get a screenshot to attach if configured
         screenshot = None
-        if config.get('SCREENSHOTURL') is not None:
+        if config.get("PF_SCREENSHOTURL", "") != "":
             screenshot = pf.get_screenshot_file(config, plane['icao'])
 
         # Send the message
