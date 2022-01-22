@@ -100,7 +100,7 @@ def main():
         "tail_num": record[1].lstrip("@"),
         "first_seen": record[2],
         "last_seen": record[3],
-        "alt": record[4],
+        "alt": int(record[4]) if record[4].isdigit() else 0,
         "min_dist": record[5],
         "adsbx_url": record[6],
         "airline": sys.argv[2] if len(sys.argv) == 3 else ""
