@@ -24,13 +24,17 @@
 import os
 import tempfile
 import shutil
-from datetime import datetime
 import csv
+from datetime import datetime
+from os.path import exists
 
 import discord
 import requests
 
 from pflib import embed
+
+
+DEFAULT_PLANEFILE="/usr/share/planefence/persist/.internal/plane-alert-db.txt"
 
 
 class InvalidConfigException(Exception):
@@ -56,35 +60,45 @@ log = None
 planedb = {}
 
 
-def load_discord_config():
-    """
-    Expected environment variables:
-        DISCORD_TOKEN
-        DISCORD_SERVER_ID
-        DISCORD_CHANNEL_ID
-        SCREENSHOTURL
-
-    :return: dict[string]any
-    """
+def load_config():
+    # Load config from the environment as a fallback
     config = {
-        "token": os.getenv("DISCORD_TOKEN"),
-        "server_id": int(os.getenv("DISCORD_SERVER_ID", 0)),  # TODO: Safer conversion 
-        "channel_id": int(os.getenv("DISCORD_CHANNEL_ID", 0)),  # TODO: Safer conversion
-        "screenshot_url": os.getenv("SCREENSHOTURL"),
-        "planefile": os.getenv("PLANEFILE", '/usr/share/planefence/persist/.internal/plane-alert-db.txt')
+        "DISCORD_TOKEN": os.getenv("DISCORD_TOKEN"),
+        "DISCORD_SERVER_ID": os.getenv("DISCORD_SERVER_ID"),
+        "DISCORD_CHANNEL_ID": os.getenv("DISCORD_CHANNEL_ID"),
+        "PLANEFILE": os.getenv('PLANEFILE', DEFAULT_PLANEFILE)
     }
 
+    # Load config
+    pfdir = os.getenv("PLANEFENCEDIR", "/usr/share/planefence")
+    config_path = f"{pfdir}/planefence.config"
+    if exists(config_path):
+        with open(config_path) as cfgfile:
+            lines = cfgfile.readlines()
+            for _, line in enumerate(lines):
+                if line.strip().startswith("#"):
+                    continue
+                split = line.split("=")
+                config[split[0].strip()] = split[1].strip()
+
     # Validate configuration
-    if config["token"] is None:
+    if config.get("DISCORD_TOKEN") is None:
         log("Missing DISCORD_TOKEN")
         raise InvalidConfigException
 
-    if config["server_id"] == 0:
+    if config.get("DISCORD_SERVER_ID") is None:
         log("Missing DISCORD_SERVER_ID")
         raise InvalidConfigException
 
-    if config["channel_id"] == 0:
+    if config.get("DISCORD_CHANNEL_ID") is None:
         log("Missing DISCORD_CHANNEL_ID")
+        raise InvalidConfigException
+
+    # Type conversions
+    try:
+        config['DISCORD_SERVER_ID'] = int(config['DISCORD_SERVER_ID'])
+        config['DISCORD_CHANNEL_ID'] = int(config['DISCORD_CHANNEL_ID'])
+    except:
         raise InvalidConfigException
 
     load_planefile(config)
@@ -101,13 +115,13 @@ def connect_discord(callback, *cbargs):
     :param cbargs: Any arguments that you want passed in to the callback.
     :return: None
     """
-    config = load_discord_config()
+    config = load_config()
     client = discord.Client()
 
     @client.event
     async def on_ready():
-        server = discord.utils.get(client.guilds, id=config['server_id'])
-        channel = server.get_channel(config['channel_id'])
+        server = discord.utils.get(client.guilds, id=config['DISCORD_SERVER_ID'])
+        channel = server.get_channel(config['DISCORD_CHANNEL_ID'])
 
         log(f"{client.user.name} has connected to {server.name}")
 
@@ -116,12 +130,12 @@ def connect_discord(callback, *cbargs):
         finally:
             await client.close()
 
-    client.run(config['token'])
+    client.run(config['DISCORD_TOKEN'])
 
 
 def get_screenshot_file(config, icao):
     log(f"Getting Screenshot for {icao}...")
-    snap_response = requests.get(f"{config['screenshot_url']}/snap/{icao}", stream=True, timeout=45.0)
+    snap_response = requests.get(f"{config['SCREENSHOTURL']}/snap/{icao}", stream=True, timeout=45.0)
     testmsg("Screenshot Got!")
 
     if snap_response.status_code == 200:
@@ -141,7 +155,7 @@ def load_planefile(config):
     global planedb
 
     planedb = {}
-    with open(config['planefile']) as csvfile:
+    with open(config['PLANEFILE']) as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             #  $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link

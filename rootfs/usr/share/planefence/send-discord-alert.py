@@ -27,9 +27,7 @@
 
 import sys
 import csv
-from datetime import date
 
-import discord
 import pflib as pf
 
 
@@ -61,26 +59,28 @@ def load_alerts(alerts_file):
 async def process_alert(config, channel, plane):
     pf.log(f"Building discord message for {plane['icao']}")
 
+    # Gather up some info for the message
     name = plane['tail_num']
     if plane["airline"] != "":
         name = plane['airline']
 
-    altstr = "{:,}".format(int(plane['alt'])) # TODO: Safer conversion
+    altstr = "{:,}".format(int(plane['alt']))  # TODO: Safer conversion
+
+    fa_link = f"https://flightaware.com/live/modes/{plane['icao']}/ident/{plane['tail_num']}]/redirect"
 
     embed = pf.embed.build(
-        f"{name} is overhead at {altstr} MSL",
+        f"{name} is overhead at {altstr} MSL",  # TODO: ALTUNIT
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
     # Attach data fields
     pf.embed.field(embed, "ICAO", plane['icao'])
-    if plane["airline"] != "":
-        pf.embed.field(embed, "Tail Number", plane['tail_num'])
+    pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
     pf.embed.field(embed, "Distance", f"{plane['min_dist']}nm")  # TODO: DISTUNIT
     pf.embed.field(embed, "First Seen", plane['first_seen'].split(" ")[1])
 
     # Get a screenshot to attach if configured
     screenshot = None
-    if config['screenshot_url'] is not None:
+    if config.get('SCREENSHOTURL') is not None:
         screenshot = pf.get_screenshot_file(config, plane['icao'])
 
     # Send the message

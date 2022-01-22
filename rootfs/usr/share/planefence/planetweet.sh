@@ -204,8 +204,10 @@ then
 			RECORD[1]=$XX
 
       # Inject the Discord integration in here so it doesn't have to worry about state management
-      # TODO: If config value
-      python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+			if [[ "$PF_DISCORD" == "ON" ]]
+			then
+      	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+      fi
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]

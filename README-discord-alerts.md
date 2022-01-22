@@ -47,7 +47,7 @@ This is part of the [kx1t/docker-planefence] docker container. Nothing in this d
 
 - With your server selected right-click the channel you want the messages to be posted in and click "Copy ID" at the bottom. Paste this into `planefence.config` as `DISCORD_CHANNEL_ID=<paste>`
 
-- Last, don't forget to set `PF_DISCORD=ON`. By default both PlaneFence and Plane-Alert will send messages to Discord. You can disable planefence messages by setting `PF_DISCORD_DISABLE="planefence"` or disable plane-alert messages by setting `PF_DISCORD_DISABLE="plane-alert"`.
+- To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
 
 # Summary of License Terms
 This program is free software: you can redistribute it and/or modify

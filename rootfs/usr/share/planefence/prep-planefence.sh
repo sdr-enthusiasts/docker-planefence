@@ -254,6 +254,8 @@ fi
 [[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" != "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
