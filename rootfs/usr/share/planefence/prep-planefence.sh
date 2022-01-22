@@ -203,6 +203,13 @@ then
 fi
 # -----------------------------------------------------------------------------------
 #
+# enable or disable discord:
+#
+[[ "x$PF_DISCORD" == "xOFF" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1/' /usr/share/planefence/planefence.conf
+[[ "$PF_DISCORD" == "ON" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
+[[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
+# -----------------------------------------------------------------------------------
+#
 # Change the heatmap height and width if they are defined in the .env parameter file:
 [[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
