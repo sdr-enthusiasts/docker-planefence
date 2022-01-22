@@ -1,7 +1,5 @@
 import discord
 
-from . import log
-
 def build(title, description, color=None):
     if color is None:
         color = 0x007bff  # Blue
@@ -16,7 +14,6 @@ def field(embed, name, value, inline=None):
 
 def media(embed, config, icao):
     if config.get("DISCORD_MEDIA") == "screenshot":
-        if config.get("PF_SCREENSHOTURL", "") == "":
-            log("[ERROR] Discord is configured to attach screenshots but PF_SCREENSHOTURL is not configured")
+        if config.get("SCREENSHOTURL", "") == "":
             return None
         return pf.get_screenshot_file(config, icao)
