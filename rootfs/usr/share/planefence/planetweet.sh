@@ -1,6 +1,6 @@
 #!/bin/bash
-# PLANETWEET - a Bash shell script to render heatmaps from modified sock30003
-# heatmap data
+# PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
+# user-defined fence area.
 #
 # Usage: ./planetweet.sh
 #
@@ -157,8 +157,9 @@ then
 		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeter^ ...or...                     ^$TWEETEVERY is true^
 		then
 
+			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
 			AIRLINETAG="#"
-			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} | tr -d '[:space:]-')"
+			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
 
 			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
 			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
@@ -202,6 +203,11 @@ then
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
+      # Inject the Discord integration in here so it doesn't have to worry about state management
+			if [[ "$PF_DISCORD" == "ON" ]]
+			then
+      	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+      fi
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]

@@ -203,6 +203,20 @@ then
 fi
 # -----------------------------------------------------------------------------------
 #
+# enable or disable discord:
+#
+[[ "x$PF_DISCORD" == "xOFF" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1/' /usr/share/planefence/planefence.conf
+if [[ "$PF_DISCORD" == "ON" ]]
+then
+	sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_TOKEN" != "x" ]] && sed -i "s/\(^\s*DISCORD_TOKEN=\).*/\1${DISCORD_TOKEN}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_SERVER_ID" != "x" ]] && sed -i "s/\(^\s*DISCORD_SERVER_ID=\).*/\1${DISCORD_SERVER_ID}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_CHANNEL_ID" != "x" ]] && sed -i "s/\(^\s*DISCORD_CHANNEL_ID=\).*/\1${DISCORD_CHANNEL_ID}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_MEDIA" != "x" ]] && sed -i "s/\(^\s*DISCORD_MEDIA=\).*/\1${DISCORD_MEDIA}/" /usr/share/planefence/planefence.conf
+fi
+[[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
+# -----------------------------------------------------------------------------------
+#
 # Change the heatmap height and width if they are defined in the .env parameter file:
 [[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
@@ -254,6 +268,8 @@ fi
 [[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" != "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf

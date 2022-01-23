@@ -11,6 +11,7 @@ RUN set -x && \
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
     KEPT_PIP_PACKAGES=() && \
+    KEPT_PIP3_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
     # Required for building multiple packages.
     TEMP_PACKAGES+=(pkg-config) && \
@@ -32,6 +33,9 @@ RUN set -x && \
     KEPT_PACKAGES+=(psmisc) && \
     # a few KEPT_PACKAGES for debugging - they can be removed in the future
     KEPT_PACKAGES+=(procps nano) && \
+    # Needed to pip3 install discord for some archs \
+    TEMP_PACKAGES+=(gcc) && \
+    TEMP_PACKAGES+=(python3-dev) && \
 #
 # define packages needed for PlaneFence, including socket30003
     KEPT_PACKAGES+=(python-pip) && \
@@ -46,9 +50,15 @@ RUN set -x && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
+    KEPT_PACKAGES+=(python3) && \
+    KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
+    KEPT_PIP3_PACKAGES+=(discord) && \
+    KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \
+    # We need some of the temp packages for building python3 dependencies so save those for the next layer
+    echo ${KEPT_PIP3_PACKAGES[*]} > /tmp/pip3.tmp && \
 #
 # Install all the KEPT packages (+ pkgconfig):
     apt-get update && \
@@ -69,7 +79,9 @@ RUN set -x && \
 #
 # First install the TEMP_PACKAGES. We do this here, so we can delete them again from the layer once installation is complete
     TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
+    KEPT_PIP3_PACKAGES="$(</tmp/pip3.tmp)" && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} && \
+pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
 git config --global advice.detachedHead false && \
 # Install dump1090.socket30003:
     pushd /src/socket30003 && \
