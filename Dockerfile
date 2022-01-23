@@ -39,9 +39,9 @@ RUN set -x && \
 #
 # define packages needed for PlaneFence, including socket30003
 #    KEPT_PACKAGES+=(python-pip) && \
-    KEPT_PACKAGES+=(python-numpy) && \
-    KEPT_PACKAGES+=(python-pandas) && \
-    KEPT_PACKAGES+=(python-dateutil) && \
+    KEPT_PACKAGES+=(python3-numpy) && \
+    KEPT_PACKAGES+=(python3-pandas) && \
+    KEPT_PACKAGES+=(python3-dateutil) && \
     KEPT_PACKAGES+=(jq) && \
     KEPT_PACKAGES+=(bc) && \
     KEPT_PACKAGES+=(gnuplot-nox) && \
