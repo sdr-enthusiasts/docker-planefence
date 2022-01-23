@@ -38,7 +38,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(python3-dev) && \
 #
 # define packages needed for PlaneFence, including socket30003
-    KEPT_PACKAGES+=(python-pip) && \
+#    KEPT_PACKAGES+=(python-pip) && \
     KEPT_PACKAGES+=(python-numpy) && \
     KEPT_PACKAGES+=(python-pandas) && \
     KEPT_PACKAGES+=(python-dateutil) && \
