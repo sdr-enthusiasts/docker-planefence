@@ -48,7 +48,7 @@ def main(argv):
     distunit="mi"
     altcorr = 0
 
-    now_utc = datetime.now(timezone('UTC'))
+    now_utc = datetime.now(timezone.utc)
     now = now_utc.astimezone(get_localzone())
 
     try:
