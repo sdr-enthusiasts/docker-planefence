@@ -5,8 +5,7 @@ import sys, getopt, csv, os, html.parser, math
 import pandas as pd
 import numpy as  np
 from datetime import datetime
-from datetime import datetime
-from pytz import timezone
+from datetime import timezone
 from tzlocal import get_localzone
 import calendar
 
@@ -15,11 +14,14 @@ def get_ax_link(row, lat, lon):
     try:
         falink = 'https://globe.adsbexchange.com/?icao='  + row[0].lower() + '&lat=' + str(lat) + '&lon=' + str(lon) + '&zoom=12'
         dt_string = row[4] + ' ' + row[5][:-4]
-        naive = datetime.strptime(dt_string, "%Y/%m/%d %H:%M:%S")
-        local_dt = get_localzone().localize(naive)
-        utc_tuple = local_dt.utctimetuple()
+#        naive = datetime.strptime(dt_string, "%Y/%m/%d %H:%M:%S")
+#        local_dt = get_localzone().localize(naive)
+#        utc_tuple = local_dt.utctimetuple()
+        local = naive.replace(tzinfo=datetime.now(timezone.utc).astimezone().tzinfo)
+        utc = local.astimezone(tz=timezone.utc)
+        utc_tuple=utc.timetuple()
         falink = falink + '&showTrace=' + str(utc_tuple[0]) + '-' + str.zfill(str(utc_tuple[1]), 2) + '-' + str.zfill(str(utc_tuple[2]), 2)
-        epoch_seconds = calendar.timegm(utc_tuple)
+        epoch_seconds = int(utc.timestamp())
         falink = falink + '&timestamp=' + str(epoch_seconds)
 
     except:
