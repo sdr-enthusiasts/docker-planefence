@@ -28,8 +28,8 @@ import csv
 from datetime import datetime
 from os.path import exists
 
-import discord
 import requests
+import discord_webhook as dw
 
 from pflib import embed
 
@@ -63,10 +63,9 @@ planedb = {}
 def load_config():
     # Load config from the environment as a fallback
     config = {
-        "DISCORD_TOKEN": os.getenv("DISCORD_TOKEN"),
-        "DISCORD_SERVER_ID": os.getenv("DISCORD_SERVER_ID"),
-        "DISCORD_CHANNEL_ID": os.getenv("DISCORD_CHANNEL_ID"),
-        "PLANEFILE": os.getenv('PLANEFILE', DEFAULT_PLANEFILE)
+        "PLANEFILE": os.getenv('PLANEFILE', DEFAULT_PLANEFILE),
+        "PA_DISCORD_WEBHOOKS": os.getenv("PA_DISCORD_WEBHOOKS", ""),
+        "PF_DISCORD_WEBHOOKS": os.getenv("PF_DISCORD_WEBHOOKS", "")
     }
 
     # Load config
@@ -85,56 +84,16 @@ def load_config():
     if os.getenv("DEBUG", "") == "ON":
         from pprint import pprint; pprint(config)
 
-    # Validate configuration
-    if config.get("DISCORD_TOKEN") is None:
-        log("Missing DISCORD_TOKEN")
-        raise InvalidConfigException
-
-    if config.get("DISCORD_SERVER_ID") is None:
-        log("Missing DISCORD_SERVER_ID")
-        raise InvalidConfigException
-
-    if config.get("DISCORD_CHANNEL_ID") is None:
-        log("Missing DISCORD_CHANNEL_ID")
-        raise InvalidConfigException
-
     # Type conversions
     try:
-        config['DISCORD_SERVER_ID'] = int(config['DISCORD_SERVER_ID'])
-        config['DISCORD_CHANNEL_ID'] = int(config['DISCORD_CHANNEL_ID'])
+        config['PA_DISCORD_WEBHOOKS'] = config.get('PA_DISCORD_WEBHOOKS', "").split(',')
+        config['PF_DISCORD_WEBHOOKS'] = config.get('PF_DISCORD_WEBHOOKS', "").split(',')
     except:
         raise InvalidConfigException
 
     load_planefile(config)
 
     return config
-
-
-def connect_discord(callback, *cbargs):
-    """
-    Connects to Discord and calls the passed-in callback.
-    After the callback completes the connection to Discord is closed.
-
-    :param callback: function(config, channel, ...)
-    :param cbargs: Any arguments that you want passed in to the callback.
-    :return: None
-    """
-    config = load_config()
-    client = discord.Client()
-
-    @client.event
-    async def on_ready():
-        server = discord.utils.get(client.guilds, id=config['DISCORD_SERVER_ID'])
-        channel = server.get_channel(config['DISCORD_CHANNEL_ID'])
-
-        log(f"{client.user.name} has connected to {server.name}")
-
-        try:
-            await callback(config, channel, *cbargs)
-        finally:
-            await client.close()
-
-    client.run(config['DISCORD_TOKEN'])
 
 
 def get_screenshot_file(config, icao):
@@ -225,3 +184,8 @@ def flightaware_link(icao, tail_num):
 
 def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')
+
+def send(urls, embed):
+    webhook = dw.DiscordWebhook(url=urls)
+    webhook.add_embed(embed)
+    webhook.execute()

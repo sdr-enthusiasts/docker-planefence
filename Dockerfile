@@ -53,7 +53,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-pip) && \
     KEPT_PIP_PACKAGES+=(tzlocal) && \
-    KEPT_PIP3_PACKAGES+=(discord) && \
+    KEPT_PIP3_PACKAGES+=(discord-webhook) && \
     KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
     echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \

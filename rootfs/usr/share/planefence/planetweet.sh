@@ -204,7 +204,7 @@ then
 			RECORD[1]=$XX
 
       # Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "$PF_DISCORD" == "ON" ]]
+			if [[ "$PF_DISCORD" == "ON" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]]
 			then
       	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
       fi
