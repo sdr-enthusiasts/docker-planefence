@@ -1,4 +1,4 @@
-FROM fredclausen/baseimage
+FROM ghcr.io/fredclausen/docker-baseimage:base
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 

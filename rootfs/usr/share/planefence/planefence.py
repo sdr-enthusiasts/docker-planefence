@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, getopt, csv, os, html.parser, math
@@ -64,9 +64,9 @@ def main(argv):
             print('If --today is used, the logfile is assumed to be the base format for logs, and we will attempt to pick today\'s log.')
             print('If --calcdist is used, it will calculate the distance based on the coordinates. If it is omitted, the distance from the logfile will be used. Note that calculation of distances is very processor intensive and may dramatically slow down the processing speed of large files.')
         elif opt == "--lat":
-            lat = arg
+            lat = float(arg)
         elif opt =="--lon":
-            lon = arg
+            lon = float(arg)
         elif opt in ("--logfile", "--log"):
             logfile = arg
         elif opt in ("--distance", "--dist"):
@@ -84,7 +84,7 @@ def main(argv):
         elif opt == "--trackservice":
             trackservice = arg
         elif opt == "--altcorr":
-            altcorr = arg
+            altcorr = int(arg)
 
     if verbose == 1:
        # print 'lat = ', lat
@@ -108,7 +108,7 @@ def main(argv):
        print("ERROR: --distunit must be one of [km|nm|mi|m]")
        sys.exit(2)
 
-    if altcorr < 0:
+    if int(altcorr) < 0:
        print("ERROR: --altcorr must be a non-negative integer")
        sys.exit(2)
 
@@ -121,7 +121,7 @@ def main(argv):
     # format of logfile is 0-ICAO,1-altitude,2-latitude,3-longitude,4-date,5-time,6-angle,7-distance,8-squawk,9-ground_speed(kilometerph),10-track,11-callsign
     # format of airplaneslist is [[0-ICAO,11-FltNum,4/5-FirstHeard,4/5-LastHeard,1-LowestAlt,7-MinDistance,FltLink)]
 
-    with open(logfile, "rb") as f:
+    with open(logfile, "rt") as f:
         # the line.replace is because sometimes the logfile is corrupted and contains zero bytes. Python pukes over this.
         reader = csv.reader( (line.replace('\0','') for line in f) )
         records = np.array(["ICAO","Flight Number","In-range Date/Time","Out-range Date/Time","Lowest Altitude","Minimal Distance","Flight Link"], dtype = 'object')
@@ -196,7 +196,7 @@ def main(argv):
 
         # Now, let's start writing everything to a CSV and/or HTML file:
         # Step zero - turn string truncation off
-        pd.set_option('display.max_colwidth', -1)
+        pd.set_option('display.max_colwidth', None)
 
         # delete the header as this interferes with appending:
         records = np.delete(records, (0), axis=0)
