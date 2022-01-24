@@ -8,7 +8,7 @@ If you think that we included parts of your software but we didn't attribute you
 
 - dump1090.socket30003 is used under the GNU GENERAL PUBLIC LICENSE, version 3. This program is (C) by Ted Sluis (@tedsluis), and a slightly modified fork can be found at https://github.com/kx1t/dump1090.socket30003. Any modification to dump1090.socket30003 are Copyright by their respective owners
 
-- Maps are generated thanks to OpenStreetMap. OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) by the OpenStreetMap Foundation (OSMF). More information, including license terms, can be found here: https://www.openstreetmap.org/copyright
+- Maps are generated thanks to OpenStreetMap. OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) by the OpenStreetMap Foundation (OSMF). "© OpenStreetMap contributors". More information, including license terms, can be found here: https://www.openstreetmap.org/copyright
 
 - Leaflet.js, a mapping overlay java script, is Copyright (c) 2010-2021, Vladimir Agafonkin, Copyright (c) 2010-2011, CloudMade, All rights reserved. The license terms can be found here: https://github.com/Leaflet/Leaflet/blob/master/LICENSE
 
