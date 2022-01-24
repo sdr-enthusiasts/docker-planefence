@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import sys, getopt, csv, os, html.parser, math
+import sys, getopt, csv, os, HTMLParser, math
 import pandas as pd
 import numpy as  np
 from datetime import datetime
@@ -52,17 +52,17 @@ def main(argv):
     try:
        opts, args = getopt.getopt(argv,'',["h","help","?","distance=","lat=","lon=","dist=","log=","logfile=","v","verbose","outfile=","maxalt=","calcdist","distunit=","trackservice=","altcorr="])
     except getopt.GetoptError:
-       print('Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]')
+       print 'Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
        sys.exit(2)
 
     for opt, arg in opts:
         if opt in ("-h", "-?", "--help", "--?") :
-            print('Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]')
-            print('If lat/long is omitted, then Belmont, MA (town hall) is used.')
-            print('If distance is omitted, then 2 miles is used.')
-            print('If outfile is omitted, then output is written to stdout. Note - if you intend to capture stdout for processing, make sure that --verbose=1 is not used.')
-            print('If --today is used, the logfile is assumed to be the base format for logs, and we will attempt to pick today\'s log.')
-            print('If --calcdist is used, it will calculate the distance based on the coordinates. If it is omitted, the distance from the logfile will be used. Note that calculation of distances is very processor intensive and may dramatically slow down the processing speed of large files.')
+            print 'Usage: planefence.py [--verbose] [--calcdist] --distance=<distance_in_statute_miles> --logfile=/path/to/logfile [--outfile=/path/to/outputfile] [--maxalt=maximum_altitude_in_ft] [--format=csv|html|both] [--trackservice=adsbexchange|flightaware]'
+            print 'If lat/long is omitted, then Belmont, MA (town hall) is used.'
+            print 'If distance is omitted, then 2 miles is used.'
+            print 'If outfile is omitted, then output is written to stdout. Note - if you intend to capture stdout for processing, make sure that --verbose=1 is not used.'
+            print 'If --today is used, the logfile is assumed to be the base format for logs, and we will attempt to pick today\'s log.'
+            print 'If --calcdist is used, it will calculate the distance based on the coordinates. If it is omitted, the distance from the logfile will be used. Note that calculation of distances is very processor intensive and may dramatically slow down the processing speed of large files.'
         elif opt == "--lat":
             lat = arg
         elif opt =="--lon":
@@ -89,27 +89,27 @@ def main(argv):
     if verbose == 1:
        # print 'lat = ', lat
        # print 'lon = ', lon
-       print('max distance = ', dist, distunit)
-       print('max altitude = ', maxalt)
+       print 'max distance = ', dist, distunit
+       print 'max altitude = ', maxalt
        # print 'output is written to ', outfile
 
     if logfile == '':
-       print("ERROR: Need logfile parameter")
+       print "ERROR: Need logfile parameter"
        sys.exit(2)
 
     if verbose == 1:
-       print('input is read from ', logfile)
+       print 'input is read from ', logfile
 
     if trackservice != 'adsbexchange' and trackservice != 'flightaware':
-       print("ERROR: --trackservice parameter must be adsbexchange or flightaware")
+       print "ERROR: --trackservice parameter must be adsbexchange or flightaware"
        sys.exit(2)
 
     if distunit != 'km' and distunit != "nm" and distunit != "mi" and distunit != "m":
-       print("ERROR: --distunit must be one of [km|nm|mi|m]")
+       print "ERROR: --distunit must be one of [km|nm|mi|m]"
        sys.exit(2)
 
     if altcorr < 0:
-       print("ERROR: --altcorr must be a non-negative integer")
+       print "ERROR: --altcorr must be a non-negative integer"
        sys.exit(2)
 
     lat1 = math.radians(float(lat))
@@ -175,7 +175,7 @@ def main(argv):
             elif rowdist <= dist and rowalt <= maxalt:
                 # it must be a new record. First check if it's in range. If so, write a new row to the records table:
                 if verbose == 1:
-                    print(counter, row[0], row[11].strip(), "(", rowdist, "<=", dist, ", alt=", rowalt, "): new")
+                    print counter, row[0], row[11].strip(), "(", rowdist, "<=", dist, ", alt=", rowalt, "): new"
                     counter = counter + 1
 
                 if trackservice == 'flightaware':
@@ -191,7 +191,7 @@ def main(argv):
                 # we have the record, but it doesn't have a flight number and we now can add it
                 records[np.where(records == row[0])[0][0]][1] = row[11].strip()
                 if verbose == 1:
-                    print("added flight number", row[11].strip(), "for", row[0])
+                    print "added flight number", row[11].strip(), "for", row[0]
 
 
         # Now, let's start writing everything to a CSV and/or HTML file:
@@ -205,7 +205,7 @@ def main(argv):
         if fltcounter > 0:
             # make sure that the file has the correct extension
             if verbose == 1:
-                print('Output is written to: ', outfile)
+                print 'Output is written to: ', outfile
 
             # Now write the table to a file as a CSV file
             with open(outfile, 'w') as file:
@@ -213,7 +213,7 @@ def main(argv):
                 writer.writerows(records.tolist())
         else:
             if verbose == 1:
-                print('Nothing to write to: ',outfile)
+                print 'Nothing to write to: ',outfile
 
         # That's all, folks!
 
