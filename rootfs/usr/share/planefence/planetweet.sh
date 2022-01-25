@@ -203,9 +203,13 @@ then
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
+			LOG "PFDISCORD: $PF_DISCORD"
+			LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
+			LOG "DISCORD_FEEDER_NAME" $DISCORD_FEEDER_NAME"
       # Inject the Discord integration in here so it doesn't have to worry about state management
 			if [[ "$PF_DISCORD" == "ON" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
+				LOG "Planefence sending Discord notification"
       	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
       fi
 
