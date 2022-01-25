@@ -245,7 +245,7 @@ EOF
 	if [[ "$HASTWEET" == "true" ]]
 	then
 		# print a header for the Tweeted column
-		printf "	<th>Tweeted</th>\n" >> "$2"
+		printf "	<th>Notified</th>\n" >> "$2"
 	fi
 	printf "</tr>\n" >&3
 
@@ -443,12 +443,12 @@ EOF
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
 				then
-					printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
-					printf "   <td>yes</td>\n" >&3
+					printf "   <td>discord</td>\n" >&3
 				fi
 			else
-				# If there were tweet, but not for this record, then print "no"
+				# If this record doesnt have an "@" then print "no"
 				printf "   <td>no</td>\n" >&3
 			fi
 			# There were no tweets at all, so don't even print a field
