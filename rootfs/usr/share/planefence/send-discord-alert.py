@@ -81,6 +81,9 @@ def process_alert(config, plane):
     if config.get('SCREENSHOTURL') is not None:
         screenshot = pf.get_screenshot_file(config, plane['icao'])
 
+    if config.get("DISCORD_FEEDER_NAME", "") != "":
+        pf.embed.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
+
     # Send the message
     pf.send(config['PF_DISCORD_WEBHOOKS'], embed)
 

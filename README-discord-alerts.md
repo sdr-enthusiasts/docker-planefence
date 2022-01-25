@@ -26,6 +26,10 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 
 - In your `planefence.config` file paste the webhook url into `PA_DISCORD_WEBHOOKS` to send plane-alert messages and `PF_DISCORD_WEBHOOKS` to send planefence messages.
 
+- If you're posting alerts to a shared channel you can set `DISCORD_FEEDER_NAME` to something that identifies where the alert came from. If you're near an airport you could use its ICAO identifier. 
+
+- To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
+
 # Summary of License Terms
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -82,6 +82,9 @@ def process_alerts(config, alerts):
 
         embed = pf.embed.build(title, description, color=color)
 
+        if config.get("DISCORD_FEEDER_NAME", "") != "":
+            pf.embed.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
+
         # Attach data fields
         pf.embed.field(embed, "ICAO", plane['icao'])
         pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")

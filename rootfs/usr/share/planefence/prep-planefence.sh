@@ -211,6 +211,7 @@ then
 	sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
 	[[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s/\(^\s*PA_DISCORD_WEBHOOKS=\).*/\1${PA_DISCORD_WEBHOOKS}/" /usr/share/planefence/planefence.conf
 	[[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s/\(^\s*PF_DISCORD_WEBHOOKS=\).*/\1${PF_DISCORD_WEBHOOKS}/" /usr/share/planefence/planefence.conf
+	[[ "x$DISCORD_FEEDER_NAME" != "x" ]] && sed -i "s/\(^\s*DISCORD_FEEDER_NAME=\).*/\1${DISCORD_FEEDER_NAME}/" /usr/share/planefence/planefence.conf
 fi
 [[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
 # -----------------------------------------------------------------------------------

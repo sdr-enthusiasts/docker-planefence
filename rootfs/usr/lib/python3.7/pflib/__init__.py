@@ -65,7 +65,8 @@ def load_config():
     config = {
         "PLANEFILE": os.getenv('PLANEFILE', DEFAULT_PLANEFILE),
         "PA_DISCORD_WEBHOOKS": os.getenv("PA_DISCORD_WEBHOOKS", ""),
-        "PF_DISCORD_WEBHOOKS": os.getenv("PF_DISCORD_WEBHOOKS", "")
+        "PF_DISCORD_WEBHOOKS": os.getenv("PF_DISCORD_WEBHOOKS", ""),
+        "DISCORD_FEEDER_NAME": os.getenv("DISCORD_FEEDER_NAME", "")
     }
 
     # Load config
