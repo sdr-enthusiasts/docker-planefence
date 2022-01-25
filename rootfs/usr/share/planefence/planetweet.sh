@@ -42,7 +42,7 @@ YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # If you don't want logging, simply set  the VERBOSE=1 line below to VERBOSE=0
 LOGFILE=/tmp/planetweet.log
 TMPFILE=/tmp/planetweet.tmp
-TWEETON=yes
+[[ "$PLANETWEET" != "" ]] && TWEETON=yes || TWEETON=no
 
 CSVDIR=$OUTFILEDIR
 CSVNAMEBASE=$CSVDIR/planefence-
