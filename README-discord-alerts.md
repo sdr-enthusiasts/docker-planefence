@@ -1,8 +1,7 @@
 # Send a message to Discord for each new plane in PlaneFence
-Setting up Discord notifications involves only a few simple steps:
+Setting up Discord notifications involves only two simple steps:
 
-- Create a Bot
-- Invite it to a server
+- Create a Webhook
 - Configure PlaneFence
 
 We'll go into the details of each step below.
@@ -13,39 +12,21 @@ We'll go into the details of each step below.
 
 This is part of the [kx1t/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
 
-## Setting up a Discord Bot
+## Creating a Webhook URL
 
-- Open the [Discord Developer Portal](https://discord.com/developers/applications) and click New Application at the top-right
+If you're sending alerts to a channel that you control you'll need to set up a Webhook URL first. If someone has provided you with a Webhook URL to send alerts to already you can skip to the last step in this section.
 
-- Enter a name for your application and click "Create". The name of your application is what will show up as the username that the messages were sent by. You can change this at any time.
+- In your Discord server right-click the channel you want messages to go to and click "Edit Channel"
 
-- On the left-hand sidebar click Bot and then click the "Add Bot" button, and then "Yes". On the next page in the "Token" section click the "Copy" button. This is what PlaneFence needs to send messages as your bot.
+- In the Integrations page click "Create Webhook"
 
-- In your `.env` file add an entry for `DISCORD_TOKEN=<paste your token>`
-
-## Bring your bot into a server
-
-- In the left-hand sidebar of your Application's page click the "OAuth 2" button and then "URL Generator" below that.
-
-- In the Scopes list we only need to check the "bot" box. It should be in the middle row, 5th entry down.
-
-- Once you click that you'll get a new list of Bot Permissions. We only need "Send Messages" at the top of the middle column.
-
-- At the bottom of the page find the "Generated URL". Copy and paste that into your browser's address bar.
-
-- Select the server you'd like to receive alerts in and then "Continue" and "Authorize".
-
-- Your bot should show up in every public channel of your server. If you'd like the alerts to go to a private channel you'll need to go into the Edit Channel page and then the "Permissions" tab. Click "Add members or roles" and select your bot.
+- Config the Name that you'd like messages to appear as and set a profile image then click "Copy Webhook URL"
 
 ## Configure Planefence
 
-- If you haven't already saved the token from the first step into your `.env` file be sure to do so.
+- In your `planefence.config` file paste the webhook url into `PA_DISCORD_WEBHOOKS` to send plane-alert messages and `PF_DISCORD_WEBHOOKS` to send planefence messages.
 
-- We also need to tell Planefence what Server and Channel to send to. Open the Preferences of your Discord client and go to the "Advanced" page (towards the bottom). Enable "Developer Mode"
-
-- Right click on your server and click "Copy ID" at the bottom. Paste that into `planefence.config` as `DISCORD_SERVER_ID=<paste>`.
-
-- With your server selected right-click the channel you want the messages to be posted in and click "Copy ID" at the bottom. Paste this into `planefence.config` as `DISCORD_CHANNEL_ID=<paste>`
+- If you're posting alerts to a shared channel you can set `DISCORD_FEEDER_NAME` to something that identifies where the alert came from. If you're near an airport you could use its ICAO identifier. 
 
 - To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
 

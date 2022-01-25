@@ -56,7 +56,7 @@ def load_alerts(alerts_file):
     return alerts
 
 
-async def process_alert(config, channel, plane):
+def process_alert(config, plane):
     pf.log(f"Building discord message for {plane['icao']}")
 
     # Gather up some info for the message
@@ -70,6 +70,9 @@ async def process_alert(config, channel, plane):
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
+    if config.get("DISCORD_FEEDER_NAME", "") != "":
+        pf.embed.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
+
     # Attach data fields
     pf.embed.field(embed, "ICAO", plane['icao'])
     pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
@@ -82,13 +85,15 @@ async def process_alert(config, channel, plane):
         screenshot = pf.get_screenshot_file(config, plane['icao'])
 
     # Send the message
-    await channel.send(embed=embed, file=screenshot)
+    pf.send(config['PF_DISCORD_WEBHOOKS'], embed)
 
 
 def main():
     pf.init_log("planefence/send-discord-alert")
 
     # Load configuration
+    config = pf.load_config()
+
     if len(sys.argv) < 2:
         print("No input file passed\n\tUsage: ./send-discord-alert.py <csvline> <airline?>")
         sys.exit(1)
@@ -105,7 +110,8 @@ def main():
         "adsbx_url": record[6],
         "airline": sys.argv[2] if len(sys.argv) == 3 else ""
     }
-    pf.connect_discord(process_alert, alert)
+
+    process_alert(config, alert)
 
     pf.log(f"Done sending alerts to Discord")
 
