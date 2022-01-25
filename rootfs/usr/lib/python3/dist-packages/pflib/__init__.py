@@ -125,8 +125,8 @@ def load_planefile(config):
             #  $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link
             # Example line:
             #  A51316,N426NA,NASA,Lockheed P-3B Orion,P3,Gov,Sce To Aux,Airborne Science,Wallops Flight Facility,Distinctive,https://www.nasa.gov
-            # Skip header and invalid lines
-            if row[0].startswith("#"):
+            # Skip header and invalid/empty lines
+            if row[0].startswith("#") or not row:
                 continue
 
             plane = {
