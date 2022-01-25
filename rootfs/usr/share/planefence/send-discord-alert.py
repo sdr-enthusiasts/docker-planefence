@@ -70,6 +70,9 @@ def process_alert(config, plane):
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
+    if config.get("DISCORD_FEEDER_NAME", "") != "":
+        pf.embed.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
+
     # Attach data fields
     pf.embed.field(embed, "ICAO", plane['icao'])
     pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
@@ -80,9 +83,6 @@ def process_alert(config, plane):
     screenshot = None
     if config.get('SCREENSHOTURL') is not None:
         screenshot = pf.get_screenshot_file(config, plane['icao'])
-
-    if config.get("DISCORD_FEEDER_NAME", "") != "":
-        pf.embed.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
 
     # Send the message
     pf.send(config['PF_DISCORD_WEBHOOKS'], embed)
