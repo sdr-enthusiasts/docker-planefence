@@ -265,11 +265,12 @@ fi
 [[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PA_DISCORD" != "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PF_DISCORD" == "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf
-[[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
+[[ "$PF_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PF_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
 [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s~\(^\s*PA_DISCORD_WEBHOOKS=\).*~\1${PA_DISCORD_WEBHOOKS}~" /usr/share/plane-alert/plane-alert.conf
+[[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s~\(^\s*PA_DISCORD_WEBHOOKS=\).*~\1${PA_DISCORD_WEBHOOKS}~" /usr/share/planefence/planefence.conf
+[[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s~\(^\s*PF_DISCORD_WEBHOOKS=\).*~\1${PF_DISCORD_WEBHOOKS}~" /usr/share/planefence/planefence.conf
 [[ "x$DISCORD_FEEDER_NAME" != "x" ]] && sed -i "s/\(^\s*DISCORD_FEEDER_NAME=\).*/\1${DISCORD_FEEDER_NAME}/" /usr/share/planefence/planefence.conf
 [[ "x$DISCORD_FEEDER_NAME" != "x" ]] && sed -i "s/\(^\s*DISCORD_FEEDER_NAME=\).*/\1${DISCORD_FEEDER_NAME}/" /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
