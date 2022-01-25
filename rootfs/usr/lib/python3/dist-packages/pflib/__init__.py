@@ -134,12 +134,12 @@ def load_planefile(config):
                 "tail_num": row[1],
                 "owner": row[2],
                 "type": row[3],
-                "icao_type": row[4],
-                "authority": row[5],
-                "tag1": row[6],
-                "tag2": row[7],
-                "tag3": row[8],
-                "category": row[9],
+                "icao_type": row[4] if len(row) > 4 else "",
+                "authority": row[5] if len(row) > 5 else "",
+                "tag1": row[6] if len(row) > 6 else "",
+                "tag2": row[7] if len(row) > 7 else "",
+                "tag3": row[8] if len(row) > 8 else "",
+                "category": row[9] if len(row) > 9 else "" ,
                 "link": row[10] if len(row) > 10 else ""
             }
             planedb[plane["icao"]] = plane
