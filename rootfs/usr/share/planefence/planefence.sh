@@ -749,9 +749,9 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
+if [[ ! -z "$PLANETWEET" || "$PF_DISCORD" == "true" ]] && [[ "$1" == "" ]]
 then
-	LOG "Invoking PlaneTweet!"
+	LOG "Invoking PlaneTweet for tweeting and/or discord notifications"
 	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"
 else
 	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
