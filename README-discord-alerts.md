@@ -22,11 +22,13 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 
 - Config the Name that you'd like messages to appear as and set a profile image then click "Copy Webhook URL"
 
+- If you want to post to the [#planefence-alert channel](https://discord.gg/ytAW4WZ66B) on the SDR-Enthusiasts Discord Server (which is where most of us hang out), please join that server and send a DM to @kx1t. 
+
 ## Configure Planefence
 
 - In your `planefence.config` file paste the webhook url into `PA_DISCORD_WEBHOOKS` to send plane-alert messages and `PF_DISCORD_WEBHOOKS` to send planefence messages.
 
-- If you're posting alerts to a shared channel you can set `DISCORD_FEEDER_NAME` to something that identifies where the alert came from. If you're near an airport you could use its ICAO identifier. 
+- If you're posting alerts to a shared channel you can set `DISCORD_FEEDER_NAME` to something that identifies where the alert came from. If you're near an airport you could use its ICAO identifier.
 
 - To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
 
