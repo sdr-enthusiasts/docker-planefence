@@ -39,7 +39,7 @@ GROUP=www-data
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Starting FastCGI" || true
-lighttpd-enable-mod fastcgi fastcgi-php >/dev/null 2>&1
+lighttpd-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
 #
 # -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:
