@@ -62,18 +62,12 @@ RUN set -x && \
 #    echo ${KEPT_PIP3_PACKAGES[*]} > /tmp/pip3.tmp && \
 #
 # Install all the apt, pip3, and gem (ruby) packages:
-    apt-get update && \
-    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
+    apt-get update -q && \
+    apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
 #    pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl && \
     pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
     git config --global advice.detachedHead false && \
-    # Install dump1090.socket30003:
-        pushd /src/socket30003 && \
-           ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
-           chmod a+x /usr/share/socket30003/*.pl && \
-          rm -rf /run/socket30003/install-* && \
-          popd && \
     # Do this here while we still have git installed:
     echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
     # Clean up
@@ -109,6 +103,13 @@ RUN set -x && \
 # Ensure the planefence and plane-alert config is available for lighttpd:
     ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
     ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
+# Install dump1090.socket30003. Note - this could move to a lower layer, but we need to have rootfs copied in.
+# In any case, it doesn't take much (build)time.
+    pushd /src/socket30003 && \
+       ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
+       chmod a+x /usr/share/socket30003/*.pl && \
+       rm -rf /run/socket30003/install-* && \
+    popd && \
 #
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
