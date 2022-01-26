@@ -74,6 +74,8 @@ RUN set -x && \
            chmod a+x /usr/share/socket30003/*.pl && \
           rm -rf /run/socket30003/install-* && \
           popd && \
+    # Do this here while we still have git installed:
+    echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
     # Clean up
     TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
     echo Uninstalling $TEMP_PACKAGES && \
@@ -103,7 +105,6 @@ RUN set -x && \
     ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     curl --compressed -s -L -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
     curl --compressed -s -L -o /usr/share/planefence/stage/Silhouettes.zip https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip && \
-    echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
 #
 # Ensure the planefence and plane-alert config is available for lighttpd:
     ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
