@@ -53,7 +53,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(php-cgi) && \
 #    KEPT_PACKAGES+=(python3) && \
 #    KEPT_PACKAGES+=(python3-pip) && \
-#    KEPT_PIP_PACKAGES+=(tzlocal) && \
+    KEPT_PIP3_PACKAGES+=(tzlocal) && \
     KEPT_PIP3_PACKAGES+=(discord-webhook) && \
     KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_RUBY_PACKAGES+=(twurl) && \
@@ -113,7 +113,7 @@ RUN set -x && \
 #
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
-    echo "alias nano=\"nano -l\"" >> /root/.bashrc 
+    echo "alias nano=\"nano -l\"" >> /root/.bashrc
 #
 # install S6 Overlay
 #    curl --compressed -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
