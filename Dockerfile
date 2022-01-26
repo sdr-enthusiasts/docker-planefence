@@ -63,7 +63,7 @@ RUN set -x && \
 #
 # Install all the apt, pip3, and gem (ruby) packages:
     apt-get update && \
-    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES} ${KEPT_PACKAGES[@]} && \
+    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
 #    pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl && \
     pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
