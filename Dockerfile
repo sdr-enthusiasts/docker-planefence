@@ -10,67 +10,45 @@ RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
-    KEPT_PIP_PACKAGES=() && \
     KEPT_PIP3_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
-    # Required for building multiple packages.
+#
     TEMP_PACKAGES+=(pkg-config) && \
     TEMP_PACKAGES+=(git) && \
-#    TEMP_PACKAGES+=(automake) && \
-#    TEMP_PACKAGES+=(autoconf) && \
-    # logging
-#    KEPT_PACKAGES+=(gawk) && \
-#    KEPT_PACKAGES+=(pv) && \
-    # required for S6 overlay
-    # curl kept for healthcheck
-    # ca-certificates kept for python
-#    TEMP_PACKAGES+=(gnupg2) && \
-#    TEMP_PACKAGES+=(file) && \
-#    KEPT_PACKAGES+=(curl) && \
-#    KEPT_PACKAGES+=(ca-certificates) && \
-#    KEPT_PACKAGES+=(netcat) && \
-    KEPT_PACKAGES+=(unzip) && \
-    KEPT_PACKAGES+=(psmisc) && \
-    # a few KEPT_PACKAGES for debugging - they can be removed in the future
-    KEPT_PACKAGES+=(procps nano) && \
-    # Needed to pip3 install discord for some archs \
     TEMP_PACKAGES+=(gcc) && \
     TEMP_PACKAGES+=(python3-dev) && \
     TEMP_PACKAGES+=(pkg-config) && \
 #
-# define packages needed for PlaneFence, including socket30003
-#    KEPT_PACKAGES+=(python-pip) && \
+    KEPT_PACKAGES+=(unzip) && \
+    KEPT_PACKAGES+=(psmisc) && \
+    KEPT_PACKAGES+=(procps nano) && \
     KEPT_PACKAGES+=(python3-numpy) && \
     KEPT_PACKAGES+=(python3-pandas) && \
     KEPT_PACKAGES+=(python3-dateutil) && \
     KEPT_PACKAGES+=(jq) && \
-#    KEPT_PACKAGES+=(bc) && \
     KEPT_PACKAGES+=(gnuplot-nox) && \
     KEPT_PACKAGES+=(lighttpd) && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
-#    KEPT_PACKAGES+=(python3) && \
-#    KEPT_PACKAGES+=(python3-pip) && \
-   KEPT_PIP3_PACKAGES+=(tzlocal) && \
+#
+    KEPT_PIP3_PACKAGES+=(tzlocal) && \
     KEPT_PIP3_PACKAGES+=(discord-webhook) && \
     KEPT_PIP3_PACKAGES+=(requests) && \
+#
     KEPT_RUBY_PACKAGES+=(twurl) && \
-    echo ${TEMP_PACKAGES[*]} > /tmp/vars.tmp && \
-# We need some of the temp packages for building python3 dependencies so save those for the next layer
-#    echo ${KEPT_PIP3_PACKAGES[*]} > /tmp/pip3.tmp && \
 #
 # Install all the apt, pip3, and gem (ruby) packages:
     apt-get update -q && \
     apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
-#    pip install ${KEPT_PIP_PACKAGES[@]} && \
     gem install twurl && \
     pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
     git config --global advice.detachedHead false && \
-    # Do this here while we still have git installed:
+#
+# Do this here while we still have git installed:
     echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
-    # Clean up
+# Clean up
     TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
     echo Uninstalling $TEMP_PACKAGES && \
     apt-get remove -y $TEMP_PACKAGES && \
@@ -82,11 +60,9 @@ RUN set -x && \
       /var/lib/apt/lists/* \
       /.dockerenv \
       /git
-
-
+#
 COPY rootfs/ /
 #
-# Copy the planefence and plane-alert program files in place:
 COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
 RUN set -x && \
@@ -115,10 +91,6 @@ RUN set -x && \
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc
 #
-# install S6 Overlay
-#    curl --compressed -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
-#
-
 ENTRYPOINT [ "/init" ]
-
+#
 EXPOSE 80
