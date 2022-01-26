@@ -272,7 +272,7 @@ touch /tmp/pa-diff.csv
 #  compare the new csv file to the old one and only print the added entries
 comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 
-[[ "$(cat /tmp/pa-diff.csv | wc -l)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
+[[ "$(cat /tmp/pa-diff.csv | wc -l)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[planefence/plane-alert][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
@@ -291,7 +291,7 @@ then
 	# Send Discord alerts if that's enabled
 	if [[ "$PA_DISCORD" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 	then
-		LOG "PlaneAlert sending Discord notification"
+		echo "PlaneAlert sending Discord notification"
 		python3 $PLANEALERTDIR/send-discord-alert.py /tmp/pa-diff.csv
 	fi
 
