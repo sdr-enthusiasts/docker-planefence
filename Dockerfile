@@ -44,16 +44,15 @@ RUN set -x && \
     apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
     gem install twurl && \
     pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
-    git config --global advice.detachedHead false && \
 #
 # Do this here while we still have git installed:
+    git config --global advice.detachedHead false && \
     echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
 # Clean up
-    TEMP_PACKAGES="$(</tmp/vars.tmp)" && \
     echo Uninstalling $TEMP_PACKAGES && \
-    apt-get remove -y $TEMP_PACKAGES && \
-    apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
-    apt-get clean -y && \
+    apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
+    apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
+    apt-get clean -y -q && \
     rm -rf \
       /src/* \
       /tmp/* \
