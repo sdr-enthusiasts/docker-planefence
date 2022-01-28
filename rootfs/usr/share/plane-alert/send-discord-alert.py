@@ -77,7 +77,7 @@ def process_alerts(config, alerts):
 
         description = f""
         if plane.get('owner', "") != "":
-            description = f"Operated by {plane.get('owner')}"
+            description = f"Operated by **{plane.get('owner')}**"
         description += f"\n[Track on ADS-B Exchange]({plane['adsbx_url']})"
 
         embed = pf.embed.build(title, description, color=color)
