@@ -289,7 +289,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
 then
 	# Send Discord alerts if that's enabled
-	if [[ "$PA_DISCORD" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
+	if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 	then
 		[[ "$LOGLEVEL" != "ERROR" ]] &&  echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
 		python3 $PLANEALERTDIR/send-discord-alert.py /tmp/pa-diff.csv
