@@ -43,15 +43,15 @@ def load_alerts(alerts_file):
             # CSV format is:
             #      ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
             alerts.append({
-                "icao": row[0],
-                "tail_num": row[1],
-                "owner": row[2],
+                "icao": row[0].strip(),
+                "tail_num": row[1].strip(),
+                "owner": row[2].strip(),
                 "plane_desc": row[3],
                 "date": row[4],
                 "time": row[5],
                 "lat": row[6],
                 "long": row[7],
-                "callsign": row[8],
+                "callsign": row[8].strip(),
                 "adsbx_url": row[9],
                 "squawk": row[10] if len(row) > 10 else "",
             })

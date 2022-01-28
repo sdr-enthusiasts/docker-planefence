@@ -181,11 +181,13 @@ def distance_unit(config):
     return "mi"
 
 def flightaware_link(icao, tail_num):
+    icao = icao.strip()
     icao = icao.replace("[", "")
     icao = icao.replace("]", "")
+    tail_num - tail_num.strip()
     tail_num = tail_num.replace("[", "")
     tail_num = tail_num.replace("]", "")
-    return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}]/redirect"
+    return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}/redirect"
 
 def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')

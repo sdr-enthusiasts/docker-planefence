@@ -42,8 +42,8 @@ def load_alerts(alerts_file):
             #         Fields after adsbx_url are optional
             #   If FlightNum has an @ prefixing the tail number it was tweeted
             alert = {
-                "icao": row[0],
-                "tail_num": row[1],
+                "icao": row[0].strip(),
+                "tail_num": row[1].strip(),
                 "first_seen": row[2],
                 "last_seen": row[3],
                 "alt": row[4],
@@ -52,7 +52,7 @@ def load_alerts(alerts_file):
             }
             alerts.append(alert)
 
-    pf.log(f"Loaded {len(alerts)} fence alerts")
+    pf.log(f"Loaded {len(alerts)} Planefence alerts")
     return alerts
 
 
