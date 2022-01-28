@@ -184,7 +184,7 @@ def flightaware_link(icao, tail_num):
     icao = icao.strip()
     icao = icao.replace("[", "")
     icao = icao.replace("]", "")
-    tail_num - tail_num.strip()
+    tail_num = tail_num.strip()
     tail_num = tail_num.replace("[", "")
     tail_num = tail_num.replace("]", "")
     return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}/redirect"
