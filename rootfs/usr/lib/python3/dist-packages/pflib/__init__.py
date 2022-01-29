@@ -177,7 +177,7 @@ def is_emergency(squawk):
 
 def attach_media(config, subsystem, webhook, embed):
     if config.get('DISCORD_MEDIA', "") == "screenshot":
-        snapshot_prefix = subsystem.lower() if subsystem.lower() == "pa" else ""
+        snapshot_prefix = "" if subsystem.lower() == "pf" else subsystem.lower()
         snapshot_path = f"/tmp/{snapshot_prefix}snapshot.png"
         testmsg(f"snapshot_path: {snapshot_path}")
         if exists(snapshot_path):

@@ -274,6 +274,7 @@ fi
 [[ "x$DISCORD_FEEDER_NAME" != "x" ]] && sed -i "s|\(^\s*DISCORD_FEEDER_NAME=\).*|\1\"${DISCORD_FEEDER_NAME}\"|" /usr/share/planefence/planefence.conf
 [[ "x$DISCORD_FEEDER_NAME" != "x" ]] && sed -i "s|\(^\s*DISCORD_FEEDER_NAME=\).*|\1\"${DISCORD_FEEDER_NAME}\"|" /usr/share/plane-alert/plane-alert.conf
 [[ "x$DISCORD_MEDIA" != "x" ]] && sed -i "s~\(^\s*DISCORD_MEDIA=\).*~\1${DISCORD_MEDIA}~" /usr/share/plane-alert/plane-alert.conf
+[[ "x$DISCORD_MEDIA" != "x" ]] && sed -i "s~\(^\s*DISCORD_MEDIA=\).*~\1${DISCORD_MEDIA}~" /usr/share/planefence/planefence.conf
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
