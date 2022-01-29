@@ -27,6 +27,7 @@ import shutil
 import csv
 from datetime import datetime
 from os.path import exists
+import tzlocal
 
 import requests
 import discord_webhook as dw
@@ -180,13 +181,12 @@ def distance_unit(config):
         return "m"
     return "mi"
 
+def get_timezone_str():
+    return datetime.now(tzlocal.get_localzone()).strftime('%Z')
+
 def flightaware_link(icao, tail_num):
-    icao = icao.strip()
-    icao = icao.replace("[", "")
-    icao = icao.replace("]", "")
-    tail_num = tail_num.strip()
-    tail_num = tail_num.replace("[", "")
-    tail_num = tail_num.replace("]", "")
+    icao = icao.strip().replace("[", "").replace("]", "")
+    tail_num = tail_num.strip().replace("[", "").replace("]", "")
     return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}/redirect"
 
 def is_emergency(squawk):

@@ -92,6 +92,9 @@ def process_alerts(config, alerts):
         if plane.get('callsign', "") != "":
             pf.embed.field(embed, "Callsign", plane['callsign'])
 
+        if plane.get('time', "") != "":
+            pf.embed.field(embed, "First Seen", f"{plane['time']} {pf.get_timezone_str()}")
+
         if dbinfo.get('category', "") != "":
             pf.embed.field(embed, "Category", dbinfo['category'])
 

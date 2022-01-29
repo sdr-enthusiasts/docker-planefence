@@ -77,7 +77,9 @@ def process_alert(config, plane):
     pf.embed.field(embed, "ICAO", plane['icao'])
     pf.embed.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
     pf.embed.field(embed, "Distance", f"{plane['min_dist']}{pf.distance_unit(config)}")
-    pf.embed.field(embed, "First Seen", plane['first_seen'].split(" ")[1])
+
+    time_seen = plane['first_seen'].split(" ")[1]
+    pf.embed.field(embed, "First Seen", f"{time_seen} {pf.get_timezone_str()}")
 
     # Get a screenshot to attach if configured
     screenshot = None
