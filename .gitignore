@@ -108,4 +108,4 @@ rootfs/webapp/static/images/30days.png
 rootfs/webapp/static/images/6hour.png
 ./acars-decoder-typescript.tgz
 acars-decoder-typescript.tgz
-rootfs/usr/lib/python3.7/pflib/__pycache__
+rootfs/usr/lib/python3/dist-packages/pflib/__pycache__

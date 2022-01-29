@@ -203,6 +203,15 @@ then
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
+			# First, let's get a screenshot if there's one available!
+			rm -f /tmp/snapshot.png
+			GOTSNAP="false"
+			if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+			then
+				GOTSNAP="true"
+			fi
+			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
+
 			# LOG "PF_DISCORD: $PF_DISCORD"
 			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
 			# LOG "DISCORD_FEEDER_NAME: $DISCORD_FEEDER_NAME"
@@ -216,17 +225,15 @@ then
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
 			then
-				# First, let's get a screenshot if there's one available!
-				rm -f /tmp/snapshot.png
 				TWIMG="false"
-				if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
 					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
-				[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
+				[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${RECORD[0]}"
 
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]

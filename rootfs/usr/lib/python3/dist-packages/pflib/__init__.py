@@ -27,6 +27,7 @@ import shutil
 import csv
 from datetime import datetime
 from os.path import exists
+import tzlocal
 
 import requests
 import discord_webhook as dw
@@ -66,7 +67,8 @@ def load_config():
         "PLANEFILE": os.getenv('PLANEFILE', DEFAULT_PLANEFILE),
         "PA_DISCORD_WEBHOOKS": os.getenv("PA_DISCORD_WEBHOOKS", ""),
         "PF_DISCORD_WEBHOOKS": os.getenv("PF_DISCORD_WEBHOOKS", ""),
-        "DISCORD_FEEDER_NAME": os.getenv("DISCORD_FEEDER_NAME", "")
+        "DISCORD_FEEDER_NAME": os.getenv("DISCORD_FEEDER_NAME", ""),
+        "DISCORD_MEDIA": os.getenv("DISCORD_MEDIA", "")
     }
 
     # Load config
@@ -95,24 +97,6 @@ def load_config():
     load_planefile(config)
 
     return config
-
-
-def get_screenshot_file(config, icao):
-    log(f"Getting Screenshot for {icao}...")
-    snap_response = requests.get(f"{config['SCREENSHOTURL']}/snap/{icao}", stream=True, timeout=45.0)
-    testmsg("Screenshot Got!")
-
-    if snap_response.status_code == 200:
-        tmp = tempfile.NamedTemporaryFile(suffix=".png")
-        with open(tmp.name, 'wb') as f:
-            snap_response.raw.decode_content = True
-            shutil.copyfileobj(snap_response.raw, f)
-
-        log(f"Screenshot for {icao} written to {tmp.name}")
-        return discord.File(tmp.name)
-    else:
-        log(f"[Error] - Non-200 response from screenshot container: {snap_response.status_code}")
-        return None
 
 
 def load_planefile(config):
@@ -180,19 +164,37 @@ def distance_unit(config):
         return "m"
     return "mi"
 
+def get_timezone_str():
+    return datetime.now(tzlocal.get_localzone()).strftime('%Z')
+
 def flightaware_link(icao, tail_num):
-    icao = icao.strip()
-    icao = icao.replace("[", "")
-    icao = icao.replace("]", "")
-    tail_num = tail_num.strip()
-    tail_num = tail_num.replace("[", "")
-    tail_num = tail_num.replace("]", "")
+    icao = icao.strip().replace("[", "").replace("]", "")
+    tail_num = tail_num.strip().replace("[", "").replace("]", "")
     return f"https://flightaware.com/live/modes/{icao}/ident/{tail_num}/redirect"
 
 def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')
 
-def send(urls, embed):
+def attach_media(config, subsystem, webhook, embed):
+    if config.get('DISCORD_MEDIA', "") == "screenshot":
+        snapshot_prefix = "" if subsystem.lower() == "pf" else subsystem.lower()
+        snapshot_path = f"/tmp/{snapshot_prefix}snapshot.png"
+        testmsg(f"snapshot_path: {snapshot_path}")
+        if exists(snapshot_path):
+            with open(snapshot_path, "rb") as f:
+                webhook.add_file(file=f.read(), filename='snapshot.png')
+            embed.set_image(url="attachment://snapshot.png")
+        else:
+            log("[error] Snapshot file doesn't exist during Discord run")
+
+def send(config, subsystem, embed):
+    urls = config[f"{subsystem.upper()}_DISCORD_WEBHOOKS"]
+
     webhook = dw.DiscordWebhook(url=urls)
     webhook.add_embed(embed)
+
+    testmsg(f"DISCORD_MEDIA: {config['DISCORD_MEDIA']}")
+    if config.get('DISCORD_MEDIA', "") != "":
+        attach_media(config, subsystem, webhook, embed)
+
     webhook.execute()
