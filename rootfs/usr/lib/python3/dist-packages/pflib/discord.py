@@ -1,11 +1,16 @@
-import discord_webhook as discord
+import discord_webhook as dw
 
-def build(title, description, color=None):
+def build(urls, title, description, color=None):
+    webhook = dw.DiscordWebhook(url=urls)
+
     if color is None:
         color = 0x007bff  # Blue
-    embed = discord.DiscordEmbed(title=title, color=color, description=description)
+    embed = dw.DiscordEmbed(title=title, color=color, description=description)
     embed.set_footer(text="Planefence by kx1t - docker:kx1t/planefence")
-    return embed
+
+    webhook.add_embed(embed)
+
+    return webhook, embed
 
 def field(embed, name, value, inline=None):
     if inline is None:

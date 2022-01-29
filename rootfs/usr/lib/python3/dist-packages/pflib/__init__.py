@@ -22,17 +22,13 @@
 # If not, see https://www.gnu.org/licenses/.
 
 import os
-import tempfile
-import shutil
 import csv
 from datetime import datetime
 from os.path import exists
+from random import choice
 import tzlocal
 
-import requests
-import discord_webhook as dw
-
-from pflib import embed
+from pflib import discord
 
 
 DEFAULT_PLANEFILE="/usr/share/planefence/persist/.internal/plane-alert-db.txt"
@@ -106,7 +102,7 @@ def load_planefile(config):
     with open(config['PLANEFILE']) as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            #  $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link
+            #  $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link,#Image Link,#Image Link 2,#Image Link 3
             # Example line:
             #  A51316,N426NA,NASA,Lockheed P-3B Orion,P3,Gov,Sce To Aux,Airborne Science,Wallops Flight Facility,Distinctive,https://www.nasa.gov
             # Skip header and invalid/empty lines
@@ -124,12 +120,28 @@ def load_planefile(config):
                 "tag2": row[7] if len(row) > 7 else "",
                 "tag3": row[8] if len(row) > 8 else "",
                 "category": row[9] if len(row) > 9 else "" ,
-                "link": row[10] if len(row) > 10 else ""
+                "link": row[10] if len(row) > 10 else "",
             }
+            if len(row) > 11:
+                plane['photos'] = [
+                    link for link in
+                    [
+                        _try_get_photo(row, 11),
+                        _try_get_photo(row, 12),
+                        _try_get_photo(row, 13)
+                    ]
+                    if link != ""
+                ]
+
             planedb[plane["icao"]] = plane
 
     log(f"Loaded {len(planedb)} entries into plane-db")
 
+def _try_get_photo(row, index):
+    try:
+        return row[index]
+    except:
+        return ""
 
 def get_plane_info(icao):
     return planedb.get(icao, {})
@@ -175,26 +187,64 @@ def flightaware_link(icao, tail_num):
 def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')
 
-def attach_media(config, subsystem, webhook, embed):
-    if config.get('DISCORD_MEDIA', "") == "screenshot":
-        snapshot_prefix = "" if subsystem.lower() == "pf" else subsystem.lower()
-        snapshot_path = f"/tmp/{snapshot_prefix}snapshot.png"
-        testmsg(f"snapshot_path: {snapshot_path}")
-        if exists(snapshot_path):
-            with open(snapshot_path, "rb") as f:
-                webhook.add_file(file=f.read(), filename='snapshot.png')
-            embed.set_image(url="attachment://snapshot.png")
-        else:
-            log("[error] Snapshot file doesn't exist during Discord run")
-
-def send(config, subsystem, embed):
-    urls = config[f"{subsystem.upper()}_DISCORD_WEBHOOKS"]
-
-    webhook = dw.DiscordWebhook(url=urls)
-    webhook.add_embed(embed)
-
+def attach_media(config, subsystem, plane, webhook, embed):
+    media_mode = config.get('DISCORD_MEDIA', "")
     testmsg(f"DISCORD_MEDIA: {config['DISCORD_MEDIA']}")
-    if config.get('DISCORD_MEDIA', "") != "":
-        attach_media(config, subsystem, webhook, embed)
 
-    webhook.execute()
+    # Media attachments is disabled
+    if media_mode == "":
+        return
+
+    image_url = ""
+    thumb_url = ""
+
+    if media_mode == "photo" and subsystem == "PA":
+        image_url = get_photo_url(plane)
+    elif media_mode == "screenshot":
+        image_url = get_screenshot_url(webhook, subsystem)
+    elif media_mode == "photo+screenshot":
+        image_url = get_photo_url(plane)
+        thumb_url = get_screenshot_url(webhook, subsystem)
+    elif media_mode == "screenshot+photo":
+        image_url = get_screenshot_url(webhook, subsystem)
+        thumb_url = get_photo_url(plane)
+    else:
+        log(f"[error] Unknown DISCORD_MEDIA mode: {media_mode}")
+
+    if image_url == "" and thumb_url != "":
+        # We have a thumbnail but no image. Swap them.
+        image_url = thumb_url
+        thumb_url = ""
+
+    if image_url != "":
+        embed.set_image(url=image_url)
+    if thumb_url != "":
+        embed.set_thumbnail(url=thumb_url)
+
+def get_photo_url(plane):
+    try:
+        photos = plane.get('photos')
+        if photos is not None:
+            testmsg(f"Plane Photos: {','.join(photos)}")
+            url = choice(photos)
+            if not url.startswith("https://"):
+                url = f"https://{url}"
+            testmsg(f"photo attachment: {url}")
+            return url
+        else:
+            testmsg(f"No plane photos for {plane['icao']}")
+    except Exception as e:
+        log("[error] unable to attach plane photo: " + e)
+    return ""
+
+def get_screenshot_url(webhook, subsystem):
+    snapshot_prefix = "" if subsystem == "PF" else subsystem.lower()
+    snapshot_path = f"/tmp/{snapshot_prefix}snapshot.png"
+    testmsg(f"snapshot_path: {snapshot_path}")
+    if exists(snapshot_path):
+        with open(snapshot_path, "rb") as f:
+            webhook.add_file(file=f.read(), filename='snapshot.png')
+        return "attachment://snapshot.png"
+    else:
+        log("[error] Snapshot file doesn't exist during Discord run")
+    return ""
