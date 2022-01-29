@@ -87,7 +87,7 @@ def process_alert(config, plane):
         screenshot = pf.get_screenshot_file(config, plane['icao'])
 
     # Send the message
-    pf.send(config['PF_DISCORD_WEBHOOKS'], embed)
+    pf.send(config, "PF", embed)
 
 
 def main():

@@ -110,13 +110,8 @@ def process_alerts(config, alerts):
         if dbinfo.get('link', "") != "":
             pf.embed.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
-        # Get a screenshot to attach if configured
-        screenshot = None
-        if config.get("SCREENSHOTURL", "") != "":
-            screenshot = pf.get_screenshot_file(config, plane['icao'])
-
         # Send the message
-        pf.send(config['PA_DISCORD_WEBHOOKS'], embed)
+        pf.send(config, "PA", embed)
 
 
 def main():

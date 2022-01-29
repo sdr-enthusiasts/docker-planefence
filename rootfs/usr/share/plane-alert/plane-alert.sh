@@ -288,6 +288,14 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 # If there's any new alerts send them out
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
 then
+	# Get a screenshot if there\'s one available!
+	rm -f /tmp/pasnapshot.png
+	GOTSNAP="false"
+	if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+	then
+		GOTSNAP="true"
+	fi
+
 	# Send Discord alerts if that's enabled
 	if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 	then
@@ -368,10 +376,9 @@ then
 					echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 					[[ "$twitterid" == "" ]] && continue
 
-					# Get a screenshot if there\'s one available!
-					rm -f /tmp/pasnapshot.png
+					# Upload a screenshot if there\'s one available!
 					TWIMG="false"
-					if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+					if [[ "$GOTSNAP" == "true" ]]
 					then
 						# If the curl call succeeded, we have a snapshot.png file saved!
 						TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
