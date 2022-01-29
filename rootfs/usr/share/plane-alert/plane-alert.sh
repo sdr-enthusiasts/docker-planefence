@@ -294,6 +294,9 @@ then
 	if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
 	then
 		GOTSNAP="true"
+		echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}"
+	else
+		echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
 	fi
 
 	# Send Discord alerts if that's enabled
@@ -388,7 +391,8 @@ then
 						#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 						#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 					fi
-					[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
+					[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
+
 
 					# send a tweet.
 					# the conditional makes sure that tweets can be sent with or without image:

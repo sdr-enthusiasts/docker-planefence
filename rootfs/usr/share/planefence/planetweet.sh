@@ -210,6 +210,7 @@ then
 			then
 				GOTSNAP="true"
 			fi
+			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
 
 			# LOG "PF_DISCORD: $PF_DISCORD"
 			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
@@ -224,8 +225,6 @@ then
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
 			then
-				# First, let's get a screenshot if there's one available!
-				rm -f /tmp/snapshot.png
 				TWIMG="false"
 				if [[ "$GOTSNAP" == "true" ]]
 				then
@@ -234,7 +233,7 @@ then
 					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
-				[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
+				[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${RECORD[0]}"
 
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]
