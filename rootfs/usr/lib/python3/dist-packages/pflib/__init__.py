@@ -211,6 +211,10 @@ def attach_media(config, subsystem, plane, webhook, embed):
     else:
         log(f"[error] Unknown DISCORD_MEDIA mode: {media_mode}")
 
+    if image_url == "" and thumb_url == "":
+        # There is no image and no thumbnail - bail out.
+        return
+
     if image_url == "" and thumb_url != "":
         # We have a thumbnail but no image. Swap them.
         image_url = thumb_url
