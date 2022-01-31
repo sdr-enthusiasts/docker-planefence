@@ -293,9 +293,9 @@ fi
 [[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
 [[ "$PF_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PF_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
-configure_planealert "PA_DISCORD_WEBHOOKS" "${PA_DISCORD_WEBHOOKS}"
-configure_planefence "PF_DISCORD_WEBHOOKS" "${PF_DISCORD_WEBHOOKS}"
-configure_both "DISCORD_FEEDER_NAME" "${DISCORD_FEEDER_NAME}"
+configure_planealert "PA_DISCORD_WEBHOOKS" "\'${PA_DISCORD_WEBHOOKS}\'"
+configure_planefence "PF_DISCORD_WEBHOOKS" "\'${PF_DISCORD_WEBHOOKS}\'"
+configure_both "DISCORD_FEEDER_NAME" "\'${DISCORD_FEEDER_NAME}\'"
 configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf

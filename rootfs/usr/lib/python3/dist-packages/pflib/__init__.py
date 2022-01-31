@@ -223,8 +223,8 @@ def attach_media(config, subsystem, plane, webhook, embed):
 
 def get_photo_url(plane):
     try:
-        photos = plane.get('photos')
-        if photos is not None:
+        photos = plane.get('photos', [])
+        if len(photos) > 0:
             testmsg(f"Plane Photos: {','.join(photos)}")
             url = choice(photos)
             if not url.startswith("https://"):
