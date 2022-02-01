@@ -252,3 +252,12 @@ def get_screenshot_url(webhook, subsystem):
     else:
         log("[error] Snapshot file doesn't exist during Discord run")
     return ""
+
+def send(webhook, config):
+    try:
+        webhook.execute()
+    except Exception as e:
+        log("[error] Exception during send, printing config...")
+        from pprint import pprint
+        pprint(config)
+        raise e
