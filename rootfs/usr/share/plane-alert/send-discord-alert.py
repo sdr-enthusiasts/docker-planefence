@@ -112,7 +112,7 @@ def process_alerts(config, alerts):
             pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
         # Send the message
-        webhook.execute()
+        pf.send(webhook, config)
 
 
 def main():
