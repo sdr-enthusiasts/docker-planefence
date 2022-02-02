@@ -34,6 +34,7 @@ RUN set -x && \
     KEPT_PIP3_PACKAGES+=(tzlocal) && \
     KEPT_PIP3_PACKAGES+=(discord-webhook) && \
     KEPT_PIP3_PACKAGES+=(requests) && \
+    KEPT_PIP3_PACKAGES+=(geopy) && \
 #
     KEPT_RUBY_PACKAGES+=(twurl) && \
 #
