@@ -1,8 +1,4 @@
-FROM ghcr.io/fredclausen/docker-baseimage:python
-
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
-
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
@@ -87,7 +83,9 @@ RUN set -x && \
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc
+
 #
-ENTRYPOINT [ "/init" ]
+# No need for SHELL and ENTRYPOINT as those are inherited from the base image
 #
+
 EXPOSE 80
