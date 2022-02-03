@@ -67,7 +67,7 @@ def process_alert(config, plane):
     fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
     webhook, embed = pf.discord.build(
-        config["PA_DISCORD_WEBHOOKS"],
+        config["PF_DISCORD_WEBHOOKS"],
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
@@ -85,7 +85,7 @@ def process_alert(config, plane):
     pf.discord.field(embed, "First Seen", f"{time_seen} {pf.get_timezone_str()}")
 
     # Send the message
-    webhook.execute()
+    pf.send(webhook, config)
 
 
 def main():

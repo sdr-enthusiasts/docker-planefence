@@ -30,6 +30,28 @@ import csv
 
 import pflib as pf
 
+#Human readable location stuff
+from geopy.geocoders import Nominatim
+geolocator = Nominatim(user_agent="plane-alert")
+
+def get_readable_location(plane):
+    lat1 = plane['lat']
+    lon1 = plane['long']
+    location1 = geolocator.reverse("{}, {}".format(lat1, lon1),exactly_one=True, language='en')
+    adr = location1.raw.get('address',{})
+    village = adr.get('village', "")
+    suburb = adr.get('suburb', "")
+    city = adr.get('city', "")
+    county = adr.get('county', "")
+    country = adr.get('country', "")
+    print (village)
+    print (suburb)
+    print (city)
+    print (county)
+    print (country)
+    return f"{village} {suburb} {city} {county} {country}"
+
+
 
 # Read the alerts in the input file
 def load_alerts(alerts_file):
@@ -78,7 +100,7 @@ def process_alerts(config, alerts):
         description = f""
         if plane.get('owner', "") != "":
             description = f"Operated by **{plane.get('owner')}**"
-        description += f"\n[Track on ADS-B Exchange]({plane['adsbx_url']})"
+            description += f"\nSeen near [**{get_readable_location(plane)}**]({plane['adsbx_url']})"
 
         webhook, embed = pf.discord.build(config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
         pf.attach_media(config, "PA", dbinfo, webhook, embed)
@@ -112,7 +134,7 @@ def process_alerts(config, alerts):
             pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
         # Send the message
-        webhook.execute()
+        pf.send(webhook, config)
 
 
 def main():
