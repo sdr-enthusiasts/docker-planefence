@@ -30,28 +30,32 @@ import csv
 
 import pflib as pf
 
-#Human readable location stuff
+# Human readable location stuff
 from geopy.geocoders import Nominatim
 geolocator = Nominatim(user_agent="plane-alert")
 
 def get_readable_location(plane):
-    lat1 = plane['lat']
-    lon1 = plane['long']
-    location1 = geolocator.reverse("{}, {}".format(lat1, lon1),exactly_one=True, language='en')
-    adr = location1.raw.get('address',{})
+    loc = geolocator.reverse("{}, {}".format(plane['lat'], plane['long']), exactly_one=True, language='en')
+    adr = loc.raw.get('address', {})
+
+    print("Location data:")
+    print(adr)
+
     village = adr.get('village', "")
-    suburb = adr.get('suburb', "")
+    municipality = adr.get('municipality', "")
     city = adr.get('city', "")
-    county = adr.get('county', "")
+    town = adr.get('town', "")
     country = adr.get('country', "")
-    print (village)
-    print (suburb)
-    print (city)
-    print (county)
-    print (country)
-    return f"{village} {suburb} {city} {county} {country}"
+    country_code = adr.get('country_code', "").upper()
 
+    place = city or town or village or municipality
 
+    if country_code == "US":
+        state = pf.get_us_state_abbrev(adr.get('state', ""))
+
+        return f"{place}, {state}, {country_code}"
+    else:
+        return f"{place}, {country}"
 
 # Read the alerts in the input file
 def load_alerts(alerts_file):
