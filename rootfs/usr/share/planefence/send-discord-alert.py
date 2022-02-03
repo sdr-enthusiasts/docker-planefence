@@ -71,7 +71,7 @@ def process_alert(config, plane):
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
-    pf.attach_media(config, "PA", plane, webhook, embed)
+    pf.attach_media(config, "PF", plane, webhook, embed)
 
     if config.get("DISCORD_FEEDER_NAME", "") != "":
         pf.discord.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
