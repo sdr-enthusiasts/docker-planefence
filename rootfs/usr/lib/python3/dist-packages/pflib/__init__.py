@@ -29,6 +29,7 @@ from random import choice
 import tzlocal
 
 from pflib import discord
+from .us_states import get_us_state_abbrev
 
 
 DEFAULT_PLANEFILE="/usr/share/planefence/persist/.internal/plane-alert-db.txt"
