@@ -368,6 +368,19 @@ then
 			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
 
+			# Upload a screenshot if there\'s one available!
+			TWIMG="false"
+			if [[ "$GOTSNAP" == "true" ]]
+			then
+				# If the curl call succeeded, we have a snapshot.png file saved!
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+				#else
+				# this entire ELSE statement is test code and should be removed
+				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+			fi
+			[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
 
 			if [[ "$TWITTER" == "DM" ]]
 			then
@@ -378,20 +391,6 @@ then
 					[[ "$TESTING" == "true" ]] && echo
 					echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 					[[ "$twitterid" == "" ]] && continue
-
-					# Upload a screenshot if there\'s one available!
-					TWIMG="false"
-					if [[ "$GOTSNAP" == "true" ]]
-					then
-						# If the curl call succeeded, we have a snapshot.png file saved!
-						TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-						#else
-						# this entire ELSE statement is test code and should be removed
-						#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-					fi
-					[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
 
 					# send a tweet.
 					# the conditional makes sure that tweets can be sent with or without image:
