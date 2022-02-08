@@ -38,14 +38,17 @@ GROUP=www-data
 #
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
-lighttpd-enable-mod fastcgi fastcgi-php
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Starting FastCGI" || true
+lighttpd-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
 #
 # -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:
 #
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Checking Lighttpd configuration" || true
 $APPPATH -tt -f $CONFIGPATH || exit $?
 #
 # -----------------------------------------------------------------------------------
 # Now run ligghttpd for real
 #
+[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Bringing Lighttpd Up" || true
 $APPPATH -f $CONFIGPATH -D
