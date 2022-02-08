@@ -36,6 +36,10 @@ geolocator = Nominatim(user_agent="plane-alert")
 
 def get_readable_location(plane):
     loc = geolocator.reverse("{}, {}".format(plane['lat'], plane['long']), exactly_one=True, language='en')
+    if loc is None:
+        pf.log("[error] No geolocation information return for '{}, {}'".format(plane['lat'], plane['long']))
+        return ""
+
     adr = loc.raw.get('address', {})
 
     print("Location data:")
@@ -74,7 +78,13 @@ def process_alert(config, plane):
     description = f""
     if plane.get('owner', "") != "":
         description = f"Operated by **{plane.get('owner')}**"
-        description += f"\nSeen near [**{get_readable_location(plane)}**]({plane['adsbx_url']})"
+
+    location = get_readable_location(plane)
+    if location == "":
+        # No location info, just embed ADSBX link
+        description += f"\nTrack on [ADSB Exchange]({plane['adsbx_url']})"
+    else:
+        description += f"\nSeen near [**{location}**]({plane['adsbx_url']})"
 
     webhook, embed = pf.discord.build(config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
     pf.attach_media(config, "PA", dbinfo, webhook, embed)
@@ -141,7 +151,7 @@ def main():
     # Process file and send alerts
     process_alert(config, alert)
 
-    pf.log(f"Done sending alerts to Discord")
+    pf.log(f"Done sending Discord alert for {alert['icao']}")
 
 
 if __name__ == "__main__":
