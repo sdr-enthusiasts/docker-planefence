@@ -30,111 +30,95 @@ import csv
 
 import pflib as pf
 
-#Human readable location stuff
+# Human readable location stuff
 from geopy.geocoders import Nominatim
 geolocator = Nominatim(user_agent="plane-alert")
 
 def get_readable_location(plane):
-    lat1 = plane['lat']
-    lon1 = plane['long']
-    location1 = geolocator.reverse("{}, {}".format(lat1, lon1),exactly_one=True, language='en')
-    adr = location1.raw.get('address',{})
+    loc = geolocator.reverse("{}, {}".format(plane['lat'], plane['long']), exactly_one=True, language='en')
+    if loc is None:
+        pf.log("[error] No geolocation information return for '{}, {}'".format(plane['lat'], plane['long']))
+        return ""
+
+    adr = loc.raw.get('address', {})
+
+    print("Location data:")
+    print(adr)
+
     village = adr.get('village', "")
-    suburb = adr.get('suburb', "")
+    municipality = adr.get('municipality', "")
     city = adr.get('city', "")
-    county = adr.get('county', "")
+    town = adr.get('town', "")
     country = adr.get('country', "")
-    print (village)
-    print (suburb)
-    print (city)
-    print (county)
-    print (country)
-    return f"{village} {suburb} {city} {county} {country}"
+    country_code = adr.get('country_code', "").upper()
 
+    place = city or town or village or municipality
 
+    if country_code == "US":
+        state = pf.get_us_state_abbrev(adr.get('state', ""))
 
-# Read the alerts in the input file
-def load_alerts(alerts_file):
-    alerts = []
-    with open(alerts_file) as csvfile:
-        reader = csv.reader(csvfile)
-        for row in reader:
-            # Skip header and invalid lines
-            if len(row) < 10 or row[0].startswith("#"):
-                continue
-            # CSV format is:
-            #      ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
-            alerts.append({
-                "icao": row[0].strip(),
-                "tail_num": row[1].strip(),
-                "owner": row[2].strip(),
-                "plane_desc": row[3],
-                "date": row[4],
-                "time": row[5],
-                "lat": row[6],
-                "long": row[7],
-                "callsign": row[8].strip(),
-                "adsbx_url": row[9],
-                "squawk": row[10] if len(row) > 10 else "",
-            })
+        return f"{place}, {state}, {country_code}"
+    else:
+        return f"{place}, {country}"
 
-    pf.log(f"Loaded {len(alerts)} alerts")
-    return alerts
+def process_alert(config, plane):
+    pf.log(f"Building Discord alert for {plane['icao']}")
 
+    dbinfo = pf.get_plane_info(plane['icao'])
 
-def process_alerts(config, alerts):
-    for plane in alerts:
-        pf.log(f"Building Discord alert for {plane['icao']}")
+    fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
-        dbinfo = pf.get_plane_info(plane['icao'])
+    title = f"Plane Alert - {plane['plane_desc']}"
+    color = 0xf2e718
+    squawk = plane.get('squawk', "")
+    if pf.is_emergency(squawk):
+        title = f"Air Emergency! {plane['tail_num']} squawked {squawk}"
+        color = 0xff0000
 
-        fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
+    description = f""
+    if plane.get('owner', "") != "":
+        description = f"Operated by **{plane.get('owner')}**"
 
-        title = f"Plane Alert - {plane['plane_desc']}"
-        color = 0xf2e718
-        squawk = plane.get('squawk', "")
-        if pf.is_emergency(squawk):
-            title = f"Air Emergency! {plane['tail_num']} squawked {squawk}"
-            color = 0xff0000
+    location = get_readable_location(plane)
+    if location == "":
+        # No location info, just embed ADSBX link
+        description += f"\nTrack on [ADSB Exchange]({plane['adsbx_url']})"
+    else:
+        description += f"\nSeen near [**{location}**]({plane['adsbx_url']})"
 
-        description = f""
-        if plane.get('owner', "") != "":
-            description = f"Operated by **{plane.get('owner')}**"
-            description += f"\nSeen near [**{get_readable_location(plane)}**]({plane['adsbx_url']})"
+    webhook, embed = pf.discord.build(config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
+    pf.attach_media(config, "PA", dbinfo, webhook, embed)
 
-        webhook, embed = pf.discord.build(config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
-        pf.attach_media(config, "PA", dbinfo, webhook, embed)
+    if config.get("DISCORD_FEEDER_NAME", "") != "":
+        pf.discord.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
 
-        if config.get("DISCORD_FEEDER_NAME", "") != "":
-            pf.discord.field(embed, "Feeder", config["DISCORD_FEEDER_NAME"])
+    # Attach data fields
+    pf.discord.field(embed, "ICAO", plane['icao'])
+    pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
 
-        # Attach data fields
-        pf.discord.field(embed, "ICAO", plane['icao'])
-        pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
+    if plane.get('callsign', "") != "":
+        pf.discord.field(embed, "Callsign", plane['callsign'])
 
-        if plane.get('callsign', "") != "":
-            pf.discord.field(embed, "Callsign", plane['callsign'])
+    if plane.get('time', "") != "":
+        pf.discord.field(embed, "First Seen", f"{plane['time']} {pf.get_timezone_str()}")
 
-        if plane.get('time', "") != "":
-            pf.discord.field(embed, "First Seen", f"{plane['time']} {pf.get_timezone_str()}")
+    if dbinfo.get('category', "") != "":
+        pf.discord.field(embed, "Category", dbinfo['category'])
 
-        if dbinfo.get('category', "") != "":
-            pf.discord.field(embed, "Category", dbinfo['category'])
+    if dbinfo.get('tag1', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag1'])
 
-        if dbinfo.get('tag1', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag1'])
+    if dbinfo.get('tag2', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag2'])
 
-        if dbinfo.get('tag2', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag2'])
+    if dbinfo.get('tag3', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag3'])
 
-        if dbinfo.get('tag3', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag3'])
+    if dbinfo.get('link', "") != "":
+        pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
-        if dbinfo.get('link', "") != "":
-            pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
-
-        # Send the message
-        pf.send(webhook, config)
+    # Send the message
+    pf.send(webhook, config)
 
 
 def main():
@@ -144,16 +128,30 @@ def main():
     config = pf.load_config()
 
     if len(sys.argv) != 2:
-        print("No input file passed\n\tUsage: ./send-discord-alert.py <inputfile>")
+        print("No input record passed\n\tUsage: ./send-discord-alert.py <csvline>")
         sys.exit(1)
 
-    input_file = sys.argv[1]
+    # CSV format is:
+    #      ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
+    row = sys.argv[1].split(',')
+    alert = {
+        "icao": row[0].strip(),
+        "tail_num": row[1].strip(),
+        "owner": row[2].strip(),
+        "plane_desc": row[3],
+        "date": row[4],
+        "time": row[5],
+        "lat": row[6],
+        "long": row[7],
+        "callsign": row[8].strip(),
+        "adsbx_url": row[9],
+        "squawk": row[10] if len(row) > 10 else "",
+    }
 
     # Process file and send alerts
-    alerts = load_alerts(input_file)
-    process_alerts(config, alerts)
+    process_alert(config, alert)
 
-    pf.log(f"Done sending alerts to Discord")
+    pf.log(f"Done sending Discord alert for {alert['icao']}")
 
 
 if __name__ == "__main__":

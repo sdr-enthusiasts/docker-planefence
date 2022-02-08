@@ -288,40 +288,40 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 # If there's any new alerts send them out
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
 then
-	# Get a screenshot if there\'s one available!
-	rm -f /tmp/pasnapshot.png
-	GOTSNAP="false"
-	if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
-	then
-		GOTSNAP="true"
-		echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}"
-	else
-		echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
-	fi
+	# Loop through the new planes and notify them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
+	ERRORCOUNT=0
+	while IFS= read -r line
+	do
+		XX=$(echo -n $line | tr -d '[:cntrl:]')
+		line=$XX
 
-	# Send Discord alerts if that's enabled
-	if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
-	then
-		[[ "$LOGLEVEL" != "ERROR" ]] &&  echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
-		python3 $PLANEALERTDIR/send-discord-alert.py /tmp/pa-diff.csv
-	fi
+		unset pa_record
+		IFS=',' read -ra pa_record <<< "$line"
 
-	# Send Twitter alerts if that's enabled
-	if [[ "$TWITTER" != "false" ]]
-	then
-		# Loop through the new planes and tweet them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
-		ERRORCOUNT=0
-		while IFS= read -r line
-		do
-			XX=$(echo -n $line | tr -d '[:cntrl:]')
-			line=$XX
+		[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
 
-			unset pa_record
-			IFS=',' read -ra pa_record <<< "$line"
+		ICAO="${pa_record[0]}"
+		# Get a screenshot if there\'s one available!
+		rm -f /tmp/pasnapshot.png
+		GOTSNAP="false"
+		if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+		then
+			GOTSNAP="true"
+			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}"
+		else
+			echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
+		fi
 
-			[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
+		# Send Discord alerts if that's enabled
+		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
+		then
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
+			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
+		fi
 
-			ICAO="${pa_record[0]}"
+		# Send Twitter alerts if that's enabled
+		if [[ "$TWITTER" != "false" ]]
+		then
 			# add a hashtag to the item if needed:
 			[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
 
@@ -368,6 +368,19 @@ then
 			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
 			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
 
+			# Upload a screenshot if there\'s one available!
+			TWIMG="false"
+			if [[ "$GOTSNAP" == "true" ]]
+			then
+				# If the curl call succeeded, we have a snapshot.png file saved!
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+				#else
+				# this entire ELSE statement is test code and should be removed
+				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+			fi
+			[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
 
 			if [[ "$TWITTER" == "DM" ]]
 			then
@@ -378,21 +391,6 @@ then
 					[[ "$TESTING" == "true" ]] && echo
 					echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
 					[[ "$twitterid" == "" ]] && continue
-
-					# Upload a screenshot if there\'s one available!
-					TWIMG="false"
-					if [[ "$GOTSNAP" == "true" ]]
-					then
-						# If the curl call succeeded, we have a snapshot.png file saved!
-						TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-						#else
-						# this entire ELSE statement is test code and should be removed
-						#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-						#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-					fi
-					[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
-
 
 					# send a tweet.
 					# the conditional makes sure that tweets can be sent with or without image:
@@ -450,18 +448,6 @@ then
 
 				echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
 
-
-				# Get a screenshot if there\'s one available!
-				rm -f /tmp/pasnapshot.png
-				TWIMG="false"
-				if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
-				then
-					# If the curl call succeeded, we have a snapshot.png file saved!
-					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-				fi
-				[[ "$TWIMG" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; Twitter Media ID=$TW_MEDIA_ID" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
-
 				# send a tweet.
 				# the conditional makes sure that tweets can be sent with or without image:
 				if [[ "$TWIMG" == "true" ]]
@@ -486,8 +472,8 @@ then
 					echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 				fi
 			fi
-		done < /tmp/pa-diff.csv
-	fi
+		fi
+	done < /tmp/pa-diff.csv
 fi
 
 [[ "$BASETIME" != "" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage" || true
