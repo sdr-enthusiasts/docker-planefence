@@ -120,7 +120,15 @@ fi
 # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
 if [[ "$FUDGELOC" != "" ]]
 then
-	if [[ "$FUDGELOC" == "2" ]]
+	if [[ "$FUDGELOC" == "0" ]]
+	then
+		printf -v LON_VIS "%.0f" $LON
+		printf -v LAT_VIS "%.0f" $LAT
+	elif [[ "$FUDGELOC" == "1" ]]
+	then
+		printf -v LON_VIS "%.1f" $LON
+		printf -v LAT_VIS "%.1f" $LAT
+	elif [[ "$FUDGELOC" == "2" ]]
 	then
 		printf -v LON_VIS "%.2f" $LON
 		printf -v LAT_VIS "%.2f" $LAT
@@ -245,7 +253,7 @@ EOF
 	if [[ "$HASTWEET" == "true" ]]
 	then
 		# print a header for the Tweeted column
-		printf "	<th>Tweeted</th>\n" >> "$2"
+		printf "	<th>Notified</th>\n" >> "$2"
 	fi
 	printf "</tr>\n" >&3
 
@@ -443,12 +451,12 @@ EOF
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
 				then
-					printf "   <td><a href=\"%s\" target=\"_blank\">yes</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
-					printf "   <td>yes</td>\n" >&3
+					printf "   <td>discord</td>\n" >&3
 				fi
 			else
-				# If there were tweet, but not for this record, then print "no"
+				# If this record doesnt have an "@" then print "no"
 				printf "   <td>no</td>\n" >&3
 			fi
 			# There were no tweets at all, so don't even print a field
@@ -749,9 +757,9 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [ ! -z "$PLANETWEET" ] && [ "$1" == "" ]
+if [[ ! -z "$PLANETWEET" || "$PF_DISCORD" == "true" ]] && [[ "$1" == "" ]]
 then
-	LOG "Invoking PlaneTweet!"
+	LOG "Invoking PlaneTweet for tweeting and/or discord notifications"
 	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"
 else
 	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
@@ -1028,10 +1036,10 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
 <hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
-<br/>&copy; Copyright 2020, 2021 by Ram&oacute;n F. Kolb. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
-<br/><a href="https://github.com/kx1t/docker-planefence/actions?query=workflow%3A%22Deploy+to+Docker+Hub%22" target="_blank"><img src="https://img.shields.io/github/workflow/status/kx1t/docker-planefence/Deploy%20to%20Docker%20Hub"></a>
-<a href="https://hub.docker.com/r/k1xt/planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
-<a href="https://hub.docker.com/r/kx1t/planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
+<br/>&copy; Copyright 2020 - 2022 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/workflow/status/kx1t/docker-planefence/Deploy%20to%20Docker%20Hub"></a>
+<a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
+<a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 </div>
 </body>

@@ -15,6 +15,31 @@ PLANEFENCEDIR=/usr/share/planefence
 APPNAME="$(hostname)/planefence"
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
+function configure_planefence() {
+	local SETTING_NAME="$1"
+	local SETTING_VALUE="$2"
+	if [[ "x$SETTING_VALUE" != "x" ]]
+	then
+		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/planefence/planefence.conf
+	else
+		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/planefence/planefence.conf
+	fi
+}
+function configure_planealert() {
+	local SETTING_NAME="$1"
+	local SETTING_VALUE="$2"
+	if [[ "x$SETTING_VALUE" != "x" ]]
+	then
+		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/plane-alert/plane-alert.conf
+	else
+		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/plane-alert/plane-alert.conf
+	fi
+}
+function configure_both() {
+	configure_planefence "$1" "$2"
+	configure_planealert "$1" "$2"
+}
+
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Running PlaneFence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
@@ -203,6 +228,17 @@ then
 fi
 # -----------------------------------------------------------------------------------
 #
+# enable or disable discord:
+#
+[[ "x$PF_DISCORD" == "xOFF" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1/' /usr/share/planefence/planefence.conf
+if [[ "$PF_DISCORD" == "ON" ]]
+then
+	sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
+	[[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s~\(^\s*PF_DISCORD_WEBHOOKS=\).*~\1${PF_DISCORD_WEBHOOKS}~" /usr/share/planefence/planefence.conf
+fi
+[[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
+# -----------------------------------------------------------------------------------
+#
 # Change the heatmap height and width if they are defined in the .env parameter file:
 [[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
 [[ "x$PF_MAPWIDTH" != "x" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
@@ -254,6 +290,13 @@ fi
 [[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
+[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
+[[ "$PF_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PF_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
+configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
+configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
+configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
+configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
