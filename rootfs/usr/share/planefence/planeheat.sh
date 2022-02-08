@@ -66,14 +66,22 @@
         # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
         if [[ "$FUDGELOC" != "" ]]
         then
-            if [[ "$FUDGELOC" == "2" ]]
+            if [[ "$FUDGELOC" == "0" ]]
             then
-                printf -v LON_VIS "%.2f" $LON
-                printf -v LAT_VIS "%.2f" $LAT
+              printf -v LON_VIS "%.0f" $LON
+              printf -v LAT_VIS "%.0f" $LAT
+            elif [[ "$FUDGELOC" == "1" ]]
+            then
+              printf -v LON_VIS "%.1f" $LON
+              printf -v LAT_VIS "%.1f" $LAT
+            elif [[ "$FUDGELOC" == "2" ]]
+            then
+              printf -v LON_VIS "%.2f" $LON
+              printf -v LAT_VIS "%.2f" $LAT
             else
-                # If $FUDGELOC != "" but also != "2", then assume it is "3"
-                printf -v LON_VIS "%.3f" $LON
-                printf -v LAT_VIS "%.3f" $LAT
+              # If $FUDGELOC != "" but also != "2", then assume it is "3"
+              printf -v LON_VIS "%.3f" $LON
+              printf -v LAT_VIS "%.3f" $LAT
             fi
             # clean up the strings:
             LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
