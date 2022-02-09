@@ -297,6 +297,9 @@ configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
 configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
 configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
 configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
+
+configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
