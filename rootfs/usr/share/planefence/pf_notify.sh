@@ -156,82 +156,34 @@ then
 			NOTIF_STRING=""
 			for i in {0..12}
 			do
-				[[ "${RECORD[i]}" != "" ]] && NOTIF_STRING+="${HEADR[i]}=${RECORD[i]}&"
+				if [[ "${RECORD[i]}" != "" ]]
+				then
+					# only consider non-empty fields
+					if (( i >= 7 )) && [[ "${RECORD[i]:0:4}" != "http" ]]
+					then
+						# add them if the field# >=7 and it's not a (twitter) link
+						NOTIF_STRING+="${HEADR[i]}=${RECORD[i]}&"
+					elif (( i < 7 ))
+					then
+						# also add them if the field is in the first 7 (0 through 6)
+						NOTIF_STRING+="${HEADR[i]}=${RECORD[i]}&"
+					fi
+				fi
 			done
 			# strip any trailing "&" from the string:
 			NOTIF_STRING="${NOTIF_STRING%%&}"
-
-
-			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
-			if [[ "${RECORD[1]}" != "" ]]
-			then
-				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]//-/}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
-			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}"
-			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
-			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
-			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
-
-			# If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
-			# There is more data we could tweet, but we're a bit restricted in real estate on twitter.
-			(( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
-
-			# figure out of there are custom tags that apply to this ICAO:
-			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
-			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
-
-			# Add attribution to the tweet:
-			TWEET+="%0A$ATTRIB%0A"
-
-			# let's do some calcs on the actual tweet length, so we strip the minimum:
-			teststring="${TWEET//%0A/ }" # replace newlines with a single character
-			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
-			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
-
-			TWEET="${TWEET:0:$maxlength}"
-
-			# Now add the last field (attribution) without title or training Newline
-			# Reason: this is a URL that Twitter reinterprets and previews on the web
-			# Also, the Newline at the end tends to mess with Twurl
-			TWEET+="${RECORD[6]}"
-
-			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
 			# Before anything else, let's add the "tweeted" flag to the flight number:
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
-			# First, let's get a screenshot if there's one available!
-			rm -f /tmp/snapshot.png
-			GOTSNAP="false"
-			if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+      # notify when enabled:
+			if [[ "$NOTIFICATION_SERVER" != "" ]]
 			then
-				GOTSNAP="true"
-			fi
-			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
-
-			# LOG "PF_DISCORD: $PF_DISCORD"
-			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
-			# LOG "DISCORD_FEEDER_NAME: $DISCORD_FEEDER_NAME"
-      # Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
-			then
-				LOG "Planefence sending Discord notification with \"$CSVLINE\" \"$AIRLINE\""
-      	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+				LOG "Planefence sending to Notification Server with \"$CSVLINE\" \"$AIRLINE\""
+				[[ "${NOTIFICATION_SERVER:0:4}" != "http" ]] && NOTIFICATION_SERVER="http://${NOTIFICATION_SERVER}"
+      	curl_result="$(curl -d "$NOTIF_STRING" -X POST "${NOTIFICATION_SERVER}")"
       fi
-			if [[ "$NOTIFICATION_SERVER" != "" ]] then
-				IFS="," read -ra CSVARRAY <<< "$CSVLINE"
-				HEADER=()
-				HEADER[0]="icao"
-				HEADER[1]="callsign"
-				HEADER[2]="startdate"
-				HEADER[3]="enddate"
-				HEADER[4]="minalt"
-				HEADER[5]="mindist"
-				HEADER[6]="adsbxlink"
-
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
