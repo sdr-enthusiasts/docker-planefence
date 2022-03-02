@@ -1,7 +1,7 @@
 import discord_webhook as dw
 
-def build(urls, title, description, color=None):
-    webhook = dw.DiscordWebhook(url=urls)
+def build(username, urls, title, description, color=None):
+    webhook = dw.DiscordWebhook(url=urls, username=username)
 
     if color is None:
         color = 0x007bff  # Blue
