@@ -184,6 +184,12 @@ GET_ICAO_DB ()
 # ad merges these with the preloaded list.
 GET_AIRLINE_DB ()
 {
+    if [[ -f /usr/share/planefence/persist/airlinecodes.txt ]] && [[ $(find /usr/share/planefence/persist/airlinecodes.txt mtime -7 | wc -l) == 1 ]]; then
+        # file exists and is less than 7 days old
+        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database is up to date" || true
+        return 0
+    fi
+
     [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Updating airline names database..." || true
     rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
     curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes" || true
@@ -209,7 +215,10 @@ GET_AIRLINE_DB ()
             awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 >/tmp/airlinecodes.txt
         fi
     fi
-    mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist
+    # make sure the file is minimally disrupte and programs who have still have it open don't have the data connected to the inode modified
+    mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist/airlinecodes.txt.tmp
+    rm -f /usr/share/planefence/persist/airlinecodes.txt
+    mv -f /usr/share/planefence/persist/airlinecodes.txt.tmp /usr/share/planefence/persist/airlinecodes.txt
     rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp /tmp/airlinecodes.txt.tmp2
     [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database update complete" || true
 }
