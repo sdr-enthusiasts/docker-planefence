@@ -66,7 +66,9 @@ CLEANUP ()
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/timestamp
-    tmpfile=$(mktemp)
+
+    tmpfile=/run/socket30003/cleanup.tmp
+
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
         [[ "$f" == "" ]] && continue || true
@@ -81,6 +83,7 @@ CLEANUP ()
         then
             # We're less than MAXLOGTIME into today, so prune yesterday's file
             TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
+            rm -f $tmpfile
             awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
             [[ "$(wc -l < $tmpfile)" -gt 0 ]] && mv -f $tmpfile $f || rm -f $tmpfile $f
         fi
@@ -91,6 +94,7 @@ CLEANUP ()
         if [[ "$fdate" == "$(date +%y%m%d)" ]]
         then
             TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
+            rm -f $tmpfile
             awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
             if [[ "$(wc -l < $tmpfile)" -gt 0 ]]
             then
@@ -103,6 +107,8 @@ CLEANUP ()
         fi
 
     done
+
+    rm -f $tmpfile
 
 
     if [[ -f /tmp/planefence.log ]]
