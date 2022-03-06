@@ -516,6 +516,10 @@ EOF
 	fi
 }
 
+# file used to store the line progress at the start of the prune interval
+PRUNESTARTFILE=/run/socket30003/.lastprunecount
+# for detecting change of day
+LASTFENCEFILE=/usr/share/planefence/persist/.internal/lastfencedate
 
 # Here we go for real:
 LOG "Initiating PlaneFence"
@@ -523,6 +527,8 @@ LOG "FENCEDATE=$FENCEDATE"
 # First - if there's any command line argument, we need to do a full run discarding all cached items
 if [ "$1" != "" ]
 then
+	rm "$LASTFENCEFILE"  2>/dev/null
+	rm "$PRUNESTARTFILE"  2>/dev/null
 	rm "$TMPLINES"  2>/dev/null
 	rm "$OUTFILEHTML"  2>/dev/null
 	rm "$OUTFILECSV"  2>/dev/null
@@ -547,6 +553,12 @@ then
 else
 	TOTALLINES=0
 fi
+if [ -f "$TMPLINES" ]; then
+	read -r LASTFENCEDATE < "$LASTFENCEFILE"
+else
+    # file is missing, assume we ran last yesterday
+	LASTFENCEDATE=$(date --date="yesterday" '+%y%m%d')
+fi
 
 # delete some of the existing TMP files, so we don't leave any garbage around
 # this is less relevant for today's file as it will be overwritten below, but this will
@@ -556,7 +568,8 @@ rm -f "$OUTFILETMP"
 
 # before anything else, let's determine our current line count and write it back to the temp file
 # We do this using 'wc -l', and then strip off all character starting at the first space
-[[ -f "$LOGFILEBASE$FENCEDATE.txt" ]] && CURRCOUNT=$(wc -l $LOGFILEBASE$FENCEDATE.txt |cut -d ' ' -f 1) || CURRCOUNT=0
+SOCKETFILE="$LOGFILEBASE$FENCEDATE.txt"
+[[ -f "$SOCKETFILE" ]] && CURRCOUNT=$(wc -l "$SOCKETFILE" |cut -d ' ' -f 1) || CURRCOUNT=0
 
 if [[ "$READLINES" -gt "$CURRCOUNT" ]]
 then
@@ -567,17 +580,55 @@ then
 	READLINES=0
 fi
 
+PRUNEMINS=180 # 3h
+# if the PRUNESTARTFILE file doesn't exist
+# note down that we started up, write down 0 for the next prune as nothing will be older than PRUNEMINS
+if ! [ -f "$PRUNESTARTFILE" ] || [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
+    echo 0 > $PRUNESTARTFILE
+# if PRUNESTARTFILE is older than PRUNEMINS, do the pruning
+elif [[ $(find $PRUNESTARTFILE -mmin +$PRUNEMINS | wc -l) == 1 ]]; then
+	read -r CUTLINES < "$PRUNESTARTFILE"
+    if (( $(wc -l "$SOCKETFILE" | cut -d ' ' -f 1) < CUTLINES )); then
+        LOG "PRUNE ERROR: can't retain more lines than $SOCKETFILE has, retaining all lines, regular prune after next interval."
+        CUTLINES=0
+    fi
+    tmpfile=$(mktemp)
+    tail --lines=+$((CUTLINES + 1)) "$SOCKETFILE" > $tmpfile
+
+    # restart Socket30003 to ensure that things run smoothly:
+    touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
+    killall /usr/bin/perl
+    sleep .1 # give the script a moment to exit, then move the files
+
+    mv -f $tmpfile "$SOCKETFILE"
+    rm -f $tmpfile
+
+    # update line numbers
+    (( READLINES -= CUTLINES ))
+    (( CURRCOUNT -= CUTLINES ))
+
+    LOG "pruned $CUTLINES lines from $SOCKETFILE, current lines $CURRCOUNT"
+    # socket30003 will start up on its own with a small delay
+
+    # note the current position in the file, the next prune run will cut everything above that line
+    echo $READLINES > $PRUNESTARTFILE
+fi
+
 # Now write the $CURRCOUNT back to the TMP file for use next time PlaneFence is invoked:
 echo "$CURRCOUNT" > "$TMPLINES"
 
+if [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
+    TOTALLINES=0
+fi
+
 # update TOTALLINES and write it back to the file
-(( TOTALLINES += CURRCOUNT - READLINES ))
+TOTALLINES=$(( TOTALLINES + CURRCOUNT - READLINES ))
 echo "$TOTALLINES" > "$TOTLINES"
 
 LOG "Current run starts at line $READLINES of $CURRCOUNT, with $TOTALLINES lines for today"
 
 # Now create a temp file with the latest logs
-tail --lines=+$READLINES $LOGFILEBASE"$FENCEDATE".txt > $INFILETMP
+tail --lines=+$READLINES "$SOCKETFILE" > $INFILETMP
 
 [[ "$BASETIME" != "" ]] && echo "2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- invoking planefence.py" || true
 
@@ -1060,6 +1111,8 @@ if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] &&
 then
 	sed -i -e :a -e '$q;N;8000,$D;ba' "$LOGFILE"
 fi
+
+echo "$FENCEDATE" > "$LASTFENCEFILE"
 
 # That's all
 # This could probably have been done more elegantly. If you have changes to contribute, I'll be happy to consider them for addition
