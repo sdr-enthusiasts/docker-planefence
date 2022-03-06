@@ -581,6 +581,14 @@ then
 fi
 
 PRUNEMINS=180 # 3h
+
+SOCKETFILEYESTERDAY="$LOGFILEBASE$(date -d yesterday +%y%m%d).txt"
+if [[ -f $SOCKETFILEYESTERDAY ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > PRUNEMINS * 60 ))
+then
+    # If we're longer than PRUNEMINS into today, remove yesterday's file
+    rm -v -f $SOCKETFILEYESTERDAY
+fi
+
 # if the PRUNESTARTFILE file doesn't exist
 # note down that we started up, write down 0 for the next prune as nothing will be older than PRUNEMINS
 if ! [ -f "$PRUNESTARTFILE" ] || [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then

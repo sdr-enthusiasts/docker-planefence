@@ -37,9 +37,7 @@ PF_CHECKREMOTEDB=$(grep "^PF_CHECKREMOTEDB" /usr/share/planefence/persist/planef
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
 #
-# MAXLOGTIME contains the max number of seconds that we will keep in any of the socket30003 logs
-MAXLOGTIME=10800    # 10800 secs = 3 hours
-
+#
 # this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
 {
@@ -73,13 +71,6 @@ CLEANUP ()
 
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -v -f $f && continue
-
-        if [[ "$fdate" == "$(date -d yesterday +%y%m%d)" ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > MAXLOGTIME ))
-        then
-            # If we're longer than MAXLOGTIME into today, then also remove yesterday's file
-            rm -v -f $f
-        fi
-
     done
 
 
