@@ -94,13 +94,16 @@ CLEANUP ()
         then
             TIMELIMIT=$(date -d "@$(( $(date +%s) - MAXLOGTIME))" +%T |awk -F ":" '{print 3600*$1+60*$2+$3}')
             awk -F "," -v L=$TIMELIMIT '{split($6,time,":"); x=3600*time[1]+60*time[2]+time[3]; if (x>L) print;}' $f > $tmpfile
+
+            # restart Socket30003 to ensure that things run smoothly:
+            touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
+            killall /usr/bin/perl
+
             if [[ "$(wc -l < $tmpfile)" -gt 0 ]]
             then
                 mv -f $tmpfile $f
             else
-                # restart Socket30003 to ensure that things run smoothly:
-                touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
-                killall /usr/bin/perl && rm -f $tmpfile $f
+                rm -f $tmpfile $f
             fi
         fi
 
