@@ -553,7 +553,7 @@ then
 else
 	TOTALLINES=0
 fi
-if [ -f "$TMPLINES" ]; then
+if [ -f "$LASTFENCEFILE" ]; then
 	read -r LASTFENCEDATE < "$LASTFENCEFILE"
 else
     # file is missing, assume we ran last yesterday
@@ -627,6 +627,7 @@ echo "$CURRCOUNT" > "$TMPLINES"
 
 if [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
     TOTALLINES=0
+    READLINES=0
 fi
 
 # update TOTALLINES and write it back to the file

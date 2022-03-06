@@ -310,14 +310,16 @@ cat <<EOF >>"$PLANEHEATHTML"
 
 EOF
 
+STATUS="Processed $(wc -l $INFILETMP | cut -d ' ' -f 1) lines, heatmap has $COUNTER planes on it."
+
 # log this one line to stdout always
 LOGFILESAVE="$LOGFILE"
 LOGFILE=/dev/stdout
-LOG "Processed $(wc -l $INFILETMP | cut -d ' ' -f 1) lines, data from $COUNTER planes added."
+LOG "$STATUS"
 LOGFILE="$LOGFILESAVE"
 
 # log to logfile
-LOG "Processed $(wc -l $INFILETMP | cut -d ' ' -f 1) lines, data from $COUNTER planes added."
+LOG "$STATUS"
 
 
 # VERY last thing... ensure that the log doesn't overflow:
