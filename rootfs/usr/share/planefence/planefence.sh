@@ -1116,9 +1116,11 @@ ln -sf "${OUTFILEHTML##*/}" index.html
 popd > /dev/null
 
 # VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]]
+if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l $LOGFILE) > 8000 ))
 then
-	sed -i -e :a -e '$q;N;8000,$D;ba' "$LOGFILE"
+    #sed -i -e :a -e '$q;N;8000,$D;ba'
+    tail -n 4000 "$LOGFILE" > "$LOGFILE.tmp"
+    mv -f "$LOGFILE.tmp" "$LOGFILE"
 fi
 
 echo "$FENCEDATE" > "$LASTFENCEFILE"
