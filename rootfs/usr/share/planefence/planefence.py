@@ -226,9 +226,9 @@ def main(argv):
             # Now write the table to a file as a CSV file
             with open(outfile, 'w') as file:
                 writer = csv.writer(file, delimiter=',')
-                for v in records.values():
-                    # format of airplaneslist is [[0-ICAO,11-FltNum,4/5-FirstHeard,4/5-LastHeard,1-LowestAlt,7-MinDistance,FltLink)]
-                    writer.writerow([ v.icao, v.callsign, v.firstHeard, v.lastHeard, v.min_alt, v.min_dist, v.link])
+                # format of airplaneslist is [[0-ICAO,11-FltNum,4/5-FirstHeard,4/5-LastHeard,1-LowestAlt,7-MinDistance,FltLink)]
+                outrows = [ [ v.icao, v.callsign, v.firstHeard, v.lastHeard, v.min_alt, v.min_dist, v.link ] for v in list(records.values()) ]
+                writer.writerows(outrows)
         else:
             if verbose == 1:
                 print('Nothing to write to: ',outfile)
