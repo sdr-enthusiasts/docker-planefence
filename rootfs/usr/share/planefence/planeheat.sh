@@ -205,6 +205,7 @@ then
         icao="${RECORD[0]}"
         alt="${RECORD[1]}"
         [[ -z "$icao" ]] && continue
+        [[ "$icao" == "hex_ident" ]] && continue     # it's a header line in this case
         [[ -z "$alt" ]] && continue
         (( alt > MAXALT )) && continue
         DICT["${icao}"]+="$line"$'\n'
