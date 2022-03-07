@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 set -x
-
+starttime=$(date +%s)
 [[ "$1" != "-" ]] && BRANCH="$1"
 [[ "$BRANCH" == "-" ]] && BRANCH=dev
 
@@ -34,3 +34,4 @@ mv /tmp/airlinecodes.txt rootfs/usr/share/planefence/
 rm -f rootfs/usr/share/planefence/branch
 rm -rf ./root_certs
 popd
+echo "Total time elapsed: $(( $(date +%s) - starttime )) seconds"
