@@ -596,7 +596,7 @@ if ! [ -f "$PRUNESTARTFILE" ] || [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
 # if PRUNESTARTFILE is older than PRUNEMINS, do the pruning
 elif [[ $(find $PRUNESTARTFILE -mmin +$PRUNEMINS | wc -l) == 1 ]]; then
 	read -r CUTLINES < "$PRUNESTARTFILE"
-    if (( $(wc -l "$SOCKETFILE" | cut -d ' ' -f 1) < CUTLINES )); then
+    if (( $(wc -l < "$SOCKETFILE") < CUTLINES )); then
         LOG "PRUNE ERROR: can't retain more lines than $SOCKETFILE has, retaining all lines, regular prune after next interval."
         CUTLINES=0
     fi
@@ -1116,7 +1116,7 @@ ln -sf "${OUTFILEHTML##*/}" index.html
 popd > /dev/null
 
 # VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l $LOGFILE) > 8000 ))
+if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l < $LOGFILE) > 8000 ))
 then
     #sed -i -e :a -e '$q;N;8000,$D;ba'
     tail -n 4000 "$LOGFILE" > "$LOGFILE.tmp"

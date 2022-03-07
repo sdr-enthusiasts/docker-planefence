@@ -251,7 +251,7 @@ then
     done <<< "$INPUT"
 
     rm -f "$POS_TMP"
-    TOTAL_POSITIONS="$(wc -l $PH_LINES | cut -d ' ' -f 1)"
+    TOTAL_POSITIONS="$(wc -l < $PH_LINES)"
     STATUS="Processed $INFILETMP_LINES lines, heatmap has $COUNTER planes and a total of $TOTAL_POSITIONS positions."
 
     # log this one line to stdout always
