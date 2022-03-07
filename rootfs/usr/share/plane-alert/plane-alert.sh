@@ -173,7 +173,13 @@ then
 				#IFS=, read -ra firstrecord <<< $(awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}' "$INFILE")
 				#IFS=, read -ra lastrecord <<< $(tac "$INFILE" | awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}')
 				#(( $(date -d "${lastrecord[4]} ${lastrecord[5]}" +%s) - $(date -d "${firstrecord[4]} ${firstrecord[5]}" +%s) > SQUAWKTIME )) && printf "%s\n" $line >> $TMPDIR/patmp2 || echo "Pruned spurious Squawk: $line"
-				(( endtime - starttime > SQUAWKTIME )) && printf "%s\n" "$line" >> "$TMPDIR"/patmp2 || echo "Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
+				if (( endtime - starttime > SQUAWKTIME ))
+				then
+					printf "%s\n" "$line" >> "$TMPDIR"/patmp2
+					echo "Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
+				else
+					echo "Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
+				fi
 			done < "$TMPDIR"/patmp
 			mv -f "$TMPDIR"/patmp2 "$TMPDIR"/patmp
 		fi
