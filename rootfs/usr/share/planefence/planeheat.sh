@@ -183,9 +183,36 @@ LOG "Starting: Previously processed planes=$LASTFENCE"
 # split the $INFILESOCK if needed
 # tail --lines=+"$((LASTLINE + 1))" "$INFILESOCK" > "$INFILESOCK".tmp
 
+POS_TMP=$(mktemp)
+
 # Now let's iterate through the entries in the file
 if [[ -f "$INFILECSV" ]]
 then
+
+    # read INFILETMP into a dictionary, each entry has all the lines belonging to one ICAO concatenated
+    # INFILETMP is part of the SOCKET30003 file which is being processed in this planefence / planeheat run
+
+    LOG "Read SOCKET30003 partial file INFILETMP into dictionary: $INFILETMP"
+
+    declare -A DICT
+    INFILETMP_LINES=0
+
+    [[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- read existing heatentries into dictionary" || true
+    ENTRIES=0
+    while IFS="" read -r line; do
+        (( INFILETMP_LINES = INFILETMP_LINES + 1 ))
+        IFS="," read -r -aRECORD <<< "$line" || continue
+        icao="${RECORD[0]}"
+        alt="${RECORD[1]}"
+        [[ -z "$icao" ]] && continue
+        [[ -z "$alt" ]] && continue
+        (( alt > MAXALT )) && continue
+        DICT["${icao}"]+="$line"$'\n'
+        ((ENTRIES=ENTRIES+1))
+    done < "$INFILETMP"
+
+    LOG "Iterate over records in planefence list: $INFILECSV"
+
     # Now clean the line from any control characters (like stray \r's) and read the line into an array:
     INPUT=$(tr -d -c '[:print:]\n' <"$INFILECSV")
     while read -r CSVLINE
@@ -193,14 +220,12 @@ then
         IFS="," read -r -aRECORD <<< "$CSVLINE"
 
         (( COUNTER++ ))
-        LOG "Processing ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}) with COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE"
 
-        # changed the IF statement below. Skipping over already processed entities doesn't really slow down the script too much
-        # if it is executed every, say hour or so, and this will enable collecting more data if the log rolled over just when we did the
-        # last iteration.
-        #       if (( ${#RECORD[@]} != 0 )) && (( $COUNTER > $LASTFENCE ))
-        if (( ${#RECORD[@]} != 0 ))
-        then
+        icao="${RECORD[0]}"
+        INFILETMP_LINE=${DICT["${icao}"]}
+        # check if the icao is in DICT
+        if [[ -n "$INFILETMP_LINE" ]]; then
+
             # first make sure there are at least $MINTIME samples that are being considered
             if (( $(date -d ${RECORD[3]:11:8} +%s) - $(date -d ${RECORD[2]:11:8} +%s) < MINTIME ))
             then
@@ -209,12 +234,34 @@ then
             else
                 ENDTIME="${RECORD[3]:11:8}"
             fi
-            awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" 'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' "$INFILETMP" >> "$PH_LINES"
-            LOG "Now $(wc -l $PH_LINES) positions in $PH_LINES"
-        else
-            LOG "(${RECORD[0]} was previously processed.)"
+
+            awk -v starttime="${RECORD[2]:11:8}" -v endtime="$ENDTIME" -v icao="${RECORD[0]}" -v maxalt="$MAXALT" \
+                'BEGIN { FS="," } { if ($1 == icao && $6 >= starttime && $6 <= endtime && $2 <= maxalt) print $0; }' \
+                <<< "$INFILETMP_LINE" >> "$POS_TMP"
+
+            ADDED=$(wc -l <<< "$OUT")
+            if (( ADDED > 0 )); then
+                cat "$POS_TMP" >> "$PH_LINES"
+            fi
+            LOG "Processed ${RECORD[0]} (${RECORD[2]:11:8} - ${RECORD[3]:11:8}), added $ADDED lines to PH_LINES (COUNTER=$COUNTER, NUMRECORD=${#RECORD[@]}, LASTFENCE=$LASTFENCE)"
+
+            #LOG "$INFILETMP_LINE"
         fi
+
     done <<< "$INPUT"
+
+    rm -f "$POS_TMP"
+    TOTAL_POSITIONS="$(wc -l $PH_LINES | cut -d ' ' -f 1)"
+    STATUS="Processed $INFILETMP_LINES lines, heatmap has $COUNTER planes and a total of $TOTAL_POSITIONS positions."
+
+    # log this one line to stdout always
+    LOGFILESAVE="$LOGFILE"
+    LOGFILE=/dev/stdout
+    LOG "$STATUS"
+    LOGFILE="$LOGFILESAVE"
+
+    # log to logfile
+    LOG "$STATUS"
 
 fi
 
@@ -223,6 +270,7 @@ rm -f "$TMPVARSTEMPLATE" 2>/dev/null
 #((  LASTLINE = LASTLINE + $(wc -l < "$INFILESOCK".tmp) ))
 printf "%s,%s\n" "$COUNTER" "$LASTLINE" > "$TMPVARS"
 #rm -f "$INFILESOCK".tmp
+
 
 LOG "Creating Heatmap Data"
 
@@ -309,19 +357,3 @@ cat <<EOF >>"$PLANEHEATHTML"
 </script>
 
 EOF
-
-# log this one line to stdout always
-LOGFILESAVE="$LOGFILE"
-LOGFILE=/dev/stdout
-LOG "Processed $(wc -l $INFILETMP | cut -d ' ' -f 1) lines, data from $COUNTER planes added."
-LOGFILE="$LOGFILESAVE"
-
-# log to logfile
-LOG "Processed $(wc -l $INFILETMP | cut -d ' ' -f 1) lines, data from $COUNTER planes added."
-
-
-# VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]]
-then
-	sed -i -e :a -e '$q;N;8000,$D;ba' "$LOGFILE"
-fi
