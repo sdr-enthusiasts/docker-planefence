@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, getopt, csv, os, html.parser, math
-import numpy as  np
+#import numpy as  np
 from datetime import datetime
 from datetime import timezone
 from tzlocal import get_localzone
@@ -29,11 +29,11 @@ def get_ax_link(icao, row, lat, lon, date, time):
     return falink
 
 class Record():
-    def __init__(self, icao, callsign, ts1, ts2, min_alt, min_dist, link):
+    def __init__(self, icao, callsign, firstHeard, lastHeard, min_alt, min_dist, link):
         self.icao = icao
         self.callsign = callsign
-        self.ts1 = ts1
-        self.ts2 = ts2
+        self.firstHeard = firstHeard
+        self.lastHeard = lastHeard
         self.min_alt = min_alt
         self.min_dist = min_dist
         self.link = link
@@ -135,8 +135,8 @@ def main(argv):
     with open(logfile, "rt") as f:
         # the line.replace is because sometimes the logfile is corrupted and contains zero bytes. Python pukes over this.
         reader = csv.reader( (line.replace('\0','') for line in f) )
-        records = np.array(["ICAO","Flight Number","In-range Date/Time","Out-range Date/Time","Lowest Altitude","Minimal Distance","Flight Link"], dtype = 'object')
-        #records = dict()
+        #records = np.array(["ICAO","Flight Number","In-range Date/Time","Out-range Date/Time","Lowest Altitude","Minimal Distance","Flight Link"], dtype = 'object')
+        records = dict()
         counter = 0
         fltcounter = 0
         for row in reader:
@@ -163,33 +163,48 @@ def main(argv):
                 except:
                     pass
 
+            alt = int(alt)
+
+            rec = records.get(icao)
+            # rec has the following members
+            # icao, callsign, firstHeard, lastHeard, min_alt, min_dist, link
+
+            heard = date + ' ' + time[:8]
 
             # now check if it's a duplicate that is in range
-            if icao in records and dist <= maxdist and alt <= maxalt:
+            if rec is not None and dist <= maxdist and alt <= maxalt:
 
                 # first check if we already have a flight number. If we don't, there may be one in the updated record we could use?
-                if records[np.where(records == icao)[0][0]][1] == "" and callsign != "":
-                    records[np.where(records == icao)[0][0]][1] = callsign
+                #if records[np.where(records == icao)[0][0]][1] == "" and callsign != "":
+                #    records[np.where(records == icao)[0][0]][1] = callsign
+                if rec.callsign == "" and callsign != "":
+                    rec.callsign = callsign
 
                 if trackservice == 'flightaware':
-                    falink = 'https://flightaware.com/live/modes/' + icao.lower() + '/ident/' + callsign + '/redirect'
+                    link = 'https://flightaware.com/live/modes/' + icao.lower() + '/ident/' + rec.callsign + '/redirect'
 
                 if trackservice == 'adsbexchange':
                     # format example: https://globe.adsbexchange.com/?icao=a4a567&lat=42.397&lon=-71.177&zoom=12.0&showTrace=2020-08-12
-                    falink = get_ax_link(icao, row, lat, lon, date, time)
+                    link = get_ax_link(icao, row, lat, lon, date, time)
 
-                records[np.where(records == icao)[0][0]][6] = falink.strip()
+                #records[np.where(records == icao)[0][0]][6] = link.strip()
+                rec.link = link
 
                 # replace "LastHeard" by the time in this row:
-                records[np.where(records == icao)[0][0]][3] = date + ' ' + time[:8]
+                #records[np.where(records == icao)[0][0]][3] = date + ' ' + time[:8]
+                rec.lastHeard = heard
 
                 # only replace the lowest altitude if it's smaller than what we had before
-                if alt < float(records[np.where(records == icao)[0][0]][4]):
-                    records[np.where(records == icao)[0][0]][4] = "{:.0f}".format(alt)
+                #if alt < float(records[np.where(records == icao)[0][0]][4]):
+                #    records[np.where(records == icao)[0][0]][4] = "{:.0f}".format(alt)
+                if alt < rec.min_alt:
+                    rec.min_alt = alt
 
                 # only replace the smallest distance if it's smaller than what we had before
-                if dist < float(records[np.where(records == icao)[0][0]][5]):
-                    records[np.where(records == icao)[0][0]][5] =  "{:.1f}".format(dist)
+                #if dist < float(records[np.where(records == icao)[0][0]][5]):
+                #    records[np.where(records == icao)[0][0]][5] =  "{:.1f}".format(dist)
+                if dist < rec.min_dist:
+                    rec.min_dist = dist
 
             elif dist <= maxdist and alt <= maxalt:
                 # it must be a new record. First check if it's in range. If so, write a new row to the records table:
@@ -198,17 +213,21 @@ def main(argv):
                     counter = counter + 1
 
                 if trackservice == 'flightaware':
-                    falink = 'https://flightaware.com/live/modes/' + icao.lower() + '/ident/' + callsign + '/redirect'
+                    link = 'https://flightaware.com/live/modes/' + icao.lower() + '/ident/' + callsign + '/redirect'
 
                 if trackservice == 'adsbexchange':
-                    falink = get_ax_link(icao, row, lat, lon, date, time)
+                    link = get_ax_link(icao, row, lat, lon, date, time)
 
-                records=np.vstack([records, np.array([icao,callsign, date + ' ' + time[:8], date + ' ' + time[:8],"{:.0f}".format(alt),"{:.1f}".format(dist),falink.strip() ])])
+                #records=np.vstack([records, np.array([icao,callsign, date + ' ' + time[:8], date + ' ' + time[:8],"{:.0f}".format(alt),"{:.1f}".format(dist), link.strip() ])])
+                # icao, callsign, firstHeard, lastHeard, min_alt, min_dist, link
+                records[icao] = Record(icao, callsign, heard, heard, alt, dist, link.strip())
                 fltcounter = fltcounter + 1
 
-            elif icao in records and records[np.where(records == icao)[0][0]][1] == "" and callsign != "":
+            #elif icao in records and records[np.where(records == icao)[0][0]][1] == "" and callsign != "":
+            elif rec is not None and rec.callsign == "" and callsign != "":
                 # we have the record, but it doesn't have a flight number and we now can add it
-                records[np.where(records == icao)[0][0]][1] = callsign
+                #records[np.where(records == icao)[0][0]][1] = callsign
+                rec.callsign = callsign
                 if verbose == 1:
                     print("added flight number", callsign, "for", icao)
 
@@ -216,7 +235,7 @@ def main(argv):
         # Now, let's start writing everything to a CSV and/or HTML file:
 
         # delete the header as this interferes with appending:
-        records = np.delete(records, (0), axis=0)
+        #records = np.delete(records, (0), axis=0)
 
         # Write CSV file
         if fltcounter > 0:
@@ -227,7 +246,10 @@ def main(argv):
             # Now write the table to a file as a CSV file
             with open(outfile, 'w') as file:
                 writer = csv.writer(file, delimiter=',')
-                writer.writerows(records.tolist())
+                #writer.writerows(records.tolist())
+                for v in records.values():
+                    # format of airplaneslist is [[0-ICAO,11-FltNum,4/5-FirstHeard,4/5-LastHeard,1-LowestAlt,7-MinDistance,FltLink)]
+                    writer.writerow([ v.icao, v.callsign, v.firstHeard, v.lastHeard, v.min_alt, v.min_dist, v.link])
         else:
             if verbose == 1:
                 print('Nothing to write to: ',outfile)
