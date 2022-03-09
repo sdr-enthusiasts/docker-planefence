@@ -197,7 +197,8 @@ then
     declare -A DICT
     INFILETMP_LINES=0
 
-    [[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- read existing heatentries into dictionary" || true
+    [[ "$BASETIME" != "" ]] && echo "8a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Read SOCKET30003 partial file INFILETMP into dictionary" || true
+
     ENTRIES=0
     while IFS="" read -r line; do
         (( INFILETMP_LINES = INFILETMP_LINES + 1 ))
@@ -213,6 +214,7 @@ then
     done < "$INFILETMP"
 
     LOG "Iterate over records in planefence list: $INFILECSV"
+    [[ "$BASETIME" != "" ]] && echo "8b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Iterate over records in planefence list" || true
 
     # Now clean the line from any control characters (like stray \r's) and read the line into an array:
     INPUT=$(tr -d -c '[:print:]\n' <"$INFILECSV")
@@ -264,6 +266,7 @@ then
     # log to logfile
     LOG "$STATUS"
 
+    [[ "$BASETIME" != "" ]] && echo "8c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Creating Heatmap Data" || true
 fi
 
 rm -f "$POS_TMP"
@@ -298,6 +301,7 @@ fi
 # Now call the Heatmap Generator
 if [[ -f "$INFILECSV" ]]
 then
+    [[ "$BASETIME" != "" ]] && echo "8d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Invoke planeheat.pl" || true
     $PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
     #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
     LOG "Returned from planeheat.pl"
@@ -308,6 +312,7 @@ fi
 
 DISTMTS=$(bc <<< "$DIST * $TO_METER")
 
+[[ "$BASETIME" != "" ]] && echo "8e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Build html file" || true
 # Now build the HTML file of the day:
 
 cat <<EOF >"$PLANEHEATHTML"

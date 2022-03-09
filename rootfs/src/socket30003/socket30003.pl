@@ -716,9 +716,14 @@ while (1) {
 			}
 			$flight{$hex_ident}{'altitude_loggedtime'} = $loggeddatetime;
 		}
-		# Save squawk
 		if ($col[$hdr{'squawk'}] =~ /^\d+$/) {
-			$flight{$hex_ident}{'squawk'} = $col[$hdr{'squawk'}];
+			if ($flight{$hex_ident}{'squawk_unfiltered'} == $col[$hdr{'squawk'}]) {
+				# Save squawk only if we've seen two messages with the same squawk
+				$flight{$hex_ident}{'squawk'} = $col[$hdr{'squawk'}];
+			}
+
+			# save squawk to squawk_unfiltered field
+			$flight{$hex_ident}{'squawk_unfiltered'} = $col[$hdr{'squawk'}];
 		}
 		# Save track
 		if ($col[$hdr{'track'}] =~ /^\d+\.?\d*$/) {
@@ -744,15 +749,18 @@ while (1) {
 		my $diff1 = abs($flight{$hex_ident}{'lon_loggedtime'} - $flight{$hex_ident}{'lat_loggedtime'});
 		my $diff2 = abs($flight{$hex_ident}{'lon_loggedtime'} - $flight{$hex_ident}{'altitude_loggedtime'});
 		my $diff3 = abs($flight{$hex_ident}{'lat_loggedtime'} - $flight{$hex_ident}{'altitude_loggedtime'});
+
 		# Be sure that the time differance between the messages is less than $TIME_MESSAGE_MARGIN.
 		next unless (($diff1 < $TIME_MESSAGE_MARGIN) && ($diff2 < $TIME_MESSAGE_MARGIN) && ($diff3 < $TIME_MESSAGE_MARGIN));
-       	 	# Skip this one. All the values need to be different...
-       	 	next if ((exists $flight{$hex_ident}{'prev_lon'})      		  && ($flight{$hex_ident}{'lon'}      		 eq $flight{$hex_ident}{'prev_lon'}) &&  
-       	          (exists $flight{$hex_ident}{'Prev_lat'})      		  && ($flight{$hex_ident}{'lat'}      		 eq $flight{$hex_ident}{'Prev_lat'}) &&  
-       	          (exists $flight{$hex_ident}{'prev_altitude'}) 		  && ($flight{$hex_ident}{'altitude'} 		 eq $flight{$hex_ident}{'prev_altitude'}));
-		# Skip this one. All the values need to be from a new moment...
-		next if ((exists $flight{$hex_ident}{'prev_lon_loggedtime'})      && ($flight{$hex_ident}{'lon_loggedtime'}      eq $flight{$hex_ident}{'prev_lon_loggedtime'}) && 
-			 (exists $flight{$hex_ident}{'Prev_lat_loggedtime'})      && ($flight{$hex_ident}{'lat_loggedtime'}      eq $flight{$hex_ident}{'Prev_lat_loggedtime'}) && 
+
+		# Skip this one if lat / lon / alt are the same as previously
+		next if ((exists $flight{$hex_ident}{'prev_lon'})      		  && ($flight{$hex_ident}{'lon'}      		 eq $flight{$hex_ident}{'prev_lon'}) &&
+			(exists $flight{$hex_ident}{'Prev_lat'})      		  && ($flight{$hex_ident}{'lat'}      		 eq $flight{$hex_ident}{'Prev_lat'}) &&
+			(exists $flight{$hex_ident}{'prev_altitude'}) 		  && ($flight{$hex_ident}{'altitude'} 		 eq $flight{$hex_ident}{'prev_altitude'}));
+
+		# Skip this one if lat / lon / alt were received at the same exact time
+		next if ((exists $flight{$hex_ident}{'prev_lon_loggedtime'})      && ($flight{$hex_ident}{'lon_loggedtime'}      eq $flight{$hex_ident}{'prev_lon_loggedtime'}) &&
+			 (exists $flight{$hex_ident}{'Prev_lat_loggedtime'})      && ($flight{$hex_ident}{'lat_loggedtime'}      eq $flight{$hex_ident}{'Prev_lat_loggedtime'}) &&
 			 (exists $flight{$hex_ident}{'prev_altitude_loggedtime'}) && ($flight{$hex_ident}{'altitude_loggedtime'} eq $flight{$hex_ident}{'prev_altitude_loggedtime'}));
 		
 		# Count the positions per flight and overall:
