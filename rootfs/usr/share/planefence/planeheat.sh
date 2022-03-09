@@ -251,7 +251,7 @@ then
 
     done <<< "$INPUT"
 
-    rm -f "$POS_TMP"
+
     TOTAL_POSITIONS="$(wc -l < $PH_LINES)"
     STATUS="Processed $INFILETMP_LINES lines, heatmap has $COUNTER planes and a total of $TOTAL_POSITIONS positions."
 
@@ -266,7 +266,9 @@ then
 
 fi
 
-# rewrite the latest to $TMPVARS
+rm -f "$POS_TMP"
+
+rewrite the latest to $TMPVARS
 rm -f "$TMPVARSTEMPLATE" 2>/dev/null
 #((  LASTLINE = LASTLINE + $(wc -l < "$INFILESOCK".tmp) ))
 printf "%s,%s\n" "$COUNTER" "$LASTLINE" > "$TMPVARS"
