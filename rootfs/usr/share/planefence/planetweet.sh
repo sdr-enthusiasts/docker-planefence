@@ -219,6 +219,7 @@ then
 			then
 				snapfile="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null)"
 				if [[ "$snapfile" != "" ]]
+				then
 					GOTSNAP="true"
 				else
 					link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null)
