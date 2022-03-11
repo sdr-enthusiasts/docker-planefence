@@ -316,8 +316,9 @@ then
 		ICAO="${pa_record[0]}"
 		# Get a screenshot if there\'s one available!
 		rm -f /tmp/pasnapshot.png
+		snapfile="/tmp/pasnapshot.png"
 		GOTSNAP="false"
-		if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o "/tmp/pasnapshot.png"
+		if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o "$snapfile"
 		then
 			GOTSNAP="true"
 			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}"
@@ -325,11 +326,42 @@ then
 			echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
 		fi
 
+		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
+		if [[ "$GOTSNAP" == "false" ]]
+		then
+			snapfile="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null)"
+			if [[ "$snapfile" != "" ]]
+			then
+				GOTSNAP="true"
+			else
+				link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null)
+				if [[ "$link" != "" ]] && curl -s -L --fail $link -o "/tmp/pasnapshot.jpg" 2>/dev/null
+				then
+					snapfile="/tmp/pasnapshot.jpg"
+					GOTSNAP="true"
+				fi
+			fi
+		fi
+
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 		then
 			[[ "$LOGLEVEL" != "ERROR" ]] && echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
+
+			# Out of convenience / laziness, we need to link the snapfile to /tmp/snapshot.png if it isn't already that file
+			if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/pasnapshot.png" ]]
+			then
+					ln -sf $snapfile /tmp/pasnapshot.png
+			fi
+
 			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
+
+			# If needed, clean up after ourselves:
+			if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/snapshot.png" ]]
+			then
+					rm -f /tmp/pasnapshot.png
+			fi
+
 		fi
 
 		# Send Twitter alerts if that's enabled
@@ -386,7 +418,7 @@ then
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				# If the curl call succeeded, we have a snapshot.png file saved!
-				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 				[[ "$TW_MEDIA_ID" -gt "0"  ]] && TWIMG="true" || TW_MEDIA_ID=""
 				#else
 				# this entire ELSE statement is test code and should be removed

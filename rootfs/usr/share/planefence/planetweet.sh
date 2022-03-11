@@ -206,11 +206,29 @@ then
 			# First, let's get a screenshot if there's one available!
 			rm -f /tmp/snapshot.png
 			GOTSNAP="false"
+			snapfile=""
 			if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 			then
+				snapfile="/tmp/snapshot.png"
 				GOTSNAP="true"
 			fi
 			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
+
+			# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
+			if [[ "$GOTSNAP" == "false" ]]
+			then
+				snapfile="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null)"
+				if [[ "$snapfile" != "" ]]
+					GOTSNAP="true"
+				else
+					link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null)
+					if [[ "$link" != "" ]] && curl -s -L --fail $link -o "/tmp/snapshot.jpg" 2>/dev/null
+					then
+						snapfile="/tmp/snapshot.jpg"
+						GOTSNAP="true"
+					fi
+				fi
+			fi
 
 			# LOG "PF_DISCORD: $PF_DISCORD"
 			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
@@ -219,7 +237,17 @@ then
 			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
+				# Out of convenience / laziness, we need to link the snapfile to /tmp/snapshot.png if it isn't already that file
+				if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/snapshot.png" ]]
+				then
+						ln -sf $snapfile /tmp/snapshot.png
+				fi
       	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+				# If needed, clean up after ourselves:
+				if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/snapshot.png" ]]
+				then
+						rm -f /tmp/snapshot.png
+				fi
       fi
 
 			# And now, let's tweet!
@@ -229,7 +257,7 @@ then
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
-					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
@@ -244,6 +272,9 @@ then
 				fi
 
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
+
+				rm -f $snapfile
+
 			else
 				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
 			fi
