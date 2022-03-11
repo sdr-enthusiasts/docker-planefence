@@ -214,19 +214,24 @@ then
 			fi
 			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
 
-			# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
 			if [[ "$GOTSNAP" == "false" ]]
 			then
-				snapfile="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null)"
-				if [[ "$snapfile" != "" ]]
+				newsnap="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null || true)"
+				echo "-0- newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
+				if [[ "$newsnap" != "" ]]
 				then
 					GOTSNAP="true"
+					rm -f $snapfile
+					ln -sf $newsnap $snapfile
+					echo "-1- Using picture from $newsnap"
 				else
-					link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null)
-					if [[ "$link" != "" ]] && curl -s -L --fail $link -o "/tmp/snapshot.jpg" 2>/dev/null
+					link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+					if [[ "$link" != "" ]] && curl -s -L --fail $link -o $snapfile 2>/dev/null
 					then
-						snapfile="/tmp/snapshot.jpg"
+						echo "-2- Using picture from $link"
 						GOTSNAP="true"
+					else
+						echo "-3- Failed attempt to get picture from $link"
 					fi
 				fi
 			fi
