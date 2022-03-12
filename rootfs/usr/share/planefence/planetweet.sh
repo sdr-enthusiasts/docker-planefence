@@ -206,10 +206,9 @@ then
 			# First, let's get a screenshot if there's one available!
 			rm -f /tmp/snapshot.png
 			GOTSNAP="false"
-			snapfile=""
+			snapfile="/tmp/snapshot.png"
 			if curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 			then
-				snapfile="/tmp/snapshot.png"
 				GOTSNAP="true"
 			fi
 			[[ "$GOTSNAP" == "true" ]] && echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
