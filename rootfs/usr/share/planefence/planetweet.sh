@@ -243,18 +243,8 @@ then
 			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-				# Out of convenience / laziness, we need to link the snapfile to /tmp/snapshot.png if it isn't already that file
-				if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/snapshot.png" ]]
-				then
-						ln -sf $snapfile /tmp/snapshot.png
-				fi
-      	python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-				# If needed, clean up after ourselves:
-				if [[ "$GOTSNAP" == "true" ]] && [[ "$snapfile" != "/tmp/snapshot.png" ]]
-				then
-						rm -f /tmp/snapshot.png
-				fi
-      fi
+      	                        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+                        fi
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
