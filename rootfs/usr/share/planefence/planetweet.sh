@@ -225,7 +225,7 @@ then
 					echo "-1- Using picture from $newsnap"
 				else
 					link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-					if [[ "$link" != "" ]] && curl -s -L --fail $link -o $snapfile 2>/dev/null
+					if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile 2>/dev/null
 					then
 						echo "-2- Using picture from $link"
 						GOTSNAP="true"
