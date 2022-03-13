@@ -320,37 +320,34 @@ then
 		rm -f $snapfile
 		GOTSNAP="false"
 
-		if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
+		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
+		echo "-0- newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit)"
+		if [[ "$newsnap" != "" ]]
 		then
 			GOTSNAP="true"
-			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}; saved to $snapfile"
+			rm -f $snapfile
+			ln -sf $newsnap $snapfile
+			echo "-1- Using picture from $newsnap"
 		else
-			echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}; not saved to $snapfile"
-		fi
-
-		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
-		if [[ "$GOTSNAP" == "false" ]]
-		then
-			newsnap="$(find /usr/share/planefence/persist/planepix -iname ${pa_record[0]}.jpg -print -quit 2>/dev/null || true)"
-			echo "-0- newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${pa_record[0]}.jpg -print -quit)"
-			if [[ "$newsnap" != "" ]]
+			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile 2>/dev/null
 			then
+				echo "-2- Using picture from $link"
 				GOTSNAP="true"
-				rm -f $snapfile
-				ln -sf $newsnap $snapfile
-				echo "-1- Using picture from $newsnap"
+				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
 			else
-				link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile 2>/dev/null
-				then
-					echo "-2- Using picture from $link"
-					GOTSNAP="true"
-                                        [[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
-				else
-					echo "-3- Failed attempt to get picture from $link"
-				fi
+				echo "-3- Failed attempt to get picture from $link"
 			fi
 		fi
+
+		if [[ "$GOTSNAP" == "false" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		then
+			GOTSNAP="true"
+			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+		fi
+
+		[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]

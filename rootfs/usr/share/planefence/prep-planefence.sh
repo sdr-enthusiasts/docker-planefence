@@ -338,6 +338,15 @@ fi
 [[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
 
 #--------------------------------------------------------------------------------
+# get the sample planepix file
+if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
+then
+	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
+	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
+	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt"
+fi
+
+#--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
 date +%s > /run/planefence/last-config-change
