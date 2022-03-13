@@ -345,6 +345,7 @@ then
 				then
 					echo "-2- Using picture from $link"
 					GOTSNAP="true"
+                                        [[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
 				else
 					echo "-3- Failed attempt to get picture from $link"
 				fi
