@@ -322,22 +322,20 @@ then
 
 		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
 		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
-		echo "-0- newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit)"
 		if [[ "$newsnap" != "" ]]
 		then
 			GOTSNAP="true"
-			rm -f $snapfile
 			ln -sf $newsnap $snapfile
-			echo "-1- Using picture from $newsnap"
+			echo "Using picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile 2>/dev/null
+			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 			then
-				echo "-2- Using picture from $link"
+				echo "Using picture from $link"
 				GOTSNAP="true"
 				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
 			else
-				echo "-3- Failed attempt to get picture from $link"
+				[[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
 			fi
 		fi
 

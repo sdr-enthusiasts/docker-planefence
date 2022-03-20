@@ -209,30 +209,31 @@ then
 			snapfile="/tmp/snapshot.png"
 
 			newsnap="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null || true)"
-			echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
+			# echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
 			if [[ "$newsnap" != "" ]]
 			then
 				GOTSNAP="true"
 				rm -f $snapfile
 				ln -sf $newsnap $snapfile
-				echo "-1- Using picture from $newsnap"
+				echo "Using picture from $newsnap"
 			else
 				link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile 2>/dev/null
+				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 				then
-					echo "-2- Using picture from $link"
+					echo "Using picture from $link"
 					GOTSNAP="true"
 					[[ ! -f "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" || true
 				else
-					echo "-3- Failed attempt to get picture from $link"
+				  [[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
 				fi
 			fi
 
 			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 			then
 				GOTSNAP="true"
-				echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}" || echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"
+				echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
 			fi
+			[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
 
 			# LOG "PF_DISCORD: $PF_DISCORD"
 			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
