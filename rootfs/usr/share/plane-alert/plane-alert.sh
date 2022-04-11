@@ -43,9 +43,9 @@ trap 'echo -e "[ERROR] $(basename $0) in line $LINENO when executing: $BASH_COMM
 function cleanup
 {
 	# do some final clean-up before exiting - this function is called by a trap on receiving the EXIT signal
-	rm -f ${OUTFILE%.*}*.diff >/dev/null 2>/dev/null
-	rm -f ${OUTFILE%.*}*.old >/dev/null 2>/dev/null
-	rm -f $TMPDIR/plalert*.tmp >/dev/null 2>/dev/null
+	rm -f "${OUTFILE%.*}"*.diff >/dev/null 2>/dev/null
+	rm -f "${OUTFILE%.*}"*.old >/dev/null 2>/dev/null
+	rm -f "$TMPDIR"/plalert*.tmp >/dev/null 2>/dev/null
 	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv /tmp/patmp
 	[ "$TESTING" == "true" ] && echo 11. Finished.
 	if [[ "$TESTING" == "true" ]] && [[ "$hextext" != "" ]]
@@ -71,7 +71,7 @@ then
 	# testhex is the letter "X" followed by the number of seconds since midnight
 	# since we're filtering by day and hex ID, this combo is pretty much unique
 	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
-	echo $texthex,N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
+	echo "$texthex",N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
 	echo " Plane-alert testing under way..."
 #else
 #	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
@@ -121,18 +121,18 @@ tac "$INFILE" | {
         fi
     done
 }   | sort -t',' -k1,1 -k5,5 -u		`# Filter out only the unique combinations of fields 1 (ICAO) and 5 (date)` \
-	> $TMPDIR/plalert.out.tmp		`# write the result to a tmp file`
+	> "$TMPDIR"/plalert.out.tmp		`# write the result to a tmp file`
 
 # remove the SQUAWKS. We're not interested in them if they were picked up because of the list, and having them here
 # will cause duplicate entries down the line
 if [[ -f "$TMPDIR/plalert.out.tmp" ]]
 then
-	rm -f $TMPDIR/patmp
-	awk -F "," 'OFS="," {$9="";print}' $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
-	mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
+	rm -f "$TMPDIR"/patmp
+	awk -F "," 'OFS="," {$9="";print}' "$TMPDIR"/plalert.out.tmp > "$TMPDIR"/patmp
+	mv -f "$TMPDIR"/patmp "$TMPDIR"/plalert.out.tmp
 fi
 
-[ "$TESTING" == "true" ] && echo 2. $TMPDIR/plalert.out.tmp contains $(cat $TMPDIR/plalert.out.tmp | wc -l) lines
+[ "$TESTING" == "true" ] && echo 2. "$TMPDIR"/plalert.out.tmp contains $(cat "$TMPDIR"/plalert.out.tmp | wc -l) lines
 # Now plalert.out.tmp contains SBS data
 
 
@@ -140,8 +140,8 @@ fi
 
 
 # Let's figure out if we also need to find SQUAWKS
-rm -f $TMPDIR/patmp
-touch $TMPDIR/patmp
+rm -f "$TMPDIR"/patmp
+touch "$TMPDIR"/patmp
 if [[ "$SQUAWKS" != "" ]]
 then
 		IFS="," read -ra sq <<< "$SQUAWKS"
@@ -151,34 +151,43 @@ then
 		for ((i=0; i<"${#sq[@]}"; i++))
 		do
 			sq[i]="${sq[i]: -4}"	# get the right-most 4 characters
-			sq[i]="${sq[i]/x/.}"	# replace x with dot-wildcard
-			awk -F "," "{if(\$9 ~ /${sq[i]}/){print}}" "$INFILE" >>$TMPDIR/patmp
+			sq[i]="${sq[i]//x/.}"	# replace x with dot-wildcard
+			awk -F "," "{if(\$9 ~ /${sq[i]}/){print}}" "$INFILE" >>"$TMPDIR"/patmp
 		done
 
 		# Now remove any erroneous squawks. We will consider a squawk valid only if there is another
 		# message more than 15 seconds apart from the same plane with the same squawk
 		# First read all
 		# Get the first match and the last match of the ICAO + Squawk combo
-		read -d " " -r a <<< $(wc -l $TMPDIR/patmp)
+		read -d " " -r a <<< "$(wc -l "$TMPDIR"/patmp)"
 		if [[ "$a" != "0" ]]
 		then
-			rm -f $TMPDIR/patmp2
-			touch $TMPDIR/patmp2
+			rm -f "$TMPDIR"/patmp2
+			touch "$TMPDIR"/patmp2
 			while IFS="" read -r line
 			do
 				IFS="," read -ra record <<< "$line"
 				# find the first match with the same Hex ID and Squawk
-				IFS=, read -ra firstrecord <<< $(awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}' "$INFILE")
-				IFS=, read -ra lastrecord <<< $(tac "$INFILE" | awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}')
-				(( $(date -d "${lastrecord[4]} ${lastrecord[5]}" +%s) - $(date -d "${firstrecord[4]} ${firstrecord[5]}" +%s) > SQUAWKTIME )) && printf "%s\n" $line >> $TMPDIR/patmp2 || echo "Pruned spurious Squawk: $line"
-			done <<< $TMPDIR/patmp
-			mv -f $TMPDIR/patmp2 $TMPDIR/patmp
+				starttime="$(date -d "$(cat "$INFILE" 2>/dev/null | awk -F "," -v "ICAO=${record[0]}" -v "SQ=${record[8]}" '{if ($1 == ICAO && $9 == SQ) {print $5 " " $6; exit;}}')" +%s)"
+				endtime="$(date -d "$(tac "$INFILE" 2>/dev/null | awk -F "," -v "ICAO=${record[0]}" -v "SQ=${record[8]}" '{if ($1 == ICAO && $9 == SQ) {print $5 " " $6; exit;}}')" +%s)"
+				#IFS=, read -ra firstrecord <<< $(awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}' "$INFILE")
+				#IFS=, read -ra lastrecord <<< $(tac "$INFILE" | awk -F "," -v ICAO="${record[0]}" -v SQ="${record[8]}" '$1==ICAO && $9==SQ {print;exit}')
+				#(( $(date -d "${lastrecord[4]} ${lastrecord[5]}" +%s) - $(date -d "${firstrecord[4]} ${firstrecord[5]}" +%s) > SQUAWKTIME )) && printf "%s\n" $line >> $TMPDIR/patmp2 || echo "Pruned spurious Squawk: $line"
+				if (( endtime - starttime > SQUAWKTIME ))
+				then
+					printf "%s\n" "$line" >> "$TMPDIR"/patmp2
+					echo "Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
+				else
+					echo "Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
+				fi
+			done < "$TMPDIR"/patmp
+			mv -f "$TMPDIR"/patmp2 "$TMPDIR"/patmp
 		fi
 
 		# clean up /tmp/patmp
-		tac $TMPDIR/patmp | sort -t',' -k1,1 -k9,9 -u  >> $TMPDIR/plalert.out.tmp # sort this from the reverse of the file
-		sort -t',' -k5,5 -k6,6 $TMPDIR/plalert.out.tmp > $TMPDIR/patmp
-		mv -f $TMPDIR/patmp $TMPDIR/plalert.out.tmp
+		tac "$TMPDIR"/patmp | sort -t',' -k1,1 -k9,9 -u  >> "$TMPDIR"/plalert.out.tmp # sort this from the reverse of the file
+		sort -t',' -k5,5 -k6,6 "$TMPDIR"/plalert.out.tmp > "$TMPDIR"/patmp
+		mv -f "$TMPDIR"/patmp "$TMPDIR"/plalert.out.tmp
 		# Now plalert.out.tmp may contain duplicates if there's a match on BOTH the plane-alert-db AND the Squawk
 		# Going to assume that this is OK for now even though it may result in double tweets.
 		# Although -- twitter may reject the second tweet.
@@ -199,7 +208,7 @@ cp -f "$OUTFILE" /tmp/pa-old.csv
 
 while IFS= read -r line
 do
-	[ "$TESTING" == "true" ] && echo 3. Parsing line $line
+	[ "$TESTING" == "true" ] && echo 3. Parsing line "$line"
 	IFS=',' read -ra pa_record <<< "$line"		# load a single line into an array called $pa_record
 
 	# Skip the line if it's out of range
@@ -224,8 +233,12 @@ do
 	if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
 		#if [[ "${TAIL:0:1}" == "N" ]]; then
 		if [[ $TAIL =~ ^N[0-9][0-9a-zA-Z]+$ ]]; then
-			OWNER="$(/usr/share/planefence/airlinename.sh $TAIL)"
+			OWNER="$(/usr/share/planefence/airlinename.sh "$TAIL")"
 		fi
+	fi
+	#Get an owner if there's none and there is a flight number
+	if [[ -z $OWNER ]] && [[ -n ${pa_record[11]/ */} ]]; then
+		OWNER="$(/usr/share/planefence/airlinename.sh "${pa_record[11]/ */}")"
 	fi
 	outrec+="${OWNER}," # owner name
 	outrec+="${TAGLINE[3]}," # equipment
@@ -236,7 +249,7 @@ do
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
 
 	epoch_sec="$(date -d"${pa_record[4]} ${pa_record[5]}" +%s)"
-	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=$(date -u -d@${epoch_sec} "+%Y-%m-%d")&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]}&timestamp=${epoch_sec},"	# ICAO for insertion into ADSBExchange link
+	outrec+="https://globe.adsbexchange.com/?icao=${pa_record[0]}&showTrace=$(date -u -d@"${epoch_sec}" "+%Y-%m-%d")&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]}&timestamp=${epoch_sec},"	# ICAO for insertion into ADSBExchange link
 
 	# only add squawk if its in the list
 	x=""
@@ -248,7 +261,7 @@ do
 
 	echo "$outrec" >> "$OUTFILE"	# Append this line to $OUTWRITEFILE
 
-done < $TMPDIR/plalert.out.tmp
+done < "$TMPDIR"/plalert.out.tmp
 # I like this better but the line below sorts nicer: awk -F',' '!seen[$1 $5)]++' "$OUTFILE" > /tmp/pa-new.csv
 sort -t',' -k5,5  -k1,1 -k11,11 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by field 5=date and only keep unique entries based on ICAO, date, and squawk. Use an intermediate file so we dont overwrite the file we are reading from
 sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date and time but keep all entries
@@ -259,11 +272,11 @@ sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date 
 # if testing, insert the test item into the diff to trigger tweeting
 if [[ "$TESTING" == "true" ]]
 then
-	echo $texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> "$OUTFILE"
+	echo "$texthex",N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> "$OUTFILE"
 	#echo /tmp/pa-diff.csv:
 	#cat /tmp/pa-diff.csv
-	echo var TWITTER: $TWITTER
-	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE $TWIDFILE exists || echo var TWIDFILE $TWIDFILE does not exist
+	echo var TWITTER: "$TWITTER"
+	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE "$TWIDFILE" exists || echo var TWIDFILE "$TWIDFILE" does not exist
 fi
 
 # create some diff files
@@ -272,7 +285,7 @@ touch /tmp/pa-diff.csv
 #  compare the new csv file to the old one and only print the added entries
 comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 
-[[ "$(cat /tmp/pa-diff.csv | wc -l)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[planefence/plane-alert][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
+[[ "$(wc -l < /tmp/pa-diff.csv)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[planefence/plane-alert][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
@@ -292,7 +305,7 @@ then
 	ERRORCOUNT=0
 	while IFS= read -r line
 	do
-		XX=$(echo -n $line | tr -d '[:cntrl:]')
+		XX=$(echo -n "$line" | tr -d '[:cntrl:]')
 		line=$XX
 
 		unset pa_record
@@ -301,16 +314,38 @@ then
 		[[ "$BASETIME" != "" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
 
 		ICAO="${pa_record[0]}"
+
 		# Get a screenshot if there\'s one available!
-		rm -f /tmp/pasnapshot.png
+		snapfile="/tmp/pasnapshot.png"
+		rm -f $snapfile
 		GOTSNAP="false"
-		if curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail $SCREENSHOTURL/snap/${pa_record[0]#\#} -o "/tmp/pasnapshot.png"
+
+		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
+		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
+		if [[ "$newsnap" != "" ]]
 		then
 			GOTSNAP="true"
-			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${pa_record[0]}"
+			ln -sf $newsnap $snapfile
+			echo "Using picture from $newsnap"
 		else
-			echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${pa_record[0]}"
+			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
+			then
+				echo "Using picture from $link"
+				GOTSNAP="true"
+				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
+			else
+				[[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
+			fi
 		fi
+
+		if [[ "$GOTSNAP" == "false" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		then
+			GOTSNAP="true"
+			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+		fi
+
+		[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
@@ -365,16 +400,17 @@ then
 
 			TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
-			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo $TWITTEXT )
-			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from $TWIDFILE )
+			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo "$TWITTEXT" )
+			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from "$TWIDFILE" )
 
 			# Upload a screenshot if there\'s one available!
 			TWIMG="false"
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				# If the curl call succeeded, we have a snapshot.png file saved!
-				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/pasnapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-				[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+				[[ "$TW_MEDIA_ID" -gt "0"  ]] && TWIMG="true" || TW_MEDIA_ID=""
+
 				#else
 				# this entire ELSE statement is test code and should be removed
 				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
@@ -389,7 +425,7 @@ then
 				do
 					# tweet and add the processed output to $result:
 					[[ "$TESTING" == "true" ]] && echo
-					echo Tweeting with the following data: recipient = \"$twitterid\" Tweet DM = \"$TWITTEXT\"
+					echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
 					[[ "$twitterid" == "" ]] && continue
 
 					# send a tweet.
@@ -482,11 +518,11 @@ fi
 
 # Now everything is in place, let\'s update the website
 
-cp -f $PLANEALERTDIR/plane-alert.header.html $TMPDIR/plalert-index.tmp
+cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
 # Create a FD for plalert-index.tml to reduce write cycles
-exec 3>> $TMPDIR/plalert-index.tmp
+exec 3>> "$TMPDIR"/plalert-index.tmp
 
 SB="$(sed -n 's|^\s*SPORTSBADGER=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 if [[ "$SB" != "" ]]
@@ -514,7 +550,7 @@ EOF
 fi
 
 # figure out if there are squawks:
-awk -F "," '$12 != "" {rc = 1} END {exit !rc}' $OUTFILE && sq="true" || sq="false"
+awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sq="true" || sq="false"
 
 [[ "$BASETIME" != "" ]] && echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers" || true
 
@@ -627,10 +663,10 @@ do
 				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
 			fi
 		else
-			printf "    %s%s\n" "<td>" "" "</td>" >&3
+			printf "    %s%s%s\n" "<td>" "" "</td>" >&3
 		fi
-		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>$TMPDIR/plalert-index.tmp # column: ICAO
-		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>$TMPDIR/plalert-index.tmp # column: Tail
+		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>"$TMPDIR"/plalert-index.tmp # column: ICAO
+		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>"$TMPDIR"/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
@@ -666,15 +702,15 @@ done <<< "$OUTSTRING"
 cat $PLANEALERTDIR/plane-alert.footer.html >&3
 
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
-sed -i "s|##NAME##|$NAME|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##ADSBLINK##|$ADSBLINK|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##ALERTLIST##|$ALERTLIST|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##CONCATLIST##|$CONCATLIST|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##HISTTIME##|$HISTTIME|g" $TMPDIR/plalert-index.tmp
-sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  $TMPDIR/plalert-index.tmp
-sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" $TMPDIR/plalert-index.tmp
-[[ "$PF_LINK" != "" ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit PlaneFence: a list of aircraft heard that are within a short distance of the station.|g" $TMPDIR/plalert-index.tmp || sed -i "s|##PFLINK##||g" $TMPDIR/plalert-index.tmp
+sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##ALERTLIST##|$ALERTLIST|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##CONCATLIST##|$CONCATLIST|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
+sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" "$TMPDIR"/plalert-index.tmp
+[[ "$PF_LINK" != "" ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit PlaneFence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
 
 echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
 
@@ -682,5 +718,5 @@ echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
 exec 3>&-
 
 #Finally, put the temp index into its place:
-mv -f $TMPDIR/plalert-index.tmp $WEBDIR/index.html
+mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
 [[ "$BASETIME" != "" ]] && echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert" || true

@@ -81,7 +81,9 @@ do
 		# we do this inside this endless loop so it will show in the logs regularly
 		if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 >/dev/null 2>&1
 		then
-			! timeout --preserve-status 15m /usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && [[ ! -f /tmp/socket-cleanup ]] && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
+      sleep .4 # delay startup a little bit as to not interrupt file pruning
+      echo "[$APPNAME][$(date)] socket30003 starting up."
+			/usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && [[ ! -f /tmp/socket-cleanup ]] && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
 		else
 			echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
 			echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"

@@ -1,35 +1,43 @@
 #!/bin/bash
-# PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
+# PF_ALERT - a Bash shell script to send a notification to the Notification Server when a plane is detected in the
 # user-defined fence area.
-#
-# Usage: ./planetweet.sh
-#
-# Note: this script is meant to be run as a daemon using SYSTEMD
-# If run manually, it will continuously loop to listen for new planes
 #
 # This script is distributed as part of the PlaneFence package and is dependent
 # on that package for its execution.
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2022 by Ramon F. Kolb (kx1t) - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence
+# https://github.com/kx1t/docker-planefence
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # - Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
 # - Twurl by Twitter: https://github.com/twitter/twurl and https://developer.twitter.com
 # These packages may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
-# Feel free to make changes to the variables between these two lines. However, it is
-# STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
-#
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
-[[ "x$PLANEFENCEDIR" == "x" ]] && PLANEFENCEDIR=/usr/share/planefence
+[[ "$PLANEFENCEDIR" == "" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio")
+HEADR=("icao")
+HEADR+=("callsign")
+HEADR+=("starttime")
+HEADR+=("endtime")
+HEADR+=("minalt")
+HEADR+=("mindist")
+HEADR+=("adsbxlink")
+HEADR+=("audioloudness")
+HEADR+=("audiopeak")
+HEADR+=("audio1min")
+HEADR+=("audio5min")
+HEADR+=("audio10min")
+HEADR+=("audio60min")
+
+# the htmlsafe function converts text into html safe text by replacing certain characters by their unicode equivalent
+HTMLSAFE () { sed 's/&/%26/g; s/</%3C/g; s/>/%3E/g; s/\s/%20/g; s/"/%22/g; s/'"'"'/%27/g' <<< "$1"; }
+
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
 TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
@@ -48,9 +56,9 @@ CSVDIR=$OUTFILEDIR
 CSVNAMEBASE=$CSVDIR/planefence-
 CSVNAMEEXT=".csv"
 VERBOSE=1
-CSVTMP=/tmp/planetweet2-tmp.csv
-PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
-# MINTIME is the minimum time we wait before sending a tweet
+CSVTMP=/tmp/pf_notify-tmp.csv
+
+# MINTIME is the minimum time (secs) we wait before sending a notification
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
 
 [[ "$TWEET_MINTIME" > 0 ]] && MINTIME=$TWEET_MINTIME || MINTIME=100
@@ -104,12 +112,7 @@ fi
 
 }
 
-if [ "$1" != "" ] && [ "$1" != "reset" ]
-then # $1 contains the date for which we want to run PlaneFence
-TWEETDATE=$(date --date="$1" '+%y%m%d')
-else
-	TWEETDATE=$(date --date="today" '+%y%m%d')
-fi
+TWEETDATE=$(date --date="today" '+%y%m%d')
 
 [[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
 
@@ -120,22 +123,11 @@ CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
 
 #Now iterate through the CSVFILE:
 LOG "------------------------------"
-LOG "Starting PLANETWEET"
+LOG "Starting PF_NOTIFY"
 LOG "CSVFILE=$CSVFILE"
 
 # Get the hashtaggable headers, and figure out of there is a field with a
 # custom "$tag" header
-
-[[ -f "$PLANEFILE" ]] && IFS="," read -ra hashtag < $PLANEFILE || unset hashtag
-tagfield=""
-for ((i = 0 ; i < ${#hashtag[@]} ; i++))
-do
-	if [[ "${hashtag[i],,}" == "$tag" ]] || [[ "${hashtag[i],,}" == "#$tag" ]]
-	then
-		tagfield=$((i+1)) # number tagfield from 1 instead of 0 as we will use AWK to get it
-		break;
-	fi
-done
 
 if [ -f "$CSVFILE" ]
 then
@@ -154,96 +146,44 @@ then
 		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
 
 		if [[ "${RECORD[1]:0:1}" != "@" ]] && [[ $TIMEDIFF -gt $MINTIME ]] && [[ ( "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ) || "$TWEETEVERY" == "true" ]]
-		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeter^ ...or...                     ^$TWEETEVERY is true^
+		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was notified^ ...or...                     ^$TWEETEVERY is true^
 		then
 
 			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
-			AIRLINETAG="#"
-			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
 
-			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
-			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
-			if [[ "${RECORD[1]}" != "" ]]
-			then
-				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]//-/}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
-			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}"
-			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
-			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
-			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
-			# If there is sound level data, then add a Loudness factor (peak RMS - 1 hr avg) to the tweet.
-			# There is more data we could tweet, but we're a bit restricted in real estate on twitter.
-			(( RECORD[7] < 0 )) && TWEET+="${HEADR[9]}: ${RECORD[7]} dBFS%0A${HEADR[8]}: $(( RECORD[7] - RECORD[11] )) dB%0A"
-
-			# figure out of there are custom tags that apply to this ICAO:
-			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
-			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
-
-			# Add attribution to the tweet:
-			TWEET+="%0A$ATTRIB%0A"
-
-			# let's do some calcs on the actual tweet length, so we strip the minimum:
-			teststring="${TWEET//%0A/ }" # replace newlines with a single character
-			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
-			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
-
-			TWEET="${TWEET:0:$maxlength}"
-
-			# Now add the last field (attribution) without title or training Newline
-			# Reason: this is a URL that Twitter reinterprets and previews on the web
-			# Also, the Newline at the end tends to mess with Twurl
-			TWEET+="${RECORD[6]}"
-
-			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
+			# Create a Notification string that can be patched at the end of a URL:
+			NOTIF_STRING=""
+			for i in {0..12}
+			do
+				if [[ "${RECORD[i]}" != "" ]]
+				then
+					# only consider non-empty fields
+					if (( i >= 7 )) && [[ "${RECORD[i]:0:4}" != "http" ]]
+					then
+						# add them if the field# >=7 and it's not a (twitter) link
+						NOTIF_STRING+="${HEADR[i]}=${RECORD[i]}&"
+					elif (( i < 7 ))
+					then
+						# also add them if the field is in the first 7 (0 through 6)
+						NOTIF_STRING+="${HEADR[i]}=${RECORD[i]}&"
+					fi
+				fi
+			done
+			# strip any trailing "&" from the string:
+			NOTIF_STRING="${NOTIF_STRING%%&}"
 
 			# Before anything else, let's add the "tweeted" flag to the flight number:
 			XX="@${RECORD[1]}"
 			RECORD[1]=$XX
 
-			# First, let's get a screenshot if there's one available!
-			rm -f /tmp/snapshot.png
-			GOTSNAP="false"
-			snapfile="/tmp/snapshot.png"
-
-			newsnap="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null || true)"
-			# echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
-			if [[ "$newsnap" != "" ]]
+      # notify when enabled:
+			if [[ "$NOTIFICATION_SERVER" != "" ]]
 			then
-				GOTSNAP="true"
-				rm -f $snapfile
-				ln -sf $newsnap $snapfile
-				echo "Using picture from $newsnap"
-			else
-				link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
-				then
-					echo "Using picture from $link"
-					GOTSNAP="true"
-					[[ ! -f "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" || true
-				else
-				  [[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
-				fi
-			fi
-
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
-			then
-				GOTSNAP="true"
-				echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
-			fi
-			[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
-
-			# LOG "PF_DISCORD: $PF_DISCORD"
-			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
-			# LOG "DISCORD_FEEDER_NAME: $DISCORD_FEEDER_NAME"
-      # Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
-			then
-				LOG "Planefence sending Discord notification"
-      	                        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-                        fi
+				LOG "Planefence sending to Notification Server with \"$CSVLINE\" \"$AIRLINE\""
+				[[ "${NOTIFICATION_SERVER:0:4}" != "http" ]] && NOTIFICATION_SERVER="http://${NOTIFICATION_SERVER}"
+      	curl_result="$(curl -d "$NOTIF_STRING" -X POST "${NOTIFICATION_SERVER}")"
+      fi
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
@@ -252,7 +192,7 @@ then
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
-					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
+					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
@@ -267,9 +207,6 @@ then
 				fi
 
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
-
-				rm -f $snapfile
-
 			else
 				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
 			fi

@@ -46,8 +46,10 @@ function configure_both() {
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
+mkdir -p /usr/share/planefence/persist/planepix
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
 chmod -f u=rwx,go=rx /usr/share/planefence/persist/.internal
+chmod a=rwx /usr/share/planefence/persist/planepix
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
@@ -297,6 +299,9 @@ configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
 configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
 configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
 configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
+
+configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
 # removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
@@ -331,6 +336,15 @@ fi
 # Move web page background pictures in place
 [[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
 [[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
+
+#--------------------------------------------------------------------------------
+# get the sample planepix file
+if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
+then
+	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
+	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
+	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt"
+fi
 
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
