@@ -116,7 +116,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - If your system doesn't behave as expected: check, check, double-check. Did you configure the correct container in `docker-compose.yml`? Did you edit the `planefence.config` file?
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: http://myip:8088 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
-- Plane-alert will appear at http://myip:8081/plane-alert
+- Plane-alert will appear at http://myip:8088/plane-alert
 - Twitter setup is complex. [Here](https://github.com/kx1t/docker-planefence#setting-up-tweeting)'s a description on what to do.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
     - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `~/.planefence/planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack (in which case you use your machine's IP address).
