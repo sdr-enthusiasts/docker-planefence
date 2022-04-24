@@ -660,7 +660,7 @@ do
 				esac
 				printf "    %s%s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
 			else
-				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
+				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:none;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
 			fi
 		else
 			printf "    %s%s%s\n" "<td>" "" "</td>" >&3
