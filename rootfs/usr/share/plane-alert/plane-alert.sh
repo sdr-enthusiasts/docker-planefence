@@ -339,7 +339,7 @@ then
 			fi
 		fi
 
-		if [[ "$GOTSNAP" == "false" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		if [[ "$GOTSNAP" == "false" ]] && [[ "${SCREENSHOTURL,,}" != "off" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
 			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
