@@ -63,6 +63,12 @@ then
 else
 	sed -i 's/\(^\s*speedunit=\).*/\1knotph/' /usr/share/socket30003/socket30003.cfg
 fi
+if [[ "x$PF_SOCK30003PORT" != "x" ]]
+then
+	sed -i 's|\(^\s*PEER_PORT=\).*|\1'"$PF_SOCK30003PORT"'|' /usr/share/socket30003/socket30003.cfg
+else
+	sed -i 's|\(^\s*PEER_PORT=\).*|\130003|' /usr/share/socket30003/socket30003.cfg
+fi
 
 # -----------------------------------------------------------------------------------
 
