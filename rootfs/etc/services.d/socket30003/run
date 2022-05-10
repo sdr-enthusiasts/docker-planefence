@@ -63,12 +63,8 @@ then
 else
 	sed -i 's/\(^\s*speedunit=\).*/\1knotph/' /usr/share/socket30003/socket30003.cfg
 fi
-if [[ "x$PF_SOCK30003PORT" != "x" ]]
-then
-	sed -i 's|\(^\s*PEER_PORT=\).*|\1'"$PF_SOCK30003PORT"'|' /usr/share/socket30003/socket30003.cfg
-else
-	sed -i 's|\(^\s*PEER_PORT=\).*|\130003|' /usr/share/socket30003/socket30003.cfg
-fi
+[[ "x$PF_SOCK30003PORT" == "x" ]] && PF_SOCK30003PORT=30003 || true
+sed -i 's|\(^\s*PEER_PORT=\).*|\1'"$PF_SOCK30003PORT"'|' /usr/share/socket30003/socket30003.cfg
 
 # -----------------------------------------------------------------------------------
 
@@ -85,15 +81,15 @@ do
 	else
 		# if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
 		# we do this inside this endless loop so it will show in the logs regularly
-		if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST 30003 >/dev/null 2>&1
+		if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST $PF_SOCK30003PORT >/dev/null 2>&1
 		then
       sleep .4 # delay startup a little bit as to not interrupt file pruning
       echo "[$APPNAME][$(date)] socket30003 starting up."
 			/usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && [[ ! -f /tmp/socket-cleanup ]] && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
 		else
-			echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port 30003."
+			echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
 			echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
-			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port 30003!"
+			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port $PF_SOCK30003PORT!"
 		fi
 	fi
 	if [[ ! -f /tmp/socket-cleanup ]]
