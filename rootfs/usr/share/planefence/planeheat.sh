@@ -258,10 +258,10 @@ then
     STATUS="Processed $INFILETMP_LINES lines, heatmap has $COUNTER planes and a total of $TOTAL_POSITIONS positions."
 
     # log this one line to stdout always
-    LOGFILESAVE="$LOGFILE"
-    LOGFILE=/dev/stdout
-    LOG "$STATUS"
-    LOGFILE="$LOGFILESAVE"
+    # LOGFILESAVE="$LOGFILE"
+    # LOGFILE=/dev/stdout
+    # LOG "$STATUS"
+    # LOGFILE="$LOGFILESAVE"
 
     # log to logfile
     LOG "$STATUS"
