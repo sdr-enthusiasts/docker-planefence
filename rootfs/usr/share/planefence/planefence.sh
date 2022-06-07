@@ -882,7 +882,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020 - 2022 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/docker-planefence/
@@ -915,8 +915,17 @@ gtag('js', new Date());
 gtag('config', 'UA-171737107-1');
 </script>
 <script type="text/javascript" src="sort-table.js"></script>
-<title>ADS-B 1090 MHz PlaneFence</title>
 EOF
+
+if [[ "${AUTOREFRESH,,}" == "true" ]]
+then
+	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
+	cat <<EOF >>"$OUTFILEHTMTMP"
+	<meta http-equiv="refresh" content="$REFRESH_INT">
+EOF
+fi
+
+echo "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
 
 if [ -f "$PLANEHEATHTML" ]
 then

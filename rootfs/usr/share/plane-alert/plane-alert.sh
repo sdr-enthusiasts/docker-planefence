@@ -339,7 +339,7 @@ then
 			fi
 		fi
 
-		if [[ "$GOTSNAP" == "false" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		if [[ "$GOTSNAP" == "false" ]] && [[ "${SCREENSHOTURL,,}" != "off" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
 			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
@@ -635,36 +635,43 @@ do
 			fi
 		fi
 
-		if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]
+		if [[ "${pa_record[10]}" != "" ]]
 		then
-			# print aircraft silhouette or Squawk
-			if [[ "${pa_record[10]}" != "" ]]
-			then
-				# determine text color for squawk
-				case "${pa_record[10]}" in
-					"7700")
-						SQCOLOR="#7F0000"
+			# print Squawk
+
+			# determine text color for squawk
+			case "${pa_record[10]}" in
+				"7700")
+					SQCOLOR="#7F0000"
 					;;
-					"7600")
-						SQCOLOR="#FF6A00"
+				"7600")
+					SQCOLOR="#FF6A00"
 					;;
-					"7500")
-						SQCOLOR="#00194C"
+				"7500")
+					SQCOLOR="#00194C"
 					;;
-					"7400")
-						SQCOLOR="#2D3F00"
+				"7400")
+					SQCOLOR="#2D3F00"
 					;;
-					*)
-						SQCOLOR="#000000"
+				*)
+					SQCOLOR="#000000"
 					;;
-				esac
-				printf "    %s%s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<!-- img src=\"$IMGURL\" -->" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
-			else
-				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "<img src=\"$IMGURL\">" "</div></td>" >&3
-			fi
+			esac
+
+			printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
+
 		else
-			printf "    %s%s%s\n" "<td>" "" "</td>" >&3
+			# print aircraft silhouette if it exists
+			if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]
+			then
+				IMG="<img src=\"$IMGURL\">"
+			else
+				IMG=""
+			fi
+
+			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
 		fi
+
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]}" "${pa_record[0]}" >>"$TMPDIR"/plalert-index.tmp # column: ICAO
 		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>"$TMPDIR"/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
@@ -710,6 +717,7 @@ sed -i "s|##CONCATLIST##|$CONCATLIST|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
 sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" "$TMPDIR"/plalert-index.tmp
+[[ "${AUTOREFRESH,,}" == "true" ]] && sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\" content=\"$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)\"|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##AUTOREFRESH##|!-- no auto-refresh --|g" "$TMPDIR"/plalert-index.tmp
 [[ "$PF_LINK" != "" ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit PlaneFence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
 
 echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
