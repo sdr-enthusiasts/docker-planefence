@@ -925,7 +925,7 @@ then
 EOF
 fi
 
-cat "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
+echo "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
 
 if [ -f "$PLANEHEATHTML" ]
 then
