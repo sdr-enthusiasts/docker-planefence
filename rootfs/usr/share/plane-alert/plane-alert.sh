@@ -78,8 +78,6 @@ then
 fi
 
 [[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
-LOOPTIME="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
-[[ "$LOOPTIME" == "" ]] && LOOPTIME=60
 
 [[ "$BASETIME" != "" ]] && echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: parse alert list into dictionary" || true
 
