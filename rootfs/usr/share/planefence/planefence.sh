@@ -915,22 +915,23 @@ gtag('js', new Date());
 gtag('config', 'UA-171737107-1');
 </script>
 <script type="text/javascript" src="sort-table.js"></script>
-<title>ADS-B 1090 MHz PlaneFence</title>
 EOF
-
-if [ -f "$PLANEHEATHTML" ]
-then
-	cat <<EOF >>"$OUTFILEHTMTMP"
-	<link rel="stylesheet" href="leaflet.css" />
-	<script src="leaflet.js"></script>
-EOF
-fi
 
 if [[ "${AUTOREFRESH,,}" == "true" ]]
 then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<meta http-equiv="refresh" content="$REFRESH_INT">
+EOF
+fi
+
+cat "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
+
+if [ -f "$PLANEHEATHTML" ]
+then
+	cat <<EOF >>"$OUTFILEHTMTMP"
+	<link rel="stylesheet" href="leaflet.css" />
+	<script src="leaflet.js"></script>
 EOF
 fi
 
