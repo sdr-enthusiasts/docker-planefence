@@ -33,8 +33,8 @@
 HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio" "Org" "Dest")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
-TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
-YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
+#TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
+#YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # TWURLPATH is where we can find TWURL. This only needs to be filled in if you can't get it
 # as part of the default PATH:
 #[ ! `which twurl` ] && TWURLPATH="/root/.rbenv/shims/"
@@ -42,7 +42,7 @@ YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # If the VERBOSE variable is set to "1", then we'll write logs to LOGFILE.
 # If you don't want logging, simply set  the VERBOSE=1 line below to VERBOSE=0
 LOGFILE=/tmp/planetweet.log
-TMPFILE=/tmp/planetweet.tmp
+#TMPFILE=/tmp/planetweet.tmp
 [[ "$PLANETWEET" != "" ]] && TWEETON=yes || TWEETON=no
 
 CSVDIR=$OUTFILEDIR
@@ -106,9 +106,9 @@ LOG ()
 
 getRoute()
 {
-  # first make sure we have an argument
-  if [[ -z "$1" ]]
-  then
+	# first make sure we have an argument
+	if [[ -z "$1" ]]
+	then
 		return
 	fi
 
@@ -117,7 +117,7 @@ getRoute()
 
 	# Unknown Call -> return empty
 	if [[ "$(jq '.response' <<< "$routeObj")" == "\"unknown callsign\"" ]]
-  then
+	then
 		return
 	fi
 
@@ -126,13 +126,14 @@ getRoute()
 	destination="$(jq '.response.flightroute.destination.iata_code' <<< "$routeObj"|tr -d '\"')"
 	response=""
 
-  if [[ -n "$origin" ]] && [[ -n "$destination" ]]
+	if [[ -n "$origin" ]] && [[ -n "$destination" ]]
 	then
 		response="#$origin-#$destination"
 	elif [[ -n "$origin" ]]
 	then
 		response="org: #$origin"
-	else
+	elif [[ -n "$destination" ]]
+	then
 		response="dest: #$destination"
 	fi
 
@@ -303,9 +304,9 @@ then
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]
 				then
-					LINK=$(echo `twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(echo "`twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				else
-					LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(echo "`twurl -r "status=$TWEET" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
