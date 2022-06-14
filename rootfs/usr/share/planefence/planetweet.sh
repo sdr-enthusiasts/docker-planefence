@@ -106,6 +106,16 @@ LOG ()
 
 getRoute()
 {
+  # Uses MrJackWills's API to look up flight information based on Callsign. See https://github.com/mrjackwills/adsbdb
+	# Usage: routeString="$(getRoute "$CallSign")"
+	#
+	# Returns a string:
+	#    if both Origin and Destination airport are available:  "#BOS-#JFK"
+	#    if only either Origin or Destination airport are known: "org: #BOS" or "dest: #JFK"
+	#    if neither is available: empty string
+	#
+  # Prerequisites/dependencies: JQ, CURL
+
 	# first make sure we have an argument
 	if [[ -z "$1" ]]
 	then
@@ -122,8 +132,8 @@ getRoute()
 	fi
 
 	# Get origin/dest:
-	origin="$(jq '.response.flightroute.origin.iata_code' <<< "$routeObj"|tr -d '\"')"
-	destination="$(jq '.response.flightroute.destination.iata_code' <<< "$routeObj"|tr -d '\"')"
+	origin="$(jq '.response.flightroute.origin.iata_code' 2>/dev/null <<< "$routeObj"|tr -d '\"')"
+	destination="$(jq '.response.flightroute.destination.iata_code' 2>/dev/null <<< "$routeObj"|tr -d '\"')"
 	response=""
 
 	if [[ -n "$origin" ]] && [[ -n "$destination" ]]
