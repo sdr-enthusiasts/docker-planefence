@@ -126,10 +126,19 @@ then
 
 fi
 
+if [[ "$b" == "" ]]
+then
+  # check OpenSky DB -- this is a bit of a Last Resort as the OS database isn't too accurate
+  if [[ -f /run/OpenSkyDB.csv ]]
+  then
+    b="$(awk -F ","  -v p="${a,,}" '{IGNORECASE=1; gsub("-",""); gsub("\"",""); if(tolower($2)==p) {print $14;exit}}' /run/OpenSkyDB.csv)"
+    [[ "$b" != "" ]] && MUSTCACHE=1
+    [[ "$b" != "" ]] && [[ "$q" == "" ]] && q="OpenSky"
+  fi
+fi
 
 # Add additional database lookups in the future here:
 # ---------------------------------------------------
-
 
 # ---------------------------------------------------
 
