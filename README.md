@@ -39,7 +39,7 @@ There must already be an instance of `tar1090`, `dump1090[-fa]`, or `readsb` con
 2. If you are not adding this to an existing container stack, you should create a project directory: `sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence` . Then add a new `docker-compose.yml` there.
 3. Get the template Docker-compose.yml file from here:
 ```
-curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/docker-compose.yml > docker-compose.yml
+curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/main/docker-compose.yml > docker-compose.yml
 ```
 
 ### Planefence Configuration
