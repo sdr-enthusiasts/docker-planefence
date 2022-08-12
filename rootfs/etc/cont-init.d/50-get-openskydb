@@ -1,0 +1,39 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/get-openskydb"
+# -----------------------------------------------------------------------------------
+# Copyright 2020-2022 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/planefence4docker/
+#
+# This package may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+#
+
+echo "[$(date)][$APPNAME] OpenSky DB checking has been temporarily disabled."
+exit 0
+
+#----------------#
+
+savedfile="$(find "/usr/share/planefence/stage/" -name "OpenSkyDb*" -print0 | xargs -r -0 ls -1 -t | head -1)"
+if [[ -n "$savedfile" ]] && [[ "$savedfile" == "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)" ]] \
+     || { [[ -f /run/OpenSkyDB.csv ]] && [[ "/run/OpenSkyDB.csv" -nt "$savedfile" ]] }
+then
+  # we have the most current complete database
+  cp -fu "$savedfile" /run/OpenSkyDB.csv
+  echo "[$(date)][$APPNAME] OpenSky DB is up to date. No action needed."
+else
+  echo "[$(date)][$APPNAME] Fetching new OpenSky DB - this may take a while (~5-10 mins)"
+  if ! curl --compressed -sL --fail -o "/tmp/$(date +OpenSkyDb-%Y-%m.csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-%m.csv)"
+  then
+    echo "[$(date)][$APPNAME] Error - OpenSky DB is out of date, but a new one cannot be fetched. Continue to use the existing one"
+    rm -f "/tmp/$(date +OpenSkyDb-%Y-%m.csv)"
+    cp -fu "$savedfile" /run/OpenSkyDB.csv
+  else
+    echo "[$(date)][$APPNAME] OpenSky DB is out of date and a new one has been fetched."
+    cp -f "/tmp/$(date +OpenSkyDb-%Y-%m.csv)" "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)"
+    mv -f "/tmp/$(date +OpenSkyDb-%Y-%m.csv)" /run/OpenSkyDB.csv
+  fi
+fi

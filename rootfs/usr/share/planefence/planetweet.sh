@@ -29,11 +29,12 @@
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
-HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio")
+#         0      1      2           3           4         5         6         7        8          9        10     11
+HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio" "Org" "Dest")
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
-TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
-YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
+#TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
+#YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # TWURLPATH is where we can find TWURL. This only needs to be filled in if you can't get it
 # as part of the default PATH:
 #[ ! `which twurl` ] && TWURLPATH="/root/.rbenv/shims/"
@@ -41,7 +42,7 @@ YSTRDAYCSV=$(date -d yesterday +"planefence-%y%m%d.csv")
 # If the VERBOSE variable is set to "1", then we'll write logs to LOGFILE.
 # If you don't want logging, simply set  the VERBOSE=1 line below to VERBOSE=0
 LOGFILE=/tmp/planetweet.log
-TMPFILE=/tmp/planetweet.tmp
+#TMPFILE=/tmp/planetweet.tmp
 [[ "$PLANETWEET" != "" ]] && TWEETON=yes || TWEETON=no
 
 CSVDIR=$OUTFILEDIR
@@ -53,7 +54,7 @@ PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 # MINTIME is the minimum time we wait before sending a tweet
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
 
-[[ "$TWEET_MINTIME" > 0 ]] && MINTIME=$TWEET_MINTIME || MINTIME=100
+(( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
 [[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
@@ -98,9 +99,56 @@ fi
 # First create an function to write to the log
 LOG ()
 {	if [ "$VERBOSE" != "" ]
-then
-	printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$1" >> $LOGFILE
-fi
+  then
+   	printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$1" >> $LOGFILE
+  fi
+}
+
+getRoute()
+{
+  # Uses MrJackWills's API to look up flight information based on Callsign. See https://github.com/mrjackwills/adsbdb
+	# Usage: routeString="$(getRoute "$CallSign")"
+	#
+	# Returns a string:
+	#    if both Origin and Destination airport are available:  "#BOS-#JFK"
+	#    if only either Origin or Destination airport are known: "org: #BOS" or "dest: #JFK"
+	#    if neither is available: empty string
+	#
+  # Prerequisites/dependencies: JQ, CURL
+
+	# first make sure we have an argument
+	if [[ -z "$1" ]]
+	then
+		return
+	fi
+
+	# Now get the results object from the API:
+	routeObj="$(curl -sL https://api.adsbdb.com/v0/callsign/$1)"
+
+	# Unknown Call -> return empty
+	if [[ "$(jq '.response' <<< "$routeObj")" == "\"unknown callsign\"" ]]
+	then
+		return
+	fi
+
+	# Get origin/dest:
+	origin="$(jq '.response.flightroute.origin.iata_code' 2>/dev/null <<< "$routeObj"|tr -d '\"')"
+	destination="$(jq '.response.flightroute.destination.iata_code' 2>/dev/null <<< "$routeObj"|tr -d '\"')"
+	response=""
+
+	if [[ -n "$origin" ]] && [[ -n "$destination" ]]
+	then
+		response="#$origin-#$destination"
+	elif [[ -n "$origin" ]]
+	then
+		response="org: #$origin"
+	elif [[ -n "$destination" ]]
+	then
+		response="dest: #$destination"
+	fi
+
+	# print the result - this will be captured by the caller
+	echo "$response"
 
 }
 
@@ -159,7 +207,11 @@ then
 
 			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
 			AIRLINETAG="#"
-			[[ "${RECORD[1]#@}" != "" ]] && AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
+			if [[ "${RECORD[1]}" != "" ]]
+			then
+				AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
+				ROUTE="$(getRoute "${RECORD[1]}")"
+			fi
 
 			# Create a Tweet with the first 6 fields, each of them followed by a Newline character
 			[[ "${hashtag[0]:0:1}" == "$" ]] && TWEET="${HEADR[0]}: #${RECORD[0]}%0A" || TWEET="${HEADR[0]}: ${RECORD[0]}%0A" # ICAO
@@ -167,7 +219,8 @@ then
 			then
 				[[ "${hashtag[1]:0:1}" == "$" ]] && TWEET+="${HEADR[1]}: #${RECORD[1]//-/}" || TWEET+="${HEADR[1]}: ${RECORD[1]}" # Flight
 			fi
-			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}"
+			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}" || true
+			[[ -n "$ROUTE" ]] && TWEET+=" $ROUTE" || true
 			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
@@ -253,7 +306,7 @@ then
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
 					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+					(( TW_MEDIA_ID > 0 )) && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
 				[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${RECORD[0]}"
@@ -261,9 +314,9 @@ then
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]
 				then
-					LINK=$(echo `twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(echo "`twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				else
-					LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(echo "`twurl -r "status=$TWEET" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
@@ -284,7 +337,7 @@ then
 
 		# Now write everything back to $CSVTMP
 		( IFS=','; echo "${RECORD[*]}" >> "$CSVTMP" )
-		LOG "The record now contains $(IFS=','; echo ${RECORD[*]})"
+		LOG "The record now contains $(IFS=','; echo "${RECORD[*]}")"
 
 	done < "$CSVFILE"
 	# last, copy the TMP file back to the CSV file
