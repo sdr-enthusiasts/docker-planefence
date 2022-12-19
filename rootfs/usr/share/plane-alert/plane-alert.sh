@@ -354,51 +354,86 @@ then
 			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
 		fi
 
+		# Build the message field:
+
+		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
+
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
+		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
+		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
+
+		# First build the text of the tweet: reminder:
+		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
+		# 8-callsign,9-adsbx_url,10-squawk
+
+		TWITTEXT="#PlaneAlert "
+		TWITTEXT+="ICAO: ${pa_record[0]} "
+		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
+		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
+		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
+
+		PLANELINE="${ALERT_DICT["${ICAO}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+		# Add any hashtags:
+		for i in {4..10}
+		do
+			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
+			then
+				tag="${TAGLINE[i]}"
+				if [[ "${tag:0:4}" == "http" ]]
+				then
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
+				elif [[ "$tag" != "" ]]
+				then
+					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
+				fi
+			fi
+		done
+
+		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+
+
+		# Inject Mastodone integration here:
+		if [[ -n "$MASTODON_SERVER" ]]
+		then
+			mast_id="null"
+			if [[ "$GOTSNAP" == "true" ]]
+			then
+				# we upload an image
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+				mast_id="$("$(jq '.id' <<< "$response"|xargs)")"
+			fi
+
+			# now send the message. API is different if text-only vs text+image:
+			if [[ "${mast_id,,}" == "null" ]]
+			then
+				# send without image
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWITTEXT}" -F "language=eng" -F "visibility=public")"
+			else
+				# send with image
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWITTEXT}" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
+			fi
+
+			# check if there was an error
+			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+			then
+				echo "Planefence post to Mastodon generated successfully with content: $TWEET"
+				echo "Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+			else
+				echo "Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
+			fi
+		fi
+
 		# Send Twitter alerts if that's enabled
 		if [[ "$TWITTER" != "false" ]]
 		then
 			# add a hashtag to the item if needed:
-			[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
-
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
-			[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
-			[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
-			[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
-
-			# First build the text of the tweet: reminder:
-			# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
-			# 8-callsign,9-adsbx_url,10-squawk
-
-			TWITTEXT="#PlaneAlert "
-			TWITTEXT+="ICAO: ${pa_record[0]} "
-			[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
-			[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
-			[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
-			[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
-			TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-			TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
-
-			PLANELINE="${ALERT_DICT["${ICAO}"]}"
-			IFS="," read -ra TAGLINE <<< "$PLANELINE"
-			# Add any hashtags:
-			for i in {4..10}
-			do
-				(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-				if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
-				then
-					tag="${TAGLINE[i]}"
-					if [[ "${tag:0:4}" == "http" ]]
-					then
-						TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
-					elif [[ "$tag" != "" ]]
-					then
-						TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
-					fi
-				fi
-			done
-
-			TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
 			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo "$TWITTEXT" )
 			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from "$TWIDFILE" )

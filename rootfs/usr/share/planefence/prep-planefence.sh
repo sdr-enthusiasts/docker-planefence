@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2015,SC2268
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -300,6 +300,17 @@ configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
 configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
 configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
 configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+
+# Configure Mastodon parameters:
+if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -f /run/mastodon_ok ]]
+then
+	MASTODON_SERVER="${MASTODON_SERVER,,}"
+	# strip http:// https://
+	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
+	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+	configure_both "MASTODON_SERVER" "\"${MASTODON_SERVER}\""
+	configure_both "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+fi
 
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf

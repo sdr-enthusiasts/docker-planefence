@@ -288,15 +288,44 @@ then
 			fi
 			[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
 
-			# LOG "PF_DISCORD: $PF_DISCORD"
-			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
-			# LOG "DISCORD_FEEDER_NAME: $DISCORD_FEEDER_NAME"
-      # Inject the Discord integration in here so it doesn't have to worry about state management
+			# Inject the Discord integration in here so it doesn't have to worry about state management
 			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	                        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-                        fi
+      	        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+            fi
+
+			# Inject Mastodone integration here:
+			if [[ -n "$MASTODON_SERVER" ]]
+			then
+				mast_id="null"
+				if [[ "$GOTSNAP" == "true" ]]
+				then
+					# we upload an image
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+					mast_id="$("$(jq '.id' <<< "$response"|xargs)")"
+				fi
+
+				# now send the message. API is different if text-only vs text+image:
+				if [[ "${mast_id,,}" == "null" ]]
+				then
+					# send without image
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWEET//%0A/ }}" -F "language=eng" -F "visibility=public")"
+				else
+					# send with image
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWEET//%0A/ }}" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
+				fi
+
+				# check if there was an error
+				if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+				then
+					echo "Planefence post to Mastodon generated successfully with content: $TWEET"
+					echo "Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+				else
+					echo "Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
+				fi
+			fi
+
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
