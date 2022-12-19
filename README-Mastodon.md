@@ -16,10 +16,10 @@ Mastodon is a distributed social media service. This means, that you have your c
 Once you have an account, please do the following:
 
 - Sign in to Mastodon and go to the home page, for example: https://airwaves.social/home
-- Click `Preferences` on the right bottom of the page 
+- Click `Preferences` on the bottom right of the page 
 ![image](https://user-images.githubusercontent.com/15090643/208437930-ee33596d-5015-4283-923c-12913552f6db.png)
 
-- On the left botton, click `</> Development`
+- On the bottom left, click `</> Development`
 ![image](https://user-images.githubusercontent.com/15090643/208438201-27c29fec-cad9-43fe-88f6-c4009961b162.png)
 
 - Create a new Application by clicking the button, then:
@@ -32,7 +32,7 @@ Once you have an account, please do the following:
 
 - Open the Application and (important!!!) note the Access Token
 ![image](https://user-images.githubusercontent.com/15090643/208438462-b40cc847-f36c-4db7-bacb-54a68fae2cff.png)
-![image](https://user-images.githubusercontent.com/15090643/208438512-a6527270-a917-47ac-bbd9-6a3b4c8a4e1c.png)
+![image](https://user-images.githubusercontent.com/15090643/208438987-3e1fd9c2-5ce9-46c0-92e9-20bb78f55a8c.png)
 
 ## Configuring Planefence to use Mastodon
 
