@@ -303,7 +303,7 @@ then
 				then
 					# we upload an image
 					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
-					mast_id="$("$(jq '.id' <<< "$response"|xargs)")"
+					mast_id="$(jq '.id' <<< "$response"|xargs)"
 				fi
 
 				# now send the message. API is different if text-only vs text+image:
