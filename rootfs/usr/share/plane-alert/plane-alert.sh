@@ -4,7 +4,7 @@
 #
 # Usage: ./plane-alert.sh <inputfile>
 #
-# Copyright 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2023 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -745,6 +745,7 @@ done <<< "$OUTSTRING"
 cat $PLANEALERTDIR/plane-alert.footer.html >&3
 
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
+sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp

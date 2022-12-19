@@ -5,7 +5,7 @@
 #
 # Usage: ./planefence.sh
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2023 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -882,7 +882,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2020 - 2022 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# Copyright 2020 - 2023 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/docker-planefence/
@@ -965,6 +965,7 @@ top: 0;
 <h1>PlaneFence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+${PF_MOTD}
 <article>
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
