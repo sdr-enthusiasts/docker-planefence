@@ -403,10 +403,11 @@ then
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
 			mast_id="null"
+                        MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				# we upload an image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+				response="$(curl -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
 				mast_id="$(jq '.id' <<< "$response"|xargs)"
 			fi
 
@@ -414,10 +415,10 @@ then
 			if [[ "${mast_id,,}" == "null" ]]
 			then
 				# send without image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWITTEXT//%0A/ }" -F "language=eng" -F "visibility=public")"
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
 			else
 				# send with image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWITTEXT//%0A/ }" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
 			fi
 
 			# check if there was an error
