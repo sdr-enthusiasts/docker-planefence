@@ -36,4 +36,6 @@ If you think that we included parts of your software but we didn't attribute you
 
 - @JDiPierro (FerretWithASpork on Discord) for his contributions to write a Discord Notifier for Planefence and Plane-Alert
 
+- @KevinE (https://airwaves.social/@kevin https://airwaves.social/@airframes https://github.com/kevinelliott) for his highly valuable work setting up the AirWaves Mastodon Server and providing expertise, support, and encouragement to add Mastodon notifications
+
 - Last, this Planefence package itself is available under the GNU General Public License, version 3. If this license doesn't work for you, feel free to reach out to kx1t@amsat.org to see if we can mutually agree on a license structure that better suits your needs. In any case, since this project was written by a non-professional hobbyist programmer, under no circumstances will we waive the Disclaimer of Warranty and the Limitation of Liability set forth in the license terms.
