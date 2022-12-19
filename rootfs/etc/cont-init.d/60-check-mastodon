@@ -29,6 +29,8 @@ else
     if curl -sS -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials" | grep -vi "The access token is invalid" >/dev/null 2>&1
     then
         echo "[$(date)][$APPNAME] Mastodon configured correctly."
+        [[ "${PF_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Planefence" || echo "[$(date)][$APPNAME] Mastodon disabled for Planefence"
+        [[ "${PA_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Plane-Alert" || echo "[$(date)][$APPNAME] Mastodon disabled for Plane-Alert"
     else
         echo "[$(date)][$APPNAME] Mastodon configured incorrectly. Check your setup"
     fi
