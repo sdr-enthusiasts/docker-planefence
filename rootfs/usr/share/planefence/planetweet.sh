@@ -299,6 +299,7 @@ then
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
+                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# we upload an image
@@ -310,10 +311,10 @@ then
 				if [[ "${mast_id,,}" == "null" ]]
 				then
 					# send without image
-					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWEET//%0A/ }" -F "language=eng" -F "visibility=public")"
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
 				else
 					# send with image
-					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${TWEET//%0A/ }" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
 				fi
 
 				# check if there was an error
