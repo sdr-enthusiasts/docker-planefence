@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash disable=SC2015
+#shellcheck shell=bash disable=SC2015,SC1091
 
 APPNAME="$(hostname)/check-mastodon"
 # -----------------------------------------------------------------------------------
@@ -14,8 +14,8 @@ APPNAME="$(hostname)/check-mastodon"
 
 echo "[$(date)][$APPNAME] Checking Mastodon server and access token"
 
-MASTODON_SERVER="$(sed -n 's/\s*MASTODON_SERVER=\(.*\)/\1/p' /usr/share/planefence/persist/planefence.config)"
-MASTODON_ACCESS_TOKEN="$(sed -n 's/\s*MASTODON_ACCESS_TOKEN=\(.*\)/\1/p' /usr/share/planefence/persist/planefence.config)"
+source /usr/share/planefence/persist/planefence.config
+rm -f /run/pf_mastodon_on /run/pa_mastodon_on
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]] || [[ -z "$MASTODON_SERVER" ]]
 then
@@ -29,9 +29,7 @@ else
     if curl -sS -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials" | grep -vi "The access token is invalid" >/dev/null 2>&1
     then
         echo "[$(date)][$APPNAME] Mastodon configured correctly."
-        touch /run/mastodon_ok
     else
         echo "[$(date)][$APPNAME] Mastodon configured incorrectly. Check your setup"
-        rm -f /run/mastodon_ok
     fi
 fi

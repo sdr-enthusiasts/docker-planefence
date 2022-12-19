@@ -302,14 +302,28 @@ configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
 configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
 
 # Configure Mastodon parameters:
-if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -f /run/mastodon_ok ]]
+if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]
 then
 	MASTODON_SERVER="${MASTODON_SERVER,,}"
 	# strip http:// https://
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
-	configure_both "MASTODON_SERVER" "\"${MASTODON_SERVER}\""
-	configure_both "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+	if [[ "${PF_MASTODON,,}" == "on" ]]
+	then
+		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+		configure_planefence "MASTODON_SERVER" "$MASTODON_SERVER"
+	else
+		configure_planefence "MASTODON_ACCESS_TOKEN" ""
+		configure_planefence "MASTODON_SERVER" ""
+	fi
+	if [[ "${PA_MASTODON,,}" == "on" ]]
+	then
+		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
+	else
+		configure_planealert "MASTODON_ACCESS_TOKEN" ""
+		configure_planealert "MASTODON_SERVER" ""
+	fi
 fi
 
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf

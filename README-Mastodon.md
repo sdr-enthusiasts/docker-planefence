@@ -16,7 +16,7 @@ Mastodon is a distributed social media service. This means, that you have your c
 Once you have an account, please do the following:
 
 - Sign in to Mastodon and go to the home page, for example: https://airwaves.social/home
-- Click `Preferences` on the bottom right of the page 
+- Click `Preferences` on the bottom right of the page
 <img src="https://user-images.githubusercontent.com/15090643/208437930-ee33596d-5015-4283-923c-12913552f6db.png"/>
 
 - On the bottom left, click `</> Development`
@@ -43,10 +43,12 @@ Please set the following parameters in your `planefence.config` file:
 ```
 MASTODON_SERVER=airwaves.social
 MASTODON_ACCESS_TOKEN=vsafdwafewarewdcvdsafwaefaewfdw
+PF_MASTODON=ON
+PA_MASTODON=ON
 ```
-(replace by the applicable server name and access token)
-
-As long as both these parameters are defined and correct, Planefence and Plane-Alert will post to Mastodon.
+Replace by the applicable server name and access token.
+If `PF_MASTODON` is not set to `ON`, then no PlaneFence Mastodon notifications will be sent.
+If `PA_MASTODON` is not set to `ON`, then no Plane-Alert Mastodon notifications will be sent.
 
 # Summary of License Terms
 This program is free software: you can redistribute it and/or modify
