@@ -57,6 +57,9 @@ function cleanup
 # Now make sure we call 'cleanup' upon exit:
 trap cleanup EXIT
 #
+
+APPNAME="$(hostname)/plane-alert"
+
 #
 # -----------------------------------------------------------------------------------
 # Let's see if there is a CONF file that defines some of the parameters
@@ -176,9 +179,9 @@ then
 				if (( endtime - starttime > SQUAWKTIME ))
 				then
 					printf "%s\n" "$line" >> "$TMPDIR"/patmp2
-					echo "Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
+					echo "[$(date)][$APPNAME] Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
 				else
-					echo "Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
+					echo "[$(date)][$APPNAME] Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
 				fi
 			done < "$TMPDIR"/patmp
 			mv -f "$TMPDIR"/patmp2 "$TMPDIR"/patmp
@@ -326,31 +329,31 @@ then
 		then
 			GOTSNAP="true"
 			ln -sf $newsnap $snapfile
-			echo "Using picture from $newsnap"
+			echo "[$(date)][$APPNAME] Using picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
 			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 			then
-				echo "Using picture from $link"
+				echo "[$(date)][$APPNAME] Using picture from $link"
 				GOTSNAP="true"
 				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
 			else
-				[[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
+				[[ "$link" != "" ]] && echo "[$(date)][$APPNAME] Failed attempt to get picture from $link" || true
 			fi
 		fi
 
 		if [[ "$GOTSNAP" == "false" ]] && [[ "${SCREENSHOTURL,,}" != "off" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
-			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
 		fi
 
-		[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
+		[[ "$GOTSNAP" == "false" ]] && echo "[$(date)][$APPNAME] Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 		then
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$(date)][$APPNAME] PlaneAlert sending Discord notification" || true
 			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
 		fi
 
@@ -398,6 +401,11 @@ then
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
+		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
+		then
+			echo "[$(date)][$APPNAME] Attempting to Tweet or Toot this message:"
+			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+		fi
 
 		# Inject Mastodone integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
@@ -424,10 +432,9 @@ then
 			# check if there was an error
 			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
 			then
-				echo "Planefence post to Mastodon generated successfully with content: $TWEET"
-				echo "Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
 			else
-				echo "Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
+				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs)"
 			fi
 		fi
 
@@ -452,7 +459,7 @@ then
 				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 			fi
-			[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
+			[[ "$TWIMG" == "true" ]] && echo "[$(date)][$APPNAME] Twitter Media ID=$TW_MEDIA_ID" || echo "[$(date)][$APPNAME] Twitter screenshot upload unsuccessful for ${pa_record[0]}"
 
 			if [[ "$TWITTER" == "DM" ]]
 			then
@@ -460,8 +467,7 @@ then
 				while IFS= read -r twitterid
 				do
 					# tweet and add the processed output to $result:
-					[[ "$TESTING" == "true" ]] && echo
-					echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
+					[[ "$TESTING" == "true" ]] && echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
 					[[ "$twitterid" == "" ]] && continue
 
 					# send a tweet.
@@ -479,14 +485,14 @@ then
 					processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
 					if [[ "$processedresult" != "" ]]
 					then
-						echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-						echo "Diagnostics:"
-						echo "Error: $processedresult"
-						echo "Twitter ID: $twitterid"
-						echo "Text: $TWITTEXT"
+						echo "[$(date)][$APPNAME] Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+						echo "[$(date)][$APPNAME] Diagnostics:"
+						echo "[$(date)][$APPNAME] Error: $processedresult"
+						echo "[$(date)][$APPNAME] Twitter ID: $twitterid"
+						echo "[$(date)][$APPNAME] Text: $TWITTEXT"
 						(( ERRORCOUNT++ ))
 					else
-						echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+						echo "[$(date)][$APPNAME] Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 					fi
 				done < "$TWIDFILE"	# done with the DM tweeting
 			elif [[ "$TWITTER" == "TWEET" ]]
@@ -515,10 +521,10 @@ then
 				done
 				if (( truncated > 0 )); then
 					TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
-					echo "[WARNING]: Tweet has been truncated, cut $truncated characters at the end!"
+					echo "[$(date)][$APPNAME] WARNING: Tweet has been truncated, cut $truncated characters at the end!"
 				fi
 
-				echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
+				echo "[$(date)][$APPNAME] Tweeting a regular tweet"
 
 				# send a tweet.
 				# the conditional makes sure that tweets can be sent with or without image:
@@ -534,14 +540,14 @@ then
 				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
 				if [[ "$processedresult" != "" ]]
 				then
-					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-					echo "Diagnostics:"
-					echo "Error: $processedresult"
-					echo "Twitter ID: $twitterid"
-					echo "Text: $TWITTEXT"
+					echo "[$(date)][$APPNAME] Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+					echo "[$(date)][$APPNAME] Diagnostics:"
+					echo "[$(date)][$APPNAME] Error: $processedresult"
+					echo "[$(date)][$APPNAME] Twitter ID: $twitterid"
+					echo "[$(date)][$APPNAME] Text: $TWITTEXT"
 					(( ERRORCOUNT++ ))
 				else
-					echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+					echo "[$(date)][$APPNAME] Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 				fi
 			fi
 		fi
@@ -550,7 +556,7 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage" || true
 
-(( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
+(( ERRORCOUNT > 0 )) && echo "[$(date)][$APPNAME] There were $ERRORCOUNT tweet errors."
 
 # Now everything is in place, let\'s update the website
 
