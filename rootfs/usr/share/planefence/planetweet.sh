@@ -300,6 +300,7 @@ then
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
 			then
 				echo "[$(date)][$APPNAME] Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+			fi
 			# Inject Mastodone integration here:
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
