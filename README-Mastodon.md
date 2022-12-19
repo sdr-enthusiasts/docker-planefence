@@ -16,13 +16,20 @@ Mastodon is a distributed social media service. This means, that you have your c
 Once you have an account, please do the following:
 
 - Sign in to Mastodon and go to the home page, for example: https://airwaves.social/home
-- Click `Preferences` on the right bottom of the page
+- Click `Preferences` on the right bottom of the page 
+![image](https://user-images.githubusercontent.com/15090643/208437930-ee33596d-5015-4283-923c-12913552f6db.png)
 - On the left botton, click `</> Developer`
+![image](https://user-images.githubusercontent.com/15090643/208438201-27c29fec-cad9-43fe-88f6-c4009961b162.png)
 - Create a new Application by clicking the button, then:
   - Give it a name (for example, "Planefence")
   - Add a URL (if you don't have one, use something like "https://airwaves.social/@myhandle" (replace `myhandle` by your Mastodon handle))
   - Make sure that the following scopes are selected (important!!!): `read`, `write`, `follow`
-  - Save the Application and (important!!!) note the Access Token
+  - Press `Submit` at the bottom of the page
+![image](https://user-images.githubusercontent.com/15090643/208438325-2f5dd1b7-ebd8-404e-8929-7bf5e7875037.png)
+![image](https://user-images.githubusercontent.com/15090643/208438373-de1defdb-41ee-4528-a659-f2faa846733d.png)
+- Open the Application and (important!!!) note the Access Token
+![image](https://user-images.githubusercontent.com/15090643/208438462-b40cc847-f36c-4db7-bacb-54a68fae2cff.png)
+![image](https://user-images.githubusercontent.com/15090643/208438512-a6527270-a917-47ac-bbd9-6a3b4c8a4e1c.png)
 
 ## Configuring Planefence to use Mastodon
 
