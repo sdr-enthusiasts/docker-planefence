@@ -404,7 +404,7 @@ then
 		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
 		then
 			echo "[$(date)][$APPNAME] Attempting to Tweet or Toot this message:"
-			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
 		fi
 
 		# Inject Mastodone integration here:

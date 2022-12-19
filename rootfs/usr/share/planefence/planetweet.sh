@@ -299,7 +299,7 @@ then
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
 			then
-				echo "[$(date)][$APPNAME] Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+				echo "[$(date)][$APPNAME] Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWEET}")"
 			fi
 			# Inject Mastodone integration here:
 			if [[ -n "$MASTODON_SERVER" ]]
