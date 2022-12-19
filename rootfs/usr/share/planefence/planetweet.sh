@@ -289,7 +289,7 @@ then
 			[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
 
 			# Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
+			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
       	        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
