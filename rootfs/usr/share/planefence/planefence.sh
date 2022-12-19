@@ -964,8 +964,8 @@ top: 0;
 
 <h1>PlaneFence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
-<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 ${PF_MOTD}
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
