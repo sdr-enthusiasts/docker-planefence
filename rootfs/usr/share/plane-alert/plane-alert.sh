@@ -427,11 +427,13 @@ then
 			for (( i=0 ; i<=20; i++ ))
 			do
 				fld="$(echo ${field[$i]}|xargs)"
-				if [[ " http HTTP " =~ " ${fld:0:4} " ]] && [[ " jpg png peg bmp gif " =~ " ${fld: -3} " ]]
+				ext="${fld: -3}"
+				if  [[ " jpg png peg bmp gif " =~ " $ext " ]]
 				then
 					rm -f /tmp/planeimg.*
-					ext="${fld: -3}"
+
 					[[ "$ext" == "peg" ]] && ext="jpeg" || true
+					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
 					if curl -sL "$fld" -o "/tmp/planeimg.$ext"
 					then
 						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
