@@ -423,20 +423,25 @@ then
 			# check if there are any images in the plane-alert-db
 			field=()
 			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]}]}"
-			for (( i=11 ; i<=15; i++ ))
+
+			for (( i=0 ; i<=20; i++ ))
 			do
-				if [[ "${field[$i]:0:4}" == "http" ]] || [[ "${field[$i]:0:4}" == "HTTP" ]]
+				fld="$(echo ${field[$i]}|xargs)"
+				if [[ " http HTTP " =~ " ${fld:0:4} " ]] && [[ " jpg png peg bmp gif " =~ " ${fld: -3} " ]]
 				then
 					rm -f /tmp/planeimg.*
-					if curl -sL "${field[$i]:0:4}" -o "/tmp/planeimg${field[$i]: -4}"
+					ext="${fld: -3}"
+					[[ "$ext" == "peg" ]] && ext="jpeg" || true
+					if curl -sL "$fld" -o "/tmp/planeimg.$ext"
 					then
-						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg${field[$i]: -4}")"
+						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
 						[[ "$(jq '.id' <<< "$response"|xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response"|xargs)") || true
+						rm -f "/tmp/planeimg.$ext"
 					fi
 				fi
 			done
 
-			# now send the message. API is different if text-only vs text+image:
+			# now send the Mastodon Toot. API is different if text-only vs text+image:
 			if [[ "${#mast_id[@]}" == "0" ]]
 			then
 				# send without image
