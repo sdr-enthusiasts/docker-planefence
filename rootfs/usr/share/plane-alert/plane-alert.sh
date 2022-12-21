@@ -30,6 +30,7 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 # -----------------------------------------------------------------------------------
 #
 # PLEASE EDIT PARAMETERS IN 'plane-alert.conf' BEFORE USING PLANE-ALERT !!!
+echo $0 invoked
 #
 # -----------------------------------------------------------------------------------
 # Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
@@ -418,11 +419,12 @@ then
 				# we upload an image
 				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
 				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
+
 			fi
 
 			# check if there are any images in the plane-alert-db
 			field=()
-			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]}]}"
+			readarray -td, field <<< "${ALERT_DICT["${pa_record[0]#\#}"]}"
 
 			for (( i=0 ; i<=20; i++ ))
 			do
@@ -431,30 +433,26 @@ then
 				if  [[ " jpg png peg bmp gif " =~ " $ext " ]]
 				then
 					rm -f /tmp/planeimg.*
-
 					[[ "$ext" == "peg" ]] && ext="jpeg" || true
 					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
-					if curl -sL "$fld" -o "/tmp/planeimg.$ext"
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
 					then
 						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
-						[[ "$(jq '.id' <<< "$response"|xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response"|xargs)") || true
+						[[ "$(jq '.id' <<< "$response" | xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs)") || true
 						rm -f "/tmp/planeimg.$ext"
 					fi
 				fi
 			done
-
-			# now send the Mastodon Toot. API is different if text-only vs text+image:
-			if [[ "${#mast_id[@]}" == "0" ]]
+			#shellcheck disable=SC2068
+			if (( ${#mast_id[@]} > 0 ))
 			then
-				# send without image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
+				printf -v media_ids -- '-F media_ids[]=%s ' ${mast_id[@]}
+				echo "[$(date)][$APPNAME] ${#mast_id[@]} images uploaded to Mastodon"
 			else
-				# send with image
-				printf -v media_ids "&media_ids[]=%s" "${mast_id[@]}"
-				media_ids="${media_ids:1}"
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses?$media_ids" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
+				media_ids=""
 			fi
-
+			# now send the Mastodon Toot.
+			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
 			# check if there was an error
 			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
 			then
