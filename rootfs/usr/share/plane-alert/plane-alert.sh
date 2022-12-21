@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck shell=bash disable=SC2164,SC2015,SC2006
 # PLANE-ALERT - a Bash shell script to assess aircraft from a socket30003 render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -410,23 +411,41 @@ then
 		# Inject Mastodone integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
-			mast_id="null"
-                        MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+			mast_id=()
+            MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				# we upload an image
-				response="$(curl -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
-				mast_id="$(jq '.id' <<< "$response"|xargs)"
+				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
 			fi
 
+			# check if there are any images in the plane-alert-db
+			field=()
+			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]}]}"
+			for (( i=11 ; i<=15; i++ ))
+			do
+				if [[ "${field[$i]:0:4}" == "http" ]] || [[ "${field[$i]:0:4}" == "HTTP" ]]
+				then
+					rm -f /tmp/planeimg.*
+					if curl -sL "${field[$i]:0:4}" -o "/tmp/planeimg${field[$i]: -4}"
+					then
+						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg${field[$i]: -4}")"
+						[[ "$(jq '.id' <<< "$response"|xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response"|xargs)") || true
+					fi
+				fi
+			done
+
 			# now send the message. API is different if text-only vs text+image:
-			if [[ "${mast_id,,}" == "null" ]]
+			if [[ "${#mast_id[@]}" == "0" ]]
 			then
 				# send without image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
 			else
 				# send with image
-				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public" -F "media_ids[]=${mast_id}")"
+				printf -v media_ids "&media_ids[]=%s" "${mast_id[@]}"
+				media_ids="${media_ids:1}"
+				response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses?$media_ids" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=public")"
 			fi
 
 			# check if there was an error
