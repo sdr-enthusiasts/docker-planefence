@@ -30,7 +30,7 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 # -----------------------------------------------------------------------------------
 #
 # PLEASE EDIT PARAMETERS IN 'plane-alert.conf' BEFORE USING PLANE-ALERT !!!
-echo $0 invoked
+##echo $0 invoked
 #
 # -----------------------------------------------------------------------------------
 # Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
