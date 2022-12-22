@@ -334,6 +334,7 @@ then
 			echo "[$(date)][$APPNAME] Using picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+			echo "[$(date)][$APPNAME] Attempting to get screenshot from $link"
 			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 			then
 				echo "[$(date)][$APPNAME] Using picture from $link"
