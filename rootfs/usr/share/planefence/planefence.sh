@@ -1107,7 +1107,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
 <br/>&copy; Copyright 2020 - 2022 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
-<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/kx1t/docker-planefence/workflows/deploy.yml?branch=main"></a>
+<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/kx1t/docker-planefence/deploy.yml"></a>
 <a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
 <a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
