@@ -69,7 +69,14 @@ RUN set -x && \
     ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     curl --compressed --fail -s -L -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
     curl --compressed --fail -s -L -o /usr/share/planefence/stage/Silhouettes.zip https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip && \
-    if ! curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-%m.csv)"; then curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-$(date -d "$(date +%Y-%m-1) -1 month" +%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-$(date -d "$(date +%Y-%m-1) -1 month" +%m).csv)"; fi && \
+    if \
+            curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-%m.csv)" \
+        ||  curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)"; \
+    then \
+        echo "Got new OpenSkyDb"; \
+    else \
+        echo "Couldn't download OpenSKyDb"; \
+    fi && \
 #
 # Ensure the planefence and plane-alert config is available for lighttpd:
     ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
