@@ -79,7 +79,7 @@ RUN set -x && \
     then \
         echo "Couldn't download OpenSKyDb - getting one we know exists, but it may be out of date"; \
         curl --compressed --fail -L -o "/usr/share/planefence/stage/OpenSkyDb-2022-11.csv)" "https://opensky-network.org/datasets/metadata/OpenSkyDb-2022-11.csv)"; \
-    else
+    else \
         echo "Couldn't download OpenSKyDb - continuing without"; \
     fi && \
 #
