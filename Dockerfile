@@ -72,10 +72,15 @@ RUN set -x && \
     if \
             curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-%m.csv)" \
         ||  curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)"; \
+        ||  curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-$(date -d "$(date +%Y-%m-1) -2 months" +%Y-%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-$(date -d "$(date +%Y-%m-1) -2 monthS" +%Y-%m).csv)"; \
     then \
         echo "Got new OpenSkyDb"; \
-    else \
-        echo "Couldn't download OpenSKyDb"; \
+    elif curl --compressed --fail -L -o "/usr/share/planefence/stage/OpenSkyDb-2022-11.csv)" "https://opensky-network.org/datasets/metadata/OpenSkyDb-2022-11.csv)"; \
+    then \
+        echo "Couldn't download OpenSKyDb - getting one we know exists, but it may be out of date"; \
+        curl --compressed --fail -L -o "/usr/share/planefence/stage/OpenSkyDb-2022-11.csv)" "https://opensky-network.org/datasets/metadata/OpenSkyDb-2022-11.csv)"; \
+    else
+        echo "Couldn't download OpenSKyDb - continuing without"; \
     fi && \
 #
 # Ensure the planefence and plane-alert config is available for lighttpd:
