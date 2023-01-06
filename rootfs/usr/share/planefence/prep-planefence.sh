@@ -157,8 +157,6 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PA_HISTTIME" != "x" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_ALERTHEADER" != "x" ]] && sed -i "s|\(^\s*ALERTHEADER=\).*|\1\'$PF_ALERTHEADER\'|" /usr/share/plane-alert/plane-alert.conf
 
-
-
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
@@ -300,6 +298,7 @@ then
 	then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planefence "MASTODON_SERVER" "$MASTODON_SERVER"
+		[[ -n "$PF_MASTODON_VISIBILITY" ]] && configure_planefence "MASTODON_VISIBILITY" "$PF_MASTODON_VISIBILITY" || configure_planefence "MASTODON_VISIBILITY" "unlisted"
 	else
 		configure_planefence "MASTODON_ACCESS_TOKEN" ""
 		configure_planefence "MASTODON_SERVER" ""
@@ -308,6 +307,7 @@ then
 	then
 		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
+		[[ -n "$PA_MASTODON_VISIBILITY" ]] && configure_planealert "MASTODON_VISIBILITY" "$PA_MASTODON_VISIBILITY" || configure_planealert "MASTODON_VISIBILITY" "unlisted"
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""
 		configure_planealert "MASTODON_SERVER" ""

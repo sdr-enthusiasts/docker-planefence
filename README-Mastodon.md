@@ -45,10 +45,13 @@ MASTODON_SERVER=airwaves.social
 MASTODON_ACCESS_TOKEN=vsafdwafewarewdcvdsafwaefaewfdw
 PF_MASTODON=ON
 PA_MASTODON=ON
+PA_MASTODON_VISIBILITY=unlisted
+PF_MASTODON_VISIBILITY=unlisted
 ```
 Replace by the applicable server name and access token.
 If `PF_MASTODON` is not set to `ON`, then no PlaneFence Mastodon notifications will be sent.
 If `PA_MASTODON` is not set to `ON`, then no Plane-Alert Mastodon notifications will be sent.
+`Px_MASTODON_VISIBILITY` can be `public`, `unlisted`, or `private`
 
 # Summary of License Terms
 This program is free software: you can redistribute it and/or modify
