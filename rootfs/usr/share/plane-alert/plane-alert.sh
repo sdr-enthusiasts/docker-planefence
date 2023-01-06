@@ -453,11 +453,11 @@ then
 				media_ids=""
 			fi
 			# now send the Mastodon Toot.
-			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=$MASTODON_VISIBILITY")"
+			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 			# check if there was an error
 			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
 			then
-				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
 			else
 				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs)"
 			fi

@@ -317,16 +317,16 @@ then
 				if [[ "${mast_id,,}" == "null" ]]
 				then
 					# send without image
-					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=$MASTODON_VISIBILITY")"
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 				else
 					# send with image
-					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=$MASTODON_VISIBILITY" -F "media_ids[]=${mast_id}")"
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}" -F "media_ids[]=${mast_id}")"
 				fi
 
 				# check if there was an error
 				if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
 				then
-					echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+					echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
 				else
 					echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
 				fi
