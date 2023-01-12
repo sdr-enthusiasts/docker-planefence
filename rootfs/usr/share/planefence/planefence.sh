@@ -1,5 +1,7 @@
-#!/bin/bash
-#set -x
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+#shellcheck disable=SC2015,SC1091
+#
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -241,7 +243,7 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 EOF
 		# If there are spectrograms for today, then also make a column for these:
-		if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
+		if (( $(ls -1 "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" 2>/dev/null |wc -l) > 0 ))
 		then
 			printf "<th>Spectrogram</th>\n" >> "$2"
 			SPECTROPRINT="true"
@@ -313,7 +315,7 @@ EOF
 		then
 			# First, the noise graph:
 			# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-			NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-"${NEWVALUES[0]}".png"
+			NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-${NEWVALUES[0]}.png"
 			NOISEGRAPHLINK=${NOISEGRAPHFILE##*/}
 
 			# If no graph already exists, create one:
@@ -817,15 +819,15 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ ! -z "$PLANETWEET" || "$PF_DISCORD" == "true" ]] && [[ "$1" == "" ]]
+if [[ ( -n "$PLANETWEET"  ||  "$PF_DISCORD" == "true" ||  "$PF_MASTODON" == "ON" ) && -z "$1" ]]
 then
-	LOG "Invoking PlaneTweet for tweeting and/or discord notifications"
-	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"
+	LOG "Invoking planefence_notify.sh for notifications"
+	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
 else
-	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
+	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
-[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking PlaneTweet, invoking PlaneHeat" || true
+[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
 if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data

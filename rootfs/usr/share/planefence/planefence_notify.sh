@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+#shellcheck disable=SC2015,SC1091
 # PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
 # user-defined fence area.
 #
-# Usage: ./planetweet.sh
+# Usage: ./planefence_notify.sh
 #
 # Note: this script is meant to be run as a daemon using SYSTEMD
 # If run manually, it will continuously loop to listen for new planes
@@ -24,7 +26,7 @@
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
-[[ "x$PLANEFENCEDIR" == "x" ]] && PLANEFENCEDIR=/usr/share/planefence
+[[ -z "$PLANEFENCEDIR" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
 APPNAME="$(hostname)/planetweet"
 #

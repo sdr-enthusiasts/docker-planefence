@@ -209,8 +209,8 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 #
 # enable or disable tweeting:
 #
-[[ "x$PF_TWEET" == "xOFF" ]] && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
-if [[ "x$PF_TWEET" == "xON" ]]
+[[ "${PF_TWEET,,}" == "off" ]] && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
+if [[ "{$PF_TWEET,,}" == "on" ]]
 then
 	if [[ ! -f ~/.twurlrc ]]
 	then
