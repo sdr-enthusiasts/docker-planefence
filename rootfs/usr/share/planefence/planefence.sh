@@ -846,16 +846,13 @@ if [ "$NOISECAPT" == "1" ]
 then
 	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram" || true
 	# get the latest spectrogram from the remote server
-	curl --fail -s $REMOTENOISE/noisecapt-spectro-latest.png >$OUTFILEDIR/noisecapt-spectro-latest.png
-	# was - wget now using curl to save disk space wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
-	#scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
-	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
+	curl --fail -s "$REMOTENOISE/noisecapt-spectro-latest.png" >"$OUTFILEDIR/noisecapt-spectro-latest.png"
 
 	# also create a noisegraph for the full day:
 	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph" || true
 	rm -f /tmp/noiselog 2>/dev/null
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f /usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log /tmp/noiselog
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat /usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log >> /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" >> /tmp/noiselog
 	gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$(date -d "yesterday" +%s)"; end="$(date +%s)"; infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = "$(date +%Y-%m-%d)")'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 	rm -f /tmp/noiselog 2>/dev/null
 

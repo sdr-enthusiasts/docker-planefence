@@ -171,7 +171,7 @@ CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
 
 #Now iterate through the CSVFILE:
 LOG "------------------------------"
-LOG "Starting PLANETWEET"
+LOG "Starting PLANEFENCE_NOTIFY"
 LOG "CSVFILE=$CSVFILE"
 
 # Get the hashtaggable headers, and figure out of there is a field with a

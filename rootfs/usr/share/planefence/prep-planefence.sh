@@ -70,7 +70,7 @@ mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
-rm -f /usr/share/planefence/html/planefence.config
+rm -f /usr/share/planefence/html/planefence.config usr/share/planefence/html/*.template
 mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
 [[ ! -f /usr/share/planefence/persist/pa-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
@@ -80,6 +80,8 @@ rm -f /usr/share/planefence/html/background.jpg
 # Copy the airlinecodes.txt file to the persist directory
 cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
 chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
+
+cp -u --backup=numbered /usr/share/planefence/stage/*.template /usr/share/planefence/persist >/dev/null 2>&1
 #
 #--------------------------------------------------------------------------------
 #
@@ -359,8 +361,15 @@ then
 	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
 	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt"
 fi
-
+#--------------------------------------------------------------------------------
+# Put the MOTDs in place:
+configure_planefence "PF_MOTD" "$PF_MOTD"
+configure_planealert "PA_MOTD" "$PA_MOTD"
+#
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
+
+configure_planealert "PF_LINK" "$PA_PF_LINK"
+
 date +%s > /run/planefence/last-config-change

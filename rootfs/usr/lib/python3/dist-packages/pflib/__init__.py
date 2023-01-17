@@ -1,6 +1,6 @@
 # Python3 module of utilities for Plane Fence and Plane Alert
 #
-# Copyright 2022 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2022 Ramon F. Kolb and @FerretWithASpork - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
