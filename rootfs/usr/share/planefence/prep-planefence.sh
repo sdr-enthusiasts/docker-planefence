@@ -363,8 +363,8 @@ then
 fi
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
-configure_planefence "PF_MOTD" "$PF_MOTD"
-configure_planealert "PA_MOTD" "$PA_MOTD"
+configure_planefence "PF_MOTD" "\"$PF_MOTD\""
+configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
