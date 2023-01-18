@@ -66,24 +66,25 @@ def process_alert(config, plane):
 
     fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
-    webhook, embed = pf.discord.build(
+    webhooks, embeds = pf.discord.build(
         config["DISCORD_FEEDER_NAME"],
         config["PF_DISCORD_WEBHOOKS"],
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
         f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
 
-    pf.attach_media(config, "PF", plane, webhook, embed)
+    for webhook, embed in zip(webhooks, embeds):
+        pf.attach_media(config, "PF", plane, webhook, embed)
 
-    # Attach data fields
-    pf.discord.field(embed, "ICAO", plane['icao'])
-    pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
-    pf.discord.field(embed, "Distance", f"{plane['min_dist']}{pf.distance_unit(config)}")
+        # Attach data fields
+        pf.discord.field(embed, "ICAO", plane['icao'])
+        pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
+        pf.discord.field(embed, "Distance", f"{plane['min_dist']}{pf.distance_unit(config)}")
 
-    time_seen = plane['first_seen'].split(" ")[1]
-    pf.discord.field(embed, "First Seen", f"{time_seen} {pf.get_timezone_str()}")
+        time_seen = plane['first_seen'].split(" ")[1]
+        pf.discord.field(embed, "First Seen", f"{time_seen} {pf.get_timezone_str()}")
 
-    # Send the message
-    pf.send(webhook, config)
+        # Send the message
+        pf.send(webhook, config)
 
 
 def main():

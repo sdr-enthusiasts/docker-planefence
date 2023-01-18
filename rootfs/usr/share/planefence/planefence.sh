@@ -819,7 +819,7 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ ( -n "$PLANETWEET"  ||  "$PF_DISCORD" == "true" ||  "$PF_MASTODON" == "ON" ) && -z "$1" ]]
+if [[ ( -n "$PLANETWEET"  ||  "$PF_DISCORD" == "ON" ||  "$PF_MASTODON" == "ON" ) && -z "$1" ]]
 then
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
