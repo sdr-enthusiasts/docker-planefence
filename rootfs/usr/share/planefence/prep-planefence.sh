@@ -283,11 +283,11 @@ fi
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 configure_planefence "PF_DISCORD" "$PF_DISCORD"
 configure_planealert "PA_DISCORD" "$PA_DISCORD"
-configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
-configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
-configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
-configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
-configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+configure_planealert "PA_DISCORD_WEBHOOKS" "$PA_DISCORD_WEBHOOKS"
+configure_planefence "PF_DISCORD_WEBHOOKS" "$PF_DISCORD_WEBHOOKS"
+configure_both "DISCORD_FEEDER_NAME" "\"$DISCORD_FEEDER_NAME\""
+configure_both "DISCORD_MEDIA" "$DISCORD_MEDIA"
+configure_both "NOTIFICATION_SERVER" "\"$NOTIFICATION_SERVER\""
 
 # Configure Mastodon parameters:
 if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]
