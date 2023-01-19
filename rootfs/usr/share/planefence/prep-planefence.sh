@@ -282,8 +282,9 @@ fi
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 configure_planefence "PF_DISCORD" "$PF_DISCORD"
-configure_planealert "PA_DISCORD" "$PA_DISCORD"
-configure_planealert "PA_DISCORD_WEBHOOKS" "$PA_DISCORD_WEBHOOKS"
+# Configure both on Plane Alert settings as the code currently uses both config files, may have to dig into that...
+configure_both "PA_DISCORD" "$PA_DISCORD"
+configure_both "PA_DISCORD_WEBHOOKS" "$PA_DISCORD_WEBHOOKS"
 configure_planefence "PF_DISCORD_WEBHOOKS" "$PF_DISCORD_WEBHOOKS"
 configure_both "DISCORD_FEEDER_NAME" "\"$DISCORD_FEEDER_NAME\""
 configure_both "DISCORD_MEDIA" "$DISCORD_MEDIA"
