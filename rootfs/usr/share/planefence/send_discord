@@ -25,33 +25,32 @@ trap 'echo -e "[$(date)][$APPNAME][ERROR] $SCRIPT_PATH in line $LINENO when exec
 
 APPNAME="$(hostname)/send-discord"
 
-[[ -z "${VESSELDBFILE}" ]] && VESSELDBFILE="/data/vessel.db" || true
-IMAGECACHE="${VESSELDBFILE%/*}/imagecache"
+PF_CONFIGFILE="/usr/share/planefence/planefence.conf"
+PA_CONFIGFILE="/usr/share/plane-alert/planealert.conf"
 
-source "$VESSELDBFILE"
 
 if [[ -z "$1" ]]
 then
-    echo "$0 - send a Discord notification for a specific MMSI"
-    echo "Usage: $0 mmsi"
+    echo "$0 - send a Discord notification for a specific Hex ID"
+    echo "Usage: $0 <hexid> <PF|PA>"
     exit 1
 else
-    echo "[$(date)][$APPNAME] Attempting Discord notification for $1 (${VESSELS[$1:shipname]})"
+    echo "[$(date)][$APPNAME] Attempting Discord notification for $1"
 fi
 
-#shellcheck disable=SC2001
-if [[ "$2 $3 $4 $5 $6" =~ .*distance=.* ]]
+if [[ "$2" == "PF" ]]
 then
-    notify_distance="$(sed 's|^.*distance=\([0-9.]*\).*$|\1|g' <<< "$2 $3 $4 $5 $6")"
-else
-    notify_distance=""
-fi
-#shellcheck disable=SC2001
-if [[ "$2 $3 $4 $5 $6" =~ .*timing=.* ]]
+    source "$PF_CONFIGFILE"
+    DISCORD_WEBHOOKS="$PF_DISCORD_WEBHOOKS"
+    notif_json="$(</usr/share/planefence/persist/discord.planefence.template)"
+elif [[ "$2" == "PA" ]]
 then
-    notify_timing="$(sed 's|^.*timing=\([0-9.]*\).*$|\1|g' <<< "$2 $3 $4 $5 $6")"
+    source "$PA_CONFIGFILE"
+    DISCORD_WEBHOOKS="$PA_DISCORD_WEBHOOKS"
+    notif_json="$(</usr/share/planefence/persist/discord.plane-alert.template)"
 else
-    notify_timing=""
+    echo "Missing PF / PA indicator. Cannot notify"
+    exit 1
 fi
 
 if [[ -z "${DISCORD_WEBHOOKS}" ]]
@@ -60,17 +59,13 @@ then
     exit 1
 fi
 
-if [[ -z "${DISCORD_NAME}" ]]
+if [[ -z "${DISCORD_FEEDER_NAME}" ]]
 then
-    echo "[$(date)][$APPNAME] Error: DISCORD_NAME not defined. Cannot send a Discord notification"
+    echo "[$(date)][$APPNAME] Error: DISCORD_FEEDER_NAME not defined. Cannot send a Discord notification"
     exit 1
 fi
 
 readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
-
-# First do some clean up
-[[ -n "${VESSELS[$1:shipname]}" ]] && VESSELS[$1:shipname]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:shipname]}")"
-[[ -n "${VESSELS[$1:destination]}" ]] && VESSELS[$1:destination]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:destination]}")"
 
 [[ -n "$DEBUG" ]] && set -x
 # load the notification JSON from the template:
@@ -102,7 +97,7 @@ else
     notif_json="${notif_json//##SM--*--SM##/}"
 fi
 # Now replace a bunch of parameters in the template:
-notif_json="${notif_json//##USER##/${DISCORD_NAME}}"
+notif_json="${notif_json//##USER##/${DISCORD_FEEDER_NAME}}"
 
 {   description=""
     [[ -z "${VESSELS[$1:notification:last]}" ]] && description+="NEW: "

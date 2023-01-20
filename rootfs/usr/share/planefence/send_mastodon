@@ -1,0 +1,138 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash disable=SC2015,SC2164,SC1090,SC1091
+#---------------------------------------------------------------------------------------------
+# Copyright (C) 2022-2023, Ramon F. Kolb (kx1t)
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+#---------------------------------------------------------------------------------------------
+# This script sends a Mastodon notification (toot)
+
+# redirect stderr to stdout so it's picked up in the docker logs
+exec 2>&1
+# all errors will show a line number and the command used to produce the error
+SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
+trap 'echo -e "[$(date)][$APPNAME][ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND returned ${?}"' ERR
+
+APPNAME="$(hostname)/send-mastodon"
+
+[[ -z "${VESSELDBFILE}" ]] && VESSELDBFILE="/data/vessel.db" || true
+[[ -z "$MASTODON_POST_VISIBILITY" ]] && MASTODON_POST_VISIBILITY=unlisted
+IMAGECACHE="${VESSELDBFILE%/*}/imagecache"
+MASTODON_SERVER="${MASTODON_SERVER,,}"
+[[ -z "${MASTODON_SERVER}" ]] && MASTODON_SERVER="airwaves.social"
+[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
+[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+MASTODON_SERVER="https://${MASTODON_SERVER}"
+
+source "$VESSELDBFILE"
+
+if [[ -z "$1" ]]
+then
+    echo "$0 - send a Mastodon notification for a specific MMSI"
+    echo "Usage: $0 mmsi"
+    exit 1
+else
+    echo "[$(date)][$APPNAME] Attempting Mastodon notification for $1 (${VESSELS[$1:shipname]})"
+fi
+
+if [[ -z "${MASTODON_ACCESS_TOKEN}" ]]
+then
+    echo "[$(date)][$APPNAME] Error: MASTODON_ACCESS_TOKEN not defined. Cannot send a Mastodon notification"
+    exit 1
+fi
+
+# First do some clean up
+[[ -n "${VESSELS[$1:shipname]}" ]] && VESSELS[$1:shipname]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+|_|g' -e 's|_,|,|g' <<< "${VESSELS[$1:shipname]}")"
+[[ -n "${VESSELS[$1:destination]}" ]] && VESSELS[$1:destination]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+|_|g' -e 's|_,|,|g' <<< "${VESSELS[$1:destination]}")"
+
+# Build the message - create notification string
+
+links=""
+[[ -n "$MASTODON_LINK_SHIPXPLORER" ]] && links+="https://www.shipxplorer.com/data/vessels/IMO-MMSI-${VESSELS[$1:mmsi]}\n" || true
+[[ -n "$MASTODON_LINK_MARINETRAFFIC" ]] && links+="https://www.marinetraffic.com/en/ais/details/ships/${VESSELS[$1:mmsi]}\n" || true
+[[ -n "$MASTODON_LINK_VESSELFINDER" ]] && links+="https://www.vesselfinder.com/vessels/details/${VESSELS[$1:mmsi]}\n" || true
+
+mast_str="#VesselAlert #Ship #Vessel #AIS"
+[[ -z "${VESSELS[$1:notification:last]}" ]] && mast_str+=" #NEW #FIRST Observation"
+#shellcheck disable=SC2154
+[[ "${notify_distance}" == "true" ]] && mast_str+=" #OnTheMove"
+mast_str+="\n"
+[[ -n "${VESSELS[$1:shipname]}" ]] && mast_str+="Name: #${VESSELS[$1:shipname]} "
+[[ -n "${VESSELS[$1:mmsi]}" ]] && mast_str+="#MMSI: #${VESSELS[$1:mmsi]}\n"
+[[ -n "${VESSELS[$1:callsign]}" ]] && mast_str+="Callsign: #${VESSELS[$1:callsign]} "
+[[ -n "${VESSELS[$1:shiptype]}" ]] && [[ -n "${SHIPTYPE[${VESSELS[$1:shiptype]}]}" ]] && mast_str+="Type: ${SHIPTYPE[${VESSELS[$1:shiptype]}]}"
+mast_str+="\n"
+
+[[ -n "${VESSELS[$1:country]}" ]] && mast_str+="#Flag: #${COUNTRY[${VESSELS[$1:country]}]} "
+mast_str+="Msgs recvd: ${VESSELS[$1:count]}\n"
+mast_str+="Seen on: $(date -d @$(( $(date +%s) - ${VESSELS[$1:last_signal]} )) +"%d-%b-%Y %H:%M:%S %Z")\n"
+
+[[ -n "${VESSELS[$1:status]}" ]] && [[ -n "${SHIPSTATUS[${VESSELS[$1:status]}]}" ]] && mast_str+="Status: ${SHIPSTATUS[${VESSELS[$1:status]}]}\n"
+[[ -n "${VESSELS[$1:speed]}" ]] && [[ "${VESSELS[$1:speed]}" != "0" ]] && [[ "${VESSELS[$1:speed]}" != "null" ]] && mast_str+="Speed: $(printf "%.1f" "${VESSELS[$1:speed]}") kts "
+[[ -n "${VESSELS[$1:heading]}" ]] && [[ "${VESSELS[$1:heading]}" != "0" ]] && [[ "${VESSELS[$1:heading]}" != "null" ]]&& mast_str+="Heading: ${VESSELS[$1:heading]} deg "
+[[ -n "${VESSELS[$1:destination]}" ]] && mast_str+="Destination: ${VESSELS[$1:destination]}\n"
+mast_str+="\n"
+
+mast_str+="Signal #RSSI: $(printf "%.1f dBFS" "${VESSELS[$1:level]}")\n"
+[[ -n "${links}" ]] && mast_str+="${links}\n"
+[[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" != "http" ]] && mast_str+="\nVessel location: ${AIS_URL}?mmsi=${VESSELS[$1:mmsi]}"
+[[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" == "http" ]] && mast_str+="\nVessel location: ${NOTIFICATION_MAPURL}?mmsi=${VESSELS[$1:mmsi]}"
+
+[[ -n "$MASTODON_CUSTOM_FIELD" ]] && mast_str+="\n$MASTODON_CUSTOM_FIELD"
+
+#shellcheck disable=SC2001
+mast_str="$(sed -e 's|\\n|\n|g' <<< "$mast_str")"
+
+# Now we have the notification string, lets upload an image if one exists:
+
+# If the image still exists, then upload it to Mastodon:
+if [[ -f "$IMAGECACHE/${VESSELS[$1:mmsi]}.jpg" ]]
+then
+    response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@$IMAGECACHE/${VESSELS[$1:mmsi]}.jpg")"
+    [[ "$(jq '.id' <<< "${response}" | xargs)" != "null" ]] && mast_id="$(jq '.id' <<< "${response}" | xargs)" || mast_id=""
+    [[ -n "${mast_id}" ]] && media_id="-F media_ids[]=${mast_id} "
+    echo "[$(date)][$APPNAME] image for ${VESSELS[$1:mmsi]} (${VESSELS[$1:shipname]}) uploaded to Mastodon"
+else
+    echo "[$(date)][$APPNAME] no image available for ${VESSELS[$1:mmsi]} (${VESSELS[$1:shipname]})"
+fi
+
+# If a screenshot exists, then upload it to Mastodon:
+if [[ -f "${IMAGECACHE}/screenshots/${VESSELS[$1:mmsi]}.jpg" ]]
+then
+    response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@${IMAGECACHE}/screenshots/${VESSELS[$1:mmsi]}.jpg")"
+    [[ "$(jq '.id' <<< "${response}" | xargs)" != "null" ]] && mast_id="$(jq '.id' <<< "${response}" | xargs)" || mast_id=""
+    [[ -n "${mast_id}" ]] && media_id+="-F media_ids[]=${mast_id} "
+fi
+
+# Now send the toot:
+#shellcheck disable=SC2086
+response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "${MASTODON_SERVER}/api/v1/statuses" -X POST ${media_id} -F "status=${mast_str}" -F "language=eng" -F "visibility=${MASTODON_POST_VISIBILITY}")"
+# check if there was an error
+if [[ "$(jq '.error' <<< "${response}"|xargs)" == "null" ]]
+then
+    echo -n "[$(date)][$APPNAME] Mastodon post for ${VESSELS[$1:mmsi]} (${VESSELS[$1:shipname]}) generated successfully with visibility ${MASTODON_POST_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "${response}"|xargs). "
+    [[ -z "${VESSELS[$1:notification:last]}" ]] && echo -n "#NEW "
+    #shellcheck disable=SC2154
+    [[ "${notify_timing}" == "true" ]] && [[ -n "${VESSELS[$1:notification:last]}" ]] && echo -n "#OLD "
+    [[ "${notify_distance}" == "true" ]] && echo -n "#ONTHEMOVE"
+    echo ""
+
+    # Update the Assoc Array with the latest values:
+    VESSELS[$1:notification:lat]="${VESSELS[$1:lat]}"
+    VESSELS[$1:notification:lon]="${VESSELS[$1:lon]}"
+    VESSELS[$1:notification:last]="$(date +%s)"
+
+    source /usr/share/vesselalert/save_databases
+else
+    echo "[$(date)][$APPNAME] Mastodon post error for ${VESSELS[$1:mmsi]} (${VESSELS[$1:shipname]}). Mastodon returned this error: ${response}"
+fi
