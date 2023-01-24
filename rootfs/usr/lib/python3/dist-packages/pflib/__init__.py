@@ -256,11 +256,14 @@ def get_screenshot_url(webhooks, subsystem):
     return ""
 
 def send(webhooks, config):
+    fails = 0
     for webhook in webhooks:
         try:
             webhook.execute()
         except Exception as e:
+            fails = fails + 1
             log("[error] Exception during send, printing config...")
             from pprint import pprint
             pprint(config)
             raise e
+    log(f"Sent {len(webhooks) - fails} Discord messages, {fails} failed")
