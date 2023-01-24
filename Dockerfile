@@ -28,7 +28,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(php-cgi) && \
 #
     KEPT_PIP3_PACKAGES+=(tzlocal) && \
-    KEPT_PIP3_PACKAGES+=(discord-webhook==0.17.0) && \
+    KEPT_PIP3_PACKAGES+=(discord-webhook==0.12.0) && \
 #    KEPT_PIP3_PACKAGES+=(discord-webhook) && \
     KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_PIP3_PACKAGES+=(geopy) && \
