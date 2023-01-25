@@ -25,6 +25,10 @@
 # Feel free to make changes to the variables between these two lines. However, it is
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
+# -----------------------------------------------------------------------------------
+# export all variables so send-discord-alert.py has access to the necessary params:
+# set -a
+#
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
 [[ -z "$PLANEFENCEDIR" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
@@ -284,7 +288,7 @@ then
 				fi
 			fi
 
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 			then
 				GOTSNAP="true"
 				echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
@@ -295,7 +299,7 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+      	        python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
             fi
 
 			# log the message we will try to tweet or toot:
