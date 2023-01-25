@@ -69,9 +69,10 @@ def load_config():
     }
 
     # Load config
-    pfdir = os.getenv("PLANEFENCEDIR", "/usr/share/planefence")
+    pfdir = os.getenv("PLANEFENCEDIR", "/usr/share/planefence/persist")
     config_path = f"{pfdir}/planefence.config"
     if exists(config_path):
+        log(f"Loading config from {config_path}")
         with open(config_path) as cfgfile:
             lines = cfgfile.readlines()
             for _, line in enumerate(lines):
