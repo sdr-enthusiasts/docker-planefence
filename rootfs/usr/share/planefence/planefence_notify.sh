@@ -32,7 +32,7 @@
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
 [[ -z "$PLANEFENCEDIR" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
-APPNAME="$(hostname)/planetweet"
+APPNAME="$(hostname)/planefence_notify"
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
