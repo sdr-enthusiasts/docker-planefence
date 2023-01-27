@@ -387,7 +387,7 @@ then
 		PLANELINE="${ALERT_DICT["${ICAO}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		# Add any hashtags:
-		for i in {4..10}
+		for i in {4..13}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
@@ -641,7 +641,7 @@ EOF
 
 #print the variable headers:
 ICAO_INDEX=-1
-for i in {4..10}
+for i in {4..13}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
@@ -756,7 +756,7 @@ do
 
         # get appropriate entry from dictionary
 
-		#for i in {4..10}
+		#for i in {4..13}
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
 			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
