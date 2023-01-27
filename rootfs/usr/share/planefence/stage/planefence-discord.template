@@ -1,0 +1,91 @@
+{
+    "username": "##USER##",
+    "avatar_url": "##AVATAR##",
+    "tts": false,
+    "embeds": [
+        {
+            "tts": false,
+            "type": "rich",
+            "title": "VesselAlert",
+            "description": "##DESCRIPTION## ",
+            "color": "16711680",
+            "fields": [
+                {
+                    "name": "Vessel Name",
+                    "value": "##VESSELNAME## ",
+                    "inline": true
+                },
+                {
+                    "name": "MMSI",
+                    "value": "##MMSI##",
+                    "inline": true
+                },
+                {
+                    "name": "Callsign",
+                    "value": "##CALLSIGN## ",
+                    "inline": true
+                },
+                {
+                    "name": "Type",
+                    "value": "##TYPE## ",
+                    "inline": true
+                },
+                {
+                    "name": "Destination",
+                    "value": "##DESTINATION## ",
+                    "inline": false
+                },
+                {
+                    "name": "Flag",
+                    "value": "##FLAG##",
+                    "inline": true
+                },
+                {
+                    "name": "Msgs rcvd",
+                    "value": "##COUNT##",
+                    "inline": true
+                },
+                {
+                    "name": "RSSI",
+                    "value": "##SIGNAL## dBFS",
+                    "inline": true
+                },
+                {
+                    "name": "Status",
+                    "value": "##STATUS## ",
+                    "inline": false
+                },
+                {
+                    "name": "Speed",
+                    "value": "##SPEED## ",
+                    "inline": true
+                },
+                {
+                    "name": "Heading",
+                    "value": "##HEADING## ",
+                    "inline": false
+                },
+                {
+                    "name": "External Links",
+                    "value": "##SM--[Station Map](##STNMAP##) | --SM##[ShipXplorer](https://www.shipxplorer.com/data/vessels/IMO-MMSI-##MMSI##) | [MarineTraffic](https://www.marinetraffic.com/en/ais/details/ships/##MMSI##) | [VesselFinder](https://www.vesselfinder.com/vessels/details/##MMSI##) | [ShipSpotting photo gallery](https://www.shipspotting.com/photos/gallery?mmsi=##MMSI##)",
+                    "inline": false
+                }
+            ],
+            "timestamp": "##TIMESTAMP##",
+            "thumbnail":
+            {
+                "url": "https://photos.marinetraffic.com/ais/showphoto.aspx?mmsi=##MMSI##"
+            },
+            "footer":
+            {
+                "text": "VesselAlert by kx1t"
+            },
+            "url": "https://www.vesselalert.com"
+            ##SCRSHT--
+            ,
+            "image":
+            {
+                "url":"attachment://##SCREENSHOTFILE##"
+            }--SCRSHT##
+            }]
+        }

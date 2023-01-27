@@ -1,37 +1,29 @@
 #!/bin/bash
-#
-set -x
-starttime=$(date +%s)
-[[ "$1" != "-" ]] && BRANCH="$1"
-[[ "$BRANCH" == "-" ]] && BRANCH=dev
+# shellcheck disable=SC2086
 
+[[ "$1" != "" ]] && BRANCH="$1" || BRANCH="$(git branch --show-current)"
 [[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
+[[ "$ARCHS" == "" ]] && ARCHS="linux/armhf,linux/arm64,linux/amd64"
 
-PLATFORMS=linux/armhf,linux/arm64,linux/amd64,linux/386
-#PLATFORMS=linux/armhf,linux/arm64
+BASETARGET1=ghcr.io/kx1t
+BASETARGET2=kx1t
 
+IMAGE1="$BASETARGET1/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG"
+IMAGE2="$BASETARGET2/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG"
+
+
+echo "press enter to start building $IMAGE1 and $IMAGE2 from $BRANCH"
+
+#shellcheck disable=SC2162
+read
+
+starttime="$(date +%s)"
 # rebuild the container
-pushd ~/git/docker-planefence
-git checkout $BRANCH || exit 2
-git pull
-mv rootfs/usr/share/planefence/airlinecodes.txt /tmp
-curl --compressed -s -L -o rootfs/usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+set -x
 
-# make the build certs root_certs folder:
-# Note that this is normally done as part of the github actions - we don't have those here, so we need to do it ourselves before building:
-#ls -la /etc/ssl/certs/
-#mkdir -p ./root_certs/etc/ssl/certs
-#mkdir -p ./root_certs/usr/share/ca-certificates/mozilla
+git pull -a
 
-#cp -P /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
-#cp -P /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
-#cp -P /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/mozilla
+docker buildx build -f Dockerfile --compress --push $2 --platform $ARCHS --tag "$IMAGE1" .
+[[ $? ]] && docker buildx build --compress --push $2 --platform $ARCHS --tag $IMAGE2 .
 
-echo "$(git branch --show-current)_($(git rev-parse --short HEAD))_$(date +%y-%m-%d-%T%Z)" > rootfs/usr/share/planefence/branch
-
-DOCKER_BUILDKIT=1 docker buildx build --progress=plain --compress --push $2 --platform $PLATFORMS --tag kx1t/planefence:$TAG .
-mv /tmp/airlinecodes.txt rootfs/usr/share/planefence/
-rm -f rootfs/usr/share/planefence/branch
-rm -rf ./root_certs
-popd
-echo "Total time elapsed: $(( $(date +%s) - starttime )) seconds"
+echo "Total build time: $(( $(date +%s) - starttime )) seconds"

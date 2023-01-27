@@ -1,10 +1,11 @@
 #!/bin/bash
+# shellcheck shell=bash disable=SC2164,SC2015,SC2006
 # PLANE-ALERT - a Bash shell script to assess aircraft from a socket30003 render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
 # Usage: ./plane-alert.sh <inputfile>
 #
-# Copyright 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2023 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -25,10 +26,12 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
+#
 PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefence.py are located
 # -----------------------------------------------------------------------------------
 #
 # PLEASE EDIT PARAMETERS IN 'plane-alert.conf' BEFORE USING PLANE-ALERT !!!
+##echo $0 invoked
 #
 # -----------------------------------------------------------------------------------
 # Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
@@ -57,6 +60,9 @@ function cleanup
 # Now make sure we call 'cleanup' upon exit:
 trap cleanup EXIT
 #
+
+APPNAME="$(hostname)/plane-alert"
+
 #
 # -----------------------------------------------------------------------------------
 # Let's see if there is a CONF file that defines some of the parameters
@@ -176,9 +182,9 @@ then
 				if (( endtime - starttime > SQUAWKTIME ))
 				then
 					printf "%s\n" "$line" >> "$TMPDIR"/patmp2
-					echo "Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
+					echo "[$(date)][$APPNAME] Found acceptable Squawk (time diff=$(( endtime - starttime )) secs): $line"
 				else
-					echo "Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
+					echo "[$(date)][$APPNAME] Pruned spurious Squawk (time diff=$(( endtime - starttime )) secs): $line"
 				fi
 			done < "$TMPDIR"/patmp
 			mv -f "$TMPDIR"/patmp2 "$TMPDIR"/patmp
@@ -326,79 +332,142 @@ then
 		then
 			GOTSNAP="true"
 			ln -sf $newsnap $snapfile
-			echo "Using picture from $newsnap"
+			echo "[$(date)][$APPNAME] Using picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+			echo "[$(date)][$APPNAME] Attempting to get screenshot from $link"
 			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 			then
-				echo "Using picture from $link"
+				echo "[$(date)][$APPNAME] Using picture from $link"
 				GOTSNAP="true"
 				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
 			else
-				[[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
+				[[ "$link" != "" ]] && echo "[$(date)][$APPNAME] Failed attempt to get picture from $link" || true
 			fi
 		fi
 
 		if [[ "$GOTSNAP" == "false" ]] && [[ "${SCREENSHOTURL,,}" != "off" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
-			echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
 		fi
 
-		[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
+		[[ "$GOTSNAP" == "false" ]] && echo "[$(date)][$APPNAME] Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 		then
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "planefence/plane-alert][$(date)] PlaneAlert sending Discord notification" || true
+			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$(date)][$APPNAME] PlaneAlert sending Discord notification" || true
 			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
+		fi
+
+		# Build the message field:
+
+		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
+
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
+		[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+		[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
+		[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
+		[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
+
+		# First build the text of the tweet: reminder:
+		# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
+		# 8-callsign,9-adsbx_url,10-squawk
+
+		TWITTEXT="#PlaneAlert "
+		TWITTEXT+="ICAO: ${pa_record[0]} "
+		[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
+		[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
+		[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
+		[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
+		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
+		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
+
+		PLANELINE="${ALERT_DICT["${ICAO}"]}"
+		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+		# Add any hashtags:
+		for i in {4..10}
+		do
+			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
+			then
+				tag="${TAGLINE[i]}"
+				if [[ "${tag:0:4}" == "http" ]]
+				then
+					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
+				elif [[ "$tag" != "" ]]
+				then
+					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
+				fi
+			fi
+		done
+
+		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
+
+		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
+		then
+			echo "[$(date)][$APPNAME] Attempting to Tweet or Toot this message:"
+			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
+		fi
+
+		# Inject Mastodone integration here:
+		if [[ -n "$MASTODON_SERVER" ]]
+		then
+			mast_id=()
+            MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+			if [[ "$GOTSNAP" == "true" ]]
+			then
+				# we upload an image
+				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
+
+			fi
+
+			# check if there are any images in the plane-alert-db
+			field=()
+			readarray -td, field <<< "${ALERT_DICT["${pa_record[0]#\#}"]}"
+
+			for (( i=0 ; i<=20; i++ ))
+			do
+				fld="$(echo ${field[$i]}|xargs)"
+				ext="${fld: -3}"
+				if  [[ " jpg png peg bmp gif " =~ " $ext " ]]
+				then
+					rm -f /tmp/planeimg.*
+					[[ "$ext" == "peg" ]] && ext="jpeg" || true
+					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
+					then
+						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
+						[[ "$(jq '.id' <<< "$response" | xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs)") || true
+						rm -f "/tmp/planeimg.$ext"
+					fi
+				fi
+			done
+			#shellcheck disable=SC2068
+			if (( ${#mast_id[@]} > 0 ))
+			then
+				printf -v media_ids -- '-F media_ids[]=%s ' ${mast_id[@]}
+				echo "[$(date)][$APPNAME] ${#mast_id[@]} images uploaded to Mastodon"
+			else
+				media_ids=""
+			fi
+			# now send the Mastodon Toot.
+			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
+			# check if there was an error
+			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+			then
+				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+			else
+				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs)"
+			fi
 		fi
 
 		# Send Twitter alerts if that's enabled
 		if [[ "$TWITTER" != "false" ]]
 		then
 			# add a hashtag to the item if needed:
-			[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
-
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[1]}" != "" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
-			[[ "${header[2]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
-			[[ "${header[3]:0:1}" == "$" ]] && [[ "${pa_record[2]}" != "" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
-			[[ "${header[1]:0:1}" == "$" ]] && [[ "${pa_record[8]}" != "" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
-			[[ "${pa_record[10]}" != "" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
-
-			# First build the text of the tweet: reminder:
-			# 0-ICAO,1-TailNr,2-Owner,3-PlaneDescription,4-date,5-time,6-lat,7-lon
-			# 8-callsign,9-adsbx_url,10-squawk
-
-			TWITTEXT="#PlaneAlert "
-			TWITTEXT+="ICAO: ${pa_record[0]} "
-			[[ "${pa_record[1]}" != "" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
-			[[ "${pa_record[8]}" != "" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
-			[[ "${pa_record[10]}" != "" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
-			[[ "${pa_record[2]}" != "" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
-			TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-			TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
-
-			PLANELINE="${ALERT_DICT["${ICAO}"]}"
-			IFS="," read -ra TAGLINE <<< "$PLANELINE"
-			# Add any hashtags:
-			for i in {4..13}
-			do
-				(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-				if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
-				then
-					tag="${TAGLINE[i]}"
-					if [[ "${tag:0:4}" == "http" ]]
-					then
-						TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
-					elif [[ "$tag" != "" ]]
-					then
-						TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
-					fi
-				fi
-			done
-
-			TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]}")"
 
 			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo "$TWITTEXT" )
 			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from "$TWIDFILE" )
@@ -416,7 +485,7 @@ then
 				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
 				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
 			fi
-			[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
+			[[ "$TWIMG" == "true" ]] && echo "[$(date)][$APPNAME] Twitter Media ID=$TW_MEDIA_ID" || echo "[$(date)][$APPNAME] Twitter screenshot upload unsuccessful for ${pa_record[0]}"
 
 			if [[ "$TWITTER" == "DM" ]]
 			then
@@ -424,8 +493,7 @@ then
 				while IFS= read -r twitterid
 				do
 					# tweet and add the processed output to $result:
-					[[ "$TESTING" == "true" ]] && echo
-					echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
+					[[ "$TESTING" == "true" ]] && echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
 					[[ "$twitterid" == "" ]] && continue
 
 					# send a tweet.
@@ -443,14 +511,14 @@ then
 					processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
 					if [[ "$processedresult" != "" ]]
 					then
-						echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-						echo "Diagnostics:"
-						echo "Error: $processedresult"
-						echo "Twitter ID: $twitterid"
-						echo "Text: $TWITTEXT"
+						echo "[$(date)][$APPNAME] Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+						echo "[$(date)][$APPNAME] Diagnostics:"
+						echo "[$(date)][$APPNAME] Error: $processedresult"
+						echo "[$(date)][$APPNAME] Twitter ID: $twitterid"
+						echo "[$(date)][$APPNAME] Text: $TWITTEXT"
 						(( ERRORCOUNT++ ))
 					else
-						echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+						echo "[$(date)][$APPNAME] Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 					fi
 				done < "$TWIDFILE"	# done with the DM tweeting
 			elif [[ "$TWITTER" == "TWEET" ]]
@@ -479,10 +547,10 @@ then
 				done
 				if (( truncated > 0 )); then
 					TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
-					echo "[WARNING]: Tweet has been truncated, cut $truncated characters at the end!"
+					echo "[$(date)][$APPNAME] WARNING: Tweet has been truncated, cut $truncated characters at the end!"
 				fi
 
-				echo "Tweeting a regular tweet, raw data: \"$TWITTEXT\""
+				echo "[$(date)][$APPNAME] Tweeting a regular tweet"
 
 				# send a tweet.
 				# the conditional makes sure that tweets can be sent with or without image:
@@ -498,14 +566,14 @@ then
 				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
 				if [[ "$processedresult" != "" ]]
 				then
-					echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-					echo "Diagnostics:"
-					echo "Error: $processedresult"
-					echo "Twitter ID: $twitterid"
-					echo "Text: $TWITTEXT"
+					echo "[$(date)][$APPNAME] Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
+					echo "[$(date)][$APPNAME] Diagnostics:"
+					echo "[$(date)][$APPNAME] Error: $processedresult"
+					echo "[$(date)][$APPNAME] Twitter ID: $twitterid"
+					echo "[$(date)][$APPNAME] Text: $TWITTEXT"
 					(( ERRORCOUNT++ ))
 				else
-					echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
+					echo "[$(date)][$APPNAME] Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
 				fi
 			fi
 		fi
@@ -514,7 +582,7 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage" || true
 
-(( ERRORCOUNT > 0 )) && echo "There were $ERRORCOUNT tweet errors."
+(( ERRORCOUNT > 0 )) && echo "[$(date)][$APPNAME] There were $ERRORCOUNT tweet errors."
 
 # Now everything is in place, let\'s update the website
 
@@ -573,7 +641,7 @@ EOF
 
 #print the variable headers:
 ICAO_INDEX=-1
-for i in {4..13}
+for i in {4..10}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
@@ -688,7 +756,7 @@ do
 
         # get appropriate entry from dictionary
 
-		#for i in {4..13}
+		#for i in {4..10}
 		for (( i=4; i<${#header[@]}; i++ ))
 		do
 			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
@@ -709,6 +777,7 @@ done <<< "$OUTSTRING"
 cat $PLANEALERTDIR/plane-alert.footer.html >&3
 
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
+sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp

@@ -86,38 +86,36 @@ def process_alert(config, plane):
     else:
         description += f"\nSeen near [**{location}**]({plane['adsbx_url']})"
 
-    webhooks, embeds = pf.discord.build(config["DISCORD_FEEDER_NAME"], config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
+    webhooks, embed = pf.discord.build(config["DISCORD_FEEDER_NAME"], config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
+    pf.attach_media(config, "PA", dbinfo, webhooks, embed)
 
-    for webhook, embed in zip(webhooks, embeds):
-        pf.attach_media(config, "PA", dbinfo, webhook, embed)
+    # Attach data fields
+    pf.discord.field(embed, "ICAO", plane['icao'])
+    pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
 
-        # Attach data fields
-        pf.discord.field(embed, "ICAO", plane['icao'])
-        pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
+    if plane.get('callsign', "") != "":
+        pf.discord.field(embed, "Callsign", plane['callsign'])
 
-        if plane.get('callsign', "") != "":
-            pf.discord.field(embed, "Callsign", plane['callsign'])
+    if plane.get('time', "") != "":
+        pf.discord.field(embed, "First Seen", f"{plane['time']} {pf.get_timezone_str()}")
 
-        if plane.get('time', "") != "":
-            pf.discord.field(embed, "First Seen", f"{plane['time']} {pf.get_timezone_str()}")
+    if dbinfo.get('category', "") != "":
+        pf.discord.field(embed, "Category", dbinfo['category'])
 
-        if dbinfo.get('category', "") != "":
-            pf.discord.field(embed, "Category", dbinfo['category'])
+    if dbinfo.get('tag1', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag1'])
 
-        if dbinfo.get('tag1', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag1'])
+    if dbinfo.get('tag2', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag2'])
 
-        if dbinfo.get('tag2', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag2'])
+    if dbinfo.get('tag3', "") != "":
+        pf.discord.field(embed, "Tag", dbinfo['tag3'])
 
-        if dbinfo.get('tag3', "") != "":
-            pf.discord.field(embed, "Tag", dbinfo['tag3'])
+    if dbinfo.get('link', "") != "":
+        pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
 
-        if dbinfo.get('link', "") != "":
-            pf.discord.field(embed, "Link", f"[Learn More]({dbinfo['link']})")
-
-        # Send the message
-        pf.send(webhook, config)
+    # Send the message
+    pf.send(webhooks, config)
 
 
 def main():

@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+#shellcheck disable=SC2015,SC1091
 # PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
 # user-defined fence area.
 #
-# Usage: ./planetweet.sh
+# Usage: ./planefence_notify.sh
 #
 # Note: this script is meant to be run as a daemon using SYSTEMD
 # If run manually, it will continuously loop to listen for new planes
@@ -23,9 +25,14 @@
 # Feel free to make changes to the variables between these two lines. However, it is
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
+# -----------------------------------------------------------------------------------
+# export all variables so send-discord-alert.py has access to the necessary params:
+# set -a
+#
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
-[[ "x$PLANEFENCEDIR" == "x" ]] && PLANEFENCEDIR=/usr/share/planefence
+[[ -z "$PLANEFENCEDIR" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
+APPNAME="$(hostname)/planefence_notify"
 #
 # These are the input and output directories and file names
 # HEADR determines the tags for each of the fields in the Tweet:
@@ -168,7 +175,7 @@ CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
 
 #Now iterate through the CSVFILE:
 LOG "------------------------------"
-LOG "Starting PLANETWEET"
+LOG "Starting PLANEFENCE_NOTIFY"
 LOG "CSVFILE=$CSVFILE"
 
 # Get the hashtaggable headers, and figure out of there is a field with a
@@ -240,7 +247,7 @@ then
 			teststring="${TWEET//%0A/ }" # replace newlines with a single character
 			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
 			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
+			(( tweetlength > 280 )) && echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
 			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
 
 			TWEET="${TWEET:0:$maxlength}"
@@ -268,35 +275,69 @@ then
 				GOTSNAP="true"
 				rm -f $snapfile
 				ln -sf $newsnap $snapfile
-				echo "Using picture from $newsnap"
+				echo "[$(date)][$APPNAME] Using picture from $newsnap"
 			else
 				link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
 				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 				then
-					echo "Using picture from $link"
+					echo "[$(date)][$APPNAME] Using picture from $link"
 					GOTSNAP="true"
 					[[ ! -f "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" || true
 				else
-				  [[ "$link" != "" ]] && echo "Failed attempt to get picture from $link" || true
+				  [[ "$link" != "" ]] && echo "[$(date)][$APPNAME] Failed attempt to get picture from $link" || true
 				fi
 			fi
 
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time $SCREENSHOT_TIMEOUT $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
 			then
 				GOTSNAP="true"
-				echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
+				echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
 			fi
-			[[ "$GOTSNAP" == "false" ]] && echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
+			[[ "$GOTSNAP" == "false" ]] && echo "[$(date)][$APPNAME] Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
 
-			# LOG "PF_DISCORD: $PF_DISCORD"
-			# LOG "PF_DISCORD_WEBHOOKS: $PF_DISCORD_WEBHOOKS"
-			# LOG "DISCORD_FEEDER_NAME: $DISCORD_FEEDER_NAME"
-      # Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "$PF_DISCORD" == "ON" || "$PF_DISCORD" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
+			# Inject the Discord integration in here so it doesn't have to worry about state management
+			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	                        python3 $PLANEFENCEDIR/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-                        fi
+      	        python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+            fi
+
+			# log the message we will try to tweet or toot:
+			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
+			then
+				echo "[$(date)][$APPNAME] Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWEET}")"
+			fi
+			# Inject Mastodone integration here:
+			if [[ -n "$MASTODON_SERVER" ]]
+			then
+				mast_id="null"
+                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+				if [[ "$GOTSNAP" == "true" ]]
+				then
+					# we upload an image
+					response="$(curl -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
+					mast_id="$(jq '.id' <<< "$response"|xargs)"
+				fi
+
+				# now send the message. API is different if text-only vs text+image:
+				if [[ "${mast_id,,}" == "null" ]]
+				then
+					# send without image
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
+				else
+					# send with image
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}" -F "media_ids[]=${mast_id}")"
+				fi
+
+				# check if there was an error
+				if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+				then
+					echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+				else
+					echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
+				fi
+			fi
+
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
@@ -309,7 +350,7 @@ then
 					(( TW_MEDIA_ID > 0 )) && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
-				[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${RECORD[0]}"
+				[[ "$TWIMG" == "true" ]] && echo "[$(date)][$APPNAME] Twitter Media ID=$TW_MEDIA_ID" || echo "[$(date)][$APPNAME] Twitter screenshot upload unsuccessful for ${RECORD[0]}"
 
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]
@@ -319,8 +360,7 @@ then
 					LINK="$(echo "`twurl -r "status=$TWEET" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
-				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
-
+				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "[$(date)][$APPNAME] Planefence post to Twitter generated successfully. Tweet available at: $LINK" || echo "[$(date)][$APPNAME] PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
 				rm -f $snapfile
 
 			else

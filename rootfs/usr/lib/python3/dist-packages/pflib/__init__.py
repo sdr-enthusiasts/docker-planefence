@@ -1,6 +1,6 @@
 # Python3 module of utilities for Plane Fence and Plane Alert
 #
-# Copyright 2022 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2022 Ramon F. Kolb and @FerretWithASpork - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -69,9 +69,10 @@ def load_config():
     }
 
     # Load config
-    pfdir = os.getenv("PLANEFENCEDIR", "/usr/share/planefence")
+    pfdir = os.getenv("PLANEFENCEDIR", "/usr/share/planefence/persist")
     config_path = f"{pfdir}/planefence.config"
     if exists(config_path):
+        log(f"Loading config from {config_path}")
         with open(config_path) as cfgfile:
             lines = cfgfile.readlines()
             for _, line in enumerate(lines):
@@ -188,7 +189,7 @@ def flightaware_link(icao, tail_num):
 def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')
 
-def attach_media(config, subsystem, plane, webhook, embed):
+def attach_media(config, subsystem, plane, webhooks, embed):
     media_mode = config.get('DISCORD_MEDIA', "")
     testmsg(f"DISCORD_MEDIA: {config['DISCORD_MEDIA']}")
 
@@ -202,12 +203,12 @@ def attach_media(config, subsystem, plane, webhook, embed):
     if media_mode == "photo" and subsystem == "PA":
         image_url = get_photo_url(plane)
     elif media_mode == "screenshot":
-        image_url = get_screenshot_url(webhook, subsystem)
+        image_url = get_screenshot_url(webhooks, subsystem)
     elif media_mode == "photo+screenshot":
         image_url = get_photo_url(plane)
-        thumb_url = get_screenshot_url(webhook, subsystem)
+        thumb_url = get_screenshot_url(webhooks, subsystem)
     elif media_mode == "screenshot+photo":
-        image_url = get_screenshot_url(webhook, subsystem)
+        image_url = get_screenshot_url(webhooks, subsystem)
         thumb_url = get_photo_url(plane)
     else:
         log(f"[error] Unknown DISCORD_MEDIA mode: {media_mode}")
@@ -242,23 +243,28 @@ def get_photo_url(plane):
         log("[error] unable to attach plane photo: " + e)
     return ""
 
-def get_screenshot_url(webhook, subsystem):
+def get_screenshot_url(webhooks, subsystem):
     snapshot_prefix = "" if subsystem == "PF" else subsystem.lower()
     snapshot_path = f"/tmp/{snapshot_prefix}snapshot.png"
     testmsg(f"snapshot_path: {snapshot_path}")
     if exists(snapshot_path):
         with open(snapshot_path, "rb") as f:
-            webhook.add_file(file=f.read(), filename='snapshot.png')
+            for webhook in webhooks:
+                webhook.add_file(file=f.read(), filename='snapshot.png')
         return "attachment://snapshot.png"
     else:
         log("[error] Snapshot file doesn't exist during Discord run")
     return ""
 
-def send(webhook, config):
-    try:
-        webhook.execute()
-    except Exception as e:
-        log("[error] Exception during send, printing config...")
-        from pprint import pprint
-        pprint(config)
-        raise e
+def send(webhooks, config):
+    fails = 0
+    for webhook in webhooks:
+        try:
+            webhook.execute()
+        except Exception as e:
+            fails = fails + 1
+            log("[error] Exception during send, printing config...")
+            from pprint import pprint
+            pprint(config)
+            raise e
+    log(f"Sent {len(webhooks) - fails} Discord messages, {fails} failed")

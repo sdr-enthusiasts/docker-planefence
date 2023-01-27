@@ -1,0 +1,38 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash disable=SC2015,SC1091
+
+APPNAME="$(hostname)/check-mastodon"
+# -----------------------------------------------------------------------------------
+# Copyright 2020-2022 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/planefence4docker/
+#
+# This package may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+#
+
+echo "[$(date)][$APPNAME] Checking Mastodon server and access token"
+
+source /usr/share/planefence/persist/planefence.config
+rm -f /run/pf_mastodon_on /run/pa_mastodon_on
+
+if [[ -z "$MASTODON_ACCESS_TOKEN" ]] || [[ -z "$MASTODON_SERVER" ]]
+then
+    echo "[$(date)][$APPNAME] Mastodon not configured"
+    exit 0
+else
+    MASTODON_SERVER="${MASTODON_SERVER,,}"
+    # strip http:// https://
+    [[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
+    [[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+    result="$(curl -sS -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials")"
+    if  grep -vi "The access token is invalid"  <<< "$result" >/dev/null 2>&1
+    then
+        echo "[$(date)][$APPNAME] Mastodon configured correctly for application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
+        [[ "${PF_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Planefence" || echo "[$(date)][$APPNAME] Mastodon disabled for Planefence"
+        [[ "${PA_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Plane-Alert" || echo "[$(date)][$APPNAME] Mastodon disabled for Plane-Alert"
+    else
+        echo "[$(date)][$APPNAME] Mastodon configured incorrectly. Check your setup"
+    fi
+fi

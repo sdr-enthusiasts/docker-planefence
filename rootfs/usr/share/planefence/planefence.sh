@@ -1,11 +1,13 @@
-#!/bin/bash
-#set -x
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+#shellcheck disable=SC2015,SC1091
+#
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
 # Usage: ./planefence.sh
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2023 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -241,7 +243,7 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 EOF
 		# If there are spectrograms for today, then also make a column for these:
-		if (( $(ls -1 $OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png 2>/dev/null |wc -l) > 0 ))
+		if (( $(ls -1 "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" 2>/dev/null |wc -l) > 0 ))
 		then
 			printf "<th>Spectrogram</th>\n" >> "$2"
 			SPECTROPRINT="true"
@@ -313,7 +315,7 @@ EOF
 		then
 			# First, the noise graph:
 			# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-			NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-"${NEWVALUES[0]}".png"
+			NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-${NEWVALUES[0]}.png"
 			NOISEGRAPHLINK=${NOISEGRAPHFILE##*/}
 
 			# If no graph already exists, create one:
@@ -817,15 +819,15 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ ! -z "$PLANETWEET" || "$PF_DISCORD" == "true" ]] && [[ "$1" == "" ]]
+if [[ -n "$PLANETWEET"  ||  "${PF_DISCORD,,}" == "true" || "${PF_DISCORD,,}" == "on" || -n "$MASTODON_SERVER" ]] && [[ -z "$1" ]]
 then
-	LOG "Invoking PlaneTweet for tweeting and/or discord notifications"
-	$PLANEFENCEDIR/planetweet.sh today "$DISTUNIT" "$ALTUNIT"
+	LOG "Invoking planefence_notify.sh for notifications"
+	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
 else
-	[ "$1" != "" ] && LOG "Info: PlaneTweet not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
+	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
-[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking PlaneTweet, invoking PlaneHeat" || true
+[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
 if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
@@ -844,16 +846,13 @@ if [ "$NOISECAPT" == "1" ]
 then
 	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram" || true
 	# get the latest spectrogram from the remote server
-	curl --fail -s $REMOTENOISE/noisecapt-spectro-latest.png >$OUTFILEDIR/noisecapt-spectro-latest.png
-	# was - wget now using curl to save disk space wget -q -O $OUTFILEDIR/noisecapt-spectro-latest.png $REMOTENOISE/noisecapt-spectro-latest.png >/dev/null 2>&1
-	#scp -q $REMOTENOISE:$TMPDIR/noisecapt-spectro-latest.png $OUTFILEDIR/noisecapt-spectro-latest.png.tmp
-	#mv -f $OUTFILEDIR/noisecapt-spectro-latest.png.tmp $OUTFILEDIR/noisecapt-spectro-latest.png
+	curl --fail -s "$REMOTENOISE/noisecapt-spectro-latest.png" >"$OUTFILEDIR/noisecapt-spectro-latest.png"
 
 	# also create a noisegraph for the full day:
 	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph" || true
 	rm -f /tmp/noiselog 2>/dev/null
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f /usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log /tmp/noiselog
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat /usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log >> /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" >> /tmp/noiselog
 	gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$(date -d "yesterday" +%s)"; end="$(date +%s)"; infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = "$(date +%Y-%m-%d)")'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 	rm -f /tmp/noiselog 2>/dev/null
 
@@ -882,7 +881,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2020 - 2022 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# Copyright 2020 - 2023 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/docker-planefence/
@@ -964,6 +963,7 @@ top: 0;
 
 <h1>PlaneFence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
+${PF_MOTD}
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
@@ -1106,7 +1106,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
 <br/>&copy; Copyright 2020 - 2022 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
-<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/workflow/status/kx1t/docker-planefence/Deploy%20to%20Docker%20Hub"></a>
+<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/kx1t/docker-planefence/deploy.yml"></a>
 <a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
 <a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>

@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2015,SC2268
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -70,7 +70,7 @@ mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
-rm -f /usr/share/planefence/html/planefence.config
+rm -f /usr/share/planefence/html/planefence.config usr/share/planefence/html/*.template
 mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
 [[ ! -f /usr/share/planefence/persist/pf-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
 [[ ! -f /usr/share/planefence/persist/pa-background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
@@ -80,6 +80,8 @@ rm -f /usr/share/planefence/html/background.jpg
 # Copy the airlinecodes.txt file to the persist directory
 cp -n /usr/share/planefence/airlinecodes.txt /usr/share/planefence/persist
 chmod a+rw /usr/share/planefence/persist/airlinecodes.txt
+
+cp -u --backup=numbered /usr/share/planefence/stage/*.template /usr/share/planefence/persist >/dev/null 2>&1
 #
 #--------------------------------------------------------------------------------
 #
@@ -157,8 +159,6 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 [[ "x$PA_HISTTIME" != "x" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_ALERTHEADER" != "x" ]] && sed -i "s|\(^\s*ALERTHEADER=\).*|\1\'$PF_ALERTHEADER\'|" /usr/share/plane-alert/plane-alert.conf
 
-
-
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
@@ -211,8 +211,8 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 #
 # enable or disable tweeting:
 #
-[[ "x$PF_TWEET" == "xOFF" ]] && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
-if [[ "x$PF_TWEET" == "xON" ]]
+[[ "${PF_TWEET,,}" == "off" ]] && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
+if [[ "{$PF_TWEET,,}" == "on" ]]
 then
 	if [[ ! -f ~/.twurlrc ]]
 	then
@@ -228,17 +228,6 @@ then
             [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
         fi
 fi
-# -----------------------------------------------------------------------------------
-#
-# enable or disable discord:
-#
-[[ "x$PF_DISCORD" == "xOFF" ]] && sed -i 's/\(^\s*PF_DISCORD=\).*/\1/' /usr/share/planefence/planefence.conf
-if [[ "$PF_DISCORD" == "ON" ]]
-then
-	sed -i 's/\(^\s*PF_DISCORD=\).*/\1ON/' /usr/share/planefence/planefence.conf
-	[[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && sed -i "s~\(^\s*PF_DISCORD_WEBHOOKS=\).*~\1${PF_DISCORD_WEBHOOKS}~" /usr/share/planefence/planefence.conf
-fi
-[[ "$PF_DISCORD" != "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1OFF|' /usr/share/plane-alert/plane-alert.conf
 # -----------------------------------------------------------------------------------
 #
 # Change the heatmap height and width if they are defined in the .env parameter file:
@@ -292,14 +281,40 @@ fi
 [[ "x$PF_PA_TWID" != "x" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PA_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PA_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
-[[ "$PF_DISCORD" == "ON" ]] && sed -i 's|\(^\s*PF_DISCORD=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PF_DISCORD=\).*|\1false|' /usr/share/planefence/planefence.conf
+configure_planefence "PF_DISCORD" "$PF_DISCORD"
+configure_planealert "PA_DISCORD" "$PA_DISCORD"
 configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
 configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
 configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
 configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
 configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+
+# Configure Mastodon parameters:
+if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]
+then
+	MASTODON_SERVER="${MASTODON_SERVER,,}"
+	# strip http:// https://
+	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
+	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+	if [[ "${PF_MASTODON,,}" == "on" ]]
+	then
+		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+		configure_planefence "MASTODON_SERVER" "$MASTODON_SERVER"
+		[[ -n "$PF_MASTODON_VISIBILITY" ]] && configure_planefence "MASTODON_VISIBILITY" "$PF_MASTODON_VISIBILITY" || configure_planefence "MASTODON_VISIBILITY" "unlisted"
+	else
+		configure_planefence "MASTODON_ACCESS_TOKEN" ""
+		configure_planefence "MASTODON_SERVER" ""
+	fi
+	if [[ "${PA_MASTODON,,}" == "on" ]]
+	then
+		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
+		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
+		[[ -n "$PA_MASTODON_VISIBILITY" ]] && configure_planealert "MASTODON_VISIBILITY" "$PA_MASTODON_VISIBILITY" || configure_planealert "MASTODON_VISIBILITY" "unlisted"
+	else
+		configure_planealert "MASTODON_ACCESS_TOKEN" ""
+		configure_planealert "MASTODON_SERVER" ""
+	fi
+fi
 
 [[ "x$PF_NAME" != "x" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
 [[ "x$PF_MAPURL" != "x" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
@@ -346,8 +361,15 @@ then
 	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
 	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt"
 fi
-
+#--------------------------------------------------------------------------------
+# Put the MOTDs in place:
+configure_planefence "PF_MOTD" "\"$PF_MOTD\""
+configure_planealert "PA_MOTD" "\"$PA_MOTD\""
+#
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
+
+configure_planealert "PF_LINK" "$PA_PF_LINK"
+
 date +%s > /run/planefence/last-config-change
