@@ -190,7 +190,7 @@ def is_emergency(squawk):
     return squawk in ('7700', '7600', '7500')
 
 def attach_media(config, subsystem, plane, webhooks, embed):
-    media_mode = config.get('DISCORD_MEDIA', "")
+    media_mode = config.get('DISCORD_MEDIA', "").strip('"').lower()
     testmsg(f"DISCORD_MEDIA: {config['DISCORD_MEDIA']}")
 
     # Media attachments is disabled
@@ -249,8 +249,9 @@ def get_screenshot_url(webhooks, subsystem):
     testmsg(f"snapshot_path: {snapshot_path}")
     if exists(snapshot_path):
         with open(snapshot_path, "rb") as f:
+            file_data = f.read()
             for webhook in webhooks:
-                webhook.add_file(file=f.read(), filename='snapshot.png')
+                webhook.add_file(file=file_data, filename='snapshot.png')
         return "attachment://snapshot.png"
     else:
         log("[error] Snapshot file doesn't exist during Discord run")
