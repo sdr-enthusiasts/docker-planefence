@@ -359,7 +359,7 @@ if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/m
 then
 	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
 	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
-	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt"
+	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot."
 fi
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
