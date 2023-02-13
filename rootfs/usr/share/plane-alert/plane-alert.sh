@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck shell=bash disable=SC2164,SC2015,SC2006,SC2002,SC2154,SC2076
+# shellcheck shell=bash disable=SC2164,SC2015,SC2006,SC2002,SC2154,SC2076,SC2153,SC2086,SC2001,SC2016,SC2094,SC1091
 # PLANE-ALERT - a Bash shell script to assess aircraft from a socket30003 render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -254,16 +254,6 @@ sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date 
 
 [[ "$BASETIME" != "" ]] && echo "10c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done processing new data" || true
 
-# if testing, insert the test item into the diff to trigger tweeting
-if [[ "$TESTING" == "true" ]]
-then
-	echo "$texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$texthex&zoom=13" >> "$OUTFILE"
-	#echo /tmp/pa-diff.csv:
-	#cat /tmp/pa-diff.csv
-	echo var TWITTER: "$TWITTER"
-	[[ -f "$TWIDFILE" ]] && echo var TWIDFILE "$TWIDFILE" exists || echo var TWIDFILE "$TWIDFILE" does not exist
-fi
-
 # create some diff files
 rm -f /tmp/pa-diff.csv
 touch /tmp/pa-diff.csv
@@ -278,6 +268,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 
 # Read the header - we will need it a few times later:
 
+# shellcheck disable=SC2001
 [[ "$ALERTHEADER" != "" ]] && IFS="," read -ra header <<< "$(sed 's/\#\$/$#/g' <<< "$ALERTHEADER")" || IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/\#\$/$#/g')"
 # if ALERTHEADER is set, then use that one instead of
 
@@ -304,9 +295,9 @@ then
 		snapfile="/tmp/pasnapshot.png"
 		rm -f $snapfile
 		GOTSNAP="false"
-		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
+		newsnap="$(find /usr/share/planefence/persist/planepix -iname "${ICAO}.jpg" -print -quit 2>/dev/null || true)"
 
-		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -n "${newsnap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -z "${newsnap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
 			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
@@ -316,7 +307,7 @@ then
 		if [[ -n "$newsnap" ]] && [[ "$GOTSNAP" == "false" ]]
 		then
 			GOTSNAP="true"
-			ln -sf $newsnap $snapfile
+			ln -sf "$newsnap" "$snapfile"
 			echo "[$(date)][$APPNAME] Replacing screenshot with picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
@@ -334,7 +325,7 @@ then
 		[[ "$GOTSNAP" == "false" ]] && echo "[$(date)][$APPNAME] Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
 
 		# Send Discord alerts if that's enabled
-		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ "x$PA_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
+		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ -n "$PA_DISCORD_WEBHOOKS" ]] && [[ -n "$DISCORD_FEEDER_NAME" ]]
 		then
 			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$(date)][$APPNAME] PlaneAlert sending Discord notification" || true
 			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
