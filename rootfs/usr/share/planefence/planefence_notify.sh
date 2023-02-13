@@ -185,7 +185,7 @@ LOG "CSVFILE=$CSVFILE"
 tagfield=""
 for ((i = 0 ; i < ${#hashtag[@]} ; i++))
 do
-	if [[ "${hashtag[i],,}" == "$tag" ]] || [[ "${hashtag[i],,}" == "#$tag" ]]
+	if [[ "${hashtag[i],,}" == "\$tag" ]] || [[ "${hashtag[i],,}" == "#\$tag" ]]
 	then
 		tagfield=$((i+1)) # number tagfield from 1 instead of 0 as we will use AWK to get it
 		break;

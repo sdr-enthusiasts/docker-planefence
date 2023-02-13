@@ -306,7 +306,7 @@ then
 		GOTSNAP="false"
 		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
 
-		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -n "${newsmap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -n "${newsnap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
 		then
 			GOTSNAP="true"
 			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
