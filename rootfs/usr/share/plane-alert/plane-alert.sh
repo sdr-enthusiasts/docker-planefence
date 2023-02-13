@@ -304,18 +304,24 @@ then
 		snapfile="/tmp/pasnapshot.png"
 		rm -f $snapfile
 		GOTSNAP="false"
+		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
+
+		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -n "${newsmap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		then
+			GOTSNAP="true"
+			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+		fi
 
 		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
-		newsnap="$(find /usr/share/planefence/persist/planepix -iname ${ICAO}.jpg -print -quit 2>/dev/null || true)"
-		if [[ "$newsnap" != "" ]]
+		if [[ -n "$newsnap" ]] && [[ "$GOTSNAP" == "false" ]]
 		then
 			GOTSNAP="true"
 			ln -sf $newsnap $snapfile
-			echo "[$(date)][$APPNAME] Using picture from $newsnap"
+			echo "[$(date)][$APPNAME] Replacing screenshot with picture from $newsnap"
 		else
 			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-			echo "[$(date)][$APPNAME] Attempting to get screenshot from $link"
-			if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
+			[[ -n "$link" ]] && echo "[$(date)][$APPNAME] Attempting to get screenshot from $link"
+			if [[ -n "$link" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
 			then
 				echo "[$(date)][$APPNAME] Using picture from $link"
 				GOTSNAP="true"
@@ -323,12 +329,6 @@ then
 			else
 				[[ "$link" != "" ]] && echo "[$(date)][$APPNAME] Failed attempt to get picture from $link" || true
 			fi
-		fi
-
-		if [[ "$GOTSNAP" == "false" ]] && [[ "${SCREENSHOTURL,,}" != "off" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
-		then
-			GOTSNAP="true"
-			echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
 		fi
 
 		[[ "$GOTSNAP" == "false" ]] && echo "[$(date)][$APPNAME] Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
