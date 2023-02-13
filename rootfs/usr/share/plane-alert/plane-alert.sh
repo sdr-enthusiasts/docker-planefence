@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck shell=bash disable=SC2164,SC2015,SC2006
+# shellcheck shell=bash disable=SC2164,SC2015,SC2006,SC2002,SC2154,SC2076
 # PLANE-ALERT - a Bash shell script to assess aircraft from a socket30003 render a HTML and CSV table with nearby aircraft
 # based on socket30003
 #
@@ -36,9 +36,6 @@ PLANEALERTDIR=/usr/share/plane-alert # the directory where this file and planefe
 # -----------------------------------------------------------------------------------
 # Exit if there is no input file defined. The input file contains the socket30003 logs that we are searching in
 [ "$1" == "" ] && { echo "No inputfile detected. Syntax: $0 <inputfile>"; exit 1; } || INFILE="$1"
-#	[ "$TESTING" == "true" ] && echo cmdline arg = \"$1\"
-#
-#
 
 # all errors will show a line number and the command used to produce the error
 trap 'echo -e "[ERROR] $(basename $0) in line $LINENO when executing: $BASH_COMMAND"' ERR
@@ -50,11 +47,6 @@ function cleanup
 	rm -f "${OUTFILE%.*}"*.old >/dev/null 2>/dev/null
 	rm -f "$TMPDIR"/plalert*.tmp >/dev/null 2>/dev/null
 	rm -f /tmp/pa-diff.csv /tmp/pa-old.csv /tmp/pa-new.csv /tmp/patmp
-	[ "$TESTING" == "true" ] && echo 11. Finished.
-	if [[ "$TESTING" == "true" ]] && [[ "$hextext" != "" ]]
-	then
-		head -n -1 "$PLANEFILE" > /tmp/plf.tmp && mv -f /tmp/plf.tmp "$PLANEFILE"
-	fi
 }
 #
 # Now make sure we call 'cleanup' upon exit:
@@ -70,18 +62,7 @@ APPNAME="$(hostname)/plane-alert"
 # -----------------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------------
-# Some testing code -- if $TESTING="true" then it's executed
 # Mainly - add a random search item to the plane-alert db and add a plane into the CSV with the same hex ID we just added
-if [[ "$TESTING" == "true" ]]
-then
-	# testhex is the letter "X" followed by the number of seconds since midnight
-	# since we're filtering by day and hex ID, this combo is pretty much unique
-	texthex="X"$(date -d "1970-01-01 UTC `date +%T`" +%s)
-	echo "$texthex",N0000,Plane Alert Test,SomePlane >> "$PLANEFILE"
-	echo " Plane-alert testing under way..."
-#else
-#	echo " Plane-alert - not testing. \$TESTING=\"$TESTING\""
-fi
 
 [[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
 
@@ -108,8 +89,6 @@ while IFS="" read -r line; do
 	[[ -n "$hex" ]] && ALERT_DICT["${hex}"]="$line" || echo "hey badger, bad alert-list entry: \"$line\"" && continue
 	((ALERT_ENTRIES=ALERT_ENTRIES+1))
 done < "$PLANEFILE"
-
-[ "$TESTING" == "true" ] && echo "1. ALERT_DICT contains ${ALERT_ENTRIES} entries"
 
 [[ "$BASETIME" != "" ]] && echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: check input for hex numbers on alert list" || true
 
@@ -138,7 +117,7 @@ then
 	mv -f "$TMPDIR"/patmp "$TMPDIR"/plalert.out.tmp
 fi
 
-[ "$TESTING" == "true" ] && echo 2. "$TMPDIR"/plalert.out.tmp contains $(cat "$TMPDIR"/plalert.out.tmp | wc -l) lines
+[ "$TESTING" == "true" ] && echo "2. $TMPDIR/plalert.out.tmp contains $(cat "$TMPDIR"/plalert.out.tmp | wc -l) lines"
 # Now plalert.out.tmp contains SBS data
 
 
@@ -278,7 +257,7 @@ sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date 
 # if testing, insert the test item into the diff to trigger tweeting
 if [[ "$TESTING" == "true" ]]
 then
-	echo "$texthex",N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao="$texthex"\&zoom=13 >> "$OUTFILE"
+	echo "$texthex,N0000,Plane Alert Test,SomePlane,$(date +"%Y/%m/%d"),$(date +"%H:%M:%S"),42.46458,-71.31513,,https://globe.adsbexchange.com/?icao=$texthex&zoom=13" >> "$OUTFILE"
 	#echo /tmp/pa-diff.csv:
 	#cat /tmp/pa-diff.csv
 	echo var TWITTER: "$TWITTER"
@@ -618,7 +597,7 @@ EOF
 fi
 
 # figure out if there are squawks:
-awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sq="true" || sq="false"
+awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"
 
 [[ "$BASETIME" != "" ]] && echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers" || true
 
@@ -635,7 +614,7 @@ cat <<EOF >&3
 	<th class="js-sort-date">Date/Time First Seen</th>
 	<th class="js-sort-number">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
-	$([[ "$sq" == "true" ]] && echo "<th>Squawk</th>")
+	$([[ "$sqx" == "true" ]] && echo "<th>Squawk</th>")
 	<!-- th>Flight Map</th -->
 EOF
 
@@ -750,7 +729,7 @@ do
 		# printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
 		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE with link to adsbexchange
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >&3 # column: Flight No
-		[[ "$sq" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
+		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC2015,SC1091
+#shellcheck disable=SC2015,SC1091,SC2005,SC2006
 # PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
 # user-defined fence area.
 #
@@ -209,7 +209,7 @@ then
 		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
 
 		if [[ "${RECORD[1]:0:1}" != "@" ]] && [[ $TIMEDIFF -gt $MINTIME ]] && [[ ( "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ) || "$TWEETEVERY" == "true" ]]
-		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeter^ ...or...                     ^$TWEETEVERY is true^
+		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeted^ ...or...                     ^$TWEETEVERY is true^
 		then
 
 			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
