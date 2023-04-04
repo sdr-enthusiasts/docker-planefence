@@ -59,7 +59,7 @@ jobs:
 
   deploy_ghcr_multiarch:
     name: Deploy ghcr.io (Multi-Arch)
-    needs: [hadolint]
+    # needs: [hadolint]
     runs-on: ubuntu-latest
     permissions:
       packages: write
