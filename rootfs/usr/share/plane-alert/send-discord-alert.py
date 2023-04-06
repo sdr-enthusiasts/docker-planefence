@@ -35,7 +35,12 @@ from geopy.geocoders import Nominatim
 geolocator = Nominatim(user_agent="plane-alert")
 
 def get_readable_location(plane):
-    loc = geolocator.reverse("{}, {}".format(plane['lat'], plane['long']), exactly_one=True, language='en')
+    try:
+        loc = geolocator.reverse("{}, {}".format(plane['lat'], plane['long']), exactly_one=True, language='en')
+    except:
+        loc = None
+        pf.log("[error] Nominatim reverse geolocation failed.")
+        
     if loc is None:
         pf.log("[error] No geolocation information return for '{}, {}'".format(plane['lat'], plane['long']))
         return ""
