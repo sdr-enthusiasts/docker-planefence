@@ -40,7 +40,7 @@ def get_readable_location(plane):
     except:
         loc = None
         pf.log("[error] Nominatim reverse geolocation failed.")
-        
+
     if loc is None:
         pf.log("[error] No geolocation information return for '{}, {}'".format(plane['lat'], plane['long']))
         return ""
@@ -61,10 +61,15 @@ def get_readable_location(plane):
 
     if country_code == "US":
         state = pf.get_us_state_abbrev(adr.get('state', ""))
-
-        return f"{place}, {state}, {country_code}"
+        if place == "":
+            return f"{state}, {country_code}"
+        else:
+            return f"{place}, {state}, {country_code}"
     else:
-        return f"{place}, {country}"
+        if place == "":
+            return f"{country}"
+        else:
+            return f"{place}, {country}"
 
 def process_alert(config, plane):
     pf.log(f"Building Discord alert for {plane['icao']}")
