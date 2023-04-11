@@ -61,7 +61,9 @@ def get_readable_location(plane):
 
     if country_code == "US":
         state = pf.get_us_state_abbrev(adr.get('state', ""))
-        if place == "":
+        if place == "" and state == "":
+            return f"{country_code}"
+        elif place == "":
             return f"{state}, {country_code}"
         else:
             return f"{place}, {state}, {country_code}"
