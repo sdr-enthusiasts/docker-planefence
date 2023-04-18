@@ -381,7 +381,7 @@ then
 			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
 		fi
 
-		# Inject Mastodone integration here:
+		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
 			mast_id=()
@@ -402,7 +402,7 @@ then
 			do
 				fld="$(echo ${field[$i]}|xargs)"
 				ext="${fld: -3}"
-				if  [[ " jpg png peg bmp gif " =~ " $ext " ]]
+				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} <= 4 ))
 				then
 					rm -f /tmp/planeimg.*
 					[[ "$ext" == "peg" ]] && ext="jpeg" || true
