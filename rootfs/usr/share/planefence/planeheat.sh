@@ -348,16 +348,8 @@ EOF
 if [[ "$OPENAIP_LAYER" == "ON" ]]
 then
 	cat <<EOF >>"$PLANEHEATHTML"
-    var openaip_cached_basemap = new L.TileLayer("http://{s}.tile.maps.openaip.net/geowebcache/service/tms/1.0.0/openaip_basemap@EPSG%3A900913@png/{z}/{x}/{y}.png", {
-         maxZoom: 16,
-         minZoom: 2,
-         tms: true,
-         subdomains: '12',
-         format: 'image/png',
-         transparent: true,
-         attribution: "<a href=http://www.openaip.net>OpenAIP.net</a>"
-         }).addTo(map);
-
+    var openaip_cached_basemap = new L.TileLayer("https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={OPENAIPKEY}").addTo(map);
+    
 EOF
 fi
 cat <<EOF >>"$PLANEHEATHTML"
