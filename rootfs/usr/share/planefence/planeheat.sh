@@ -348,8 +348,8 @@ EOF
 if [[ "$OPENAIP_LAYER" == "ON" ]]
 then
 	cat <<EOF >>"$PLANEHEATHTML"
-    var openaip_cached_basemap = new L.TileLayer("https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={OPENAIPKEY}").addTo(map);
-    
+    var openaip_cached_basemap = new L.TileLayer("https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={PF_OPENAIPKEY}").addTo(map);
+
 EOF
 fi
 cat <<EOF >>"$PLANEHEATHTML"
