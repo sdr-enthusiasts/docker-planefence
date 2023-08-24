@@ -1,5 +1,6 @@
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
-
+#FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
+# locking Bullseye image version in place until we cab  ascertain there are no issues with Bookworm
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage@sha256:ad9824abd38072da1160fceec37c066f63c4c5b1bbac22ca07773dd78c76fc18
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
