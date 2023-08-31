@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/command/with-contenv python3
 
 # Send Discord Alert is a utility for PLANE-ALERT
 #
