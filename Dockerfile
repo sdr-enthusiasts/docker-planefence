@@ -40,7 +40,7 @@ RUN set -x && \
     apt-get update -q && \
     apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
     gem install twurl && \
-    pip3 install ${KEPT_PIP3_PACKAGES[@]} && \
+    pip3 install --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
 #
 # Do this here while we still have git installed:
     git config --global advice.detachedHead false && \
