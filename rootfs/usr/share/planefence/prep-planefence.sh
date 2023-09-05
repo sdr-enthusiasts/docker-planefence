@@ -288,6 +288,9 @@ configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
 configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
 configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
 
+# Add OPENAIPKEY for use with OpenAIP, necessary for it to work if PF_OPENAIP_LAYER is ON
+configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"
+
 # Configure Mastodon parameters:
 if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]
 then
