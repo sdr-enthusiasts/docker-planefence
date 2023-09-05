@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/command/with-contenv python3
 # -*- coding: utf-8 -*-
 
 import sys, getopt, csv, os

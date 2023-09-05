@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/command/with-contenv python3
 
 # Send Discord Alerts is a utility for PlaneFence
 #
