@@ -1103,13 +1103,12 @@ LOG "Done writing history"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
-<hr/>PlaneFence $VERSION is part of <a href="https://github.com/kx1t/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
+<<hr/>PlaneFence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
-<br/>&copy; Copyright 2020 - 2022 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
-<br/><a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/kx1t/docker-planefence/deploy.yml"></a>
-<a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/pulls/kx1t/planefence.svg"></a>
-<a href="https://github.com/kx1t/docker-planefence" target="_blank"><img src="https://img.shields.io/docker/image-size/kx1t/planefence/latest"></a>
+<br/>&copy; Copyright 2020 - 2023 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
+<br/><b>ATTENTION PLANEFENCE OPERATOR</b> -- The repo and docker image locations have moved and you are using the OLD image location that is no longer updated. Please change your docker image to <code>image: ghcr.io/sdr-enthusiasts/docker-planefence</code>
 </div>
 </body>
 </html>
