@@ -44,7 +44,7 @@ curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main
 
 #### Initial docker configuration
 In the `docker-compose.yml` file, you should configure the following:
-- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: kx1t/planefence:dev`
+- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: ghcr.io/sdr-enthusiasts/docker-planefence:dev`
 - IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these (except for updating `/home/pi/.planefence` -> `/home/ubuntu/planefence` if required). However, if you have to, you can map the HTML directory to some other location. ONLY change what is to the LEFT of the colon.
 - You can exit the editor and start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
@@ -58,9 +58,9 @@ In the `docker-compose.yml` file, you should configure the following:
   - Note -- placing the full parameter set in `.env` is OBSOLETE and support for this will be withdrawn in the next version of PlaneFence
 - MANDATORY: `sudo nano ~/.planefence/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
 - OPTIONAL: `sudo nano ~/.planefence/planefence-ignore.txt`. In this file, you can add things that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
-- OPTIONAL: `sudo nano ~/.planefence/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/kx1t/planefence/issues so we can add your changes to the default file.
+- OPTIONAL: `sudo nano ~/.planefence/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/sdr-enthusiasts/planefence/issues so we can add your changes to the default file.
 - OPTIONAL: If you configured Twitter support before, `sudo nano ~/.planefence/.twurlrc`. You can add your back-up TWURLRC file here, if you want.
-- OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/kx1t/docker-planefence/blob/main/README-planetweet.md
+- OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/sdr-enthusiasts/docker-planefence/blob/main/README-planetweet.md
 - OPTIONAL: `sudo nano ~/.planefence/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/sdr-enthusiasts/docker-planefence/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
