@@ -26,7 +26,7 @@ on:
 env:
   DOCKERHUB_REPO: kx1t
   DOCKERHUB_IMAGE: planefence
-  GHCR_IMAGE: kx1t/planefence
+  GHCR_IMAGE: sdr-enthusiasts/docker-planefence
   GHCR_REGISTRY: ghcr.io
   GH_LABEL: main
   GHCR_TAG: latest
