@@ -7,7 +7,7 @@ volumes:
 services:
 #
   planefence:
-    image: kx1t/planefence
+    image: ghcr.io/sdr-enthusiasts/docker-planefence
     tty: true
     container_name: planefence
     hostname: planefence
@@ -31,10 +31,10 @@ services:
       - LOGLEVEL=INFO
     volumes:
       # adopt this one to point at your home directory if it is not /home/pi
-      - /home/pi/.planefence:/usr/share/planefence/persist
+      - /opt/adsb/planefence/config:/usr/share/planefence/persist
       # the following exposes the html directory to the host, in case you
       # want to use an external http daemon (lighttpd, nginx, etc)
-      - /opt/planefence/Volumes/html:/usr/share/planefence/html
+      - /opt/adsb/planefence/html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
@@ -55,7 +55,7 @@ services:
   # Last - note that this container is LARGE (~350 Mb download). If storage space is an issue
   # you may decide to forego this feature. Simply delete or comment out the section below.
   screenshot:
-    image: tedder42/browser-screenshot-service:latest
+    image: image: ghcr.io/kx1t/screenshot
     tty: true
     container_name: screenshot
     hostname: screenshot
@@ -73,7 +73,7 @@ services:
   # own feeder. Also update planefence.config to point it at your feeder.
   #
   readsb:
-    image: mikenye/readsb-protobuf:latest
+    image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
     tty: true
     container_name: readsb
     hostname: readsb
