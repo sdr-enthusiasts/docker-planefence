@@ -9,13 +9,11 @@ altitude from your station. This log is displayed on a website and is also made 
 Furthermore, Planefence can send a Tweet for every plane in the fence, and (coming soon!) will be able to collect noise figures to see how loud the aircraft are that fly above your Feeder Station.
 
 Planefence is deployed as a Docker container and is pre-built for the following architectures:
-- linux/ARMv6 (armel): older Raspberry Pi's
 - linux/ARMv7 (armhf): Raspberry Pi 3B+ / 4B with the standard 32 bits Raspberry OS (tested on Busted, may work but untested on Stretch or Jessie)
 - linux/ARM64: Raspberry Pi 4B with Ubuntu 64 bits OS
 - linux/AMD64: 64-bits PC architecture (Intel or AMD) running Debian Linux (incl. Ubuntu)
-- linux/i386: 32-bits PC architecture (Intel or AMD) running Debian Linux (incl. Ubuntu)
 
-The Docker container can be accessed on [Dockerhub (kx1t/planefence)](https://hub.docker.com/repository/docker/kx1t/planefence) and can be pulled directy using this Docker command: `docker pull kx1t/planefence`.
+The Docker container can be accessed on `ghcr.io/sdr-enthusiasts/docker-planefence` and can be pulled directy using this Docker command: `docker pull ghcr.io/sdr-enthusiasts/docker-planefence`.
 
 ## Who is it for?
 Here are some assumptions or prerequisites:
@@ -39,7 +37,7 @@ There must already be an instance of `tar1090`, `dump1090[-fa]`, or `readsb` con
 2. If you are not adding this to an existing container stack, you should create a project directory: `sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence` . Then add a new `docker-compose.yml` there.
 3. Get the template Docker-compose.yml file from here:
 ```
-curl -s https://raw.githubusercontent.com/kx1t/docker-planefence/main/docker-compose.yml > docker-compose.yml
+curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
 ```
 
 ### Planefence Configuration
@@ -64,16 +62,15 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: If you configured Twitter support before, `sudo nano ~/.planefence/.twurlrc`. You can add your back-up TWURLRC file here, if you want.
 - OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/kx1t/docker-planefence/blob/main/README-planetweet.md
 - OPTIONAL: `sudo nano ~/.planefence/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
-- OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/kx1t/docker-planefence/README-nginx-rev-proxy.md).
+- OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/sdr-enthusiasts/docker-planefence/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
-- OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/kx1t/docker-planefence/issues/38) on how to do that.
+- OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/sdr-enthusiasts/docker-planefence/issues/38) on how to do that.
 - OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `~/.planefence/pf_background.jpg` for Planefence and `~/.planefence/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch ~/.planefence/planefence.config` in order for these backgrounds to become effective.)
-- OPTIONAL: Add images of tar1090 to your Tweets in Planefence and Plane-Alert. In order to enable this, simply add the `pf-screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`Docker-compose.yml`](https://github.com/kx1t/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `pf-screenshot` and that it's reachable under that name from the Planefence container stack.
+- OPTIONAL: Add images of tar1090 to your Tweets in Planefence and Plane-Alert. In order to enable this, simply add the `pf-screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`Docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `pf-screenshot` and that it's reachable under that name from the Planefence container stack.
 - OPTIONAL: Show [OpenAIP](http://map.openaip.net) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `~/.planefence/planefence.config`
 
-
 #### Applying your setup
-- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `~/.planefence/planefence.config` will be picked up automatically
+- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `/opt/adsb/planefence/config/planefence.config` will be picked up automatically
 - You can restart the Planefence container by doing: `pushd /opt/planefence && docker stop planefence && docker-compose up -d && popd`
 
 ## What does it look like when it's running?
@@ -117,7 +114,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: http://myip:8088 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8088/plane-alert
-- Twitter setup is complex. [Here](https://github.com/kx1t/docker-planefence#setting-up-tweeting)'s a description on what to do.
+- Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advice you to skip Twitter and send notifications to [Mastodon](https://github.com/sdr-enthusiasts/docker-planefence/README-Mastodon.md) instead.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
     - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `~/.planefence/planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack (in which case you use your machine's IP address).
     - Did you enable SBS (BaseStation -- *not* Beast!) output? Here are some hints on how to enable this:
