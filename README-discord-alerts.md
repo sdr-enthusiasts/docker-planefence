@@ -1,4 +1,5 @@
 # Send a message to Discord for each new plane in PlaneFence
+
 Setting up Discord notifications involves only two simple steps:
 
 - Create a Webhook
@@ -6,11 +7,20 @@ Setting up Discord notifications involves only two simple steps:
 
 We'll go into the details of each step below.
 
+## Table of Contents
+- [Send a message to Discord for each new plane in PlaneFence](#send-a-message-to-discord-for-each-new-plane-in-planefence)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Creating a Webhook URL](#creating-a-webhook-url)
+  - [Configure Planefence](#configure-planefence)
+- [Summary of License Terms](#summary-of-license-terms)
+
+
 ## Prerequisites
 
 - You'll need a Discord server to invite the bot to. Anyone can create their own server for free. Follow [these instructions](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server-) on Discord's support site.
 
-This is part of the [kx1t/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
+This is part of the [sdr-enthusiasts/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
 
 ## Creating a Webhook URL
 
@@ -33,6 +43,7 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 - To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
 
 # Summary of License Terms
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
