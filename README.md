@@ -10,9 +10,9 @@ Furthermore, Planefence can send a notification for every plane in the fence to 
 
 Planefence is deployed as a Docker container and is pre-built for the following architectures:
 
-- linux/ARMv7 (armhf): Raspberry Pi 3B+ / 4B with the standard 32 bits Raspberry OS
-- linux/ARM64: Raspberry Pi 4B with Ubuntu 64 bits OS
-- linux/AMD64: 64-bits PC architecture (Intel or AMD) running Debian Linux (incl. Ubuntu)
+- linux/ARMv7 (armhf): Raspberry Pi 3B+ / 4B with 32 bits Debian 10 Linux or later (RaspOS, Armbian, DietPi, etc.)
+- linux/ARM64: Raspberry Pi 4B with 64 bits Debian OS 10 or later (RaspOS, Armbian, DietPi, Ubuntu, etc.)
+- linux/AMD64: 64-bits PC architecture (Intel x86 or AMD) running Debian 10 Linux or later (incl. Ubuntu)
 
 The Docker container is available at `ghcr.io/sdr-enthusiasts/docker-planefence` and can be pulled directy using this Docker command: `docker pull ghcr.io/sdr-enthusiasts/docker-planefence`.
 
@@ -50,7 +50,7 @@ curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main
 
 In the `docker-compose.yml` file, you should configure the following:
 
-- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: hcr.io/sdr-enthusiasts/docker-planefence:dev`
+- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: ghcr.io/sdr-enthusiasts/docker-planefence:dev`
 - IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these unless you know what you are doing
 - After you exit the editor, start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
@@ -58,6 +58,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - Once you see the warnings about `planefence.config` not being available, press CTRL-C to get the command prompt.
 
 #### Planefence Settings Configuration
+
 - After you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work!
 - MANDATORY: First -- copy the template config file in place: `sudo cp /opt/adsb/planefence/config/planefence.config-RENAME-and-EDIT-me /opt/adsb/planefence/config/planefence.config`
 - MANDATORY: `sudo nano /opt/adsb/planefence/config/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
@@ -126,19 +127,21 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: http://myip:8088 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8088/plane-alert
-- Twitter setup is complex. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do.
+- Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advice you to skip Twitter and send notifications to [Mastodon](https://github.com/sdr-enthusiasts/docker-planefence/README-Mastodon.md) instead.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
   - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack (in which case you use your machine's IP address).
   - Did you enable SBS (BaseStation -- *not* Beast!) output? Here are some hints on how to enable this:
-    - For non-dockerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
-    - For dockerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
+   - For non-containerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
+   - For containerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
   
       ```yaml
             - READSB_NET_SBS_OUTPUT_PORT=30003
             - READSB_EXTRA_ARGS=--net-beast-reduce-interval 2 --net-sbs-reduce
       ```
 
-      if you are using a different container stack, then you should also add `- 30003:30003` to the `ports:` section
+    - For users of the `ultrafeeder` container, no additional changes should be needed (see below for enabling MLAT aircraft)
+    - if you are using a different container stack, then you should also add `- 30003:30003` to the `ports:` section
+   - For users of `ultrafeeder`, if you want to enabled MLAT, make sure to set the following parameter in the `ultrafeeder` environment variables: `- READSB_FORWARD_MLAT_SBS=true`
 
 ## Getting help
 

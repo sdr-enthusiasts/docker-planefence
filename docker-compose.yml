@@ -52,3 +52,4 @@ services:
       - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=2.0&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5
       - LOAD_SLEEP_TIME=10
       - BASE_URL=http://ultrafeeder
+      - readsbpb_autogain:/run/autogain
