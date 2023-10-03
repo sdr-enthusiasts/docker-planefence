@@ -1,11 +1,7 @@
 version: '3.8'
 
-volumes:
-  readsbpb_rrd:
-  readsbpb_autogain:
-
 services:
-#
+
   planefence:
     image: ghcr.io/sdr-enthusiasts/docker-planefence
     tty: true
@@ -13,24 +9,16 @@ services:
     hostname: planefence
     restart: always
     # by adding a ports mapping, the planefence website is exposed to the
-    # host and your internal network:
+    # host and your internal network.
     ports:
       - 8088:80
-    # we are phasing out the .env file in favor of a similar file named
-    # ~/.planefence/planefence.config. A template of that file will be
-    # generated automatically when you start the container for the first
-    # time. Planefence will not work unless you have either a .env file or
-    # a planefence.config file. Any values defined in planefence.config
-    # will take priority over those in .env. Uncomment the line below if you
-    # really want to continue to use your pre-existing .env file.
-    # Also, update TZ=America/New_York to your own timezone.
     #
     # LOGLEVEL can be "INFO" (default - all logs) or "ERROR" (only errors)
     environment:
       - TZ=America/New_York
       - LOGLEVEL=INFO
     volumes:
-      # adopt this one to point at your home directory if it is not /home/pi
+      # adopt this one to point at a subdirectory of where your docker-compose.yml file is located:
       - /opt/adsb/planefence/config:/usr/share/planefence/persist
       # the following exposes the html directory to the host, in case you
       # want to use an external http daemon (lighttpd, nginx, etc)
@@ -39,8 +27,7 @@ services:
       - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
   #
-  # The following container enables adding screenshots to the Planefence Tweets.
-  # for the contribution of this container!
+  # The following container enables adding screenshots to the Planefence Notifications.
   # The environment variable BASE_URL should be changed to point at YOUR OWN tar1090 or skyaware instance.
   # This should be the "hostname" (or "container_name" if hostname is not defined) of your tar1090 container
   # defined in this stack, or a full URL ("http://....) that can be reached from the container.
@@ -50,12 +37,12 @@ services:
   # Although it is theoretically possible to point at adsbexchange, we want to DISCOURAGE
   # people from doing this - our philosophy is to use LOCAL DATA as much as we can.
   #
-  # With thanks to tedder42 (https://github.com/tedder/browser-screenshot-service)
+  # With thanks to tedder42 for the original program (https://github.com/tedder/browser-screenshot-service)
   #
   # Last - note that this container is LARGE (~350 Mb download). If storage space is an issue
   # you may decide to forego this feature. Simply delete or comment out the section below.
   screenshot:
-    image: image: ghcr.io/kx1t/screenshot
+    image: ghcr.io/kx1t/screenshot
     tty: true
     container_name: screenshot
     hostname: screenshot
@@ -63,39 +50,6 @@ services:
     shm_size: 1gb
     environment:
       - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=2.0&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5
-      #- MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0.4&monochromeMarkers=00066&monochromeTracks=010101&outlineColor=505050&iconScale=1.5
       - LOAD_SLEEP_TIME=10
-      - BASE_URL=http://tar1090
-  #
-  # the readsb entry pulls in a readsb container to get adsb data. If you want to
-  # use your own, you can remove this one. Just make sure you expose port
-  # 30003 and tell readsb/dump1090 to produce SBS data on port 30003 on your
-  # own feeder. Also update planefence.config to point it at your feeder.
-  #
-  readsb:
-    image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
-    tty: true
-    container_name: readsb
-    hostname: readsb
-    restart: always
-    devices:
-      - /dev/bus/usb
-    ports:
-      - 8080:8080
-      - 30003:30003
-    environment:
-      - TZ=${FEEDER_TZ}
-      - READSB_DEVICE_TYPE=rtlsdr
-      - READSB_RTLSDR_DEVICE=stx:1090:38
-      - READSB_GAIN=autogain
-      - READSB_LAT=${FEEDER_LAT}
-      - READSB_LON=${FEEDER_LONG}
-      - READSB_RX_LOCATION_ACCURACY=2
-      - READSB_STATS_RANGE=true
-      - READSB_NET_ENABLE=true
-      - READSB_NET_CONNECTOR=dump978,37981,raw_in
-      - READSB_NET_SBS_OUTPUT_PORT=30003
-      - READSB_EXTRA_ARGS=--net-beast-reduce-interval 2 --net-sbs-reduce
-    volumes:
-      - readsbpb_rrd:/run/collectd
+      - BASE_URL=http://ultrafeeder
       - readsbpb_autogain:/run/autogain

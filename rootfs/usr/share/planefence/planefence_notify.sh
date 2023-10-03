@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 #shellcheck shell=bash
 #shellcheck disable=SC2015,SC1091,SC2005,SC2006
 # PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the

@@ -8,7 +8,7 @@
 BASETARGET1=ghcr.io/sdr-enthusiasts
 #BASETARGET2=kx1t
 
-IMAGE1="$BASETARGET1/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG"
+IMAGE1="$BASETARGET1/docker-planefence:$TAG"
 #IMAGE2="$BASETARGET2/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG"
 
 

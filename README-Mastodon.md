@@ -1,4 +1,12 @@
 # Send a Mastodon Post for each new plane in PlaneFence
+
+- [Send a Mastodon Post for each new plane in PlaneFence](#send-a-mastodon-post-for-each-new-plane-in-planefence)
+  - [Prerequisites](#prerequisites)
+  - [Signing up for a Mastodon Account and creating an Application](#signing-up-for-a-mastodon-account-and-creating-an-application)
+  - [Configuring Planefence to use Mastodon](#configuring-planefence-to-use-mastodon)
+  - [Summary of License Terms](#summary-of-license-terms)
+
+
 This utility enables sending Mastodon posts of new events. Ever since Twitter started to restrict posting about locations of aircraft, are encouraging people to post to Mastodon,
 
 There are two major parts to install this. Each of these parts is described below.
@@ -7,7 +15,8 @@ There are two major parts to install this. Each of these parts is described belo
 - You must follow the instructions below to configure PlaneFence to use the credentials that Mastodon provides you during this sign-up process.
 
 ## Prerequisites
-This is part of the [kx1t/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
+
+This is part of the [sdr-enthusiasts/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container.
 
 ## Signing up for a Mastodon Account and creating an Application
 
@@ -40,7 +49,7 @@ Once you have an account, please do the following:
 
 Please set the following parameters in your `planefence.config` file:
 
-```
+```text
 MASTODON_SERVER=airwaves.social
 MASTODON_ACCESS_TOKEN=vsafdwafewarewdcvdsafwaefaewfdw
 PF_MASTODON=ON
@@ -48,12 +57,14 @@ PA_MASTODON=ON
 PA_MASTODON_VISIBILITY=unlisted
 PF_MASTODON_VISIBILITY=unlisted
 ```
+
 Replace by the applicable server name and access token.
 If `PF_MASTODON` is not set to `ON`, then no PlaneFence Mastodon notifications will be sent.
 If `PA_MASTODON` is not set to `ON`, then no Plane-Alert Mastodon notifications will be sent.
 `Px_MASTODON_VISIBILITY` can be `public`, `unlisted`, or `private`
 
-# Summary of License Terms
+## Summary of License Terms
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

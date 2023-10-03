@@ -1,5 +1,14 @@
 # How to install and set up a reverse web proxy for use with @Mikenye's ADSB container collection
 
+- [How to install and set up a reverse web proxy for use with @Mikenye's ADSB container collection](#how-to-install-and-set-up-a-reverse-web-proxy-for-use-with-mikenyes-adsb-container-collection)
+	- [Acknowledgements](#acknowledgements)
+	- [Installation of NGINX, a small web server with reverse-proxy capabilities](#installation-of-nginx-a-small-web-server-with-reverse-proxy-capabilities)
+	- [Configuration of NGINX as a reverse web proxy](#configuration-of-nginx-as-a-reverse-web-proxy)
+	- [Troubleshooting and known issues](#troubleshooting-and-known-issues)
+	- [Example `/etc/nginx/sites-enabled/default` file](#example-etcnginxsites-enableddefault-file)
+	- [Example `/etc/nginx/locations.conf` file](#example-etcnginxlocationsconf-file)
+
+
 In Mikenye's excellent [gitbook](https://mikenye.gitbook.io/ads-b/) on how to quickly set up a number of containers to receive and process ADSB aircraft telemetry,
 you probably have created a bunch of containers that each provide a web service on their own port. This is a bit hard to manage, especially if you need to now open a large range of ports on your firewall to point at these services.
 
@@ -8,10 +17,12 @@ This README describes how you can set up a "reverse web proxy" that allows you t
 There are NO changes needed to the containers. All you need is to take a quick inventory of the web services you have and the machines / ports they live on. You can do this by (for example) reading the `docker-compose.yml` files that show which services and ports are exposed.
 
 ## Acknowledgements
+
 - @Mikenye for the encouragements to get started
 - @wiedehopf for the large amount of handholding to get it actually done and implemented
 
 ## Installation of NGINX, a small web server with reverse-proxy capabilities
+
 1. Start with a Raspberry Pi connected to the network and a clean install of Raspberry Pi OS, SSH enabled. This Raspberry Pi doesn't need to be the same as the one of your ADSB containers and services, but they should be on the same (or connected) subnets inside your firewall.
 2. Log into your Pi to the command line with SSH
 3. Do `sudo apt-get update && sudo apt-get upgrade`
@@ -29,10 +40,12 @@ There are NO changes needed to the containers. All you need is to take a quick i
 3. Make sure you can reach the website from the outside world. Test this with a machine outside your local network, for example your mobile phone using the data network (Wifi switched off!)
 
 4. Create and add SSL certificate Replace the email address and domain name with yours. Note - this will fail if you can't reach the machine from the Internet. See step 3 above.
-```
+
+```bash
 sudo apt install python3-certbot-nginx
 sudo certbot -n --nginx --agree-tos --redirect -m me@my-email.com -d mydomain.com
 ```
+
 This will create an SSL certificate for you that is valid for 90 days. For renewing and auto-renewing, see the Troubleshooting section below.
 
 5. In `/etc/nginx`, create a file called `locations.conf`. In this file, you will add your proxy redirects. Use `localhost` or `127.0.0.1` for ports on the local machine. See an example of this file below - adapt it to your own needs
@@ -42,15 +55,18 @@ This will create an SSL certificate for you that is valid for 90 days. For renew
     - The second section is for connections to the SSL (https) port
     - The third section rewrites any incoming "http" request into a "https" request
     - For each `server` section, just before the closing `}`, add the following line:
-	```
-	include /etc/nginx/locations.conf;
-	```
+  
+```text
+include /etc/nginx/locations.conf;
+```
+
 7. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
 
 ## Troubleshooting and known issues
+
 - My page renders badly / not / partially. This is often the case because of one of these issues:
-	- The website uses absolute paths. So if the website is looking for `/index.html` instead of `index.html`, it will work at `http://mysite/index.html` but it won't work on `http://mysite/myapp/index.html`. This is a coding bug that can only be solved with some work-arounds. 
-THis is the case with the `graphs` package for the `readsb-protobuf` container needs access to `../radar`, which is located below its own root. If you want to redirect (for example) http://graphs.mysite.com to the graphs package, you must add a second proxy_pass to `radar`. See example at the end of this guide.
+  - The website uses absolute paths. So if the website is looking for `/index.html` instead of `index.html`, it will work at `http://mysite/index.html` but it won't work on `http://mysite/myapp/index.html`. This is a coding bug that can only be solved with some work-arounds. 
+  - This is the case with the `graphs` package for the `readsb-protobuf` container needs access to `../radar`, which is located below its own root. If you want to redirect (for example) http://graphs.mysite.com to the graphs package, you must add a second proxy_pass to `radar`. See example at the end of this guide.
 
 - Your SSL certificate is only valid for 90 days and needs renewing thereafter.
 Renewal is quick and easy -- `/usr/bin/certbot renew`
@@ -64,10 +80,11 @@ More information about using Let's Encrypt SSL certificates with nginx can be fo
 
 - The target website uses websockets. In this case, make sure to implement something similar to `location /acars/` as shown below in the `locations.conf` example.
 
-
 ## Example `/etc/nginx/sites-enabled/default` file
+
 Note - this is the file from my own setup. I have a bunch of services spread around machines and ports, and each `location` entry redirects a request from http://mysite.com/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
-```
+
+```text
 ##
 # You should look at the following URL's in order to grasp a solid understanding
 # of Nginx configuration files in order to fully unleash the power of Nginx.

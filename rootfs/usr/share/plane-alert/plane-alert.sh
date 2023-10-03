@@ -385,10 +385,11 @@ then
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
 			mast_id=()
-            MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+        	MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")"
+
+			# upload a map screenshot if one is available
 			if [[ "$GOTSNAP" == "true" ]]
 			then
-				# we upload an image
 				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
 				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
 
@@ -402,9 +403,9 @@ then
 			do
 				fld="$(echo ${field[$i]}|xargs)"
 				ext="${fld: -3}"
-				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} <= 4 ))
+				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < 4 ))
 				then
-					rm -f /tmp/planeimg.*
+					rm -f "/tmp/planeimg.*"
 					[[ "$ext" == "peg" ]] && ext="jpeg" || true
 					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
 					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
