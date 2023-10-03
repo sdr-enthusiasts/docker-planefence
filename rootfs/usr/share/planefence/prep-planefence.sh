@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2015,SC2268
+#shellcheck shell=bash disable=SC2015,SC2268,SC2174
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -44,10 +44,9 @@ function configure_both() {
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
-mkdir -p /usr/share/planefence/persist/.internal
+mkdir -p -m 0700 /usr/share/planefence/persist/.internal
 mkdir -p /usr/share/planefence/persist/planepix
 chmod -fR a+rw /usr/share/planefence/persist /usr/share/planefence/persist/{.[!.]*,*}
-chmod -f u=rwx,go=rx /usr/share/planefence/persist/.internal
 chmod a=rwx /usr/share/planefence/persist/planepix
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
@@ -69,7 +68,7 @@ mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
-rm -f /usr/share/planefence/html/planefence.config usr/share/planefence/html/*.template
+rm -f /usr/share/planefence/html/planefence.config /usr/share/planefence/html/*.template /usr/share/planefence/html/aircraft-database-complete-
 mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
 [[ ! -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
 [[ ! -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
@@ -348,7 +347,6 @@ fi
 #[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/build ]] && cat /usr/share/planefence/build || cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
 #shellcheck disable=SC2046
 [[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s $REMOTEURL/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime))" || a=""
-
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 #
 #--------------------------------------------------------------------------------

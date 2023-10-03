@@ -69,18 +69,18 @@ RUN set -x && \
     ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     curl --compressed --fail -sSL -o /usr/share/planefence/airlinecodes.txt https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt && \
     curl --compressed --fail -sSL -o /usr/share/planefence/stage/Silhouettes.zip https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip && \
-    if \
-    curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-%Y-%m.csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-%Y-%m.csv)" \
-    ||  curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-$(date -d "$(date +%Y-%m-1) -1 month" +%Y-%m).csv)" \
-    ||  curl --compressed --fail -L -o "/usr/share/planefence/stage/$(date +OpenSkyDb-$(date -d "$(date +%Y-%m-1) -2 months" +%Y-%m).csv)" "https://opensky-network.org/datasets/metadata/$(date +aircraft-database-complete-$(date -d "$(date +%Y-%m-1) -2 months" +%Y-%m).csv)"; \
-    then \
-    echo "Got new OpenSkyDb"; \
-    elif curl --compressed --fail -L -o "/usr/share/planefence/stage/OpenSkyDb-2022-11.csv)" "https://opensky-network.org/datasets/metadata/OpenSkyDb-2022-11.csv)"; \
-    then \
-    echo "Couldn't download OpenSKyDb - getting one we know exists, but it may be out of date"; \
-    curl --compressed --fail -L -o "/usr/share/planefence/stage/OpenSkyDb-2022-11.csv)" "https://opensky-network.org/datasets/metadata/OpenSkyDb-2022-11.csv)"; \
+    #
+    # Get OpenSkyDB file:
+    latestfile="$(curl -L https://opensky-network.org/datasets/metadata/ | sed -n 's|.*/\(aircraft-database-complete-[0-9-]\+\.csv\).*|\1|p' | sort -ru | head -1)" && \
+    safefile="aircraft-database-complete-2023-10.csv" && \
+    if curl --compressed -L --fail -o "/usr/share/planefence/stage/$latestfile" "https://opensky-network.org/datasets/metadata/$latestfile"; then \
+        echo "Got new OpenSkyDb - $latestfile"; \
+    elif curl --compressed -L --fail -o "/usr/share/planefence/stage/$safefile)" "https://opensky-network.org/datasets/metadata/$safefile)"; then \    
+        echo "Couldn't download latest OpenSKyDb ($latestfile) - got one we know exists ($safefile), but it may be out of date"; \
+        if [[ "$latestfile" != "$safefile" ]]; then rm -f $latestfile || true; fi \
     else \
-    echo "Couldn't download OpenSKyDb - continuing without"; \
+        echo "Couldn't download OpenSKyDb - continuing without"; \
+        rm -f /usr/share/planefence/stage/aircraft-database-complete-* || true; \
     fi && \
     #
     # Ensure the planefence and plane-alert config is available for lighttpd:
