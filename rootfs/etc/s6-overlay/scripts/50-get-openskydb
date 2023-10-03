@@ -29,8 +29,6 @@ fi
 savedfile="${savedfile##*/}"
 latestfile="$(curl -sSL https://opensky-network.org/datasets/metadata/ | sed -n 's|.*/\(aircraft-database-complete-[0-9-]\+\.csv\).*|\1|p' | sort -ru | head -1)"
 
-"${s6wrap[@]}" echo "savedfile: $savedfile - latestfile: $latestfile"
-
 # Cleanup all but the newest OpenSkyDB files
 find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
 find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
