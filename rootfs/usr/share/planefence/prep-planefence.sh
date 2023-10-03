@@ -356,12 +356,12 @@ fi
 
 #--------------------------------------------------------------------------------
 # get the sample planepix file
-if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
-then
-	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
-	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
-	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot with a picture of the plane."
-fi
+# if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
+# then
+# 	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
+# 	echo "[$APPNAME][$(date)] Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
+# 	echo "[$APPNAME][$(date)] To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot with a picture of the plane."
+# fi
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
 configure_planefence "PF_MOTD" "\"$PF_MOTD\""
