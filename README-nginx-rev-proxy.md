@@ -1,6 +1,8 @@
 # How to install and set up a reverse web proxy for use with @Mikenye's ADSB container collection
 
 - [How to install and set up a reverse web proxy for use with @Mikenye's ADSB container collection](#how-to-install-and-set-up-a-reverse-web-proxy-for-use-with-mikenyes-adsb-container-collection)
+	- [How To Do Things A Lot Easier Than Described Here](#how-to-do-things-a-lot-easier-than-described-here)
+	- [Introduction](#introduction)
 	- [Acknowledgements](#acknowledgements)
 	- [Installation of NGINX, a small web server with reverse-proxy capabilities](#installation-of-nginx-a-small-web-server-with-reverse-proxy-capabilities)
 	- [Configuration of NGINX as a reverse web proxy](#configuration-of-nginx-as-a-reverse-web-proxy)
@@ -9,10 +11,18 @@
 	- [Example `/etc/nginx/locations.conf` file](#example-etcnginxlocationsconf-file)
 
 
+## How To Do Things A Lot Easier Than Described Here
+
+We have created a container that implements a fullfledged reverse web proxy, that is easy to deploy and even easier to configure.
+
+You can find that container [here](https://sdr-enthusiasts/docker-reversewebproxy).
+
+## Introduction
+
 In Mikenye's excellent [gitbook](https://mikenye.gitbook.io/ads-b/) on how to quickly set up a number of containers to receive and process ADSB aircraft telemetry,
 you probably have created a bunch of containers that each provide a web service on their own port. This is a bit hard to manage, especially if you need to now open a large range of ports on your firewall to point at these services.
 
-This README describes how you can set up a "reverse web proxy" that allows you to point to point https://mysite.com/aaaa to something like http://internalhost1:8080/xxxx, and repeat this for each of the containers or web services. Additionally, it (optionally) will redirect any non-encrypted "http://" request to a secure "https://" request, enabling you to access your web services via SSL.
+This README describes how you can set up a "reverse web proxy" that allows you to point to point `https://mysite.com/aaaa` to something like `http://internalhost1:8080/xxxx`, and repeat this for each of the containers or web services. Additionally, it (optionally) will redirect any non-encrypted "http://" request to a secure "https://" request, enabling you to access your web services via SSL.
 
 There are NO changes needed to the containers. All you need is to take a quick inventory of the web services you have and the machines / ports they live on. You can do this by (for example) reading the `docker-compose.yml` files that show which services and ports are exposed.
 
@@ -29,11 +39,13 @@ There are NO changes needed to the containers. All you need is to take a quick i
 4. Do `sudo apt-get install nginx`
 
 ## Configuration of NGINX as a reverse web proxy
+
 1. Edit the config file: `sudo nano -l /etc/nginx/nginx.conf` and make the following changes:
-    - Once your proxy is configured / tested / stable, you may want to switch logging off (near lines 41/42):
-      `access_log /var/log/nginx/access.log;` -> `access_log off;`
-      `#error_log /var/log/nginx/error.log;` -> `error_log off;`
-    Then save and exit
+
+- Once your proxy is configured / tested / stable, you may want to switch logging off (near lines 41/42):
+`access_log /var/log/nginx/access.log;` -> `access_log off;`
+`#error_log /var/log/nginx/error.log;` -> `error_log off;`
+- Then save and exit
 
 2. Test. At this time, http://mysite.com (using the external or internal address) should render a template web page.
 
@@ -51,16 +63,17 @@ This will create an SSL certificate for you that is valid for 90 days. For renew
 5. In `/etc/nginx`, create a file called `locations.conf`. In this file, you will add your proxy redirects. Use `localhost` or `127.0.0.1` for ports on the local machine. See an example of this file below - adapt it to your own needs
 
 6. Now edit /etc/nginx/sites-available/default. There will be 3 sections that start with `server {` (potentially more that are commented out).
-    - The first section is for connections to the standard http port
-    - The second section is for connections to the SSL (https) port
-    - The third section rewrites any incoming "http" request into a "https" request
-    - For each `server` section, just before the closing `}`, add the following line:
+
+- The first section is for connections to the standard http port
+- The second section is for connections to the SSL (https) port
+- The third section rewrites any incoming "http" request into a "https" request
+- For each `server` section, just before the closing `}`, add the following line:
   
 ```text
 include /etc/nginx/locations.conf;
 ```
 
-7. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
+1. Now, you're done! Restart the nginx server with `sudo systemctl restart nginx` and start testing!
 
 ## Troubleshooting and known issues
 
@@ -175,8 +188,10 @@ server {
 ```
 
 ## Example `/etc/nginx/locations.conf` file
+
 Note - this is the file from my own setup. I have a bunch of service spread around machines and ports, and each `location` entry redirects a request from http://mysite.com/xxxx to wherever the webserver for xxxx is located on my subnet. It won't work directly for anyone else, but feel free to use it as an example.
-```
+
+```apacheconf
 location /readsb/ {
 	proxy_pass http://10.0.0.191:8080/;                                                                                                
 } 
