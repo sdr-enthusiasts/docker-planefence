@@ -660,7 +660,7 @@ BNT,Bentiu Air Transport,BENTIU AIR,Sudan
 BNV,Benane Aviation Corporation,BENANE,Mauritania
 BNW,British North West Airlines,BRITISH NORTH,United Kingdom
 BNX,LAI - Línea Aérea IAACA,AIR BARINAS,Venezuela
-BNZ,Aerolíneas Bonanza,AERO BONANZA,Mexico
+BNZ,Bonza,BONZA,Australia
 BOA,Boniair,KUMANOVO,Macedonia
 BOB,Backbone A/S,BACKBONE,Denmark
 BOC,Aerobona,AEROBONA,Mexico
