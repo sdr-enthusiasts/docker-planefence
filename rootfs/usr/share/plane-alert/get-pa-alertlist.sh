@@ -50,7 +50,8 @@ done
 if [[ $inhibit_update == "false" ]]; then
 	touch /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	cat /tmp/alertlist*.txt |  tr -dc "[:alnum:][:blank:]:/?&=%#\$\\\[\].,\{\};\-_\n" | awk -F',' '!seen[$1]++'  >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
-	EXCLUSIONS="$(sed -n 's|^\s*PA_EXCLUSIONS=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+	EXCLUDE="$(sed -n 's|^\s*PA_EXCLUSIONS=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+	[[ "$EXCLUDE" != "" ]] && IFS="," read -ra EXCLUSIONS <<< "$EXCLUDE"
 	count_start="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 	for TYPE in "${EXCLUSIONS[@]}"
 	do
