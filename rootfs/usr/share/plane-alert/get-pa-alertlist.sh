@@ -58,7 +58,7 @@ if [[ $inhibit_update == "false" ]]; then
 		if (("${#TYPE} >= 3")) && (("${#TYPE} <= 4"))
 		then
 			echo "$TYPE is valid, removing."
-			sed -i "/,$TYPE,/d" /usr/share/planefence/persist/.internal/plane-alert-db.txt
+			sed -i "/,$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		else
 			echo "$TYPE is invalid, skipping!"
 		fi
