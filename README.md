@@ -1,5 +1,24 @@
 # Docker-Planefence
 
+- [Docker-Planefence](#docker-planefence)
+  - [What is it?](#what-is-it)
+  - [Who is it for?](#who-is-it-for)
+  - [Install PlaneFence - Prerequisites](#install-planefence---prerequisites)
+    - [Getting ready](#getting-ready)
+    - [Planefence Configuration](#planefence-configuration)
+      - [Initial docker configuration](#initial-docker-configuration)
+      - [Planefence Settings Configuration](#planefence-settings-configuration)
+      - [Applying your setup](#applying-your-setup)
+  - [What does it look like when it's running?](#what-does-it-look-like-when-its-running)
+  - [API access to your data](#api-access-to-your-data)
+    - [Introduction](#introduction)
+    - [API parameters and usage examples](#api-parameters-and-usage-examples)
+      - [Planefence Query parameters](#planefence-query-parameters)
+      - [Plane-Alert Query parameters](#plane-alert-query-parameters)
+  - [Troubleshooting](#troubleshooting)
+  - [Getting help](#getting-help)
+
+
 ## What is it?
 
 This repository contains Planefence, which is an add-on to `ultrafeeder`, `readsb`, `dump1090`, or `dump1090-fa` (referred to herein as `your Feeder Station`.

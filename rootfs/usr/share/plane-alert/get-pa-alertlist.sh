@@ -57,8 +57,12 @@ if [[ $inhibit_update == "false" ]]; then
 	do
 		if (("${#TYPE} >= 3")) && (("${#TYPE} <= 4"))
 		then
-			echo "$TYPE is valid, removing."
+			echo "$TYPE appears to be an ICAO type and is valid, removing."
 			sed -i "/,$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
+		elif [[ "$TYPE" =~ ^[0-9a-fA-F]{6}$ ]]
+		then
+			echo "$TYPE appears to be an ICAO hex and is valid, removing."
+			sed -r -i "/^$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		else
 			echo "$TYPE is invalid, skipping!"
 		fi
