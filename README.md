@@ -91,7 +91,31 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/kx1t/docker-planefence/issues/38) on how to do that.
 - OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `/opt/adsb/planefence/config/pf_background.jpg` for Planefence and `/opt/adsb/planefence/config/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch /opt/adsb/planefence/config/planefence.config` in order for these backgrounds to become effective.)
 - OPTIONAL: Add images of tar1090 to your Tweets in Planefence and Plane-Alert. In order to enable this, simply add the `pf-screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `pf-screenshot` and that it's reachable under that name from the Planefence container stack.
-- OPTIONAL: Show [OpenAIP](http://map.openaip.net) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `~/.planefence/planefence.config`
+- OPTIONAL: Show [OpenAIP](http://map.openaip.net) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `/opt/adsb/planefence/config/planefence.config`
+
+---
+
+#### Plane-Alert Exclusions
+
+In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `/opt/adsb/planefence/config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. It is case insensitive. An example:
+```yml
+PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd Mayweather,UC-12W
+```
+This would exclude *all* T-6 Texans, the planes with ICAO hexes `AE06D9` (a Marine Corps UC-12F Huron) and `AE27FE` (a Coast Guard MH-60T), any planes with "Floyd Mayweather" anywhere in the database entry, and any planes with "UC-12W" anywhere in the database entry. URLs and image links are intentionally not searched.
+
+*Please note:* this is a **powerful feature** which may produce unintended consequences. You should verify that it's working correctly by examining the container logs after making changes to `planefence.config`. You should see, e.g.:
+```
+tex2 appears to be an ICAO type and is valid, entries excluded: 479
+AE06D9 appears to be an ICAO hex and is valid, entries excluded: 1
+ae27fe appears to be an ICAO hex and is valid, entries excluded: 1
+Floyd Mayweather appears to be a freeform search pattern, entries excluded: 1
+UC-12W appears to be a freeform search pattern, entries excluded: 8
+490 entries excluded.
+```
+
+Also note that after adding exclusions, any pre-existing entries for those excluded planes in your Plane Alert web user interface will not be entirely removed, but some fields will disappear. If you've made a mistake and revert your exclusion changes to `planefence.config`, affected entries in your web user interface will be fully restored after a few minutes.
+
+---
 
 #### Applying your setup
 
@@ -148,7 +172,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - Plane-alert will appear at http://myip:8088/plane-alert
 - Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advice you to skip Twitter and send notifications to [Mastodon](https://github.com/sdr-enthusiasts/docker-planefence/README-Mastodon.md) instead.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
-  - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack (in which case you use your machine's IP address).
+  - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack.
   - Did you enable SBS (BaseStation -- *not* Beast!) output? Here are some hints on how to enable this:
    - For non-containerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
    - For containerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
