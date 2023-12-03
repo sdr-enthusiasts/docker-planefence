@@ -25,9 +25,9 @@ git pull -a
 a="$(mktemp)"
 cp -f Dockerfile "$a"
 if grep -qi "darwin" <<< "$(uname -a)"; then
-  sed -i '' "s/##main##/$BRANCH" Dockerfile
+  sed -i '' "s/##main##/$BRANCH/g" Dockerfile
 else
-  sed -i "s/##main##/$BRANCH" Dockerfile
+  sed -i "s/##main##/$BRANCH/g" Dockerfile
 fi
 docker buildx build -f Dockerfile --compress --push $2 --platform $ARCHS --tag "$IMAGE1" .
 # [[ $? ]] && docker buildx build --compress --push $2 --platform $ARCHS --tag $IMAGE2 .
