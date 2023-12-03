@@ -21,7 +21,7 @@
 
 ## What is it?
 
-This repository contains Planefence, which is an add-on to `ultrafeeder`, `readsb`, `dump1090`, or `dump1090-fa` (referred to herein as `your Feeder Station`.
+This repository contains Planefence, which is an add-on to `ultrafeeder`, `readsb`, `dump1090`, or `dump1090-fa` (referred to herein as `your Feeder Station`).
 
 Planefence will create a log of aircraft heard by your Feeder Station that are within a "fence", that is, less than a certain distance and lower than a certain
 altitude from your station. This log is displayed on a website and is also made available in daily CSV files.
@@ -41,7 +41,7 @@ Here are some assumptions or prerequisites:
 
 - You are already familiar the `dump1090` family of ADS-B software (for example, `ultrafeeder`, `readsb`, `tar1090`, `dump1090`, or `dump1090-fa`), how to deploy it, and the hardware needed. Ideally, you have your ADS-B station already up and running.
 - You know how to deploy Docker images to your machine. If you don't -- it's actually quite simple. It makes installation of new components really easy. [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) contains a step-by-step guide, and [here](https://github.com/sdr-enthusiasts/docker-install) you can find a quick install script.
-- You use `docker-compose`. This README has been written assuming `docker-compose`. If you don't have it, feel free to `apt-get install` it. It should be easy to convert the `docker-compose.yml` instructions to a command-line `docker run` string, but you are on your own to do this.
+- You use `docker compose`. This README has been written assuming `docker compose`. If you don't have it, feel free to `apt-get install` it. It should be easy to convert the `docker-compose.yml` instructions to a command-line `docker run` string, but you are on your own to do this.
 - Further support is provided at the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please tag "@k1xt" to your message.
 
 ## Install PlaneFence - Prerequisites
@@ -51,13 +51,13 @@ Note - this guide assumes that `/home/pi` is your home directory. If it is not (
 There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, or `readsb` connected to a SDR somewhere in reach of your Planefence machine:
 
 - This could be in the same stack of containers, separately on the same machine, or even on another machine.
-- It is important to enable SBS data on port 30003 on that instance. PlaneFence will use this to get its data. See the Troubleshooting section for help to get this done
+- It is important to enable SBS data on port 30003 on that instance. PlaneFence will use this to get its data. See the [Troubleshooting](#troubleshooting) section for help to get this done.
 
 ### Getting ready
 
-1. If you are adding this to an existing stack of docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`.
+1. If you are adding this to an existing stack of Docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`.
 2. If you are not adding this to an existing container stack, you should create a project directory: `sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence` . Then add a new `docker-compose.yml` there.
-3. Get the template Docker-compose.yml file from here:
+3. Get the template `docker-compose.yml` file from here:
 
 ```bash
 curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
@@ -72,7 +72,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: ghcr.io/sdr-enthusiasts/docker-planefence:dev`
 - IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these unless you know what you are doing
-- After you exit the editor, start the container (`docker-compose up -d`). The first time you do this, it can take a minute or so.
+- After you exit the editor, start the container (`docker compose up -d`). The first time you do this, it can take a minute or so.
 - Monitor the container (`docker logs -f planefence`). At first start-up, it should be complaining about not being configure. That is expected behavior.
 - Once you see the warnings about `planefence.config` not being available, press CTRL-C to get the command prompt.
 
@@ -84,7 +84,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/planefence-ignore.txt`. In this file, you can add aircraft that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/sdr-enthusiasts/docker-planefence/issues so we can add your changes to the default file.
 - OPTIONAL: If you configured Twitter support before, `sudo nano /opt/adsb/planefence/config/.twurlrc`. You can add your back-up TWURLRC file here, if you want.
-- OPTIONAL: Configure tweets to be sent. For details, see these instructions: https://github.com/kx1t/docker-planefence/blob/main/README-planetweet.md
+- OPTIONAL: Configure tweets to be sent. For details, see these instructions: [README](README-planetweet.md)
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/kx1t/docker-planefence/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt/).
@@ -120,7 +120,7 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 #### Applying your setup
 
 - If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `/opt/adsb/planefence/config/planefence.config` will be picked up automatically
-- You can restart the Planefence container by doing: `pushd /opt/adsb && docker-compose up -d planefence --force-recreate && popd`
+- You can restart the Planefence container by doing: `pushd /opt/adsb && docker compose up -d planefence --force-recreate && popd`
 
 ## What does it look like when it's running?
 
@@ -139,7 +139,7 @@ Planefence and Plane-Alert keep a limited amount of data available. By default, 
 
 ### API parameters and usage examples
 
-The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Querie arguments are case-insensitive: looking for `n` or for `N` yield the same results.
+The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Query arguments are case-insensitive: looking for `n` or for `N` yields the same results.
 Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
 Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if the entry was tweeted. So make sure to start your `call` query with `^@?` to include both tweeted an non-tweeted calls.
 #### Planefence Query parameters
@@ -170,12 +170,15 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: http://myip:8088 should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at http://myip:8088/plane-alert
-- Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advice you to skip Twitter and send notifications to [Mastodon](https://github.com/sdr-enthusiasts/docker-planefence/README-Mastodon.md) instead.
+- Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advise you to skip Twitter and send notifications to [Mastodon](README-Mastodon.md) instead.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
-  - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be either an IP address, or an external hostname, or the name of another container in the same stack.
+  - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be:
+      - The name of another container in the same Docker compose stack, e.g., `ultrafeeder` or `tar1090`
+      - IP address or an external hostname to a different server
+      - IP address or an external hostname to the same server if the Docker instance of `ultrafeeder`, `tar1090`, etc. is in a different stack, e.g., adsb.im feeder image
   - Did you enable SBS (BaseStation -- *not* Beast!) output? Here are some hints on how to enable this:
-   - For non-containerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
-   - For containerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
+    - For non-containerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
+    - For containerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
   
       ```yaml
             - READSB_NET_SBS_OUTPUT_PORT=30003
@@ -183,8 +186,12 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
       ```
 
     - For users of the `ultrafeeder` container, no additional changes should be needed (see below for enabling MLAT aircraft)
-    - if you are using a different container stack, then you should also add `- 30003:30003` to the `ports:` section
-   - For users of `ultrafeeder`, if you want to enabled MLAT, make sure to set the following parameter in the `ultrafeeder` environment variables: `- READSB_FORWARD_MLAT_SBS=true`
+  - If you are using multiple Docker container stacks, then you should also add `- 30003:30003` to the `ports:` section in the `docker-compose.yml` file that contains your `ultrafeeder`, `tar1090`, `readsb`, or service.
+  - For users of `ultrafeeder`, if you want to enabled MLAT, make sure to set the following parameter in the `ultrafeeder` environment variables:
+    
+    ```yaml
+          - READSB_FORWARD_MLAT_SBS=true
+    ```
 
 ## Getting help
 
