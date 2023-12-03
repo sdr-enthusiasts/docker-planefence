@@ -42,7 +42,8 @@ RUN set -x && \
     #
     # Do this here while we still have git installed:
     git config --global advice.detachedHead false && \
-    echo "main_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
+    branch="##main##" && \
+    echo "${branch//#/}_($(git ls-remote https://github.com/kx1t/docker-planefence HEAD | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
     # Clean up
     echo Uninstalling $TEMP_PACKAGES && \
     apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
