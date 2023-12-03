@@ -97,9 +97,9 @@ In the `docker-compose.yml` file, you should configure the following:
 
 #### Plane-Alert Exclusions
 
-In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `/opt/adsb/planefence/config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. It is case insensitive. An example:
+In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `/opt/adsb/planefence/config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
 ```yml
-PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd Mayweather,UC-12W
+PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd\ Mayweather,UC-12W
 ```
 This would exclude *all* T-6 Texans, the planes with ICAO hexes `AE06D9` (a Marine Corps UC-12F Huron) and `AE27FE` (a Coast Guard MH-60T), any planes with "Floyd Mayweather" anywhere in the database entry, and any planes with "UC-12W" anywhere in the database entry. URLs and image links are intentionally not searched.
 
@@ -142,7 +142,9 @@ Planefence and Plane-Alert keep a limited amount of data available. By default, 
 The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Query arguments are case-insensitive: looking for `n` or for `N` yields the same results.
 Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
 Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if the entry was tweeted. So make sure to start your `call` query with `^@?` to include both tweeted an non-tweeted calls.
+
 #### Planefence Query parameters
+
 | Parameter | Description | Example |
 |---|---|---|
 | `hex` | Hex ID to return | https://planeboston.com/planefence/pf_query.php?hex=^A[AB][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits |
