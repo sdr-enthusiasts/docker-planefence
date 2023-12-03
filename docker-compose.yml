@@ -49,7 +49,7 @@ services:
     restart: always
     shm_size: 1gb
     environment:
-      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=2.0&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5
+      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0.2&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5
       - LOAD_SLEEP_TIME=10
       - BASE_URL=http://ultrafeeder
       - readsbpb_autogain:/run/autogain
