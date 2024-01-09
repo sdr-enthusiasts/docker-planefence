@@ -328,7 +328,7 @@ then
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ -n "$PA_DISCORD_WEBHOOKS" ]] && [[ -n "$DISCORD_FEEDER_NAME" ]]
 		then
 			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$(date)][$APPNAME] PlaneAlert sending Discord notification" || true
-			python3 $PLANEALERTDIR/send-discord-alert.py "$line"
+			timeout 120 python3 $PLANEALERTDIR/send-discord-alert.py "$line"
 		fi
 
 		# Build the message field:
