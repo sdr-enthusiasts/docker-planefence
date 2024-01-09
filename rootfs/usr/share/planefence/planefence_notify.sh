@@ -299,8 +299,8 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	        python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-            fi
+      	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+                        fi
 
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
