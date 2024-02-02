@@ -977,7 +977,7 @@ z-index: 100;
 top: 0;
 }
 </style>
-$(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<a rel=\"me\" href=\"https://mastodon.social/@$MASTODON_NAME\">Mastodon</a>"; fi)
+$(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link rel=\"me\" href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\">"; fi)
 </head>
 
 <body onload="sortTable(document.getElementById('mytable'), 5, -1);">
