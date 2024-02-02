@@ -299,7 +299,7 @@ then
 	# strip http:// https://
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
-	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials")"
+	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
 	if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$mast_result" >/dev/null 2>&1; then
 		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<< "$mast_result")" 
 	fi

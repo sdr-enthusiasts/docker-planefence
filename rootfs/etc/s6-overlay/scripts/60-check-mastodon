@@ -26,10 +26,11 @@ else
     # strip http:// https://
     [[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
     [[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
-    result="$(curl -sS -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials")"
+    result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials")"
+    acct="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
     if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$result" >/dev/null 2>&1
     then
-        echo "[$(date)][$APPNAME] Mastodon configured correctly for $(jq -r '.acct' <<< "$result")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
+        echo "[$(date)][$APPNAME] Mastodon configured correctly for $(jq -r '.acct' <<< "$acct")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
         [[ "${PF_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Planefence" || echo "[$(date)][$APPNAME] Mastodon disabled for Planefence"
         [[ "${PA_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Plane-Alert" || echo "[$(date)][$APPNAME] Mastodon disabled for Plane-Alert"
     else

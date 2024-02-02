@@ -3,6 +3,7 @@
 - [Send a Mastodon Post for each new plane in PlaneFence](#send-a-mastodon-post-for-each-new-plane-in-planefence)
   - [Prerequisites](#prerequisites)
   - [Signing up for a Mastodon Account and creating an Application](#signing-up-for-a-mastodon-account-and-creating-an-application)
+  - [Automatic verification checkmark of your Mastodon account](#automatic-verification-checkmark-of-your-mastodon-account)
   - [Configuring Planefence to use Mastodon](#configuring-planefence-to-use-mastodon)
   - [Summary of License Terms](#summary-of-license-terms)
 
@@ -44,6 +45,10 @@ Once you have an account, please do the following:
 ![image](https://user-images.githubusercontent.com/15090643/208438462-b40cc847-f36c-4db7-bacb-54a68fae2cff.png)
 
 ![image](https://user-images.githubusercontent.com/15090643/208438987-3e1fd9c2-5ce9-46c0-92e9-20bb78f55a8c.png)
+
+## Automatic verification checkmark of your Mastodon account
+
+If you add a link to your public Planefence or Plane-Alert page in the Extra Fields section of your Public Profile on Mastodon, you will get automatic account verification (with a cool green checkmark) for your Mastodon account.
 
 ## Configuring Planefence to use Mastodon
 
