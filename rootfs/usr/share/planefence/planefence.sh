@@ -73,10 +73,10 @@ fi
 
 # first get DISTANCE unit:
 DISTUNIT="mi"
-DISTCONV=1
+#DISTCONV=1
 if [ "$SOCKETCONFIG" != "" ]
 then
-	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
 		nauticalmile)
 		DISTUNIT="nm"
 		;;
@@ -95,7 +95,7 @@ fi
 ALTUNIT="ft"
 if [ "$SOCKETCONFIG" != "" ]
 then
-	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
+	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
 		feet)
 		ALTUNIT="ft"
 		;;
@@ -110,7 +110,7 @@ fi
 # replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
 if [[ "x$REMOTENOISE" != "x" ]]
 then
-	if [[ "$(curl --fail -s $REMOTENOISE/noisecapt-$FENCEDATE.log > /tmp/noisecapt-$FENCEDATE.log; echo $?)" == "0" ]]
+	if [[ "$(curl --fail -s "$REMOTENOISE"/noisecapt-"$FENCEDATE".log > /tmp/noisecapt-"$FENCEDATE".log; echo $?)" == "0" ]]
 	then
 		NOISECAPT=1
 	else
@@ -124,30 +124,32 @@ if [[ "$FUDGELOC" != "" ]]
 then
 	if [[ "$FUDGELOC" == "0" ]]
 	then
-		printf -v LON_VIS "%.0f" $LON
-		printf -v LAT_VIS "%.0f" $LAT
+		printf -v LON_VIS "%.0f" "$LON"
+		printf -v LAT_VIS "%.0f" "$LAT"
 	elif [[ "$FUDGELOC" == "1" ]]
 	then
-		printf -v LON_VIS "%.1f" $LON
-		printf -v LAT_VIS "%.1f" $LAT
+		printf -v LON_VIS "%.1f" "$LON"
+		printf -v LAT_VIS "%.1f" "$LAT"
 	elif [[ "$FUDGELOC" == "2" ]]
 	then
-		printf -v LON_VIS "%.2f" $LON
-		printf -v LAT_VIS "%.2f" $LAT
+		printf -v LON_VIS "%.2f" "$LON"
+		printf -v LAT_VIS "%.2f" "$LAT"
 	else
 		# If $FUDGELOC != "" but also != "2", then assume it is "3"
-		printf -v LON_VIS "%.3f" $LON
-		printf -v LAT_VIS "%.3f" $LAT
+		printf -v LON_VIS "%.3f" "$LON"
+		printf -v LAT_VIS "%.3f" "$LAT"
 	fi
 	# clean up the strings:
 else
 	# let's not print more than 5 digits
-	printf -v LON_VIS "%.5f" $LON
-	printf -v LAT_VIS "%.5f" $LAT
+	printf -v LON_VIS "%.5f" "$LON"
+	printf -v LAT_VIS "%.5f" "$LAT"
 fi
-LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+# shellcheck disable=SC2001
+LON_VIS="$(sed 's/^00*\|00*$//g' <<< "$LON_VIS")"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
 LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
-LAT_VIS="$(sed 's/^00*\|00*$//g' <<< $LAT_VIS)" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+# shellcheck disable=SC2001
+LAT_VIS="$(sed 's/^00*\|00*$//g' <<< "$LAT_VIS")" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
 LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
 
 #
@@ -158,7 +160,7 @@ LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> 
 LOG ()
 {
 	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	while [ -n "$1" ] || read IN; do
+	while [ -n "$1" ] || read -r IN; do
 		if [ -n "$1" ]; then
 			IN="$1"
 		fi
@@ -168,7 +170,7 @@ LOG ()
 			then
 				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
 			else
-				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> $LOGFILE
+				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> "$LOGFILE"
 			fi
 		fi
 		if [ -n "$1" ]; then
@@ -243,6 +245,7 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 EOF
 		# If there are spectrograms for today, then also make a column for these:
+		# shellcheck disable=SC2012
 		if (( $(ls -1 "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" 2>/dev/null |wc -l) > 0 ))
 		then
 			printf "<th>Spectrogram</th>\n" >> "$2"
@@ -279,6 +282,7 @@ EOF
 
 	# do this for the whole INPUT at once, doing it for every line is slow (subshell, sed initialization)
 	# Step 1/5. Replace the map zoom by whatever $HEATMAPZOOM contains
+	# shellcheck disable=SC2001
 	[[ -n "$HEATMAPZOOM" ]] && INPUT=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "$INPUT")
 
 	# Now write the table
@@ -329,10 +333,10 @@ EOF
 				(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
 				NOWTIME=$(date +%s)
 				# check if there are any noise samples
-				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s="$STARTTIME" -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]
 				then
 					#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
-					gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+					gnuplot -e "offset=$(echo "$(date +%z) * 36" | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 				else
 					NOISEGRAPHLINK=""
 				fi
@@ -346,11 +350,11 @@ EOF
 			STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
 			ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
 			(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png || SPECTROFILE=""
+			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d @"$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)" +%y%m%d-%H%M%S).png || SPECTROFILE=""
 			# if it has a weird date, discard it because it wont exist.
 			# otherwise, go get it from the remote server:
 			# debug code: echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
-			[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
+			[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s "$REMOTENOISE/$SPECTROFILE" > "$OUTFILEDIR/$SPECTROFILE"
 		else
 			SPECTROFILE=""
 		fi
@@ -375,7 +379,7 @@ EOF
 
 				# if it's not in the cache, look it up with the appropriate shell script
 				if [[ -z $CACHEDNAME ]]; then
-					AIRLINENAME=$(/usr/share/planefence/airlinename.sh ${CALLSIGN} ${NEWVALUES[0]})
+					AIRLINENAME=$(/usr/share/planefence/airlinename.sh "${CALLSIGN}" "${NEWVALUES[0]}")
 					#echo ${CALLSIGN} ${AIRLINENAME}
 				elif [[ $CACHEDNAME == "UNKNOWN" ]]; then
 					AIRLINENAME=""
@@ -453,6 +457,7 @@ EOF
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
 				then
+					# shellcheck disable=SC2021
 					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
 					printf "   <td>discord</td>\n" >&3
@@ -501,15 +506,18 @@ EOF
 	# right below. Right now, it lists all files that have the planefence-20*.html format (planefence-200504.html, etc.), and then
 	# picks the newest 7 (or whatever HISTTIME is set to), reverses the strings to capture the characters 6-11 from the right, which contain the date (200504)
 	# and reverses the results back so we get only a list of dates in the format yymmdd.
-	for d in $(ls -1 "$1"/planefence-??????.html | tail --lines=$((HISTTIME+1)) | head --lines=$HISTTIME | rev | cut -c6-11 | rev | sort -r)
+	# shellcheck disable=SC2012
+	for d in $(ls -1 "$1"/planefence-??????.html | tail --lines=$((HISTTIME+1)) | head --lines="$HISTTIME" | rev | cut -c6-11 | rev | sort -r)
 	do
-		printf " | %s" "$(date -d "$d" +%d-%b-%Y): " >> "$2"
-		printf "<a href=\"%s\" target=\"_top\">html</a> - " "planefence-$(date -d "$d" +"%y%m%d").html" >> "$2"
-		printf "<a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv" >> "$2"
+		{ printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
+		  printf "<a href=\"%s\" target=\"_top\">html</a> - " "planefence-$(date -d "$d" +"%y%m%d").html"
+		  printf "<a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv"
+		}  >> "$2"
 	done
-	printf "</p>\n" >> "$2"
-	printf "<p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p>" >> "$2"
-	printf "</details>\n</article>\n</section>" >> "$2"
+	{ printf "</p>\n"
+	  printf "<p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p>"
+	  printf "</details>\n</article>\n</section>"
+	} >> "$2"
 
 	# and print the footer:
 	if [ "$3" == "standalone" ]
@@ -534,9 +542,9 @@ then
 	rm "$TMPLINES"  2>/dev/null
 	rm "$OUTFILEHTML"  2>/dev/null
 	rm "$OUTFILECSV"  2>/dev/null
-	rm $OUTFILEBASE-"$FENCEDATE"-table.html  2>/dev/null
-	rm $OUTFILETMP  2>/dev/null
-	rm $TMPDIR/dump1090-pf*  2>/dev/null
+	rm "$OUTFILEBASE-$FENCEDATE"-table.html  2>/dev/null
+	rm "$OUTFILETMP"  2>/dev/null
+	rm "$TMPDIR"/dump1090-pf*  2>/dev/null
 	LOG "File cache reset- doing full run for $FENCEDATE"
 fi
 
@@ -549,6 +557,7 @@ then
 else
 	READLINES=0
 fi
+# shellcheck disable=SC2153
 if [ -f "$TOTLINES" ]
 then
 	read -r TOTALLINES < "$TOTLINES"
@@ -588,7 +597,7 @@ SOCKETFILEYESTERDAY="$LOGFILEBASE$(date -d yesterday +%y%m%d).txt"
 if [[ -f $SOCKETFILEYESTERDAY ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > PRUNEMINS * 60 ))
 then
     # If we're longer than PRUNEMINS into today, remove yesterday's file
-    rm -v -f $SOCKETFILEYESTERDAY
+    rm -v -f "$SOCKETFILEYESTERDAY"
 fi
 
 # if the PRUNESTARTFILE file doesn't exist
@@ -603,15 +612,15 @@ elif [[ $(find $PRUNESTARTFILE -mmin +$PRUNEMINS | wc -l) == 1 ]]; then
         CUTLINES=0
     fi
     tmpfile=$(mktemp)
-    tail --lines=+$((CUTLINES + 1)) "$SOCKETFILE" > $tmpfile
+    tail --lines=+$((CUTLINES + 1)) "$SOCKETFILE" > "$tmpfile"
 
     # restart Socket30003 to ensure that things run smoothly:
     touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
     killall /usr/bin/perl
     sleep .1 # give the script a moment to exit, then move the files
 
-    mv -f $tmpfile "$SOCKETFILE"
-    rm -f $tmpfile
+    mv -f "$tmpfile" "$SOCKETFILE"
+    rm -f "$tmpfile"
 
     # update line numbers
     (( READLINES -= CUTLINES ))
@@ -639,13 +648,13 @@ echo "$TOTALLINES" > "$TOTLINES"
 LOG "Current run starts at line $READLINES of $CURRCOUNT, with $TOTALLINES lines for today"
 
 # Now create a temp file with the latest logs
-tail --lines=+$READLINES "$SOCKETFILE" > $INFILETMP
+tail --lines=+"$READLINES" "$SOCKETFILE" > "$INFILETMP"
 
 [[ "$BASETIME" != "" ]] && echo "2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- invoking planefence.py" || true
 
 # First, run planefence.py to create the CSV file:
 LOG "Invoking planefence.py..."
-$PLANEFENCEDIR/planefence.py --logfile=$INFILETMP --outfile=$OUTFILETMP --maxalt=$MAXALT --altcorr=$ALTCORR --dist=$DIST --distunit=$DISTUNIT --lat=$LAT --lon=$LON $VERBOSE $CALCDIST --trackservice=$TRACKSERVICE | LOG
+$PLANEFENCEDIR/planefence.py --logfile="$INFILETMP" --outfile="$OUTFILETMP" --maxalt="$MAXALT" --altcorr="$ALTCORR" --dist="$DIST" --distunit=$DISTUNIT --lat="$LAT" --lon="$LON" "$VERBOSE" "$CALCDIST" --trackservice="$TRACKSERVICE" | LOG
 LOG "Returned from planefence.py..."
 
 # Now we need to combine any double entries. This happens when a plane was in range during two consecutive Planefence runs
@@ -661,7 +670,7 @@ then
 	while read -r newline
 	do
 		IFS="," read -ra newrec <<< "$newline"
-		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
+		if grep -q "^${newrec[0]}," "$OUTFILECSV"
 		then
 #debug echo -n "There is a matching ICAO... ${newrec[1]} "
 			# there's a ICAO match between the new record and the existing file
@@ -721,6 +730,7 @@ $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 # Ignore list -- first clean up the list to ensure there are no empty lines
 sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
 # now apply the filter
+# shellcheck disable=SC2126
 LINESFILTERED=$(grep -i -f "$IGNORELIST" "$OUTFILECSV" 2>/dev/null | wc -l)
 if (( LINESFILTERED > 0 ))
 then
@@ -729,7 +739,11 @@ then
 fi
 
 # rewrite LINESFILTERED to file
-[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -r i < "/run/planefence/filtered-$FENCEDATE" || i=0
+if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
+	read -r i < "/run/planefence/filtered-$FENCEDATE"
+else
+	i=0
+fi
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 # if IGNOREDUPES is ON then remove duplicates
@@ -743,7 +757,11 @@ then
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
 	# rewrite LINESFILTERED to file
-	[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -ra i < "/run/planefence/filtered-$FENCEDATE" || i=0
+	if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
+		read -r i < "/run/planefence/filtered-$FENCEDATE"
+	else
+		i=0
+	fi
 	echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 fi
@@ -851,21 +869,24 @@ then
 	# also create a noisegraph for the full day:
 	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph" || true
 	rm -f /tmp/noiselog 2>/dev/null
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" /tmp/noiselog
-	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" >> /tmp/noiselog
-	gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$(date -d "yesterday" +%s)"; end="$(date +%s)"; infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = "$(date +%Y-%m-%d)")'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d yesterday +%y%m%d).log" ]] && cp -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" /tmp/noiselog
+	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d today +%y%m%d).log" ]] && cat "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" >> /tmp/noiselog
+	gnuplot -e "offset=$(echo "$(date +%z) * 36" | bc); start=$(date -d yesterday +%s); end=$(date +%s); infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = $(date +%Y-%m-%d))'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 	rm -f /tmp/noiselog 2>/dev/null
 
-elif (( $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
+elif (( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
 then
-	ln -sf $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | tail -1) $OUTFILEDIR/noisecapt-spectro-latest.png
+	ln -sf "$(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | tail -1)" "$OUTFILEDIR/noisecapt-spectro-latest.png"
 else
-	rm -f $OUTFILEDIR/noisecapt-spectro-latest.png 2>/dev/null
+	rm -f "$OUTFILEDIR"/noisecapt-spectro-latest.png 2>/dev/null
 fi
 
 [[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh" || true
 # If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
-[ "$PLANEALERT" == "ON" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"; $PLALERTFILE $INFILETMP; )
+if [[ "$PLANEALERT" == "ON" ]]; then
+	LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"
+	$PLALERTFILE "$INFILETMP"
+fi
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
@@ -881,14 +902,14 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2020 - 2023 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# Copyright 2020 - 2024 Ramon. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # The package contains contributions from several other packages, that may be licensed
 # under different terms. Attributions and our thanks can be found at
-# https://github.com/kx1t/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
+# https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
 # using the same base URL as you used to get to this web page.
 #
 # Summary of License Terms
@@ -972,15 +993,16 @@ ${PF_MOTD}
 <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
 <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
 
-<li>Only aircraft below $(printf "%'.0d" $MAXALT) $ALTUNIT are reported
+<li>Only aircraft below $(printf "%'.0d" "$MAXALT") $ALTUNIT are reported
 <li>Data extracted from $(printf "%'.0d" $TOTALLINES) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 
 EOF
 [[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
 
-[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" $IGNORELIST) > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-$FENCEDATE)" >> "$OUTFILEHTMTMP"
+[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-"$FENCEDATE")" >> "$OUTFILEHTMTMP"
 [[ "$PA_LINK" != "" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station.\n" "$PA_LINK" >> "$OUTFILEHTMTMP"
 
+# shellcheck disable=SC2129
 cat <<EOF >>"$OUTFILEHTMTMP"
 </ul>
 </details>
@@ -1002,15 +1024,19 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=$LAT_VIS&lon=$LON_VIS&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" >> "$OUTFILEHTMTMP"
+printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" "$LAT_VIS" "$LON_VIS" >> "$OUTFILEHTMTMP"
 printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
 printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)" >> "$OUTFILEHTMTMP"
 (( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level." >> "$OUTFILEHTMTMP"
 
 [[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
 [[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
-(( $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n" >> "$OUTFILEHTMTMP"
+(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n" >> "$OUTFILEHTMTMP"
 [[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n" >> "$OUTFILEHTMTMP"
+if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then
+	printf "<li>Get notified instantaneously of aircraft in range by following <a rel=\"me\" href=\"https://%s/@%s\" target=\"_blank\">@%s</a> on the <a href=\"https://%s/\" target=\"_blank\">%s</a> Mastodon Server." \
+		"$MASTODON_SERVER" "$MASTODON_NAME" "$MASTODON_NAME" "$MASTODON_SERVER" "$MASTODON_SERVER"  >> "$OUTFILEHTMTMP"
+fi
 
 printf "<li> Press the header of any of the columns to sort by that column.\n"  >> "$OUTFILEHTMTMP"
 printf "</ul>\n"  >> "$OUTFILEHTMTMP"
@@ -1055,6 +1081,7 @@ fi
 # if $PLANEHEATHTML exists, then add the heatmap
 if [ -f "$PLANEHEATHTML" ]
 then
+	# shellcheck disable=SC2129
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 	<article>
@@ -1117,13 +1144,15 @@ EOF
 
 [[ "$BASETIME" != "" ]] && echo "16. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting final cleanup" || true
 
+# shellcheck disable=SC2164
 pushd "$OUTFILEDIR" > /dev/null
 mv -f "$OUTFILEHTMTMP" "$OUTFILEHTML"
 ln -sf "${OUTFILEHTML##*/}" index.html
+# shellcheck disable=SC2164
 popd > /dev/null
 
 # VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l < $LOGFILE) > 8000 ))
+if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l < "$LOGFILE") > 8000 ))
 then
     #sed -i -e :a -e '$q;N;8000,$D;ba'
     tail -n 4000 "$LOGFILE" > "$LOGFILE.tmp"

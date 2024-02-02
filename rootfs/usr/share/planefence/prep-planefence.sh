@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2015,SC2268,SC2174
+#shellcheck shell=bash disable=SC2015,SC2268,SC2174 source=/usr/share/planefence/persist/planefence.config
 # -----------------------------------------------------------------------------------
 # Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -51,6 +51,7 @@ chmod a=rwx /usr/share/planefence/persist/planepix
 if [[ -f /usr/share/planefence/persist/planefence.config ]]
 then
 	set -o allexport
+	# shellcheck disable=SC1091
 	source /usr/share/planefence/persist/planefence.config
 	set +o allexport
 else
@@ -159,6 +160,7 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 
 if [[ "x$PF_SOCK30003HOST" != "x" ]]
 then
+	# shellcheck disable=SC2001
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
 	sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
 	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
@@ -182,7 +184,7 @@ fi
 [[ "x$PF_IGNOREDUPES" != "x" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 [[ "x$PF_COLLAPSEWITHIN" != "x" ]] && sed -i 's|\(^\s*COLLAPSEWITHIN=\).*|\1'"$PF_COLLAPSEWITHIN"'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1300|' /usr/share/planefence/planefence.conf
 a=$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf  | sed 's/\"//g')
-[[ "$a" != "" ]] && ln -sf $a /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
+[[ "$a" != "" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
 #
 # -----------------------------------------------------------------------------------
@@ -238,9 +240,9 @@ if find /usr/share/planefence/html/planefence-??????.html >/dev/null 2>&1
 then
 	for i in /usr/share/planefence/html/planefence-??????.html
 	do
-		[[ "x$PF_MAPWIDTH" != "x" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' $i
-		[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' $i
-		[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' $i
+		[[ "x$PF_MAPWIDTH" != "x" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
+		[[ "x$PF_MAPHEIGHT" != "x" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' "$i"
+		[[ "x$PF_MAPZOOM" != "x" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' "$i"
 	done
 fi
 
@@ -297,6 +299,10 @@ then
 	# strip http:// https://
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/apps/verify_credentials")"
+	if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$mast_result" >/dev/null 2>&1; then
+		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<< "$mast_result")" 
+	fi
 	if [[ "${PF_MASTODON,,}" == "on" ]]
 	then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
@@ -311,6 +317,7 @@ then
 		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
 		[[ -n "$PA_MASTODON_VISIBILITY" ]] && configure_planealert "MASTODON_VISIBILITY" "$PA_MASTODON_VISIBILITY" || configure_planealert "MASTODON_VISIBILITY" "unlisted"
+		configure_planealert
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""
 		configure_planealert "MASTODON_SERVER" ""
@@ -346,7 +353,7 @@ fi
 # Check if the remote airlinename server is online
 #[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/build ]] && cat /usr/share/planefence/build || cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
 #shellcheck disable=SC2046
-[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s $REMOTEURL/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime))" || a=""
+[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s "$REMOTEURL"/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime))" || a=""
 [[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 #
 #--------------------------------------------------------------------------------
