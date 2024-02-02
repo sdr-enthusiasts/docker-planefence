@@ -49,6 +49,8 @@ Once you have an account, please do the following:
 ## Automatic verification checkmark of your Mastodon account
 
 If you add a link to your public Planefence or Plane-Alert page in the Extra Fields section of your Public Profile on Mastodon, you will get automatic account verification (with a cool green checkmark) for your Mastodon account.
+![image](https://github.com/sdr-enthusiasts/docker-planefence/assets/15090643/7126a1c4-3aff-406b-94db-123b6b50a2f2)
+
 
 ## Configuring Planefence to use Mastodon
 
