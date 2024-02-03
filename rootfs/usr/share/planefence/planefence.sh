@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC2015,SC1091
+#shellcheck disable=SC2015,SC1091,SC2129
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 # based on socket30003
@@ -998,10 +998,14 @@ ${PF_MOTD}
 <li>Data extracted from $(printf "%'.0d" $TOTALLINES) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 
 EOF
-[[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
-
-[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-"$FENCEDATE")" >> "$OUTFILEHTMTMP"
-[[ "$PA_LINK" != "" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station.\n" "$PA_LINK" >> "$OUTFILEHTMTMP"
+{	[[ -n "$FUDGELOC" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station\n"
+	[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-"$FENCEDATE")"
+	if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then
+		printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"https://%s/@%s\" target=\"_blank\">@%s@%s</a> on Mastodon" \
+			"$MASTODON_SERVER" "$MASTODON_NAME" "$MASTODON_NAME" "$MASTODON_SERVER"
+	fi
+	[[ -n "$PA_LINK" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station\n" "$PA_LINK" 
+} >> "$OUTFILEHTMTMP"
 
 # shellcheck disable=SC2129
 cat <<EOF >>"$OUTFILEHTMTMP"
@@ -1025,22 +1029,19 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" "$LAT_VIS" "$LON_VIS" >> "$OUTFILEHTMTMP"
-printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)" >> "$OUTFILEHTMTMP"
-(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level." >> "$OUTFILEHTMTMP"
+{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" "$LAT_VIS" "$LON_VIS"
+	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)"
+	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)"
+	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level"
 
-[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
-[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
-(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n" >> "$OUTFILEHTMTMP"
-[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n" >> "$OUTFILEHTMTMP"
-if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then
-	printf "<li>Get notified instantaneously of aircraft in range by following <a rel=\"me\" href=\"https://%s/@%s\" target=\"_blank\">@%s</a> on the <a href=\"https://%s/\" target=\"_blank\">%s</a> Mastodon Server." \
-		"$MASTODON_SERVER" "$MASTODON_NAME" "$MASTODON_NAME" "$MASTODON_SERVER" "$MASTODON_SERVER"  >> "$OUTFILEHTMTMP"
-fi
+	[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n"
+	[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET"
+	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
+	[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n"
 
-printf "<li> Press the header of any of the columns to sort by that column.\n"  >> "$OUTFILEHTMTMP"
-printf "</ul>\n"  >> "$OUTFILEHTMTMP"
+	printf "<li> Press the header of any of the columns to sort by that column\n"
+	printf "</ul>\n"
+} >> "$OUTFILEHTMTMP"
 
 [[ "$BASETIME" != "" ]] && echo "12. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the PF table to the website" || true
 
