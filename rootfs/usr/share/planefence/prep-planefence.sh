@@ -375,8 +375,9 @@ configure_planefence "PF_MOTD" "\"$PF_MOTD\""
 configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #
 #--------------------------------------------------------------------------------
-# Set TRACKSERVICE for plane-alert. We will implement this for planefence some other day :)
+# Set TRACKSERVICE and TRACKLIMIT for plane-alert. We will implement this for planefence some other day :)
 [[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
+[[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
 #
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
