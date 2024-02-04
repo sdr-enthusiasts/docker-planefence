@@ -2,10 +2,10 @@
 # NOISE2FENCE -- a script for extracting recorded noise values from NOISECAPT
 # and adding them to CSV files that have been created by PlaneFence
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003

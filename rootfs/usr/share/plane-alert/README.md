@@ -22,7 +22,7 @@ The `<filename>` is a full path to one of the log files from Socket30003 - often
 For full text, see the LICENSE file included with this repository.
 The following is a short summary of terms. In case of conflict between this text and the terms and conditions set forth in the LICENSE file, those in the LICENSE file shall take precedence.
 
-    Copyright (C) 2021 Ramon F. Kolb
+    Copyright (C) 2021-2024 Ramon F. Kolb
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

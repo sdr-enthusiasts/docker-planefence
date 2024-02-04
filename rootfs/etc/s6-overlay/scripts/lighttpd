@@ -16,10 +16,10 @@ GROUP=www-data
 [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Lighttpd started as an s6 service" || true
 
 # -----------------------------------------------------------------------------------
-# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence
+# https://github.com/sdr-enthusiasts/docker-planefence
 #
 # -----------------------------------------------------------------------------------
 # Feel free to make changes to the variables between these two lines. However, it is

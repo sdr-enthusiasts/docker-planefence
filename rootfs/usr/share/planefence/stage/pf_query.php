@@ -34,7 +34,7 @@
 	   echo "will return records of which the Hex ID starts with A followed by a D or E, and that have a start date/time that contains 2021/12/13, 2021/12/14, or 2021/12/15.<br />";
 	   echo "<br />";
 	   echo "Note that the date range is limited to the data available to PlaneFence. By default, this is set to the last 14 days.<hr />";
-	   echo "(C)opyright 2021 by kx1t, available under GPL3 as defined at <a href=https://github.com/kx1t/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
+	   echo "(C)opyright 2021-2024 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
 	   echo "</body></html>";
   } else {
      if (strcmp($outputtype, "csv") == 0) {

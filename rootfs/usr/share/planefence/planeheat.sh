@@ -4,10 +4,10 @@
 #
 # Usage: ./planeheat.sh [date]
 #
-# Copyright 2020,2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -334,7 +334,7 @@ cat <<EOF >"$PLANEHEATHTML"
         radius: 7,
         maxZoom: 14,
         blur: 11,
-        attribution: "<a href=https://github.com/kx1t/docker-planefence target=_blank>docker:kx1t/planefence</a>"
+        attribution: "<a href=https://github.com/sdr-enthusiasts/docker-planefence target=_blank>docker:ghcr.io/sdr-enthusiasts/docker-planefence</a>"
         }).addTo(map);
     var circle = L.circle([ parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], {
         color: 'blue',

@@ -5,13 +5,13 @@
 # Returns
 #
 # -----------------------------------------------------------------------------------
-# This package is part of https://github.com/kx1t/docker-planefence/ and may not work or have any
+# This package is part of https://github.com/sdr-enthusiasts/docker-planefence/ and may not work or have any
 # value outside of this repository.
 #
 # Copyright 2023-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # Summary of License Terms
 # This program is free software: you can redistribute it and/or modify it under the terms of

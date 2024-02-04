@@ -50,7 +50,7 @@
 	   echo "will return records of tail N141NE, N142NE, N143NE, and that have a timestamp that contains 2021/12/20 - 2021/21/29.<br />";
 	   echo "<br />";
 	   echo "Note that the date range is limited to the data available to Plane-Alert.<hr />";
-	   echo "(C)opyright 2021 by kx1t, available under GPL3 as defined at <a href=https://github.com/kx1t/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
+	   echo "(C)opyright 2021-2024 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
      echo "<hr>" . $hex . $tail . $name . $equipment . $timestamp . $call . $lat . $lon;
 	   echo "</body></html>";
   } else {

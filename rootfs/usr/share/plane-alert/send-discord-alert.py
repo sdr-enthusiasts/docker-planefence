@@ -4,10 +4,13 @@
 #
 # Usage: ./send-discord-alert.py <inputfile>
 #
-# Copyright 2022 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2022-2024 Ramon F. Kolb, kx1t
+# Copyright 2022 Justin DiPierro
+#
+# Licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -101,6 +104,7 @@ def process_alert(config, plane):
     # Replace adsbexchange link with whatever is configured:
     if config["PA_TRACKSERVICE"]  != "":
         description.replace("globe.adsbexchange.com",config["PA_TRACKSERVICE"])
+        description.replace("ADSB Exchange",config["PA_TRACKSERVICE"])
 
     webhooks, embed = pf.discord.build(config["DISCORD_FEEDER_NAME"], config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
     pf.attach_media(config, "PA", dbinfo, webhooks, embed)

@@ -1,10 +1,10 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC2015,SC2268,SC2174 source=/usr/share/planefence/persist/planefence.config
 # -----------------------------------------------------------------------------------
-# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence4docker/
+# https://github.com/sdr-enthusiasts/planefence4docker/
 #
 # Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
 # as command separator, but use something else instead, for example '|'
@@ -375,7 +375,8 @@ configure_planefence "PF_MOTD" "\"$PF_MOTD\""
 configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #
 #--------------------------------------------------------------------------------
-# Set TRACKSERVICE and TRACKLIMIT for plane-alert. We will implement this for planefence some other day :)
+# Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
+[[ -n "$PF_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planealert "TRACKSERVICE" "globe.adsbexchange.com"
 [[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
 [[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
 #

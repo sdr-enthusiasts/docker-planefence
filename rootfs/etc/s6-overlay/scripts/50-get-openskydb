@@ -1,10 +1,10 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2174
 # -----------------------------------------------------------------------------------
-# Copyright 2020-2022 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
