@@ -302,6 +302,9 @@ then
       	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
                         fi
 
+			# swap adsbexchange for the $TRACKSERVICE:
+			TWEET="${TWEET//globe.adsbexchange.com/"$TRACKSERVICE"}}"
+
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
 			then
@@ -311,8 +314,8 @@ then
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
-                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
-								MASTTEXT="${MASTTEXT//globe.adsbexchange.com/"$TRACKSERVICE"}}"
+                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+								
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# we upload an image
