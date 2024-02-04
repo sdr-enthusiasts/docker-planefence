@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./rootfs/usr/lib/python3/dist-packages"
+    ]
+}
