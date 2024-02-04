@@ -376,7 +376,7 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #
 #--------------------------------------------------------------------------------
 # Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
-[[ -n "$PF_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planealert "TRACKSERVICE" "globe.adsbexchange.com"
+[[ -n "$PF_TRACKSERVICE" ]] && configure_planefence "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
 [[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
 [[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
 #

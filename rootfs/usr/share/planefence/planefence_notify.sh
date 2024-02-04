@@ -312,6 +312,7 @@ then
 			then
 				mast_id="null"
                                 MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+								MASTTEXT="${MASTTEXT//globe.adsbexchange.com/"$TRACKSERVICE"}}"
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# we upload an image
