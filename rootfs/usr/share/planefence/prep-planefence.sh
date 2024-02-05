@@ -225,9 +225,12 @@ then
 			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-            [[ "x$PF_TWATTRIB" != "x" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
-        fi
+    fi
 fi
+
+# Despite the name, this variable also works for Mastodon and Discord notifications:
+[[ -n "$PF_TWATTRIB" ]] && configure_planefence "ATTRIB" "$PF_TWATTRIB"
+
 # -----------------------------------------------------------------------------------
 #
 # Change the heatmap height and width if they are defined in the .env parameter file:
