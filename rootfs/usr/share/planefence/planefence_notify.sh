@@ -253,8 +253,12 @@ then
 			teststring="${TWEET//%0A/ }" # replace newlines with a single character
 			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
 			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
-			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
+			if (( tweetlength > 490 )); then
+				echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 490: tweet will be truncated!"
+				maxlength=$(( ${#TWEET} + 490 - tweetlength ))
+			else
+				maxlength=490
+			fi
 
 			TWEET="${TWEET:0:$maxlength}"
 
