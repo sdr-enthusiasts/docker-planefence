@@ -242,6 +242,7 @@ then
 			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
 			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
 
+			TWEET+="%0A${RECORD[6]}"
 			# Add attribution to the tweet:
 			TWEET+="%0A$ATTRIB%0A"
 
@@ -260,7 +261,7 @@ then
 			# Now add the last field (attribution) without title or training Newline
 			# Reason: this is a URL that Twitter reinterprets and previews on the web
 			# Also, the Newline at the end tends to mess with Twurl
-			TWEET+="${RECORD[6]}"
+
 
 			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
