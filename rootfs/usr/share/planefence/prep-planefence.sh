@@ -229,7 +229,14 @@ then
 fi
 
 # Despite the name, this variable also works for Mastodon and Discord notifications:
-[[ -n "$PF_TWATTRIB" ]] && configure_planefence "ATTRIB" "\"$PF_TWATTRIB\""
+# You can use PF_TWATTRIB/PA_TWATTRIB or PF_ATTRIB/PA_ATTRIB or simply $ATTRIB
+# If PA_[TW]ATTRIB isn't set, but PF_[TW]ATTRIB has a value, then the latter will also be used for Plane-Alert
+# Finally, if you set ATTRIB to a value, we will use that for both PA and PF and ignore any PF_[TW]ATTRIB/PA_[TW]ATTRIB values
+[[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planefence "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
+[[ -n "$PA_TWATTRIB$PA_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PA_TWATTRIB$PA_ATTRIB\""
+[[ -z "$PA_TWATTRIB$PA_ATTRIB" ]] && [[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
+[[ -n "$ATTRIB" ]] && configure_both "ATTRIB" "\"$ATTRIB\""
+
 
 # -----------------------------------------------------------------------------------
 #
