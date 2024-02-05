@@ -229,7 +229,7 @@ then
 fi
 
 # Despite the name, this variable also works for Mastodon and Discord notifications:
-[[ -n "$PF_TWATTRIB" ]] && configure_planefence "ATTRIB" "$PF_TWATTRIB"
+[[ -n "$PF_TWATTRIB" ]] && configure_planefence "ATTRIB" "\"$PF_TWATTRIB\""
 
 # -----------------------------------------------------------------------------------
 #
