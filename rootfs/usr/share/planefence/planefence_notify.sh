@@ -299,8 +299,8 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-                        fi
+      	        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+            fi
 
 			# swap adsbexchange for the $TRACKSERVICE:
 			TWEET="${TWEET//globe.adsbexchange.com/"$TRACKSERVICE"}}"

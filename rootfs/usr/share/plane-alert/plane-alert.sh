@@ -350,6 +350,7 @@ then
 		[[ -n "${pa_record[1]}" ]] && TWITTEXT+="Tail: ${pa_record[1]} "
 		[[ -n "${pa_record[8]}" ]] && TWITTEXT+="Flt: ${pa_record[8]} "
 		[[ -n "${pa_record[10]}" ]] && TWITTEXT+="#Squawk: ${pa_record[10]}"
+		[[ "${pa_record[10]//#/}" == "7700 " ]] && TWITTEXT+=" #EMERGENCY!"
 		[[ -n "${pa_record[2]}" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[&\']/_}" # trailing ']}" for vim broken syntax
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
 		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
@@ -374,6 +375,8 @@ then
 		done
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}")"
+
+		TWITTEXT+="\n\n#adsb #planefence by kx1t - http://github.com/sdr-enthusiasts/docker-planefence"
 
 		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
 		then
