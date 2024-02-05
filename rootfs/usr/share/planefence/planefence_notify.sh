@@ -244,7 +244,7 @@ then
 
 			TWEET+="%0A${RECORD[6]}"
 			# Add attribution to the tweet:
-			TWEET+="%0A$ATTRIB%0A"
+			TWEET+="%0A$ATTRIB"
 
 			# swap adsbexchange for the $TRACKSERVICE:
 			TWEET="${TWEET//globe.adsbexchange.com/"$TRACKSERVICE"}"
@@ -256,17 +256,9 @@ then
 			if (( tweetlength > 490 )); then
 				echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 490: tweet will be truncated!"
 				maxlength=$(( ${#TWEET} + 490 - tweetlength ))
-			else
-				maxlength=490
+				TWEET="${TWEET:0:$maxlength}"
 			fi
-
-			TWEET="${TWEET:0:$maxlength}"
-
-			# Now add the last field (attribution) without title or training Newline
-			# Reason: this is a URL that Twitter reinterprets and previews on the web
-			# Also, the Newline at the end tends to mess with Twurl
-
-
+			
 			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
 			# Before anything else, let's add the "tweeted" flag to the flight number:
