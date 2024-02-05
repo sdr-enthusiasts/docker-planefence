@@ -67,24 +67,28 @@ def process_alert(config, plane):
     if plane["airline"] != "":
         name = plane['airline']
     
-    if config['PF_TRACKSERVICE'] == "":
+    try:
+        if config['PF_TRACKSERVICE'] == "":
+            trackservice="globe.adsbexchange.com"
+            trackname="AdsbExchange"
+        else:
+            trackservice=config['PF_TRACKSERVICE']
+            trackname=config['PF_TRACKSERVICE'].replace('https://','')
+            trackname=trackname.replace('http://','')
+            trackname=trackname.replace('www.','')
+            trackname=trackname.replace('globe.','')
+            trackname=trackname.replace('radar.','')
+            trackname=trackname.replace('tar1090.','')
+            trackname=trackname.replace('.com','')
+            trackname=trackname.replace('.org','')
+            trackname=trackname.replace('.net','')
+            trackname=trackname.replace('/tar1090','')
+            trackname=trackname.replace('/map','')
+            trackname=trackname.replace('/radar','')
+            trackname=trackname.replace('/','')
+    except:
         trackservice="globe.adsbexchange.com"
         trackname="AdsbExchange"
-    else:
-        trackservice=config['PF_TRACKSERVICE']
-        trackname=config['PF_TRACKSERVICE'].replace('https://','')
-        trackname=trackname.replace('http://','')
-        trackname=trackname.replace('www.','')
-        trackname=trackname.replace('globe.','')
-        trackname=trackname.replace('radar.','')
-        trackname=trackname.replace('tar1090.','')
-        trackname=trackname.replace('.com','')
-        trackname=trackname.replace('.org','')
-        trackname=trackname.replace('.net','')
-        trackname=trackname.replace('/tar1090','')
-        trackname=trackname.replace('/map','')
-        trackname=trackname.replace('/radar','')
-        trackname=trackname.replace('/','')
 
     fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 

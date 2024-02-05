@@ -102,9 +102,12 @@ def process_alert(config, plane):
         description += f"\nSeen near [**{location}**]({plane['adsbx_url']})"
 
     # Replace adsbexchange link with whatever is configured:
-    if config["PA_TRACKSERVICE"]  != "":
-        description.replace("globe.adsbexchange.com",config["PA_TRACKSERVICE"])
-        description.replace("ADSB Exchange",config["PA_TRACKSERVICE"])
+    try:
+        if config["PA_TRACKSERVICE"]  != "":
+            description.replace("globe.adsbexchange.com",config["PA_TRACKSERVICE"])
+            description.replace("ADSB Exchange",config["PA_TRACKSERVICE"])
+    except:
+        pass
 
     webhooks, embed = pf.discord.build(config["DISCORD_FEEDER_NAME"], config["PA_DISCORD_WEBHOOKS"], title, description, color=color)
     pf.attach_media(config, "PA", dbinfo, webhooks, embed)
