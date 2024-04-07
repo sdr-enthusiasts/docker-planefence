@@ -329,10 +329,10 @@ EOF
 				(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
 				NOWTIME=$(date +%s)
 				# check if there are any noise samples
-				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s=$STARTTIME -v e=$$ENDTIME '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log | wc -l)" -gt "0" ]]
+				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s="$STARTTIME" -v e="$ENDTIME" '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]
 				then
 					#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
-					gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$STARTTIME"; end="$ENDTIME"; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='"$NOISEGRAPHFILE"'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+					gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 				else
 					NOISEGRAPHLINK=""
 				fi
@@ -346,11 +346,11 @@ EOF
 			STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
 			ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
 			(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d @`awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log` +%y%m%d-%H%M%S).png || SPECTROFILE=""
+			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d "@$(awk -F, -v a=$STARTTIME -v b=$ENDTIME 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log)" +%y%m%d-%H%M%S).png || SPECTROFILE=""
 			# if it has a weird date, discard it because it wont exist.
 			# otherwise, go get it from the remote server:
 			# debug code: echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
-			[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s $REMOTENOISE/$SPECTROFILE > $OUTFILEDIR/$SPECTROFILE
+			[[ "$SPECTROFILE" == "noisecapt-spectro-691231-190000.png" ]] && SPECTROFILE="" || curl --fail -s "$REMOTENOISE/$SPECTROFILE" > "$OUTFILEDIR/$SPECTROFILE"
 		else
 			SPECTROFILE=""
 		fi
@@ -661,7 +661,7 @@ then
 	while read -r newline
 	do
 		IFS="," read -ra newrec <<< "$newline"
-		if grep "^${newrec[0]}," "$OUTFILECSV" 2>&1 >/dev/null
+		if grep -q "^${newrec[0]}," "$OUTFILECSV"
 		then
 #debug echo -n "There is a matching ICAO... ${newrec[1]} "
 			# there's a ICAO match between the new record and the existing file
@@ -853,14 +853,14 @@ then
 	rm -f /tmp/noiselog 2>/dev/null
 	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" ]] && cp -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "yesterday" +%y%m%d).log" /tmp/noiselog
 	[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" ]] && cat "/usr/share/planefence/persist/.internal/noisecapt-$(date -d "today" +%y%m%d).log" >> /tmp/noiselog
-	gnuplot -e "offset=$(echo "`date +%z` * 36" | bc); start="$(date -d "yesterday" +%s)"; end="$(date +%s)"; infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = "$(date +%Y-%m-%d)")'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
+	gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$(date -d "yesterday" +%s); end=$(date +%s); infile='/tmp/noiselog'; outfile='/usr/share/planefence/html/noiseplot-latest.jpg'; plottitle='Noise Plot over Last 24 Hours (End date = $(date +%Y-%m-%d))'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 	rm -f /tmp/noiselog 2>/dev/null
 
-elif (( $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
+elif (( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 ))
 then
-	ln -sf $(find $TMPDIR/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | tail -1) $OUTFILEDIR/noisecapt-spectro-latest.png
+	ln -sf "$(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | tail -1)" "$OUTFILEDIR"/noisecapt-spectro-latest.png
 else
-	rm -f $OUTFILEDIR/noisecapt-spectro-latest.png 2>/dev/null
+	rm -f "$OUTFILEDIR"/noisecapt-spectro-latest.png 2>/dev/null
 fi
 
 [[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh" || true
