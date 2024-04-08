@@ -243,7 +243,7 @@ EOF
 EOF
 		# If there are spectrograms for today, then also make a column for these:
 		if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
-			printf "<th>Spectrogram</th>\n" >> "$2"
+			printf "	<th>Spectrogram</th>\n" >&3
 			SPECTROPRINT="true"
 		else
 			SPECTROPRINT="false"
@@ -253,7 +253,7 @@ EOF
 	if [[ "$HASTWEET" == "true" ]]
 	then
 		# print a header for the Tweeted column
-		printf "	<th>Notified</th>\n" >> "$2"
+		printf "	<th>Notified</th>\n" >&3
 	fi
 	printf "</tr>\n" >&3
 
@@ -282,8 +282,7 @@ EOF
 
 	# Now write the table
 	COUNTER=1
-	while read -r NEWLINE
-	do
+	while read -r NEWLINE; do
 		[[ "$NEWLINE" == "" ]] && continue # skip empty lines
 		[[ "${NEWLINE::1}" == "#" ]] && continue #skip lines that start with a "#"
 
@@ -300,8 +299,7 @@ EOF
 		# Step 3/5. If there's noise data, get a background color:
 		# (only when we are printing noise data, and there's actual data in this record)
 		LOUDNESS=""
-		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[9]}" != "" ]]
-		then
+		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[9]}" != "" ]]; then
 			(( LOUDNESS = NEWVALUES[7] - NEWVALUES[11] ))
 			BGCOLOR="$RED"
 			((  LOUDNESS <= YELLOWLIMIT )) && BGCOLOR="$YELLOW"
@@ -310,16 +308,14 @@ EOF
 
 		# Step 4/5. Get a noise graph
 		# (only when we are printing noise data, and there's actual data in this record)
-		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
-		then
+		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]; then
 			# First, the noise graph:
 			# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
 			NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${NEWVALUES[2]}" +"%y%m%d-%H%M%S")-${NEWVALUES[0]}.png"
 			NOISEGRAPHLINK=${NOISEGRAPHFILE##*/}
 
 			# If no graph already exists, create one:
-			if [[ ! -f "$NOISEGRAPHFILE" ]]
-			then
+			if [[ ! -f "$NOISEGRAPHFILE" ]]; then
 				# set some parameters for the graph:
 				TITLE="Noise plot for ${NEWVALUES[1]#@} at ${NEWVALUES[3]}"
 				STARTTIME=$(date -d "${NEWVALUES[2]}" +%s)
@@ -328,8 +324,7 @@ EOF
 				(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 15 )) && STARTTIME=$(( STARTTIME - 15))
 				NOWTIME=$(date +%s)
 				# check if there are any noise samples
-				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s="$STARTTIME" -v e="$ENDTIME" '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]
-				then
+				if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && [[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && [[ "$(awk -v s="$STARTTIME" -v e="$ENDTIME" '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]; then
 					#echo debug gnuplot start=$STARTTIME end=$ENDTIME infile=/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log outfile=$NOISEGRAPHFILE
 					gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
 				else
@@ -340,17 +335,26 @@ EOF
 
 		# Step 5/5. Get a spectrogram
 		# (only when we are printing noise data, and there's actual data in this record)
-		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]
-		then
+		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]; then
 			STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
 			ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
 			(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && SPECTROFILE=noisecapt-spectro-$(date -d "@$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)" +%y%m%d-%H%M%S).png || SPECTROFILE=""
-			# go get it from the remote server:
-			# debug code: echo $REMOTENOISE/$SPECTROFILE to $OUTFILEDIR/$SPECTROFILE
-			if ! curl --fail -s "$REMOTENOISE/$SPECTROFILE" > "$OUTFILEDIR/$SPECTROFILE"; then SPECTROFILE=""; fi
-		else
-			SPECTROFILE=""
+
+			# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
+			# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
+			spectrotime="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)"
+			sf="noisecapt-spectro-$(date -d "@${spectrotime}" +"%y%m%d-%H%M%S").png"
+
+			if [[ ! -s "$OUTFILEDIR/$sf" ]]; then
+				# we don't have $sf locally, or if it's an empty file, we get it:
+				curl -sL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf"
+			fi 
+			# shellcheck disable=SC2012
+			if [[ ! -s "$OUTFILEDIR/$sf" ]] || (( $(ls -s1 "$OUTFILEDIR/$sf" | awk '{print $1}') < 10 )); then
+				# we don't have $sf (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
+				rm -f "$OUTFILEDIR/$sf"
+				sf=""
+			fi
 		fi
 
 		# --------------------------------------------------------------
@@ -364,8 +368,7 @@ EOF
 		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]}" "${NEWVALUES[0]}" >&3 # ICAO
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${CALLSIGN}/redirect" "${CALLSIGN}" >&3 # Flight number; strip "@" if there is any at the beginning of the record
-		if [[ "$AIRLINECODES" != "" ]]
-		then
+		if [[ "$AIRLINECODES" != "" ]]; then
 			if [[ "${CALLSIGN}" != "" ]] && [[ "${CALLSIGN}" != "link" ]]; then
 
 				# look up callsign in associative array to get the airline name
@@ -382,15 +385,13 @@ EOF
 				fi
 
 				# update associative array to be written to disk
-				if [[ -z ${AIRLINENAME} ]]
-                                then
+				if [[ -z ${AIRLINENAME} ]]; then
 					NEWNAMES[${CALLSIGN}]="UNKNOWN"
 				else
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]
-                                then
+				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]; then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
 					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3 || printf "   <td></td>\n" >&3
@@ -405,13 +406,10 @@ EOF
 		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >&3 # min distance
 
 		# Print the noise values if we have determined that there is data
-		if [[ "$HASNOISE" == "true" ]]
-		then
+		if [[ "$HASNOISE" == "true" ]]; then
 			# First the loudness field, which needs a color and a link to a noise graph:
-			if [[ "$LOUDNESS" != "" ]]
-			then
-				if [[ "$NOISEGRAPHLINK" != "" ]]
-				then
+			if [[ -n "$LOUDNESS" ]]; then
+				if [[ -n "$NOISEGRAPHLINK" ]]; then
 					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td>\n" "$BGCOLOR" "$NOISEGRAPHLINK" "$LOUDNESS" >&3
 				else
 					printf "   <td style=\"background-color: %s\">%s dB</td>\n" "$BGCOLOR" "$LOUDNESS" >&3
@@ -420,10 +418,8 @@ EOF
 				printf "   <td></td>\n" >&3 # print an empty field
 			fi
 
-			for i in {7..11}
-			do
-				if [[ "${NEWVALUES[i]}" != "" ]]
-				then
+			for i in {7..11}; do
+				if [[ "${NEWVALUES[i]}" != "" ]]; then
 					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[i]}" >&3 # print actual value with "dBFS" unit
 				else
 					printf "   <td></td>\n" >&3 # print an empty field
@@ -431,11 +427,9 @@ EOF
 			done
 
 			# print SpectroFile:
-			if [[ "$SPECTROPRINT" == "true" ]]
-			then
-				if [[ -f "$OUTFILEDIR/$SPECTROFILE" ]]
-				then
-					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$SPECTROFILE" >&3
+			if [[ "$SPECTROPRINT" == "true" ]]; then
+				if [[ -n "$sf" ]] && [[ -f "$OUTFILEDIR/$sf" ]]; then
+					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td>\n" "$sf" >&3
 				else
 					printf "   <td></td>\n" >&3
 				fi
@@ -443,14 +437,11 @@ EOF
 		fi
 
 		# If there is a tweet value, then provide info and link as available
-		if [[ "$HASTWEET" == "true" ]]
-		then
+		if [[ "$HASTWEET" == "true" ]]; then
 			# Was there a tweet?
-			if [[ "${NEWVALUES[1]::1}" == "@" ]]
-			then
+			if [[ "${NEWVALUES[1]::1}" == "@" ]]; then
 				# Print "yes" and add a link if available
-				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]
-				then
+				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]; then
 					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
 					printf "   <td>discord</td>\n" >&3
@@ -850,8 +841,7 @@ gtag('config', 'UA-171737107-1');
 <script type="text/javascript" src="sort-table.js"></script>
 EOF
 
-if [[ "${AUTOREFRESH,,}" == "true" ]]
-then
+if [[ "${AUTOREFRESH,,}" == "true" ]]; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<meta http-equiv="refresh" content="$REFRESH_INT">
