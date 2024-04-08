@@ -2,7 +2,7 @@
 # NOISE2FENCE -- a script for extracting recorded noise values from NOISECAPT
 # and adding them to CSV files that have been created by PlaneFence
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/planefence/
@@ -15,6 +15,7 @@
 # Feel free to make changes to the variables between these two lines. However, it is
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 #
+# shellcheck disable=SC1091
 [[ -f "/usr/share/planefence/planefence.conf" ]] && source /usr/share/planefence/planefence.conf
 
 CSVDIR=/usr/share/planefence/html
@@ -26,14 +27,14 @@ CSVTMP=/usr/share/planefence/persist/.internal/pf-noise-csv.tmp
 NOISETMP=/usr/share/planefence/persist/.internal/pf-noise-data.tmp
 LOGFILE=/tmp/noise2fence.log
 VERBOSE=
-VERSION=0.2-docker
+VERSION=0.3-docker
 # -----------------------------------------------------------------------------------
 # Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and this URL is reachable, we collect noise data
 # Note that this doesn't check for the validity of the actual URL, just that we can reach it.
 #replace wget with curl to save disk space --was [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-[[ "x$REMOTENOISE" != "x" ]] && [[ "$(curl  --fail -s -o /dev/null $REMOTENOISE ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
+if [[ -n "$REMOTENOISE" ]] && curl  --fail -s -o /dev/null "$REMOTENOISE"; then NOISECAPT=1; else NOISECAPT=0; fi
 
 if [ "$NOISECAPT" != "1" ]
 then
@@ -63,20 +64,19 @@ CSVFILE=$CSVNAMEBASE$NOISEDATE$CSVNAMEEXT
 
 
 # replace wget by curl to save disk space. was: if [ "$(wget -q -O - $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
-if [ "$(curl --fail -s $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT > $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp ; echo $?)" != "0" ]
+if ! curl --fail -s "$REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT" > "$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp"
 then
 	echo "Can't reach $REMOTENOISE/${LOGNAMEBASE##*/}$NOISEDATE$LOGNAMEEXT ... exiting"
 	exit 1
 fi
 
-mv -f $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
+mv -f "$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT.tmp" "$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT"
 LOG "Got $LOGNAMEBASE$NOISEDATE$LOGNAMEEXT from $REMOTELOG"
 
-NOISEFILE=$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT
+NOISEFILE="$LOGNAMEBASE$NOISEDATE$LOGNAMEEXT"
 
 # make sure there's no stray TMP file around, so we can directly append
-[ -f "$CSVTMP" ] && rm "$CSVTMP"
-[ -f "$NOISETMP" ] && rm "$NOISETMP"
+rm -f "$CSVTMP" "$NOISETMP"
 
 #Now iterate through the CSVFILE:
 LOG "------------------------------"
@@ -88,13 +88,13 @@ then
 	# Clean the  $CSVFILE first
 #	cat "$CSVFILE" | tr -d '\r' >/tmp/noisetmp.tmp
 #	mv /tmp/noisetmp.tmp "$CSVFILE"
-	while read CSVLINE
+	while read -r CSVLINE
 	do
-		XX=$(echo -n $CSVLINE | tr -d '[:cntrl:]')
+		XX=$(echo -n "$CSVLINE" | tr -d '[:cntrl:]')
 		CSVLINE=$XX
 		unset RECORD
 		# Read the line, but first clean it up as it appears to have a newline in it
-		IFS="," read -aRECORD <<< "$CSVLINE"
+		IFS="," read -ra RECORD <<< "$CSVLINE"
 		LOG "${#RECORD[*]} records in the current line: (${RECORD[*]})"
 		# if there's no audio stored in the record
 		if [ "${#RECORD[*]}" -le "7" ]
@@ -115,7 +115,7 @@ then
 			(( NUMPOS=NUMPOS+1 ))
 			LOG "Start Position: $STARTPOS, Number of samples: $NUMPOS"
 			# Then put the corresponding noisecapt records into $NOISETMP.
-			tail --lines=+"$STARTPOS" $NOISEFILE | head --lines="$NUMPOS" > $NOISETMP
+			tail --lines=+"$STARTPOS" "$NOISEFILE" | head --lines="$NUMPOS" > $NOISETMP
 			#RECORD[6]="${RECORD[6]//[$'\t\r\n']}"
 			# Next is to figure out the data that we want to add to the PLANEFENCE record.
 			# $NOISEFILE and $NOISECAPT have the following format, with all audio values in dBFS:
@@ -133,12 +133,7 @@ then
 		fi
 		# Now write everything back to $CSVTMP, which we will then copy back over the old CSV file
 		( IFS=','; echo "${RECORD[*]}" >> "$CSVTMP" )
-		LOG "The record now contains $(IFS=','; echo ${RECORD[*]})"
-		#for i in {0..10}
-		#do
-		#	printf "%s," "${RECORD[i]}" >> "$CSVTMP"
-		#done
-		# printf "%s\n" "${RECORD[11]}" >> "$CSVTMP"
+		LOG "The record now contains ${RECORD[*]}"
 	done < "$CSVFILE"
 
 	# Now, if there is a $CSVTMP file, we will overwrite $CSVFILE with it.
