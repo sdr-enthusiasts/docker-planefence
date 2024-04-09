@@ -3,7 +3,6 @@
 #shellcheck disable=SC2015,SC1091
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
-# based on socket30003
 #
 # Usage: ./planefence.sh
 #
