@@ -73,7 +73,7 @@ fi
 
 # first get DISTANCE unit:
 DISTUNIT="mi"
-DISTCONV=1
+#DISTCONV=1
 if [[ -f "$SOCKETCONFIG" ]]; then
 	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
 		nauticalmile)
@@ -442,7 +442,7 @@ EOF
 			if [[ "${NEWVALUES[1]::1}" == "@" ]]; then
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[-1]}")"  >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")"  >&3
 				else
 					printf "   <td>discord</td>\n" >&3
 				fi
