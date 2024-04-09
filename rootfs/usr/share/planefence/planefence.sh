@@ -239,6 +239,7 @@ EOF
 		<th class="js-sort-number">5 min avg</th>
 		<th class="js-sort-number">10 min avg</th>
 		<th class="js-sort-number">1 hr avg</th>
+		<th>Spectrogram</th>\n
 EOF
 		# # If there are spectrograms for today, then also make a column for these:
 		# if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
