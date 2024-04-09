@@ -240,13 +240,18 @@ EOF
 		<th class="js-sort-number">10 min avg</th>
 		<th class="js-sort-number">1 hr avg</th>
 EOF
-		# If there are spectrograms for today, then also make a column for these:
-		if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
-			printf "	<th>Spectrogram</th>\n" >&3
-			SPECTROPRINT="true"
-		else
-			SPECTROPRINT="false"
-		fi
+		# # If there are spectrograms for today, then also make a column for these:
+		# if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
+		# 	printf "	<th>Spectrogram</th>\n" >&3
+		# 	SPECTROPRINT="true"
+		# else
+		# 	SPECTROPRINT="false"
+		# fi
+		# ^^^ this doesn't really work - there won't be any spectrograms at the beginning of the day, and 
+		# it will never create any, because SPECTROPRINT stays FALSE forever.
+		# Instead, we'll set SPECTROPRINT=true always when HASNOISE=true. This may cause an empty column, but that's
+		# preferred over not printing any spectrograms.
+		SPECTROPRINT="true"
 	fi
 
 	if [[ "$HASTWEET" == "true" ]]
