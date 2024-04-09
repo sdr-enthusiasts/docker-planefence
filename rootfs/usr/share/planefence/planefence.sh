@@ -239,7 +239,7 @@ EOF
 		<th class="js-sort-number">5 min avg</th>
 		<th class="js-sort-number">10 min avg</th>
 		<th class="js-sort-number">1 hr avg</th>
-		<th>Spectrogram</th>\n
+		<th>Spectrogram</th>
 EOF
 		# # If there are spectrograms for today, then also make a column for these:
 		# if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
@@ -943,7 +943,7 @@ printf "<li>Click on the Owner Information to see the FAA record for this plane 
 [[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n" >> "$OUTFILEHTMTMP"
 
 printf "<li> Press the header of any of the columns to sort by that column.\n"  >> "$OUTFILEHTMTMP"
-printf "</ul>\n"  >> "$OUTFILEHTMTMP"
+printf "</ul>"  >> "$OUTFILEHTMTMP"
 
 [[ "$BASETIME" != "" ]] && echo "12. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the PF table to the website" || true
 
