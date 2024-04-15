@@ -295,13 +295,13 @@ EOF
 
 		# Do some prep work:
 		# --------------------------------------------------------------
-		# Step 1/5. Replace the map zoom by whatever $HEATMAPZOOM contains
+		# Step 1/6. Replace the map zoom by whatever $HEATMAPZOOM contains
 		# this used to not work (-z instead of -n), to speed it up now, do it on the whole INPUT at once instead per line
 
-		# Step 2/5. If there is no flight number, insert the word "link"
+		# Step 2/6. If there is no flight number, insert the word "link"
 		[[ "${NEWVALUES[1]#@}" == "" ]] && NEWVALUES[1]+="link"
 
-		# Step 3/5. If there's noise data, get a background color:
+		# Step 3/6. If there's noise data, get a background color:
 		# (only when we are printing noise data, and there's actual data in this record)
 		LOUDNESS=""
 		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[9]}" != "" ]]; then
@@ -311,7 +311,7 @@ EOF
 			((  LOUDNESS <= GREENLIMIT )) && BGCOLOR="$GREEN"
 		fi
 
-		# Step 4/5. Get a noise graph
+		# Step 4/6. Get a noise graph
 		# (only when we are printing noise data, and there's actual data in this record)
 		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]; then
 			# First, the noise graph:
@@ -338,7 +338,7 @@ EOF
 			fi
 		fi
 
-		# Step 5/5. Get a spectrogram
+		# Step 5/6. Get a spectrogram
 		# (only when we are printing noise data, and there's actual data in this record)
 		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]; then
 			STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
@@ -359,6 +359,30 @@ EOF
 				# we don't have $sf (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
 				rm -f "$OUTFILEDIR/$sf"
 				sf=""
+			fi
+		fi
+
+		# Step 6/6. Get a MP3 file
+		# (only when we are printing noise data, and there's actual data in this record)
+		if [[ "$HASNOISE" == "true" ]] && [[ "${NEWVALUES[7]}" != "" ]]; then
+			STARTTIME=$(date +%s -d "${NEWVALUES[2]}")
+			ENDTIME=$(date +%s -d "${NEWVALUES[3]}")
+			(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
+
+			# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
+			# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
+			mp3time="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)"
+			mp3f="noisecapt-recording-$(date -d "@${mp3time}" +"%y%m%d-%H%M%S").mp3"
+
+			if [[ ! -s "$OUTFILEDIR/$mp3f" ]]; then
+				# we don't have $sf locally, or if it's an empty file, we get it:
+				curl -sL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f"
+			fi 
+			# shellcheck disable=SC2012
+			if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 10 )); then
+				# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
+				rm -f "$OUTFILEDIR/$mp3f"
+				mp3f=""
 			fi
 		fi
 
@@ -423,7 +447,17 @@ EOF
 				printf "   <td></td>\n" >&3 # print an empty field
 			fi
 
-			for i in {7..11}; do
+			if [[ "${NEWVALUES[7]}" != "" ]]; then
+				if [[ -n "$mp3f" ]] && [[ -f "$OUTFILEDIR/$mp3f" ]]; then 
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s</td>\n" "$mp3f" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
+				else
+					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
+				fi
+			else
+				printf "   <td></td>\n" >&3 # print an empty field
+			fi
+
+			for i in {8..11}; do
 				if [[ "${NEWVALUES[i]}" != "" ]]; then
 					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[i]}" >&3 # print actual value with "dBFS" unit
 				else
