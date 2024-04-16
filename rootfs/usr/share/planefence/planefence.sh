@@ -449,7 +449,7 @@ EOF
 
 			if [[ "${NEWVALUES[7]}" != "" ]]; then
 				if [[ -n "$mp3f" ]] && [[ -f "$OUTFILEDIR/$mp3f" ]]; then 
-					printf "   <td><a href=\"%s dBFS\" target=\"_blank\">%s</td>\n" "$mp3f" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td>\n" "$mp3f" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
 				else
 					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
 				fi
