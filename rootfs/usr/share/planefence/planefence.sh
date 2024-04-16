@@ -379,7 +379,7 @@ EOF
 				curl -sL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f"
 			fi 
 			# shellcheck disable=SC2012
-			if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 10 )); then
+			if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 4 )); then
 				# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
 				rm -f "$OUTFILEDIR/$mp3f"
 				mp3f=""
@@ -449,7 +449,7 @@ EOF
 
 			if [[ "${NEWVALUES[7]}" != "" ]]; then
 				if [[ -n "$mp3f" ]] && [[ -f "$OUTFILEDIR/$mp3f" ]]; then 
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s</td>\n" "$mp3f" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
+					printf "   <td><a href=\"%s dBFS\" target=\"_blank\">%s</td>\n" "$mp3f" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
 				else
 					printf "   <td>%s dBFS</td>\n" "${NEWVALUES[7]}" >&3 # print actual value with "dBFS" unit
 				fi
