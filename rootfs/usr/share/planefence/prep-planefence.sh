@@ -299,20 +299,20 @@ then
 	# strip http:// https://
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
-	if [[ "${PF_MASTODON,,}" == "on" ]]
-	then
+	if chk_enabled "${PF_MASTODON,,}"; then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planefence "MASTODON_SERVER" "$MASTODON_SERVER"
-		[[ -n "$PF_MASTODON_VISIBILITY" ]] && configure_planefence "MASTODON_VISIBILITY" "$PF_MASTODON_VISIBILITY" || configure_planefence "MASTODON_VISIBILITY" "unlisted"
+		configure_planefence "MASTODON_VISIBILITY" "${PF_MASTODON_VISIBILITY:-unlisted}"
 	else
 		configure_planefence "MASTODON_ACCESS_TOKEN" ""
 		configure_planefence "MASTODON_SERVER" ""
 	fi
-	if [[ "${PA_MASTODON,,}" == "on" ]]
+	if chk_enabled "${PA_MASTODON,,}"
 	then
 		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
-		[[ -n "$PA_MASTODON_VISIBILITY" ]] && configure_planealert "MASTODON_VISIBILITY" "$PA_MASTODON_VISIBILITY" || configure_planealert "MASTODON_VISIBILITY" "unlisted"
+		configure_planealert "MASTODON_VISIBILITY" "${PA_MASTODON_VISIBILITY:-unlisted}"
+		configure_planealert "MASTODON_MAXIMGS" "${PA_MASTODON_MAXIMGS:-1}"
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""
 		configure_planealert "MASTODON_SERVER" ""

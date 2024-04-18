@@ -403,7 +403,7 @@ then
 			do
 				fld="$(echo ${field[$i]}|xargs)"
 				ext="${fld: -3}"
-				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < 4 ))
+				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < MASTODON_MAXIMGS ))
 				then
 					rm -f "/tmp/planeimg.*"
 					[[ "$ext" == "peg" ]] && ext="jpeg" || true
