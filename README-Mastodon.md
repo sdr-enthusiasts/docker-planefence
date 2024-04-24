@@ -59,12 +59,14 @@ PF_MASTODON=ON
 PA_MASTODON=ON
 PA_MASTODON_VISIBILITY=unlisted
 PF_MASTODON_VISIBILITY=unlisted
+MASTODON_RETENTION_TIME=7
 ```
 
 Replace by the applicable server name and access token.
 If `PF_MASTODON` is not set to `ON`, then no PlaneFence Mastodon notifications will be sent.
 If `PA_MASTODON` is not set to `ON`, then no Plane-Alert Mastodon notifications will be sent.
 `Px_MASTODON_VISIBILITY` can be `public`, `unlisted`, or `private`
+`MASTODON_RETENTION_TIME` is the retention time of any messages, in days (not yet enforced, future functionality)
 
 ## Summary of License Terms
 

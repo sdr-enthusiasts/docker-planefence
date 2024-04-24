@@ -297,6 +297,7 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
 		configure_planealert "MASTODON_VISIBILITY" "${PA_MASTODON_VISIBILITY:-unlisted}"
 		configure_planealert "MASTODON_MAXIMGS" "${PA_MASTODON_MAXIMGS:-1}"
+		configure_planealert "MASTODON_RETENTION_TIME" "${MASTODON_RETENTION_TIME:-7}"
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""
 		configure_planealert "MASTODON_SERVER" ""
