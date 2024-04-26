@@ -24,11 +24,16 @@ delete_toot() {
     local toot_id="$1"
     local result
     if result="$(curl -s --fail -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/statuses/$toot_id" 2>&1)"; then
-        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "successfully deleted" || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && echo "successfully deleted" || true
     else
-        "${s6wrap[@]}" echo "error: $result"
+        echo "error: $result"
     fi
 }
+
+if chk_disabled "$MASTODON_RETENTION_TIME"; then
+    "${s6wrap[@]}" echo "MASTODON_RETENTION_TIME is set to $MASTODON_RETENTION_TIME (disabled); nothing to do!"
+    exit 0
+fi
 
 if [[ -z "$MASTODON_RETENTION_TIME" ]]; then
     "${s6wrap[@]}" echo "Warning: MASTODON_RETENTION_TIME not set. Defaulting to 14 days."
@@ -61,21 +66,21 @@ while : ; do
         exit
     fi
     last_id="${toot_ids[-1]}"
-    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo " ${#toot_ids[@]} toots" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && echo " ${#toot_ids[@]} toots" || true
     for t in "${toot_ids[@]}"; do
         if [[ -z "${toot_dates[$t]}" ]]; then
             toot_dates[$t]="$(date -d "$(jq -r 'map(select(.id == "'"$t"'"))[].created_at'  <<< "$toots")" +%s)"
             [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo -n "$t --> $(date -d @"${toot_dates[$t]}") " || true
             if (( (now - toot_dates[$t])/(60*60*24) > RETENTION_DAYS )); then
-                [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo -n " expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days): " || true
+                [[ "${LOGLEVEL,,}" != "error" ]] && echo -n " expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days): " || true
                 if [[ "$1" == "delete" ]]; then
-                    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo -n "deleting... " || true
+                    [[ "${LOGLEVEL,,}" != "error" ]] && echo -n "deleting... " || true
                     delete_toot "$t";
                 else
-                    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "(not deleted)" || true
+                    [[ "${LOGLEVEL,,}" != "error" ]] && echo "(not deleted)" || true
                 fi 
             else
-                [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo " not expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days)" || true
+                [[ "${LOGLEVEL,,}" != "error" ]] && echo " not expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days)" || true
             fi
         else
             [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "$t --> duplicate, we're done!" || true
