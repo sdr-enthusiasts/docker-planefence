@@ -18,15 +18,14 @@ source /scripts/common
 ACCESS_TOKEN=$MASTODON_ACCESS_TOKEN
 INSTANCE_URL="https://$MASTODON_SERVER"
 
-RETENTION_DAYS="${MASTODON_RETENTION_TIME:-14}"
+RETENTION_DAYS="${MASTODON_RETENTION_TIME:-5}"
 
 delete_toot() {
     local toot_id="$1"
     local result
-    if result="$(curl -s --fail -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/statuses/$toot_id" 2>&1)"; then
-        [[ "${LOGLEVEL,,}" != "error" ]] && echo "successfully deleted" || true
-    else
-        echo "error: $result"
+    if ! result="$(curl -s --fail -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/statuses/$toot_id" 2>&1)"; then
+        echo ""
+        "${s6wrap[@]}" echo "error deleting $toot_id: $result"
     fi
 }
 
@@ -36,7 +35,7 @@ if chk_disabled "$MASTODON_RETENTION_TIME"; then
 fi
 
 if [[ -z "$MASTODON_RETENTION_TIME" ]]; then
-    "${s6wrap[@]}" echo "Warning: MASTODON_RETENTION_TIME not set. Defaulting to 14 days."
+    "${s6wrap[@]}" echo "Warning: MASTODON_RETENTION_TIME not set. Defaulting to $RETENTION_DAYS days."
 fi
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]]; then
@@ -55,36 +54,42 @@ declare -A toot_dates
 now="$(date +%s)"
 
 masto_id="$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/accounts/verify_credentials" | jq -r '.id')"
-
+counter=0
 while : ; do
-    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo -n "Indexing Media IDs round $((++counter))" || true
+    expired=0
+    unexpired=0
+    oldest=33000000000
+    newest=0
+    output=("Indexing Toots")
     toots="$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/accounts/$masto_id/statuses?limit=40${last_id:+&max_id=}${last_id}")"
     # shellcheck disable=SC2207
     toot_ids=($(jq -r '.[] | .id' <<< "$toots" 2>/dev/null))
     if (( ${#toot_ids[@]} == 0)); then
-        [[ "${LOGLEVEL,,}" != "error" ]] && echo "No more toots, we are done!" || true
-        exit
+        "${s6wrap[@]}" echo "No more Toots; done!"
+        exit 0
     fi
     last_id="${toot_ids[-1]}"
-    [[ "${LOGLEVEL,,}" != "error" ]] && echo " ${#toot_ids[@]} toots" || true
+
+    output+=("$((counter+1)) - $((counter+${#toot_ids[@]})) (${#toot_ids[@]} toots).")
+    (( counter+=${#toot_ids[@]} )) || true
     for t in "${toot_ids[@]}"; do
         if [[ -z "${toot_dates[$t]}" ]]; then
             toot_dates[$t]="$(date -d "$(jq -r 'map(select(.id == "'"$t"'"))[].created_at'  <<< "$toots")" +%s)"
-            [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo -n "$t --> $(date -d @"${toot_dates[$t]}") " || true
+            if (( toot_dates[$t] < oldest )); then oldest="${toot_dates[$t]}"; fi
+            if (( toot_dates[$t]  > newest )); then newest="${toot_dates[$t]}"; fi
             if (( (now - toot_dates[$t])/(60*60*24) > RETENTION_DAYS )); then
-                [[ "${LOGLEVEL,,}" != "error" ]] && echo -n " expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days): " || true
+                (( expired++ )) || true
                 if [[ "$1" == "delete" ]]; then
-                    [[ "${LOGLEVEL,,}" != "error" ]] && echo -n "deleting... " || true
                     delete_toot "$t";
-                else
-                    [[ "${LOGLEVEL,,}" != "error" ]] && echo "(not deleted)" || true
                 fi 
             else
-                [[ "${LOGLEVEL,,}" != "error" ]] && echo " not expired (age: $(( (now - toot_dates[$t])/(60*60*24) )) days)" || true
+                (( unexpired++ )) || true
             fi
         else
-            [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "$t --> duplicate, we're done!" || true
+            "${s6wrap[@]}" echo "No more Toots; done!"
             exit
         fi
     done
+    output+=("($unexpired unexpired; $expired expired; oldest $(date -d "@$oldest") ($(( (now - oldest)/(60*60*24) )) days); newest $(date -d "@$newest") ($(( (now - newest)/(60*60*24) )) days))")
+    "${s6wrap[@]}" echo "${output[@]}"
 done
