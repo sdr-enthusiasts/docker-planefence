@@ -1,10 +1,10 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC2015,SC2268,SC2174,SC1091,SC2154
 # -----------------------------------------------------------------------------------
-# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence4docker/
+# https://github.com/sdr-enthusiasts/planefence4docker/
 #
 # Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
 # as command separator, but use something else instead, for example '|'
@@ -51,6 +51,7 @@ chmod -fR a+rw /usr/share/planefence/persist/{.[!.]*,*}
 chmod a=rwx /usr/share/planefence/persist/planepix
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
+	# shellcheck disable=SC1091
 	source /usr/share/planefence/persist/planefence.config
 	set +o allexport
 else
@@ -215,9 +216,20 @@ if chk_enabled "${PF_TWEET,,}"; then
 			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-            [[ -n "$PF_TWATTRIB" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
-        fi
+      [[ -n "$PF_TWATTRIB" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
+  fi
 fi
+
+# Despite the name, this variable also works for Mastodon and Discord notifications:
+# You can use PF_TWATTRIB/PA_TWATTRIB or PF_ATTRIB/PA_ATTRIB or simply $ATTRIB
+# If PA_[TW]ATTRIB isn't set, but PF_[TW]ATTRIB has a value, then the latter will also be used for Plane-Alert
+# Finally, if you set ATTRIB to a value, we will use that for both PA and PF and ignore any PF_[TW]ATTRIB/PA_[TW]ATTRIB values
+[[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planefence "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
+[[ -n "$PA_TWATTRIB$PA_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PA_TWATTRIB$PA_ATTRIB\""
+[[ -z "$PA_TWATTRIB$PA_ATTRIB" ]] && [[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
+[[ -n "$ATTRIB" ]] && configure_both "ATTRIB" "\"$ATTRIB\""
+
+
 # -----------------------------------------------------------------------------------
 #
 # Change the heatmap height and width if they are defined in the .env parameter file:
@@ -227,8 +239,7 @@ fi
 #
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
 if find /usr/share/planefence/html/planefence-??????.html >/dev/null 2>&1; then
-	for i in /usr/share/planefence/html/planefence-??????.html
-	do
+	for i in /usr/share/planefence/html/planefence-??????.html; do
 		[[ -n "$PF_MAPWIDTH" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
 		[[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' "$i"
 		[[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' "$i"
@@ -284,6 +295,10 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	# strip http:// https://
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
+	if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$mast_result" >/dev/null 2>&1; then
+		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<< "$mast_result")" 
+	fi
 	if chk_enabled "${PF_MASTODON,,}"; then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planefence "MASTODON_SERVER" "$MASTODON_SERVER"
@@ -352,6 +367,12 @@ fi
 # Put the MOTDs in place:
 configure_planefence "PF_MOTD" "\"$PF_MOTD\""
 configure_planealert "PA_MOTD" "\"$PA_MOTD\""
+#
+#--------------------------------------------------------------------------------
+# Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
+[[ -n "$PF_TRACKSERVICE" ]] && configure_planefence "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
+[[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
+[[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
 #
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,

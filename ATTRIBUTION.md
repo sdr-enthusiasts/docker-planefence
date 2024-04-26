@@ -1,12 +1,12 @@
 Planefence, and its associated programs, data, tools, documentation, and example code, is
-Copyright (C) 2020 - 2022 by Ramon F. Kolb, KX1T.
+Copyright (C) 2020 - 2024 by Ramon F. Kolb, KX1T.
 KX1T can be reached via email at k x 1 t   (at)   a m s a t   d o t  org
 or via snail mail at PO Box 11, Belmont, MA 02478, USA.
 
 This file contains attributions and license terms of software, databases, and other items that were used in the creation and operation of Planefence and Plane-Alert. We are sincerely grateful to all who contributed.
 If you think that we included parts of your software but we didn't attribute you properly, please contact us and we will add attribution.
 
-- dump1090.socket30003 is used under the GNU GENERAL PUBLIC LICENSE, version 3. This program is (C) by Ted Sluis (@tedsluis), and a slightly modified fork can be found at https://github.com/kx1t/dump1090.socket30003. Any modification to dump1090.socket30003 are Copyright by their respective owners
+- dump1090.socket30003 is used under the GNU GENERAL PUBLIC LICENSE, version 3. This program is (C) by Ted Sluis (@tedsluis), and a slightly modified fork can be found at https://github.com/sdr-enthusiasts/dump1090.socket30003. Any modification to dump1090.socket30003 are Copyright by their respective owners
 
 - Maps are generated thanks to OpenStreetMap. OpenStreetMap® is open data, licensed under the Open Data Commons Open Database License (ODbL) by the OpenStreetMap Foundation (OSMF). "© OpenStreetMap contributors". More information, including license terms, can be found here: https://www.openstreetmap.org/copyright
 

@@ -5,10 +5,10 @@
 # Usage: pf_php.sh [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>
 #        File argument is always required and at least 1 additional argument is required.
 #
-# Copyright 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # Summary of License Terms
 # This program is free software: you can redistribute it and/or modify it under the terms of

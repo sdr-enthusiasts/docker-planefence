@@ -4,10 +4,13 @@
 #
 # Usage: ./send-discord-alert.py <inputfile>
 #
-# Copyright 2022 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2022-2024 Ramon F. Kolb, kx1t
+# Copyright 2022 Justin DiPierro
+#
+# Licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -63,6 +66,29 @@ def process_alert(config, plane):
     name = plane['tail_num']
     if plane["airline"] != "":
         name = plane['airline']
+    
+    try:
+        if config['PF_TRACKSERVICE'] == "":
+            trackservice="globe.adsbexchange.com"
+            trackname="AdsbExchange"
+        else:
+            trackservice=config['PF_TRACKSERVICE']
+            trackname=config['PF_TRACKSERVICE'].replace('https://','')
+            trackname=trackname.replace('http://','')
+            trackname=trackname.replace('www.','')
+            trackname=trackname.replace('globe.','')
+            trackname=trackname.replace('radar.','')
+            trackname=trackname.replace('tar1090.','')
+            trackname=trackname.replace('.com','')
+            trackname=trackname.replace('.org','')
+            trackname=trackname.replace('.net','')
+            trackname=trackname.replace('/tar1090','')
+            trackname=trackname.replace('/map','')
+            trackname=trackname.replace('/radar','')
+            trackname=trackname.replace('/','')
+    except:
+        trackservice="globe.adsbexchange.com"
+        trackname="AdsbExchange"
 
     fa_link = pf.flightaware_link(plane['icao'], plane['tail_num'])
 
@@ -70,7 +96,7 @@ def process_alert(config, plane):
         config["DISCORD_FEEDER_NAME"],
         config["PF_DISCORD_WEBHOOKS"],
         f"{name} is overhead at {pf.altitude_str(config, plane['alt'])}",
-        f"[Track on ADS-B Exchange]({plane['adsbx_url']})")
+        f"[Track on {trackname}]({plane['adsbx_url'].replace('globe.adsbexchange.com',trackservice)})")
 
     pf.attach_media(config, "PF", plane, webhooks, embed)
 

@@ -3,10 +3,10 @@
 
 APPNAME="$(hostname)/get-silhouettes"
 # -----------------------------------------------------------------------------------
-# Copyright 2020, 2021 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence4docker/
+# https://github.com/sdr-enthusiasts/planefence4docker/
 #
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------

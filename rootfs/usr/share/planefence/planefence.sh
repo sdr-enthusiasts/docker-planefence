@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC2015,SC1091
+#shellcheck disable=SC2015,SC1091,SC2129
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 #
@@ -9,7 +9,7 @@
 # Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -395,7 +395,7 @@ EOF
 		printf "   <td>%s</td>\n" "$((COUNTER++))" >&3 # table index number
 		#printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >&3 # ICAO
 		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]}" "${NEWVALUES[0]}" >&3 # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${NEWVALUES[0]}" >&3 # ICAO
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${NEWVALUES[0]}/ident/${CALLSIGN}/redirect" "${CALLSIGN}" >&3 # Flight number; strip "@" if there is any at the beginning of the record
 		if [[ "$AIRLINECODES" != "" ]]; then
 			if [[ "${CALLSIGN}" != "" ]] && [[ "${CALLSIGN}" != "link" ]]; then
@@ -481,7 +481,7 @@ EOF
 			if [[ "${NEWVALUES[1]::1}" == "@" ]]; then
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")"  >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
 				else
 					printf "   <td>discord</td>\n" >&3
 				fi
@@ -761,7 +761,11 @@ then
 fi
 
 # rewrite LINESFILTERED to file
-[[ -f /run/planefence/filtered-$FENCEDATE ]] && read -r i < "/run/planefence/filtered-$FENCEDATE" || i=0
+if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
+	read -r i < "/run/planefence/filtered-$FENCEDATE"
+else
+	i=0
+fi
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 # if IGNOREDUPES is ON then remove duplicates
@@ -775,7 +779,11 @@ then
 		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
 	fi
 	# rewrite LINESFILTERED to file
-	if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then read -r i < "/run/planefence/filtered-$FENCEDATE"; else i=0; fi
+	if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
+		read -r i < "/run/planefence/filtered-$FENCEDATE"
+	else
+		i=0
+	fi
 	echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 fi
@@ -829,7 +837,10 @@ fi
 
 [[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh" || true
 # If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
-[ "$PLANEALERT" == "ON" ] && ( LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"; $PLALERTFILE "$INFILETMP"; )
+if [[ "$PLANEALERT" == "ON" ]]; then
+	LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"
+	$PLALERTFILE "$INFILETMP"
+fi
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
@@ -845,14 +856,14 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2020 - 2023 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/docker-planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # The package contains contributions from several other packages, that may be licensed
 # under different terms. Attributions and our thanks can be found at
-# https://github.com/kx1t/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
+# https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
 # using the same base URL as you used to get to this web page.
 #
 # Summary of License Terms
@@ -919,6 +930,7 @@ z-index: 100;
 top: 0;
 }
 </style>
+$(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
 </head>
 
 <body onload="sortTable(document.getElementById('mytable'), 5, -1);">
@@ -932,17 +944,19 @@ ${PF_MOTD}
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
-<li>Last update: $(date +"%b %d, %Y %R:%S %Z")
-<li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
-
-<li>Only aircraft below $(printf "%'.0d" "$MAXALT") $ALTUNIT are reported
-<li>Data extracted from $(printf "%'.0d" "$TOTALLINES") <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
-
+  <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
+  <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
+  <li>Only aircraft below $(printf "%'.0d" "$MAXALT") $ALTUNIT are reported
+  <li>Data extracted from $(printf "%'.0d" $TOTALLINES) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 EOF
-[[ "$FUDGELOC" != "" ]] && printf "<li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station.\n" >> "$OUTFILEHTMTMP"
-
-[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "<li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(<"/run/planefence/filtered-$FENCEDATE")" >> "$OUTFILEHTMTMP"
-[[ "$PA_LINK" != "" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station.\n" "$PA_LINK" >> "$OUTFILEHTMTMP"
+{	[[ -n "$FUDGELOC" ]] && printf "  <li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station\n"
+	[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "  <li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-"$FENCEDATE")"
+	if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then
+		printf   "<li>Get notified instantaneously of aircraft in range by following <a href=\"https://%s/@%s\" rel=\"me\">@%s@%s</a> on Mastodon" \
+			"$MASTODON_SERVER" "$MASTODON_NAME" "$MASTODON_NAME" "$MASTODON_SERVER"
+	fi
+	[[ -n "$PA_LINK" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station\n" "$PA_LINK" 
+} >> "$OUTFILEHTMTMP"
 
 # shellcheck disable=SC2129
 cat <<EOF >>"$OUTFILEHTMTMP"
@@ -966,18 +980,19 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://globe.adsbexchange.com/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">AdsbExchange</a>)" "$LAT_VIS" "$LON_VIS" >> "$OUTFILEHTMTMP"
-printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)" >> "$OUTFILEHTMTMP"
-printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)" >> "$OUTFILEHTMTMP"
-(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level." >> "$OUTFILEHTMTMP"
+{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)" "$LAT_VIS" "$LON_VIS"
+	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)"
+	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)"
+	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level"
 
-[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n" >> "$OUTFILEHTMTMP"
-[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET" >> "$OUTFILEHTMTMP"
-(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n" >> "$OUTFILEHTMTMP"
-[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n" >> "$OUTFILEHTMTMP"
+	[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n"
+	[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET"
+	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
+	[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n"
 
-printf "<li> Press the header of any of the columns to sort by that column.\n"  >> "$OUTFILEHTMTMP"
-printf "</ul>"  >> "$OUTFILEHTMTMP"
+	printf "<li> Press the header of any of the columns to sort by that column\n"
+	printf "</ul>\n"
+} >> "$OUTFILEHTMTMP"
 
 [[ "$BASETIME" != "" ]] && echo "12. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the PF table to the website" || true
 
@@ -1070,7 +1085,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
 <hr/>PlaneFence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
-<br/>&copy; Copyright 2020 - 2023 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/>&copy; Copyright 2020-2024 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
 <br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 </div>

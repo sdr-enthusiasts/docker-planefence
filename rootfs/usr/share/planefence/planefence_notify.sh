@@ -12,10 +12,10 @@
 # This script is distributed as part of the PlaneFence package and is dependent
 # on that package for its execution.
 #
-# Copyright 2020 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/planefence
+# https://github.com/sdr-enthusiasts/docker-planefence
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # - Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -64,11 +64,11 @@ PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 (( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
-[[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
+[[ -z "$ATTRIB" ]] && ATTRIB="#adsb #planefence by kx1t - http://github.com/sdr-enthusiasts/docker-planefence"
 
 if [ "$SOCKETCONFIG" != "" ]
 then
-	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
 		nauticalmile)
 		DISTUNIT="nm"
 		;;
@@ -87,7 +87,7 @@ fi
 ALTUNIT="ft"
 if [ "$SOCKETCONFIG" != "" ]
 then
-	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
+	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
 		feet)
 		ALTUNIT="ft"
 		;;
@@ -130,7 +130,7 @@ getRoute()
 	fi
 
 	# Now get the results object from the API:
-	routeObj="$(curl -sL https://api.adsbdb.com/v0/callsign/$1)"
+	routeObj="$(curl -sL "https://api.adsbdb.com/v0/callsign/$1")"
 
 	# Unknown Call -> return empty
 	if [[ "$(jq '.response' <<< "$routeObj")" == "\"unknown callsign\"" ]]
@@ -194,13 +194,13 @@ done
 
 if [ -f "$CSVFILE" ]
 then
-	while read CSVLINE
+	while read -r CSVLINE
 	do
-		XX=$(echo -n $CSVLINE | tr -d '[:cntrl:]')
+		XX=$(echo -n "$CSVLINE" | tr -d '[:cntrl:]')
 		CSVLINE=$XX
 		unset RECORD
 		# Read the line, but first clean it up as it appears to have a newline in it
-		IFS="," read -aRECORD <<< "$CSVLINE"
+		IFS="," read -raRECORD <<< "$CSVLINE"
 		# LOG "${#RECORD[*]} records in the current line: (${RECORD[*]})"
 		# $TIMEDIFF contains the difference in seconds between the current record and "now".
 		# We want this to be at least $MINDIFF to avoid tweeting before all noise data is captured
@@ -208,15 +208,17 @@ then
 		# start time (not POST -> RECORD[2]) of the observation time
 		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
 
+		# shellcheck disable=SC2126
+		# shellcheck disable=SC2094
 		if [[ "${RECORD[1]:0:1}" != "@" ]] && [[ $TIMEDIFF -gt $MINTIME ]] && [[ ( "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ) || "$TWEETEVERY" == "true" ]]
 		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was tweeted^ ...or...                     ^$TWEETEVERY is true^
 		then
 
-			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
+			AIRLINE=$(/usr/share/planefence/airlinename.sh "${RECORD[1]#@}" "${RECORD[0]}" )
 			AIRLINETAG="#"
 			if [[ "${RECORD[1]}" != "" ]]
 			then
-				AIRLINETAG+="$(echo $AIRLINE | tr -d '[:space:]-')"
+				AIRLINETAG+="$(echo "$AIRLINE" | tr -d '[:space:]-')"
 				ROUTE="$(getRoute "${RECORD[1]}")"
 			fi
 
@@ -240,23 +242,23 @@ then
 			[[ "$tagfield" != "" ]] && customtag="$(awk -F "," -v field="$tagfield" -v icao="${RECORD[0]}" '$1 == icao {print $field; exit;}' "$PLANEFILE")" || customtag=""
 			[[ "$customtag" != "" ]] && TWEET+="#$customtag "
 
+			TWEET+="%0A${RECORD[6]}"
 			# Add attribution to the tweet:
-			TWEET+="%0A$ATTRIB%0A"
+			TWEET+="%0A$ATTRIB"
+
+			# swap adsbexchange for the $TRACKSERVICE:
+			TWEET="${TWEET//globe.adsbexchange.com/"$TRACKSERVICE"}"
 
 			# let's do some calcs on the actual tweet length, so we strip the minimum:
 			teststring="${TWEET//%0A/ }" # replace newlines with a single character
 			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
 			tweetlength=$(( ${#teststring} - 1 ))
-			(( tweetlength > 280 )) && echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 280: tweet will be truncated!"
-			(( tweetlength > 280 )) && maxlength=$(( ${#TWEET} + 280 - tweetlength )) || maxlength=280
-
-			TWEET="${TWEET:0:$maxlength}"
-
-			# Now add the last field (attribution) without title or training Newline
-			# Reason: this is a URL that Twitter reinterprets and previews on the web
-			# Also, the Newline at the end tends to mess with Twurl
-			TWEET+="${RECORD[6]}"
-
+			if (( tweetlength > 490 )); then
+				echo "[$(date)][$APPNAME] Warning: PF tweet length is $tweetlength > 490: tweet will be truncated!"
+				maxlength=$(( ${#TWEET} + 490 - tweetlength ))
+				TWEET="${TWEET:0:$maxlength}"
+			fi
+			
 			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
 			# Before anything else, let's add the "tweeted" flag to the flight number:
@@ -268,17 +270,17 @@ then
 			GOTSNAP="false"
 			snapfile="/tmp/snapshot.png"
 
-			newsnap="$(find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit 2>/dev/null || true)"
+			newsnap="$(find /usr/share/planefence/persist/planepix -iname "${RECORD[0]}.jpg" -print -quit 2>/dev/null || true)"
 			# echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
 			if [[ "$newsnap" != "" ]]
 			then
 				GOTSNAP="true"
-				rm -f $snapfile
-				ln -sf $newsnap $snapfile
+				rm -f "$snapfile"
+				ln -sf "$newsnap" "$snapfile"
 				echo "[$(date)][$APPNAME] Using picture from $newsnap"
 			else
 				link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
+				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail "$link" -o $snapfile --show-error 2>/dev/stdout
 				then
 					echo "[$(date)][$APPNAME] Using picture from $link"
 					GOTSNAP="true"
@@ -288,7 +290,7 @@ then
 				fi
 			fi
 
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" $SCREENSHOTURL/snap/${RECORD[0]#\#} -o "/tmp/snapshot.png"
+			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" "$SCREENSHOTURL/snap/${RECORD[0]#\#}" -o "/tmp/snapshot.png"
 			then
 				GOTSNAP="true"
 				echo "[$(date)][$APPNAME] Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
@@ -299,8 +301,8 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-                        fi
+      	        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+            fi
 
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
@@ -311,7 +313,8 @@ then
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
-                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+								
 				if [[ "$GOTSNAP" == "true" ]]
 				then
 					# we upload an image
@@ -360,6 +363,7 @@ then
 					LINK="$(echo "`twurl -r "status=$TWEET" /1.1/statuses/update.json`" | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
+				# shellcheck disable=SC2028
 				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "[$(date)][$APPNAME] Planefence post to Twitter generated successfully. Tweet available at: $LINK" || echo "[$(date)][$APPNAME] PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
 				rm -f $snapfile
 

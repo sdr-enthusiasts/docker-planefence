@@ -6,10 +6,10 @@
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2021-2023 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/kx1t/plane-alert/
+# https://github.com/sdr-enthusiasts/plane-alert/
 #
 # The package contains parts of, links to, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -54,6 +54,7 @@
         top: 0;
         }
     </style>
+    ##MASTOHEADER##
 </head>
 
 <body onload="sortTable(document.getElementById('mytable'), 6, -1);">
@@ -73,9 +74,11 @@
 				<li>Aircraft are listed in reverse chronological order. Click the header of a column to resort.
 				<li>Note that for each aircraft, only the first observation of the day is listed. Additional flights, if any, can be seen on the Flight Map link.
                 <li>Only aircraft that have been seen in the last ##HISTTIME## days will be displayed below. The CSV version contains the complete history.
-                <li>Click on the Transponder ID to see the aircraft history on ADSBExchange
+                <li>Click on the Transponder ID to see the aircraft history on ##TRACKSERVICE##
                 <li>Click on the Tail number to see the flight history, potentially with routing information, on FlightAware
+                ##MEGALINK##
                 ##PFLINK##
+                ##MASTODONLINK##
 			</ul>
 		</details>
 	</article>
