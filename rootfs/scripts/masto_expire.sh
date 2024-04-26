@@ -13,6 +13,8 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
 fi
 
+source /scripts/common
+
 ACCESS_TOKEN=$MASTODON_ACCESS_TOKEN
 INSTANCE_URL="https://$MASTODON_SERVER"
 
