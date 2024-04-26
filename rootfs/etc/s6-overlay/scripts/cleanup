@@ -1,15 +1,9 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2154,SC2015
 
-# redirect stderr to stdout so it's picked up in the docker logs
-exec 2>&1
-# all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
-trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
+source /scripts/common
 
-APPNAME="$(hostname)/cleanup"
-
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup started as an s6 service" || true
+[[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleanup started as an s6 service" || true
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
@@ -28,11 +22,16 @@ LOOPTIME="3h"
 # It specifically applies to files in the HTML directory.
 # If $PF_DELETEAFTER is set to "0" then we never delete.
 # Note - files in /tmp will get deleted if they are older than 2 days.
-PF_DELETEAFTER=$(grep "^PF_DELETEAFTER" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
-[[ "x$PF_DELETEAFTER" == "x" ]] && OLDERTHAN=14 || OLDERTHAN=$PF_DELETEAFTER
 
-PF_CHECKREMOTEDB=$(grep "^PF_CHECKREMOTEDB" /usr/share/planefence/persist/planefence.config 2>/dev/null| awk -F "=" '{ print $2 }')
 
+if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
+  source /usr/share/planefence/persist/planefence.config
+else
+  "${s6wrap[@]}" echo "[ERROR] - Can't find /usr/share/planefence/persist/planefence.config which is needed for this app to run"
+  exit 1
+fi
+
+OLDERTHAN=${PF_DELETEAFTER:-14}
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
@@ -43,9 +42,9 @@ CLEANUP ()
 {
   if (( OLDERTHAN > 0 ))
   then
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up web files older than $OLDERTHAN days" || true
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleaning up logs and tmp files older than 1 day" || true
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleaning up web files older than $OLDERTHAN days" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleaning up logs and tmp files older than 1 day" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
 
     #these are temp actions to facilitate the transition to the new directory structure:
     mkdir -p /usr/share/planefence/persist/.internal
@@ -53,9 +52,9 @@ CLEANUP ()
     mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
     mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
 
-    touch -t $(date -d "yesterday 00:00:00" +%Y%m%d%H%M) /tmp/timestamp
-    find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +$OLDERTHAN -delete 2>/dev/null
-    find /usr/share/planefence/html/noise*.png -mtime +$OLDERTHAN -delete 2>/dev/null
+    touch -t "$(date -d "yesterday 00:00:00" +%Y%m%d%H%M)" /tmp/timestamp
+    find /usr/share/planefence/html/plane*{.html,.js,.csv} -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/html/noise*.png -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
@@ -70,7 +69,7 @@ CLEANUP ()
         fdate=${f: -10:6}   # get the date component from the file name
 
         # remove anything older than yesterday:
-        (( fdate < $(date -d yesterday +%y%m%d) )) && rm -v -f $f && continue
+        (( fdate < $(date -d yesterday +%y%m%d) )) && rm -v -f "$f" && continue
     done
 
 
@@ -99,7 +98,7 @@ CLEANUP ()
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 
   else
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] $LOOPTIME set to 0 - cleanup skipped" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "$LOOPTIME set to 0 - cleanup skipped" || true
   fi
 }
 
@@ -109,38 +108,32 @@ GET_ICAO_DB ()
 {
     if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
     then
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
         # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
-        curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php
-        if [[ "$?" != "0" ]]
-        then
-            echo "[$APPNAME][$(date)] Retrieving ICAO to TAIL database from https://www.mictronics.de FAILED!"
+        if ! curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php; then
+            "${s6wrap[@]}" echo "Retrieving ICAO to TAIL database from https://www.mictronics.de FAILED!"
             return 1
         fi
 
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] unzipping ... " || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "unzipping ... " || true
         # unzipping *will* fail when the retrieved file is not a valid ZIP file
-        unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null
-        if [[ "$?" != "0" ]]
-        then
-            echo "[$APPNAME][$(date)] Unzipping ICAO to TAIL database from https://www.mictronics.de FAILED!"
+        if ! unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null; then
+            "${s6wrap[@]}" echo "Unzipping ICAO to TAIL database from https://www.mictronics.de FAILED!"
             return 1
         fi
 
         rm -f /tmp/icao24plus.zip
         # now convert the text based file into a CSV file
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] converting ... " || true
-        sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt
-        if [[ "$?" != "0" ]]
-        then
-            echo "[$APPNAME][$(date)] Converting ICAO to TAIL database from https://www.mictronics.de FAILED!"
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "converting ... " || true
+        if ! sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt; then
+            "${s6wrap[@]}" echo "Converting ICAO to TAIL database from https://www.mictronics.de FAILED!"
             return 1
         fi
 
         mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] done!" || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "done!" || true
     else
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ICAO to TAIL database is up to date" || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "ICAO to TAIL database is up to date" || true
     fi
 }
 #
@@ -152,14 +145,14 @@ GET_AIRLINE_DB ()
 {
     if [[ -f /usr/share/planefence/persist/airlinecodes.txt ]] && [[ $(find /usr/share/planefence/persist/airlinecodes.txt -mtime -7 | wc -l) == 1 ]]; then
         # file exists and is less than 7 days old
-        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database is up to date" || true
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Airlinecodes database is up to date" || true
         return 0
     fi
 
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Updating airline names database..." || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Updating airline names database..." || true
     rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
-    curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got kx1t/planefence-airlinecodes" || true
-    curl --compressed -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Got jbroutier/whatisflying-db" || true
+    curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt && [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Got kx1t/planefence-airlinecodes" || true
+    curl --compressed -s -L -f https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv -o /tmp/airlines.csv && [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Got jbroutier/whatisflying-db" || true
 
     #convert JBroutier's DB into our format:
     if [[ -f /tmp/airlines.csv ]]
@@ -173,29 +166,32 @@ GET_AIRLINE_DB ()
 	#echo "header has ${#header[@]} elements and contains:"
 	#echo ${header[@]}
 	#echo "icao=$icao name=$name country=$country callsign=$callsign"
-        if [[ ! -z "$icao" ]] && [[ ! -z "$name" ]] && [[ ! -z "$country" ]] && [[ ! -z "$callsign" ]]
+        if [[ -n "$icao" ]] && [[ -n "$name" ]] && [[ -n "$country" ]] && [[ -n "$callsign" ]]
         then
             tail -n +2 /tmp/airlines.csv | awk -F "," -v icao=$(( icao + 1 )) -v name=$(( name + 1 )) -v country=$(( country + 1 )) -v callsign=$(( callsign + 1 )) '{print $icao "," $name "," $callsign "," $country}' >> /tmp/airlinecodes.txt.tmp
             [[ -f /tmp/airlinecodes.txt ]] && cat /tmp/airlinecodes.txt /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2 || cat /tmp/airlinecodes.txt.tmp > /tmp/airlinecodes.txt.tmp2
-	        [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Removed $(awk -F',' 'seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) overlapping entries, left $(awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) entries in place" || true
+	        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Removed $(awk -F',' 'seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) overlapping entries, left $(awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 |wc -l) entries in place" || true
             awk -F',' '!seen[$1]++' /tmp/airlinecodes.txt.tmp2 >/tmp/airlinecodes.txt
         fi
     fi
-    # make sure the file is minimally disrupte and programs who have still have it open don't have the data connected to the inode modified
+    # make sure the file is minimally disrupted and programs who have still have it open don't have the data connected to the inode modified
     mv -f /tmp/airlinecodes.txt /usr/share/planefence/persist/airlinecodes.txt.tmp
     rm -f /usr/share/planefence/persist/airlinecodes.txt
     mv -f /usr/share/planefence/persist/airlinecodes.txt.tmp /usr/share/planefence/persist/airlinecodes.txt
     rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp /tmp/airlinecodes.txt.tmp2
-    [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Airlinecodes database update complete" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Airlinecodes database update complete" || true
 }
 
 #Now loop forevah:
 while true
 do
-  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Performing a cleanup run..." || true
+  [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Performing a cleanup run..." || true
   CLEANUP
   GET_ICAO_DB
   GET_AIRLINE_DB
-  [[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Cleanup done. Sleeping for $LOOPTIME" || true
+  if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then 
+    /scripts/masto_expire.sh delete
+  fi
+  [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleanup done. Sleeping for $LOOPTIME" || true
   sleep $LOOPTIME
 done
