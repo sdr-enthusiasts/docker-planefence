@@ -44,8 +44,7 @@ Once you have an account, please do the following:
 ![image](https://user-images.githubusercontent.com/15090643/208438462-b40cc847-f36c-4db7-bacb-54a68fae2cff.png)
 ![image](https://user-images.githubusercontent.com/15090643/208438987-3e1fd9c2-5ce9-46c0-92e9-20bb78f55a8c.png)
 
-Note -- if you post lots of traffic to Mastodon, please consider adding an Automatic Post Deletion time of 1 week.
-This will help manage storage costs for the operator of the Mastodon server!
+Note -- the `MASTODON_RETENTION_TIME` parameter in `planefence.config` determines the retention time (in days) of any Toots you send to Mastodon. This will help manage storage costs for the operator of the Mastodon server! Note - the default expiration time if the parameter is omitted, is `7` (days). If you want your Toots to never expire, please set the parameter value to `off` or `0`. However, please be cognizant that your Mastodon Server operator is probably paying for disk storage out of their own pocket - so please leave this retention time as short as you can afford.
 
 ## Configuring Planefence to use Mastodon
 
