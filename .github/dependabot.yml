@@ -9,12 +9,18 @@ updates:
     directory: "/" # Location of package manifests
     target-branch: "dev"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "00:00"
+      timezone: "Etc/UTC"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "saturday"
+      time: "00:00"
+      timezone: "Etc/UTC"
     assignees:
       - "fredclausen"
