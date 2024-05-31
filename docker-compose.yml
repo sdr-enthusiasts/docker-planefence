@@ -17,10 +17,10 @@ services:
       - LOGLEVEL=INFO
     volumes:
       # adopt this one to point at a subdirectory of where your docker-compose.yml file is located:
-      - /opt/adsb/planefence/config:/usr/share/planefence/persist
+      - ./planefence/config:/usr/share/planefence/persist
       # the following exposes the html directory to the host, in case you
       # want to use an external http daemon (lighttpd, nginx, etc)
-      - /opt/adsb/planefence/html:/usr/share/planefence/html
+      - ./planefence/html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
