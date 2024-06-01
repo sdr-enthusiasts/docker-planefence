@@ -529,14 +529,17 @@ EOF
 	# right below. Right now, it lists all files that have the planefence-20*.html format (planefence-200504.html, etc.), and then
 	# picks the newest 7 (or whatever HISTTIME is set to), reverses the strings to capture the characters 6-11 from the right, which contain the date (200504)
 	# and reverses the results back so we get only a list of dates in the format yymmdd.
-	# shellcheck disable=SC2012
-	for d in $(ls -1 "$1"/planefence-??????.html | tail --lines=$((HISTTIME+1)) | head --lines="$HISTTIME" | rev | cut -c6-11 | rev | sort -r)
-	do
-		{ printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
-		  printf "<a href=\"%s\" target=\"_top\">html</a> - " "planefence-$(date -d "$d" +"%y%m%d").html"
-		  printf "<a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv"
-		} >> "$2"
-	done
+	
+	if compgen -G "$1/planefence-??????.html" >/dev/null; then
+		# shellcheck disable=SC2012
+		for d in $(ls -1 "$1"/planefence-??????.html | tail --lines=$((HISTTIME+1)) | head --lines="$HISTTIME" | rev | cut -c6-11 | rev | sort -r)
+		do
+			{ printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
+			printf "<a href=\"%s\" target=\"_top\">html</a> - " "planefence-$(date -d "$d" +"%y%m%d").html"
+			printf "<a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv"
+			} >> "$2"
+		done
+	fi
 	{ printf "</p>\n"
 	  printf "<p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p>"
 	  printf "</details>\n</article>\n</section>"

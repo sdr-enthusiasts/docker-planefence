@@ -190,7 +190,7 @@ do
   GET_ICAO_DB
   GET_AIRLINE_DB
   if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then 
-    /scripts/masto_expire.sh delete
+    /scripts/masto_expire.sh delete || true
   fi
   [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleanup done. Sleeping for $LOOPTIME" || true
   sleep $LOOPTIME

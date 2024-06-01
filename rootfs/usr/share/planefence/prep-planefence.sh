@@ -238,7 +238,7 @@ fi
 [[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/planefence/planefence.conf
 #
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
-if find /usr/share/planefence/html/planefence-??????.html >/dev/null 2>&1; then
+if compgen -G "$1/planefence-??????.html" >/dev/null; then
 	for i in /usr/share/planefence/html/planefence-??????.html; do
 		[[ -n "$PF_MAPWIDTH" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
 		[[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' "$i"
