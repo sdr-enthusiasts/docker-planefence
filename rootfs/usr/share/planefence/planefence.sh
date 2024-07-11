@@ -805,7 +805,7 @@ fi
 [[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
-if [ -f "$PLANEHEATSCRIPT" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
+if chk_enabled "$PLANEHEAT" && [ -f "${PLANEHEATSCRIPT}" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
 then
 	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
@@ -1035,7 +1035,7 @@ EOF
 fi
 
 # if $PLANEHEATHTML exists, then add the heatmap
-if [ -f "$PLANEHEATHTML" ]
+if chk_enabled "$PLANEHEAT" && [ -f "$PLANEHEATHTML" ]
 then
 	# shellcheck disable=SC2129
 	cat <<EOF >>"$OUTFILEHTMTMP"

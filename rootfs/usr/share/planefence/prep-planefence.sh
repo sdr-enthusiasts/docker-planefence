@@ -38,7 +38,7 @@ function configure_both() {
 	configure_planealert "$1" "$2"
 }
 
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo" Running PlaneFence configuration - either the container is restarted or a config change was detected." || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running PlaneFence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
@@ -232,6 +232,8 @@ fi
 
 # -----------------------------------------------------------------------------------
 #
+# enable/disable planeheat;
+chk_disabled "$PF_HEATMAP" && configure_planefence "PLANEHEAT" "OFF" || configure_planefence "PLANEHEAT" "ON"
 # Change the heatmap height and width if they are defined in the .env parameter file:
 [[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
 [[ -n "$PF_MAPWIDTH" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
