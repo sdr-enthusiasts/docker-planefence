@@ -232,6 +232,8 @@ fi
 
 # -----------------------------------------------------------------------------------
 #
+# enable/disable planeheat;
+chk_disabled "$PF_HEATMAP" && configure_planefence "PLANEHEAT" "OFF" || configure_planefence "PLANEHEAT" "ON"
 # Change the heatmap height and width if they are defined in the .env parameter file:
 [[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
 [[ -n "$PF_MAPWIDTH" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
