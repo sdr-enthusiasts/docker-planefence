@@ -109,13 +109,13 @@ mkdir -p /run/planefence
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
 		sleep 10s
-		"${s6wrap[@]}" echo" ----------------------------------------------------------"
-		"${s6wrap[@]}" echo" !!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
-		"${s6wrap[@]}" echo" Planefence will not run unless you edit it configuration."
-		"${s6wrap[@]}" echo" You can do this by pressing CTRL-c now and typing:"
-		"${s6wrap[@]}" echo" sudo nano -l ~/.planefence/planefence.config"
-		"${s6wrap[@]}" echo" Once done, restart the container and this message should disappear."
-		"${s6wrap[@]}" echo" ----------------------------------------------------------"
+		"${s6wrap[@]}" echo "----------------------------------------------------------"
+		"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
+		"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
+		"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
+		"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
+		"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+		"${s6wrap[@]}" echo "----------------------------------------------------------"
 		exec sleep infinity
 fi
 
@@ -134,8 +134,8 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # -----------------------------------------------------------------------------------
 #
 # read the environment variables and put them in the planefence.conf file:
-[[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo" Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; while :; do sleep 2073600; done; }
-[[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo" Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
+[[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; while :; do sleep 2073600; done; }
+[[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
 [[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
 [[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
 [[ -n "$PF_ELEVATION" ]] && sed -i 's/\(^\s*ALTCORR=\).*/\1'"\"$PF_ELEVATION\""'/' /usr/share/planefence/planefence.conf
@@ -160,13 +160,13 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 	unset a
 else
 	sleep 10s
-	"${s6wrap[@]}" echo" ----------------------------------------------------------"
-	"${s6wrap[@]}" echo" !!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
-	"${s6wrap[@]}" echo" Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo" You can do this by pressing CTRL-c now and typing:"
-	"${s6wrap[@]}" echo" sudo nano -l ~/.planefence/planefence.config"
-	"${s6wrap[@]}" echo" Once done, restart the container and this message should disappear."
-	"${s6wrap[@]}" echo" ----------------------------------------------------------"
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
+	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
+	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
+	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
+	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	while true
 	do
 			sleep 99999
@@ -207,12 +207,12 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 chk_disabled "${PF_TWEET}" && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 if chk_enabled "${PF_TWEET,,}"; then
 	if [[ ! -f ~/.twurlrc ]]; then
-			"${s6wrap[@]}" echo" Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
-			"${s6wrap[@]}" echo" Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
-			"${s6wrap[@]}" echo" Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
-			"${s6wrap[@]}" echo" For more information on how to sign up for a Twitter Developer Account, see this link:"
-			"${s6wrap[@]}" echo" https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
-			"${s6wrap[@]}" echo" PlaneFence will continue to start without Twitter functionality."
+			"${s6wrap[@]}" echo "Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
+			"${s6wrap[@]}" echo "Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
+			"${s6wrap[@]}" echo "Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
+			"${s6wrap[@]}" echo "For more information on how to sign up for a Twitter Developer Account, see this link:"
+			"${s6wrap[@]}" echo "https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
+			"${s6wrap[@]}" echo "PlaneFence will continue to start without Twitter functionality."
 			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
@@ -261,10 +261,10 @@ fi
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && chk_enabled "$PF_PLANEALERT"; then
-		"${s6wrap[@]}" echo" Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
-		"${s6wrap[@]}" echo" Do this on the host to get a base file:"
-		"${s6wrap[@]}" echo" curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
-		"${s6wrap[@]}" echo" and then restart this docker container"
+		"${s6wrap[@]}" echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
+		"${s6wrap[@]}" echo "Do this on the host to get a base file:"
+		"${s6wrap[@]}" echo "curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+		"${s6wrap[@]}" echo "and then restart this docker container"
 		PF_PLANEALERT="OFF"
 fi
 
@@ -362,8 +362,8 @@ fi
 # if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
 # then
 # 	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
-# 	"${s6wrap[@]}" echo" Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
-# 	"${s6wrap[@]}" echo" To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot with a picture of the plane."
+# 	"${s6wrap[@]}" echo "Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
+# 	"${s6wrap[@]}" echo "To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot with a picture of the plane."
 # fi
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
