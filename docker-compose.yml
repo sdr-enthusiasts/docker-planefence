@@ -2,7 +2,6 @@ services:
 
   planefence:
     image: ghcr.io/sdr-enthusiasts/docker-planefence
-    tty: true
     container_name: planefence
     hostname: planefence
     restart: always
@@ -41,7 +40,6 @@ services:
   # you may decide to forego this feature. Simply delete or comment out the section below.
   screenshot:
     image: ghcr.io/kx1t/screenshot
-    tty: true
     container_name: screenshot
     hostname: screenshot
     restart: always
