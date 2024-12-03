@@ -384,6 +384,61 @@ then
 			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
 		fi
 
+		# Inject MQTT integration here:
+		if [[ -n "$MQTT_URL" ]]; then
+			# do some prep work:
+			PLANELINE="${ALERT_DICT["${ICAO}"]}"
+			IFS="," read -ra TAGLINE <<< "$PLANELINE"
+
+			unset msg_array
+			declare -A msg_array
+
+			# now put all relevant info into the associative array:
+			msg_array[icao]="${pa_record[0]//#/}"
+			msg_array[tail]="${pa_record[1]//#/}"
+			msg_array[squawk]="${pa_record[10]//#/}"
+			[[ "${pa_record[10]//#/}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
+			msg_array[flight]="${pa_record[8]//#/}"
+			msg_array[operator]="${pa_record[2]//[&\']/_}"
+			msg_array[type]="${pa_record[3]//#/}"
+			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" +%s)"
+			msg_array[tracklink]="${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}"
+			msg_array[latitude]="${pa_record[6]}"
+			msg_array[longitude]="${pa_record[7]}"
+
+			# Add any hashtags:
+			for i in {4..13}; do
+				(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+				if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]; then
+					hdr="${header[i]//[#$]/}"
+					hdr="${hdr// /_}"
+					hdr="${hdr,,}"
+					msg_array[$hdr]="${TAGLINE[i]}"
+				fi
+			done
+
+			# convert $msg_array[@] into a JSON object:
+			json="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+
+			# prep the MQTT_URL
+			MQTT_URL="${MQTT_URL,,}"
+			if [[ "${MQTT_URL:0:7}" != "mqtt://" ]]; then MQTT_URL="mqtt://$MQTT_URL"; fi
+			while [[ "${MQTT_URL: -1}" == "/" ]]; do x="${MQTT_URL:0: -1}"; done
+			
+			# log the message we are going to send:
+			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
+			echo "[$(date)][$APPNAME] MQTT Target: $MQTT_URL"
+			echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
+			echo "[$(date)][$APPNAME] MQTT Payload JSON onject: $json"
+
+			# send the MQTT message:
+			if ! errormsg="$(curl -sSL -d "$json" "$MQTT_URL/$MQTT_TOPIC" 2>&1)"; then
+				echo "[$(date)][$APPNAME] MQTT Delivery Error: $errormsg"
+			else
+				echo "[$(date)][$APPNAME] MQTT Delivery successful!"
+			fi
+		fi
+
 		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
