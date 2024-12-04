@@ -429,7 +429,7 @@ then
 			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
 			echo "[$(date)][$APPNAME] MQTT Target: $MQTT_URL"
 			echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
-			echo "[$(date)][$APPNAME] MQTT Payload JSON onject: $json"
+			echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $json"
 
 			# send the MQTT message:
 			if ! errormsg="$(curl -sSL -d "$json" "$MQTT_URL/$MQTT_TOPIC" 2>&1)"; then

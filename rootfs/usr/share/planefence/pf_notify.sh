@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck shell=bash disable=SC1091,SC2034,SC2094
 # PF_ALERT - a Bash shell script to send a notification to the Notification Server when a plane is detected in the
 # user-defined fence area.
 #
@@ -15,6 +16,9 @@
 # - Twurl by Twitter: https://github.com/twitter/twurl and https://developer.twitter.com
 # These packages may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
+#
+# Load common script:
+source /scripts/common
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
 [[ "$PLANEFENCEDIR" == "" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
@@ -61,14 +65,13 @@ CSVTMP=/tmp/pf_notify-tmp.csv
 # MINTIME is the minimum time (secs) we wait before sending a notification
 # to ensure that at least $MINTIME of audio collection (actually limited to the Planefence update runs in this period) to get a more accurste Loudness.
 
-[[ "$TWEET_MINTIME" > 0 ]] && MINTIME=$TWEET_MINTIME || MINTIME=100
+(( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
-[[ "x$ATTRIB" == "x" ]] && ATTRIB="#Planefence by kx1t - docker:kx1t/planefence"
+ATTRIB="${ATTRIB:-#Planefence by kx1t - docker:kx1t/planefence}"
 
-if [ "$SOCKETCONFIG" != "" ]
-then
-	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+if [[ -n "$SOCKETCONFIG" ]]; then
+	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
 		nauticalmile)
 		DISTUNIT="nm"
 		;;
@@ -87,7 +90,7 @@ fi
 ALTUNIT="ft"
 if [ "$SOCKETCONFIG" != "" ]
 then
-	case "$(grep "^altitudeunit=" $SOCKETCONFIG |sed "s/altitudeunit=//g")" in
+	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
 		feet)
 		ALTUNIT="ft"
 		;;
@@ -117,9 +120,9 @@ TWEETDATE=$(date --date="today" '+%y%m%d')
 [[ ! -f "$AIRLINECODES" ]] && AIRLINECODES=""
 
 CSVFILE=$CSVNAMEBASE$TWEETDATE$CSVNAMEEXT
-#CSVFILE=/tmp/planefence-200526.csv
+
 # make sure there's no stray TMP file around, so we can directly append
-[ -f "$CSVTMP" ] && rm "$CSVTMP"
+rm -f "$CSVTMP"
 
 #Now iterate through the CSVFILE:
 LOG "------------------------------"
@@ -129,28 +132,29 @@ LOG "CSVFILE=$CSVFILE"
 # Get the hashtaggable headers, and figure out of there is a field with a
 # custom "$tag" header
 
-if [ -f "$CSVFILE" ]
-then
-	while read CSVLINE
-	do
-		XX=$(echo -n $CSVLINE | tr -d '[:cntrl:]')
+if [[ -f "$CSVFILE" ]]; then
+	while read -r CSVLINE; do
+		XX=$(echo -n "$CSVLINE" | tr -d '[:cntrl:]')
 		CSVLINE=$XX
 		unset RECORD
 		# Read the line, but first clean it up as it appears to have a newline in it
-		IFS="," read -aRECORD <<< "$CSVLINE"
+		IFS="," read -ra RECORD <<< "$CSVLINE"
 		# LOG "${#RECORD[*]} records in the current line: (${RECORD[*]})"
 		# $TIMEDIFF contains the difference in seconds between the current record and "now".
 		# We want this to be at least $MINDIFF to avoid tweeting before all noise data is captured
 		# $TWEET_BEHAVIOR determines if we are looking at the end time (POST -> RECORD[3]) or at the
 		# start time (not POST -> RECORD[2]) of the observation time
-		[[ "$TWEET_BEHAVIOR" == "POST" ]] && TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) )) || TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
+		if [[ "$TWEET_BEHAVIOR" == "POST" ]]; then
+			TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[3]}" +%s) ))
+		else
+			TIMEDIFF=$(( $(date +%s) - $(date -d "${RECORD[2]}" +%s) ))
+		fi
 
-		if [[ "${RECORD[1]:0:1}" != "@" ]] && [[ $TIMEDIFF -gt $MINTIME ]] && [[ ( "$(grep "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" | wc -l)" == "0" ) || "$TWEETEVERY" == "true" ]]
+		# shellcheck disable=SC2094
+		if [[ "${RECORD[1]:0:1}" != "@" ]] && (( TIMEDIFF > MINTIME )) && ! grep -q "${RECORD[0]},@${RECORD[1]}" "$CSVFILE" || chk_enabled "$TWEETEVERY"; then
 		#   ^not tweeted before^                 ^older than $MINTIME^             ^No previous occurrence that was notified^ ...or...                     ^$TWEETEVERY is true^
-		then
 
-			AIRLINE=$(/usr/share/planefence/airlinename.sh ${RECORD[1]#@} ${RECORD[0]} )
-
+			AIRLINE=$(/usr/share/planefence/airlinename.sh "${RECORD[1]#@}" "${RECORD[0]}" )
 
 			# Create a Notification string that can be patched at the end of a URL:
 			NOTIF_STRING=""
@@ -193,7 +197,7 @@ then
 				then
 					# If the curl call succeeded, we have a snapshot.png file saved!
 					TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/snapshot.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-					[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
+					(( TW_MEDIA_ID > 0 )) && TWIMG="true" || TW_MEDIA_ID=""
 				fi
 
 				[[ "$TWIMG" == "true" ]] && echo "Twitter Media ID=$TW_MEDIA_ID" || echo "Twitter screenshot upload unsuccessful for ${RECORD[0]}"
@@ -201,12 +205,12 @@ then
 				# send a tweet and read the link to the tweet into ${LINK[1]}
 				if [[ "$TWIMG" == "true" ]]
 				then
-					LINK=$(echo `twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(twurl -r "status=$TWEET&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json 2>&1 | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				else
-					LINK=$(echo `twurl -r "status=$TWEET" /1.1/statuses/update.json` | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')
+					LINK="$(twurl -r "status=$TWEET" /1.1/statuses/update.json 2>&1 | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
-				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
+				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned: $(tail -1 /tmp/tweets.log)"
 			else
 				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
 			fi
@@ -221,7 +225,7 @@ then
 
 		# Now write everything back to $CSVTMP
 		( IFS=','; echo "${RECORD[*]}" >> "$CSVTMP" )
-		LOG "The record now contains $(IFS=','; echo ${RECORD[*]})"
+		LOG "The record now contains $(IFS=','; echo "${RECORD[*]}")"
 
 	done < "$CSVFILE"
 	# last, copy the TMP file back to the CSV file

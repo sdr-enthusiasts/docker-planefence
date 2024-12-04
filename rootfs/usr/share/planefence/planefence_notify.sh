@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC2015,SC1091,SC2005,SC2006
+#shellcheck disable=SC2015,SC1091,SC2005,SC2006,SC2094
 # PLANETWEET - a Bash shell script to send a Tweet when a plane is detected in the
 # user-defined fence area.
 #
@@ -30,6 +30,9 @@
 # set -a
 #
 # Let's see if there is a CONF file that overwrites some of the parameters already defined
+
+source /scripts/common
+
 [[ -z "$PLANEFENCEDIR" ]] && PLANEFENCEDIR=/usr/share/planefence
 [[ -f "$PLANEFENCEDIR/planefence.conf" ]] && source "$PLANEFENCEDIR/planefence.conf"
 APPNAME="$(hostname)/planefence_notify"
@@ -38,6 +41,7 @@ APPNAME="$(hostname)/planefence_notify"
 # HEADR determines the tags for each of the fields in the Tweet:
 #         0      1      2           3           4         5         6         7        8          9        10     11
 HEADR=("ICAO" "Flt" "Airline" "First seen" "End Time" "Min Alt" "Min Dist" "Link" "Loudness" "Peak Audio" "Org" "Dest")
+
 # CSVFILE termines which file name we need to look in. We're using the 'date' command to
 # get a filename in the form of 'planefence-200504.csv' where 200504 is yymmdd
 #TODAYCSV=$(date -d today +"planefence-%y%m%d.csv")
@@ -156,7 +160,6 @@ getRoute()
 
 	# print the result - this will be captured by the caller
 	echo "$response"
-
 }
 
 if [ "$1" != "" ] && [ "$1" != "reset" ]
@@ -200,7 +203,7 @@ then
 		CSVLINE=$XX
 		unset RECORD
 		# Read the line, but first clean it up as it appears to have a newline in it
-		IFS="," read -raRECORD <<< "$CSVLINE"
+		IFS="," read -ra RECORD <<< "$CSVLINE"
 		# LOG "${#RECORD[*]} records in the current line: (${RECORD[*]})"
 		# $TIMEDIFF contains the difference in seconds between the current record and "now".
 		# We want this to be at least $MINDIFF to avoid tweeting before all noise data is captured
@@ -309,7 +312,7 @@ then
 			then
 				echo "[$(date)][$APPNAME] Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWEET}")"
 			fi
-			# Inject Mastodone integration here:
+			# Inject Mastodon integration here:
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
@@ -341,6 +344,54 @@ then
 				fi
 			fi
 
+			# Inject MQTT notification here:
+			if [[ -n "$MQTT_URL" ]]; then
+				unset msg_array
+				declare -A msg_array
+
+				msg_array[icao]="${RECORD[0]}"
+				msg_array[flight]="${RECORD[1]#@}"
+				msg_array[operator]="${AIRLINE}"
+				if [[ -n "$ROUTE" ]]; then
+					if [[ "${ROUTE:0:4}" == "org:" ]]; then msg_array[origin]="${ROUTE:6}"
+					elif [[ "${ROUTE:0:5}" == "dest:" ]]; then msg_array[destination]="${ROUTE:7}"
+					else 
+						msg_array[origin]="${ROUTE:1:3}"
+						msg_array[destination]="${ROUTE: -3}"
+					fi
+				fi
+				msg_array[first_seen]="$(date -d "${RECORD[2]}" +%s)"
+				msg_array[last_seen]="$(date -d "${RECORD[3]}" +%s)"
+				msg_array[min_alt]="${RECORD[4]} $ALTUNIT $ALTPARAM"
+				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
+				msg_array[link]="${RECORD[6]}//globe.adsbexchange.com/$TRACKSERVICE}"
+				if (( RECORD[7] < 0 )); then
+					msg_array[peek_audio]="${RECORD[7]} dBFS"
+					msg_array[loudness]="$(( RECORD[7] - RECORD[11] )) dB"
+				fi
+
+				# convert $msg_array[@] into a JSON object:
+				json="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+
+				# prep the MQTT_URL
+				MQTT_URL="${MQTT_URL,,}"
+				if [[ "${MQTT_URL:0:7}" != "mqtt://" ]]; then MQTT_URL="mqtt://$MQTT_URL"; fi
+				while [[ "${MQTT_URL: -1}" == "/" ]]; do x="${MQTT_URL:0: -1}"; done
+				
+				# log the message we are going to send:
+				echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
+				echo "[$(date)][$APPNAME] MQTT Target: $MQTT_URL"
+				echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
+				echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $json"
+
+				# send the MQTT message:
+				if ! errormsg="$(curl -sSL -d "$json" "$MQTT_URL/$MQTT_TOPIC" 2>&1)"; then
+					echo "[$(date)][$APPNAME] MQTT Delivery Error: $errormsg"
+				else
+					echo "[$(date)][$APPNAME] MQTT Delivery successful!"
+				fi
+
+			fi
 
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
