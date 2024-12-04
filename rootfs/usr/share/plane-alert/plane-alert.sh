@@ -399,7 +399,7 @@ then
 			msg_array[squawk]="${pa_record[10]//#/}"
 			[[ "${pa_record[10]//#/}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
 			msg_array[flight]="${pa_record[8]//#/}"
-			msg_array[operator]="${pa_record[2]//[&\']/_}"
+			msg_array[operator]="${pa_record[2]//[&\'#]/_}"; msg_array[operator]="${msg_array[operator]//#/}"
 			msg_array[type]="${pa_record[3]//#/}"
 			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" +%s)"
 			msg_array[tracklink]="${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}"
