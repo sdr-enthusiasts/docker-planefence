@@ -380,8 +380,10 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 # Configure MQTT notifications for Planefence and plane-alert
 [[ -n "$PF_MQTT_URL" ]] && configure_planefence "MQTT_URL" "$PF_MQTT_URL" || true
 [[ -n "$PF_MQTT_TOPIC" ]] && configure_planefence "MQTT_TOPIC" "$PF_MQTT_TOPIC" || true
+[[ -n "$PF_MQTT_DATETIME_FORMAT" ]] && configure_planefence "MQTT_DATETIME_FORMAT" "$PF_MQTT_DATETIME_FORMAT" || true
 [[ -n "$PA_MQTT_URL" ]] && configure_planealert "MQTT_URL" "$PA_MQTT_URL" || true
 [[ -n "$PA_MQTT_TOPIC" ]] && configure_planealert "MQTT_TOPIC" "$PA_MQTT_TOPIC" || true
+[[ -n "$PA_MQTT_DATETIME_FORMAT" ]] && configure_planealert "MQTT_DATETIME_FORMAT" "$PA_MQTT_DATETIME_FORMAT" || true
 #
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,

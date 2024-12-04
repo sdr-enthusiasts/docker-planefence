@@ -360,8 +360,8 @@ then
 						msg_array[destination]="${ROUTE: -3}"
 					fi
 				fi
-				msg_array[first_seen]="$(date -d "${RECORD[2]}" +%s)"
-				msg_array[last_seen]="$(date -d "${RECORD[3]}" +%s)"
+				msg_array[first_seen]="$(date -d "${RECORD[2]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
+				msg_array[last_seen]="$(date -d "${RECORD[3]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[min_alt]="${RECORD[4]} $ALTUNIT $ALTPARAM"
 				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
 				msg_array[link]="${RECORD[6]}//globe.adsbexchange.com/$TRACKSERVICE}"

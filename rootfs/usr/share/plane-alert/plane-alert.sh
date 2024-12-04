@@ -401,7 +401,7 @@ then
 			msg_array[flight]="${pa_record[8]//#/}"
 			msg_array[operator]="${pa_record[2]//[&\'#]/_}"; msg_array[operator]="${msg_array[operator]//#/}"
 			msg_array[type]="${pa_record[3]//#/}"
-			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" +%s)"
+			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 			msg_array[tracklink]="${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}"
 			msg_array[latitude]="${pa_record[6]}"
 			msg_array[longitude]="${pa_record[7]}"
