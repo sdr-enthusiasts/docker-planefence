@@ -364,7 +364,7 @@ then
 				msg_array[last_seen]="$(date -d "${RECORD[3]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[min_alt]="${RECORD[4]} $ALTUNIT $ALTPARAM"
 				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
-				msg_array[link]="${RECORD[6]}//globe.adsbexchange.com/$TRACKSERVICE}"
+				msg_array[link]="${RECORD[6]//globe.adsbexchange.com/$TRACKSERVICE}"
 				if (( RECORD[7] < 0 )); then
 					msg_array[peek_audio]="${RECORD[7]} dBFS"
 					msg_array[loudness]="$(( RECORD[7] - RECORD[11] )) dB"
