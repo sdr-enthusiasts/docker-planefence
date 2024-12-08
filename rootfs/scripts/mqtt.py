@@ -21,7 +21,7 @@ where:
 '''
 
 import argparse
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt # type: ignore
 
 def publish_message(broker, port, topic, qos, message, client_id, username=None, password=None):
     # Create an MQTT client instance

@@ -398,7 +398,7 @@ then
 			echo "[$(date)][$APPNAME] MQTT Host: $MQTT_HOST"
 			echo "[$(date)][$APPNAME] MQTT Port: ${MQTT_PORT:-1883}"
 			echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
-			echo "[$(date)][$APPNAME] MQTT Client ID: {MQTT_CLIENT_ID:-$(hostname)}"
+			echo "[$(date)][$APPNAME] MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
 			if [[ -n "$MQTT_USERNAME" ]]; then echo "[$(date)][$APPNAME] MQTT Username: $MQTT_USERNAME"; fi
 			if [[ -n "$MQTT_PASSWORD" ]]; then echo "[$(date)][$APPNAME] MQTT Password: $MQTT_PASSWORD"; fi
 			if [[ -n "$MQTT_QOS" ]]; then echo "[$(date)][$APPNAME] MQTT QOS: $MQTT_QOS"; fi
@@ -412,10 +412,10 @@ then
 			mqtt_string+=(--client_id \""${MQTT_CLIENT_ID:-$(hostname)}"\")
 			if [[ -n "$MQTT_USERNAME" ]]; then mqtt_string+=(--username "$MQTT_USERNAME"); fi
 			if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
-			mqtt_string+=(--message \'"${MQTT_JSON}"\')
+			mqtt_string+=(--message "'${MQTT_JSON}'")
 
 			# shellcheck disable=SC2068
-			outputmsg="$(mqtt ${mqtt_string[@]})"
+			outputmsg="$(echo ${mqtt_string[@]} | xargs mqtt)"
 
 			if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]] ; then
 				echo "[$(date)][$APPNAME] MQTT Delivery Error: ${outputmsg//$'\n'/ }"
