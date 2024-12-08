@@ -419,7 +419,7 @@ then
 			done
 
 			# convert $msg_array[@] into a JSON object:
-			MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+			MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf "{\'%s\':\'%s\'}\n" "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
 			# prep the MQTT host, port, etc
 			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
