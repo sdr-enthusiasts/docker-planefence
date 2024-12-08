@@ -371,7 +371,7 @@ then
 				fi
 
 				# convert $msg_array[@] into a JSON object:
-				MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf "{\'%s\':\'%s\'}\n" "$i" "${msg_array[$i]}"; done | jq -sc add)"
+				MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
 
 			# prep the MQTT host, port, etc
@@ -405,7 +405,18 @@ then
 			echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $MQTT_JSON"
 
 			# send the MQTT message:
-			outputmsg="$(echo "--broker $MQTT_HOST ${MQTT_PORT:+--port $MQTT_PORT} --topic \"$MQTT_TOPIC\" ${MQTT_QOS:+--qos $MQTT_QOS} --client_id \"${MQTT_CLIENT_ID:-$(hostname)}\" ${MQTT_USERNAME:+--username $MQTT_USERNAME} ${MQTT_PASSWORD:+--password $MQTT_PASSWORD} --message \"$MQTT_JSON\"" | xargs mqtt)"
+			mqtt_string=(--broker "$MQTT_HOST")
+			if [[ -n "$MQTT_PORT" ]]; then mqtt_string+=(--port "$MQTT_PORT"); fi
+			mqtt_string+=(--topic \""$MQTT_TOPIC"\")
+			if [[ -n "$MQTT_QOS" ]]; then mqtt_string+=(--qos "$MQTT_QOS"); fi
+			mqtt_string+=(--client_id \""${MQTT_CLIENT_ID:-$(hostname)}"\")
+			if [[ -n "$MQTT_USERNAME" ]]; then mqtt_string+=(--username "$MQTT_USERNAME"); fi
+			if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
+			mqtt_string+=(--message \'"${MQTT_JSON//\"/\\\"}"\')
+
+			# shellcheck disable=SC2068
+			outputmsg="$(mqtt ${mqtt_string[@]})"
+
 			if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]] ; then
 				echo "[$(date)][$APPNAME] MQTT Delivery Error: ${outputmsg//$'\n'/ }"
 			else
