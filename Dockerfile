@@ -18,6 +18,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(python3-numpy) && \
     KEPT_PACKAGES+=(python3-pandas) && \
     KEPT_PACKAGES+=(python3-dateutil) && \
+    KEPT_PACKAGES+=(python3-paho-mqtt) && \
     KEPT_PACKAGES+=(jq) && \
     KEPT_PACKAGES+=(gnuplot-nox) && \
     KEPT_PACKAGES+=(lighttpd) && \
@@ -95,6 +96,8 @@ RUN set -x && \
     chmod a+x /usr/share/socket30003/*.pl && \
     rm -rf /run/socket30003/install-* && \
     popd && \
+    # Move the mqtt.py script to an executable directory
+    mv -f /scripts/mqtt.py /usr/local/bin/mqtt && \
     #
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \

@@ -371,25 +371,46 @@ then
 				fi
 
 				# convert $msg_array[@] into a JSON object:
-				json="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+				MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
-				# prep the MQTT_URL
-				MQTT_URL="${MQTT_URL,,}"
-				if [[ "${MQTT_URL:0:7}" != "mqtt://" ]]; then MQTT_URL="mqtt://$MQTT_URL"; fi
-				while [[ "${MQTT_URL: -1}" == "/" ]]; do x="${MQTT_URL:0: -1}"; done
-				
-				# log the message we are going to send:
-				echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
-				echo "[$(date)][$APPNAME] MQTT Target: $MQTT_URL"
-				echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
-				echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $json"
+			# prep the MQTT host, port, etc
+			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
+			MQTT_HOST="${MQTT_URL,,}"
+			MQTT_HOST="${MQTT_HOST##*:\/\/}" # strip protocol header (mqtt:// etc)
+			while [[ "${MQTT_HOST: -1}" == "/" ]]; do MQTT_HOST="${MQTT_HOST:0: -1}"; done # remove any trailing / from the HOST
+			if [[ $MQTT_HOST == *"/"* ]]; then MQTT_TOPIC="${MQTT_TOPIC:-${MQTT_HOST#*\/}}"; fi # if there's no explicitly defined topic, then use the URL's topic if that exists
+			MQTT_TOPIC="${MQTT_TOPIC:-$(hostname)/planefence}" # add default topic if there is still none defined
+			MQTT_HOST="${MQTT_HOST%%/*}" # remove everything from the first / onward
 
-				# send the MQTT message:
-				if ! errormsg="$(curl -sSL -d "$json" "$MQTT_URL/$MQTT_TOPIC" 2>&1)"; then
-					echo "[$(date)][$APPNAME] MQTT Delivery Error: $errormsg"
-				else
-					echo "[$(date)][$APPNAME] MQTT Delivery successful!"
-				fi
+			if [[ $MQTT_HOST == *"@"* ]]; then
+				MQTT_USERNAME="${MQTT_USERNAME:-${MQTT_HOST%@*}}"
+				MQTT_PASSWORD="${MQTT_PASSWORD:-${MQTT_USERNAME#*:}}"
+				MQTT_USERNAME="${MQTT_USERNAME%:*}"
+				MQTT_HOST="${MQTT_HOST#*@}"
+			fi
+			if [[ $MQTT_HOST == *":"* ]]; then MQTT_PORT="${MQTT_PORT:-${MQTT_HOST#*:}}"; fi
+			MQTT_HOST="${MQTT_HOST%:*}" # finally strip the host so there's only a hostname or ip address
+
+			
+			# log the message we are going to send:
+			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
+			echo "[$(date)][$APPNAME] MQTT Host: $MQTT_HOST"
+			echo "[$(date)][$APPNAME] MQTT Port: ${MQTT_PORT:-1883}"
+			echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
+			echo "[$(date)][$APPNAME] MQTT Client ID: {MQTT_CLIENT_ID:-$(hostname)}"
+			if [[ -n "$MQTT_USERNAME" ]]; then echo "[$(date)][$APPNAME] MQTT Username: $MQTT_USERNAME"; fi
+			if [[ -n "$MQTT_PASSWORD" ]]; then echo "[$(date)][$APPNAME] MQTT Password: $MQTT_PASSWORD"; fi
+			if [[ -n "$MQTT_QOS" ]]; then echo "[$(date)][$APPNAME] MQTT QOS: $MQTT_QOS"; fi
+			echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $MQTT_JSON"
+
+			# send the MQTT message:
+			outputmsg="$(echo "--broker $MQTT_HOST ${MQTT_PORT:+--port $MQTT_PORT} --topic \"$MQTT_TOPIC\" ${MQTT_QOS:+--qos $MQTT_QOS} --client_id \"${MQTT_CLIENT_ID:-$(hostname)}\" ${MQTT_USERNAME:+--username $MQTT_USERNAME} ${MQTT_PASSWORD:+--password $MQTT_PASSWORD} --message \"$MQTT_JSON\"" | xargs mqtt)"
+			if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]] ; then
+				echo "[$(date)][$APPNAME] MQTT Delivery Error: ${outputmsg//$'\n'/ }"
+			else
+				echo "[$(date)][$APPNAME] MQTT Delivery successful!"
+				if chk_enabled "$MQTT_DEBUG"; then echo "[$(date)][$APPNAME] Results string: ${outputmsg//$'\n'/ }"; fi
+			fi
 
 			fi
 
