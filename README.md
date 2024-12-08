@@ -8,6 +8,7 @@
     - [Planefence Configuration](#planefence-configuration)
       - [Initial docker configuration](#initial-docker-configuration)
       - [Planefence Settings Configuration](#planefence-settings-configuration)
+      - [Plane-Alert Exclusions](#plane-alert-exclusions)
       - [Applying your setup](#applying-your-setup)
   - [What does it look like when it's running?](#what-does-it-look-like-when-its-running)
   - [API access to your data](#api-access-to-your-data)
@@ -83,8 +84,6 @@ In the `docker-compose.yml` file, you should configure the following:
 - MANDATORY: `sudo nano /opt/adsb/planefence/config/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/planefence-ignore.txt`. In this file, you can add aircraft that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at https://github.com/sdr-enthusiasts/docker-planefence/issues so we can add your changes to the default file.
-- OPTIONAL: If you configured Twitter support before, `sudo nano /opt/adsb/planefence/config/.twurlrc`. You can add your back-up TWURLRC file here, if you want.
-- OPTIONAL: Configure tweets to be sent. For details, see these instructions: [README](README-planetweet.md)
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/sdr-enthusiasts/docker-planefence/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/sdr-enthusiasts/docker-noisecapt/).
