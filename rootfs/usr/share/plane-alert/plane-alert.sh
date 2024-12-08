@@ -442,14 +442,14 @@ then
 			
 			# log the message we are going to send:
 			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
-			echo "[$(date)][$APPNAME] MQTT Host: $MQTT_HOST"
+			echo "[$(date)][$APPNAME] MQTT Host: ${MQTT_HOST}"
 			echo "[$(date)][$APPNAME] MQTT Port: ${MQTT_PORT:-1883}"
-			echo "[$(date)][$APPNAME] MQTT Topic: $MQTT_TOPIC"
-			echo "[$(date)][$APPNAME] MQTT Client ID: {MQTT_CLIENT_ID:-$(hostname)}"
-			if [[ -n "$MQTT_USERNAME" ]]; then echo "[$(date)][$APPNAME] MQTT Username: $MQTT_USERNAME"; fi
-			if [[ -n "$MQTT_PASSWORD" ]]; then echo "[$(date)][$APPNAME] MQTT Password: $MQTT_PASSWORD"; fi
-			if [[ -n "$MQTT_QOS" ]]; then echo "[$(date)][$APPNAME] MQTT QOS: $MQTT_QOS"; fi
-			echo "[$(date)][$APPNAME] MQTT Payload JSON Object: $MQTT_JSON"
+			echo "[$(date)][$APPNAME] MQTT Topic: ${MQTT_TOPIC}"
+			echo "[$(date)][$APPNAME] MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
+			if [[ -n "$MQTT_USERNAME" ]]; then echo "[$(date)][$APPNAME] MQTT Username: ${MQTT_USERNAME}"; fi
+			if [[ -n "$MQTT_PASSWORD" ]]; then echo "[$(date)][$APPNAME] MQTT Password: ${MQTT_PASSWORD}"; fi
+			if [[ -n "$MQTT_QOS" ]]; then echo "[$(date)][$APPNAME] MQTT QOS: ${MQTT_QOS}"; fi
+			echo "[$(date)][$APPNAME] MQTT Payload JSON Object: ${MQTT_JSON}"
 
 			# send the MQTT message:
 						# send the MQTT message:
