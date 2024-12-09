@@ -118,7 +118,7 @@ a="${a#@}"      # strip off any leading "@" signs - this is a Planefence feature
 # Nothing? Then do an FAA DB lookup
 if [[ "$b" == "" ]] && [[ "${a:0:1}" == "N" ]]
 then
-        b="$(timeout 3 curl --compressed -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+        b="$(timeout 3 curl --compressed  -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" -s https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
         # If we got something, make sure it will get added to the cache:
         [[ "$b" != "" ]] && MUSTCACHE=1
         [[ "$b" != "" ]] && [[ "$q" == "" ]] && q="faa"
