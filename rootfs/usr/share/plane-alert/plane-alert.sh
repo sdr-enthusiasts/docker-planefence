@@ -407,16 +407,18 @@ then
 
 			#Get an owner if there's none, we have a tail number and we are in the US
 			OWNER="${TAGLINE[2]}"
-			if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
+			if [[ -z "$OWNER" ]] && [[ -n $TAIL ]]; then
 				#if [[ "${TAIL:0:1}" == "N" ]]; then
 				if [[ $TAIL =~ ^N[0-9][0-9a-zA-Z]+$ ]]; then
 					OWNER="$(/usr/share/planefence/airlinename.sh "$TAIL")"
 				fi
 			fi
 			#Get an owner if there's none and there is a flight number
-			if [[ -z $OWNER ]] && [[ -n ${pa_record[8]/ */} ]]; then
+			if [[ -z "$OWNER" ]] && [[ -n ${pa_record[8]/ */} ]]; then
 				OWNER="$(/usr/share/planefence/airlinename.sh "${pa_record[8]/ */}")"
 			fi
+
+			if [[ -n "$OWNER" ]]; then OWNER="$(echo "${OWNER}" | xargs -0)"; fi # clean up any stray spaces
 
 			# now put all relevant info into the associative array:
 			msg_array[icao]="${pa_record[0]//#/}"

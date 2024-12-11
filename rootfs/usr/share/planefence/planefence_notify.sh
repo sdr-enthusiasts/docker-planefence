@@ -351,7 +351,7 @@ then
 
 				msg_array[icao]="${RECORD[0]}"
 				msg_array[flight]="${RECORD[1]#@}"
-				msg_array[operator]="${AIRLINE}"
+				msg_array[operator]="$(echo "${AIRLINE}" | xargs -0)"
 				if [[ -n "$ROUTE" ]]; then
 					if [[ "${ROUTE:0:4}" == "org:" ]]; then msg_array[origin]="${ROUTE:6}"
 					elif [[ "${ROUTE:0:5}" == "dest:" ]]; then msg_array[destination]="${ROUTE:7}"
