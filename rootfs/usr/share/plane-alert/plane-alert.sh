@@ -394,38 +394,37 @@ then
 			unset msg_array
 			declare -A msg_array
 
+  	    	PLANELINE="${ALERT_DICT[${pa_record[0]}]}"
+			IFS="," read -ra TAGLINE <<< "$PLANELINE"
+			# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
 
-        PLANELINE="${ALERT_DICT[${pa_record[0]}]}"
-	IFS="," read -ra TAGLINE <<< "$PLANELINE"
-	# Parse this into a single line with syntax ICAO,TailNr,Owner,PlaneDescription,date,time,lat,lon,callsign,adsbx_url,squawk
+			ICAO="${pa_record[0]/ */}" # ICAO (stripped spaces)
+			TAIL="${TAGLINE[1]}"
+			#Get a tail number if we don't have one
+			if [[ -z "$TAIL" ]]; then
+				TAIL="$(grep -i -w "$ICAO" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
+			fi
 
-	ICAO="${pa_record[0]/ */}" # ICAO (stripped spaces)
-	TAIL="${TAGLINE[1]}"
-	#Get a tail number if we don't have one
-	if [[ -z "$TAIL" ]]; then
-		TAIL="$(grep -i -w "$ICAO" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
-	fi
-
-	#Get an owner if there's none, we have a tail number and we are in the US
-	OWNER="${TAGLINE[2]}"
-	if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
-		#if [[ "${TAIL:0:1}" == "N" ]]; then
-		if [[ $TAIL =~ ^N[0-9][0-9a-zA-Z]+$ ]]; then
-			OWNER="$(/usr/share/planefence/airlinename.sh "$TAIL")"
-		fi
-	fi
-	#Get an owner if there's none and there is a flight number
-	if [[ -z $OWNER ]] && [[ -n ${pa_record[8]/ */} ]]; then
-		OWNER="$(/usr/share/planefence/airlinename.sh "${pa_record[8]/ */}")"
-	fi
+			#Get an owner if there's none, we have a tail number and we are in the US
+			OWNER="${TAGLINE[2]}"
+			if [[ -z $OWNER ]] && [[ -n $TAIL ]]; then
+				#if [[ "${TAIL:0:1}" == "N" ]]; then
+				if [[ $TAIL =~ ^N[0-9][0-9a-zA-Z]+$ ]]; then
+					OWNER="$(/usr/share/planefence/airlinename.sh "$TAIL")"
+				fi
+			fi
+			#Get an owner if there's none and there is a flight number
+			if [[ -z $OWNER ]] && [[ -n ${pa_record[8]/ */} ]]; then
+				OWNER="$(/usr/share/planefence/airlinename.sh "${pa_record[8]/ */}")"
+			fi
 
 			# now put all relevant info into the associative array:
 			msg_array[icao]="${pa_record[0]//#/}"
 			msg_array[tail]="${pa_record[1]//#/}"
 			msg_array[squawk]="${pa_record[10]//#/}"
-			[[ "${pa_record[10]//#/}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
+			[[ "${msg_array[squawk]}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
 			msg_array[flight]="${pa_record[8]//#/}"
-			msg_array[operator]="${OWNER}"
+			if [[ -n "${OWNER}" ]]; then msg_array[operator]="${OWNER}"; fi
 			msg_array[type]="${pa_record[3]//#/}"
 			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 			msg_array[tracklink]="${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}"
