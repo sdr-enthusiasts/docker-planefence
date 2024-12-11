@@ -86,10 +86,12 @@ while : ; do
                 (( unexpired++ )) || true
             fi
         else
-            "${s6wrap[@]}" echo "No more Toots; done!"
+            if chk_enabled "$MASTODON_DEBUG"; then "${s6wrap[@]}" echo "No more Toots; done!"; fi
             exit
         fi
     done
-    output+=("($unexpired unexpired; $expired expired; oldest $(date -d "@$oldest") ($(( (now - oldest)/(60*60*24) )) days); newest $(date -d "@$newest") ($(( (now - newest)/(60*60*24) )) days))")
-    "${s6wrap[@]}" echo "${output[@]}"
+    if chk_enabled "$MASTODON_DEBUG"; then 
+        output+=("($unexpired unexpired; $expired expired; oldest $(date -d "@$oldest") ($(( (now - oldest)/(60*60*24) )) days); newest $(date -d "@$newest") ($(( (now - newest)/(60*60*24) )) days))")
+        "${s6wrap[@]}" echo "${output[@]}"
+    fi
 done
