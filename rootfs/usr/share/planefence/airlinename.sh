@@ -39,6 +39,9 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 #
+
+source /scripts/common
+
 CACHEFILE="/usr/share/planefence/persist/.internal/planeownerscache.txt"
 #
 # get the plane-alert configuration before the planefence configuration
