@@ -24,8 +24,10 @@ delete_toot() {
     local toot_id="$1"
     local result
     if ! result="$(curl -s --fail -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/statuses/$toot_id" 2>&1)"; then
-        echo ""
-        "${s6wrap[@]}" echo "error deleting $toot_id: $result"
+        if chk_enabled "$MASTODON_DEBUG"; then
+            echo ""
+            "${s6wrap[@]}" echo "error deleting $toot_id: $result"
+        fi
     fi
 }
 
