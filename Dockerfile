@@ -1,6 +1,6 @@
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
-RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Starting..." && \
+RUN /bin/bash -o pipefail -c " \
     # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -57,13 +57,13 @@ RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Starting..." && \
     /tmp/* \
     /var/lib/apt/lists/* \
     /.dockerenv \
-    /git
+    /git"
 #
 COPY rootfs/ /
 #
 COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
-RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Installing Planefence..." && \
+RUN /bin/bash -o pipefail -c " \
     #
     #
     # Install Planefence (it was copied in with /rootfs, so this is
@@ -102,7 +102,7 @@ RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Installing Planefence..." 
     #
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
-    echo "alias nano=\"nano -l\"" >> /root/.bashrc
+    echo "alias nano=\"nano -l\"" >> /root/.bashrc"
 
 #
 # No need for SHELL and ENTRYPOINT as those are inherited from the base image
