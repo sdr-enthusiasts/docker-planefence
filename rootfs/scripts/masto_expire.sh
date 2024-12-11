@@ -63,7 +63,7 @@ while : ; do
     output=("Indexing Toots")
     toots="$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/accounts/$masto_id/statuses?limit=40${last_id:+&max_id=}${last_id}")"
     # shellcheck disable=SC2207
-    toot_ids=($(jq -r '.[] | .id' <<< "$toots" 2>/dev/null))
+    toot_ids=($(jq -r '.[] | .id' <<< "$toots" 2>/dev/null || true))
     if (( ${#toot_ids[@]} == 0)); then
         "${s6wrap[@]}" echo "No more Toots; done!"
         exit 0
