@@ -1,6 +1,6 @@
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
-RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] \
+RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Starting..." && \
     # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
@@ -63,7 +63,7 @@ COPY rootfs/ /
 #
 COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
-RUN  ["/bin/bash", "-o", "pipefail", "-c", "-x"] \
+RUN ["/bin/bash", "-o", "pipefail", "-c", "-x"] echo "Installing Planefence..." && \
     #
     #
     # Install Planefence (it was copied in with /rootfs, so this is
