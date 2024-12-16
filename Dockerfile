@@ -27,6 +27,7 @@ RUN set -xe && \
     KEPT_PACKAGES+=(iputils-ping) && \
     KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
+    KEPT_PACKAGES+=(html-xml-utils) && \
     #
     KEPT_PIP3_PACKAGES+=(tzlocal) && \
     KEPT_PIP3_PACKAGES+=(discord-webhook==1.0.0) && \

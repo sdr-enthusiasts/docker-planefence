@@ -124,7 +124,7 @@ if [[ -n "$b" ]] && [[ -z "$q" ]]; then q="ca-n"; fi
 
 # Nothing? Then do an FAA DB lookup
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "N" ]]; then
-        b="$(timeout 5 curl --compressed -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" -s "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+        b="$(timeout 5 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
         # If we got something, make sure it will get added to the cache:
         if [[ -n "$b" ]]; then MUSTCACHE=1; fi
         if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="faa"; fi
@@ -137,6 +137,21 @@ if [[ -z "$b" ]]; then
         if [[ -n "$b" ]]; then MUSTCACHE=1; fi
         if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="OpenSky"; fi
   fi
+fi
+
+# If it's a Canadian tail number, let's use the Canadian lookup
+
+if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
+        a_clean="$a"
+        if [[ "${a_clean:0:2}" == "CF" ]]; then a_clean="${a_clean:2}"
+        elif [[ "${a_clean:0:1}" == "C" ]]; then a_clean="${a_clean:1}"
+        fi
+        if [[ "${a_clean:0:1}" == "-" ]]; then a_clean="${a_clean:1}"; fi
+
+        b="$(timeout 5 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" | hxclean | hxselect -i -c div#dvOwnerName div.col-md-6 | xargs | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        # If we got something, make sure it will get added to the cache:
+        if [[ -n "$b" ]]; then MUSTCACHE=1; fi
+        if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="caa"; fi
 fi
 
 # Add additional database lookups in the future here:
