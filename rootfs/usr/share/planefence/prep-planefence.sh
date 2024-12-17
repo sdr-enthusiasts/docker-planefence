@@ -43,10 +43,11 @@ function configure_both() {
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
-mkdir -p -m 0777 /usr/share/planefence/persist/.internal
+mkdir -p /usr/share/planefence/persist/.internal
 mkdir -p /usr/share/planefence/persist/planepix
 chmod -f a=rwx /usr/share/planefence/persist
 chmod -fR a+rw /usr/share/planefence/persist/{.[!.]*,*}
+chmod u=rwx,go=rx /usr/share/planefence/persist/.internal
 
 chmod a=rwx /usr/share/planefence/persist/planepix
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
