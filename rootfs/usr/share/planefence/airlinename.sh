@@ -85,6 +85,7 @@ CLEANUP_CACHE ()
 # First, let's try to see if it's a regular airline by looking up the argument in our own database:
 a="$1"  # get the flight number or tail number from the command line argument
 a="${a#@}"      # strip off any leading "@" signs - this is a Planefence feature
+a="${a^^}"      # capitalize it
 
 if [[ -n "$2" ]]; then c="$2"; else c=""; fi # C is optional ICAO
 
@@ -142,11 +143,8 @@ fi
 # If it's a Canadian tail number, let's use the Canadian lookup
 
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
-        a_clean="$a"
-        if [[ "${a_clean:0:2}" == "CF" ]]; then a_clean="${a_clean:2}"
-        elif [[ "${a_clean:0:1}" == "C" ]]; then a_clean="${a_clean:1}"
-        fi
-        if [[ "${a_clean:0:1}" == "-" ]]; then a_clean="${a_clean:1}"; fi
+        a_clean="${a//-/}"     # remove any -
+        a_clean="${a_clean:1}" # remove the leading C
 
         b="$(timeout 5 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" | hxclean | hxselect -i -c div#dvOwnerName div.col-md-6 | xargs | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
         # If we got something, make sure it will get added to the cache:
