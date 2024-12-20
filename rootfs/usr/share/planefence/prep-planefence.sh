@@ -396,6 +396,13 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 [[ -n "$PA_MQTT_QOS" ]] && configure_planealert "MQTT_QOS" "$PA_MQTT_QOS" || true
 #
 #--------------------------------------------------------------------------------
+# RSS related parameters:
+[[ -n "$PF_RSS_SITELINK" ]] && configure_planefence "RSS_SITELINK" "$PF_RSS_SITELINK" || true
+[[ -n "$PF_RSS_FAVICONLINK" ]] && configure_planefence "RSS_FAVICONLINK" "$PF_RSS_FAVICONLINK" || true
+[[ -n "$PA_RSS_SITELINK" ]] && configure_planealert "RSS_SITELINK" "$PA_RSS_SITELINK" || true
+[[ -n "$PA_RSS_FAVICONLINK" ]] && configure_planealert "RSS_FAVICONLINK" "$PA_RSS_FAVICONLINK" || true
+#
+#--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
 
