@@ -60,7 +60,7 @@ generate_rss() {
     ${SITE_IMAGE:+<image>
         <url>$(xml_encode "$SITE_IMAGE")</url>
         <title>$(xml_encode "$SITE_TITLE")</title>
-        <link>$(xml_encode "$SITE_LINK")</link>
+        <link>$SITE_LINK</link>
     </image>}
     <atom:link href="$(xml_encode "${SITE_LINK}${rss_file##*/}")" rel="self" type="application/rss+xml" />
 EOF
@@ -102,7 +102,7 @@ EOF
     <item>
         <title>$(xml_encode "$TITLE")</title>
         <description>$(xml_encode "$DESC")</description>
-        <link>$(xml_encode "$ITEM_LINK")</link>
+        <link>$ITEM_LINK</link>
         <guid isPermaLink="false">$HEXCODE-$FIRSTSEEN</guid>
         <pubDate>$PUBDATE</pubDate>
     </item>
