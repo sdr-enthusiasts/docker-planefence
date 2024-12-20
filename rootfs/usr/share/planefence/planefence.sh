@@ -995,7 +995,7 @@ EOF
 	[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET"
 	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
 	[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n"
-
+	printf "<li> A RSS feed of the aircraft detected with Planefence is available at <a href=\"planefence.rss\">planefence.rss</a>\n"
 	printf "<li> Press the header of any of the columns to sort by that column\n"
 	printf "</ul>\n"
 } >> "$OUTFILEHTMTMP"
