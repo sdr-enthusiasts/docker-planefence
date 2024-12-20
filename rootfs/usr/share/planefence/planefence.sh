@@ -802,6 +802,9 @@ else
 	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
+# run planefence-rss.sh in the background:
+/usr/share/planefence/planefence-rss.sh &
+
 [[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
