@@ -1,14 +1,15 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2015,SC2154
 
 source /scripts/common
 
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
-[[ "$LOOPTIME" == "" ]] && LOOPTIME=60
+LOOPTIME="${LOOPTIME:-60}"
+
 PLANEFENCEDIR=/usr/share/planefence
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence started as an s6 service" || true
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence started as an s6 service" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)" || true
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -30,27 +31,28 @@ PLANEFENCEDIR=/usr/share/planefence
 # can't be exported back to parent processes.
 source /usr/share/planefence/prep-planefence.sh
 #--------------------------------------------------------------------------------
-# Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call PlaneFence
+# Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call Planefence
 #
 #
 #
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence is deployed and will be starting in $LOOPTIME..." || echo "[$APPNAME][$(date)] Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs." || true
-sleep $LOOPTIME
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] PlaneFence starting its initial run now" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence is deployed and will be starting in $LOOPTIME..." || "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs." || true
+sleep "$LOOPTIME"
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence starting its initial run now" || true
 
 while true
 do
     LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
     [[ "$LOOPTIME" == "" ]] && LOOPTIME=60
-	sleep $LOOPTIME &
-	if [[ $(find /run/socket30003/ -name dump1090-*-$(date +%y%m%d).txt) ]]
+	sleep "$LOOPTIME" &
+	if [[ $(find /run/socket30003/ -name "dump1090-*-$(date +%y%m%d).txt") ]]
         then
               starttime=$(date +%s)
               # BASETIME is used for run time measurements
-              [[ "$TIMING" != "" ]] && export BASETIME=$(date +%s.%2N) || unset BASETIME
+              # shellcheck disable=SC2155
+              if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
-              [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "PlaneFence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( $starttime + $LOOPTIME )) +"%Y/%m/%d %H:%M:%S")." || true
+              [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%Y/%m/%d %H:%M:%S")." || true
         else
               "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
               "${s6wrap[@]}" echo "If this continues to happen after 5-10 minutes, check this:"
@@ -58,5 +60,5 @@ do
     fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
     wait
-	# echo "[$APPNAME][$(date)] PlaneFence process running..."
+	# "${s6wrap[@]}" echo "Planefence process running..."
 done
