@@ -46,7 +46,7 @@ generate_rss() {
     local date_str="${csv_file##*-}"
     date_str="${date_str%.csv}"
     
-    echo "Generating RSS feed for $csv_file"
+    if [[ "${LOGLEVEL,,}" != "error" ]]; then "${s6wrap[@]}" echo "Generating RSS feed for $csv_file"; fi
     
     # Create RSS header
     cat > "$rss_file" <<EOF
@@ -117,8 +117,8 @@ EOF
 EOF
 
     # Set proper permissions
-    chmod 644 "$rss_file"
-    "${s6wrap[@]}" echo "RSS feed generated at $rss_file"
+    chmod u=rw,go=r "$rss_file"
+    if [[ "${LOGLEVEL,,}" != "error" ]]; then "${s6wrap[@]}" echo "RSS feed generated at $rss_file"; fi
 }
 
 # Create/update symlink for today's feed
