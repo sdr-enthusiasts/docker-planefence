@@ -475,6 +475,35 @@ then
 			fi
 		fi
 
+		# Inject BlueSky integration here:
+		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+			# get a list of images to upload
+			unset images
+			if [[ "$GOTSNAP" == "true" ]]; then images+=("$snapfile"); fi
+
+			# check if there are any images in the plane-alert-db
+			field=()
+			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]#\#}]}"
+			rm -f "/tmp/planeimg*"
+			for (( i=0 ; i<=20; i++ ))
+			do
+				fld="$(echo ${field[$i]}|xargs)"
+				if  [[ " jpg peg " =~ " ${fld: -3} " ]] && (( ${#images[@]} < 4)); then
+					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg-$i.jpg"
+					then
+						images+=("/tmp/planeimg-$i.jpg")
+					fi
+				fi
+			done
+
+			# now send the BlueSky message:
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" "${images[@]}"
+			rm -f "/tmp/planeimg-*.jpg"
+
+		fi
+
+
 		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then

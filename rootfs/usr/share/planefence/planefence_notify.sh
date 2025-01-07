@@ -425,6 +425,11 @@ then
 
 			fi
 
+			# Insert BlueSky notifications here:
+			if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+				/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")" "$([[ "$GOTSNAP" == "true" ]] && echo "$snapfile") || echo "")"
+			fi
+
 			# And now, let's tweet!
 			if [ "$TWEETON" == "yes" ]
 			then

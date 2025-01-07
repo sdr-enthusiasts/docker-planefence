@@ -399,6 +399,16 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 [[ -n "$PA_RSS_FAVICONLINK" ]] && configure_planealert "RSS_FAVICONLINK" "$PA_RSS_FAVICONLINK" || true
 #
 #--------------------------------------------------------------------------------
+# BlueSky related parameters:
+chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && configure_planefence "BLUESKY_HANDLE" "$BLUESKY_HANDLE" || configure_planefence "BLUESKY_HANDLE" ""
+chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]] && configure_planefence "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD" || configure_planefence "BLUESKY_APP_PASSWORD" ""
+chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planefence "BLUESKY_API" "$BLUESKY_API" || configure_planefence "BLUESKY_API" ""
+
+chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && configure_planealert "BLUESKY_HANDLE" "$BLUESKY_HANDLE" || configure_planealert "BLUESKY_HANDLE" ""
+chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]] && configure_planealert "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD" || configure_planealert "BLUESKY_APP_PASSWORD" ""
+chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planealert "BLUESKY_API" "$BLUESKY_API" || configure_planealert "BLUESKY_API" ""
+#
+#--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
 
