@@ -11,7 +11,7 @@ def build(username, urls, title, description, color=None):
     if color is None:
         color = 0x007bff  # Blue
     embed = DiscordEmbed(title=title, color=color, description=description)
-    embed.set_footer(text="Planefence by kx1t - https://planefence.com")
+    embed.set_footer(text="Planefence by kx1t - https://sdr-e.com/docker-planefence")
 
     webhooks = dw.create_batch(urls=urls, username=username)
 

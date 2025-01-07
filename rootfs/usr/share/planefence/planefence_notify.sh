@@ -68,7 +68,7 @@ PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 (( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
-[[ -z "$ATTRIB" ]] && ATTRIB="#adsb #planefence by kx1t - http://github.com/sdr-enthusiasts/docker-planefence"
+ATTRIB="${ATTRIB:-#adsb #planefence by kx1t - https://sdr-e.com/docker-planefence}"
 
 if [ "$SOCKETCONFIG" != "" ]
 then

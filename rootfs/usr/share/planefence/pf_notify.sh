@@ -68,7 +68,7 @@ CSVTMP=/tmp/pf_notify-tmp.csv
 (( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
-ATTRIB="${ATTRIB:-#Planefence by kx1t - docker:kx1t/planefence}"
+ATTRIB="${ATTRIB:-#Planefence by kx1t - https://sdr-e.com/docker-planefence}"
 
 if [[ -n "$SOCKETCONFIG" ]]; then
 	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in

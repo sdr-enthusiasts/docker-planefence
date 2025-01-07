@@ -15,8 +15,6 @@ fi
 
 source /scripts/common
 
-set -x
-
 if (( ${#@} < 1 )); then
     "${s6wrap[@]}" echo "Usage: $0 <text> [image1] [image2] ..."
     exit 1
@@ -86,7 +84,8 @@ for image in "${IMAGES[@]}"; do
 done
 
 # Clean up the text
-post_text="${TEXT/\\n/\n}"
+post_text="${TEXT//[[:cntrl:]]/ }"  # remove control characters
+post_text="${post_text:0:300}"      # limit to 300 characters
 
 # Prepare the post data
 if (( ${#cid[@]} == 0 )); then
