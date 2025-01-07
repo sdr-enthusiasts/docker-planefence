@@ -53,8 +53,6 @@ if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
     exit 1
 fi
 
-set -x
-
 # send pictures to Bluesky
 unset cid size
 declare -A size
@@ -143,9 +141,9 @@ response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
     -H "Authorization: Bearer $access_jwt" \
     -d "$post_data")
 
-if [[ "$(echo "$response" | jq -r '.uri')" != "null" ]]; then
-	echo "Post successful"
+if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
+	"${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
 else
-	echo "Error: $response"
+	"${s6wrap[@]}" echo "BlueSky Posting Error: $response"
 fi
 
