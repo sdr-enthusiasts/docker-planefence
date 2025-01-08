@@ -25,13 +25,95 @@ BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
 
 # Check if the required variables are set
 if [[ -z "$BLUESKY_HANDLE" ]]; then
-    "${s6wrap[@]}" echo "Fatal: the BLUESKY_HANDLE environment variable must be set to something like \"xxxxx.bsky.social\""
+    "${s6wrap[@]}" echo "Fatal: the BLUESKY_HANDLE environment variable must be set to something like \"xxxxx.bsky.social\""    
     exit 1
 fi
 if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
     "${s6wrap[@]}" echo "Fatal: the BLUESKY_APP_PASSWORD environment variable must be set to the app password"
     exit 1
 fi
+
+mapurls=(AdsbExchange.com airplanes.live adsb.lol adsb.fi flightaware flightradar24 fr24 AirNav RadarBox)
+
+function get_embed_block() {
+# create the embed block for the post]
+
+    local embed_block=""
+    # First add images. Loop through CIDs if there are multiple images
+    if (( ${#cid[@]} > 0 )); then
+        embed_block+="
+                \"\$type\": \"app.bsky.embed.images\",
+                \"images\": [ "
+        for img in "${cid[@]}"; do
+            embed_block+="
+                    {
+                        \"image\": {
+                            \"\$type\": \"blob\",
+                            \"ref\": { \"\$link\": \"$img\" },
+                            \"mimeType\": \"${mimetype["$img"]}\" ,
+                            \"size\": ${size["$img"]}
+                        },
+                        \"alt\": \"\"
+                    },"
+        done
+        # Remove trailing comma and close the array and the rest of the post data
+        embed_block="${embed_block%,}"  # remove last comma
+        embed_block+="
+                ] "
+    fi
+
+    # add hashtags:
+    if (( ${#hashtags[@]} > 0 )); then
+        if [[ -n "$embed_block" ]]; then
+            embed_block+=",
+                "
+        fi
+        embed_block+="
+                \"facets\": [
+                    "
+        for tag in "${hashtags[@]}"; do
+            embed_block+="
+                    {
+                        \"index\": {
+                            \"byteStart\": ${tagpos[${tag:1}]},
+                            \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
+                        },
+                        \"features\": [{
+                            \"\$type\": \"app.bsky.richtext.facet#hashtag\",
+                            \"tag\": \"${tag:1}\"
+                        }]
+                    },"
+        done
+        embed_block="${embed_block%,}"  # remove last comma
+        embed_block+="
+                ] "
+    fi
+
+    # add map URL:
+    local map_done=false
+    if (( ${#urls[@]} > 0 )); then
+        for url in "${urls[@]}"; do
+            for mapurl in "${mapurls[@]}"; do
+                if grep -q "$mapurl" <<< "$url"; then
+                    if [[ -n "$embed_block" ]]; then embed_block+=", "; fi
+                    embed_block+="\"\$type\": \"app.bsky.embed.external\", \"external\": { \"uri\": \"$url\", \"title\": \"Map Link\", \"description\": \"$mapurl\" }"
+                    map_done=true
+                    break
+                fi
+            done
+        if $map_done; then break; fi
+        done
+    fi
+
+    # add header and footer to ensure the JSON is valid:
+    if [[ -n "$embed_block" ]]; then
+        embed_block="\"embed\": { $embed_block }"
+    fi
+}
+
+
+
+
 
 # Extract info from the command line arguments
 args=("$@")
@@ -51,7 +133,7 @@ if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
     exit 1
 fi
 
-# send pictures to Bluesky
+# upload pictures to Bluesky
 unset cid size mimetype tagpos taglen
 declare -A size mimetype tagpos taglen
 
@@ -108,103 +190,30 @@ post_text="${post_text:0:300}"      # limit to 300 characters
 
 echo "DEBUG: post_text after URL/hashtag processing: $post_text"
 
-# Prepare the post data
-if (( ${#cid[@]} == 0 )); then
-    # no images
+# Prepare the post JSON object
+
     post_data="{
         \"repo\": \"$did\",
         \"collection\": \"app.bsky.feed.post\",
         \"record\": {
             \"\$type\": \"app.bsky.feed.post\",
-            \"text\": \"$post_text\",
-            \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\""
-    # add hashtags:
-    if (( ${#hashtags[@]} > 0 )); then
-        post_data+=",
-            \"facets\": [
-                "
-        for tag in "${hashtags[@]}"; do
-            post_data+="
-                {
-                    \"index\": {
-                        \"byteStart\": ${tagpos[${tag:1}]},
-                        \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
-                    },
-                    \"features\": [{
-                        \"\$type\": \"app.bsky.richtext.facet#tag\",
-                        \"tag\": \"${tag:1}\"
-                    }]
-                },"
-        done
+            \"text\": \"$post_text\","
+        if (( ${#hastags[@]} + ${#urls[@]} + ${#cid[@]} > 0 )); then
+            post_data+="$embed_block"
+        fi
         post_data="${post_data%,}"  # remove last comma
-        post_data+="
-            ]"
-    fi
+        
 
-    post_data+="
-            }
-        }"
-else
-    post_data="{
-        \"repo\": \"$did\",
-        \"collection\": \"app.bsky.feed.post\",
-        \"record\": {
-            \"\$type\": \"app.bsky.feed.post\",
-            \"text\": \"$post_text\",
-            \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
-            \"embed\": {
-                \"\$type\": \"app.bsky.embed.images\",
-                \"images\": ["
 
-    # Loop through CIDs if there are multiple images
-    for img in "${cid[@]}"; do
-        post_data+="
-            {
-                \"image\": {
-                    \"\$type\": \"blob\",
-                    \"ref\": { \"\$link\": \"$img\" },
-                    \"mimeType\": \"${mimetype["$img"]}\" ,
-                    \"size\": ${size["$img"]}
-                },
-                \"alt\": \"\"
-            },"
-    done
 
     # Remove trailing comma and close the array and the rest of the post data
     post_data="${post_data%,}"  # remove last comma
-    post_data+="
-                ]
-            }"
-
-    # add hashtags:
-    if (( ${#hashtags[@]} > 0 )); then
-        post_data+=",
-            \"facets\": [
-                "
-        for tag in "${hashtags[@]}"; do
-            post_data+="
-                {
-                    \"index\": {
-                        \"byteStart\": ${tagpos[${tag:1}]},
-                        \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
-                    },
-                    \"features\": [{
-                        \"\$type\": \"app.bsky.richtext.facet#hashtag\",
-                        \"tag\": \"${tag:1}\"
-                    }]
-                },"
-        done
-        post_data="${post_data%,}"  # remove last comma
-        post_data+="
-            ]"
-    fi
 
     post_data+="
         }
     }"
-fi
 
-echo "DEBUG: post_data: $post_data"
+echo "DEBUG: post_data: $(jq . <<< "$post_data")"
 
 # Send the post to Bluesky
 response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
@@ -213,7 +222,8 @@ response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
     -d "$post_data")
 
 if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
-        "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
+	"${s6wrap[@]}" echo "BlueSky Post successful."
 else
-        "${s6wrap[@]}" echo "BlueSky Posting Error: $response"
+	"${s6wrap[@]}" echo "BlueSky Posting Error: $response"
 fi
+
