@@ -56,8 +56,8 @@ unset cid size mimetype tagpos taglen
 declare -A size mimetype tagpos taglen
 
 for image in "${IMAGES[@]}"; do
-    # skip if the image is not a file that exists
-    if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
+    # skip if the image is not a file that exists or if it's greater than 1MB (max file size for BlueSky)
+    if [[ -z "$image" ]] || [[ ! -f "$image" ]] || (( $(stat -c%s "$image") >= 1000000 )); then
         continue
     fi
 
