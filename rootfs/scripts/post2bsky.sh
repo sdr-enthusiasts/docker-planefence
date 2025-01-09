@@ -189,7 +189,7 @@ else
                         \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
                     },
                     \"features\": [{
-                        \"\$type\": \"app.bsky.richtext.facet#hashtag\",
+                        \"\$type\": \"app.bsky.richtext.facet#tag\",
                         \"tag\": \"${tag:1}\"
                     }]
                 },"
