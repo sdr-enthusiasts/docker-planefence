@@ -487,7 +487,7 @@ then
 			rm -f "/tmp/planeimg*"
 			for (( i=0 ; i<=20; i++ ))
 			do
-				fld="$(echo ${field[$i]}|xargs)"
+				fld="$(echo ${field[$i]}|xargs -0)"
 				if  [[ " jpg peg png gif " =~ " ${fld: -3} " ]] && (( ${#images[@]} < 4)); then
 					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
 					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg-$i.${fld: -3}"
@@ -515,7 +515,7 @@ then
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
-				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
+				mast_id+=("$(jq '.id' <<< "$response"|xargs -0)")
 
 			fi
 
@@ -525,7 +525,7 @@ then
 
 			for (( i=0 ; i<=20; i++ ))
 			do
-				fld="$(echo ${field[$i]}|xargs)"
+				fld="$(echo ${field[$i]}|xargs -0)"
 				ext="${fld: -3}"
 				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < MASTODON_MAXIMGS ))
 				then
@@ -535,7 +535,7 @@ then
 					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
 					then
 						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
-						[[ "$(jq '.id' <<< "$response" | xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs)") || true
+						[[ "$(jq '.id' <<< "$response" | xargs -0)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs -0)") || true
 						rm -f "/tmp/planeimg.$ext"
 					fi
 				fi
@@ -551,11 +551,11 @@ then
 			# now send the Mastodon Toot.
 			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 			# check if there was an error
-			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+			if [[ "$(jq '.error' <<< "$response"|xargs -0)" == "null" ]]
 			then
 				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
 			else
-				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs)"
+				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs -0)"
 			fi
 		fi
 

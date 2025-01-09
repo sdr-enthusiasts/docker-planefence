@@ -9,10 +9,7 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 
-if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
-    source /usr/share/planefence/persist/planefence.config
-fi
-
+source /usr/share/planefence/persist/planefence.config
 source /scripts/common
 
 if (( ${#@} < 1 )); then
@@ -22,6 +19,12 @@ fi
 
 # Set the default values
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
+BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
+
+mapurls=("${BLUESKY_MAPURLS[@]}")
+if [[ -z "${mapurls[*]}" ]]; then
+    mapurls=(adsbexchange flightradar24 planefinder opensky flightaware fr24 radarbox airnav airplanes.live adsb.lol adsb.fi wiki planefence)
+fi
 
 # Check if the required variables are set
 if [[ -z "$BLUESKY_HANDLE" ]]; then
@@ -52,17 +55,24 @@ if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
 fi
 
 # send pictures to Bluesky
-unset cid size mimetype tagpos taglen
-declare -A size mimetype tagpos taglen
+unset cid size mimetype tagstart tagend urlstart urlend urluri
+declare -A size mimetype tagstart tagend urlstart urlend urluri
 
 for image in "${IMAGES[@]}"; do
-    # skip if the image is not a file that exists
-    if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
-        continue
-    fi
+     # skip if the image is not a file that exists or if it's greater than 1MB (max file size for BlueSky)
+     if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
+         continue
+     fi
+     # figure out what type the image is: jpeg, png, gif.
+     mimetype_local="$(file --mime-type -b "$image")"
 
-    # figure out what type the image is: jpeg, png, gif.
-    mimetype_local="$(file --mime-type -b "$image")"
+     if (( $(stat -c%s "$image") >= 1000000 )); then
+         if [[ "$mimetype_local" == "image/jpeg" ]]; then
+             jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
+         else
+             continue # skip if it's > 1MB and not JPG
+         fi
+     fi
 
     #Send the image to Bluesky
     response="$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.uploadBlob" \
@@ -85,27 +95,59 @@ done
 # Clean up the text
 # First extract and remove any URLs
 readarray -t urls <<< "$(grep -ioE 'https?://\S*' <<< "${TEXT}")"   # extract URLs
-post_text="$(sed -e 's|http[s]\?://\S*||g' <<< "$TEXT")"  # remove URLs
-# further cleanup:
+post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove URLs and empty lines
 
-post_text="${post_text//[[:cntrl:]]/; }"  # remove control characters
-while grep -sq '; ; ' <<< "$post_text"; do
-    post_text="${post_text//; ; /; }"  # remove double "; ; "
-done
+# further cleanup:
 if [[ "${post_text: -3}" == " - " ]]; then post_text="${post_text:0:-3}"; fi  # remove trailing " - "
 
 # extract hashtags
 readarray -t hashtags <<< "$(grep -o '#[[:alnum:]]*' <<< "$post_text")"
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
-    tagpos[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
-    taglen[${tag:1}]="$((${#tag} - 1))" # get the length of the tag without the "#" symbol
+    tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
+    tagend[${tag:1}]="$((${tagstart[${tag:1}]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
     post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
     #echo "DEBUG: $tag - ${tagpos[${tag:1}]} - ${taglen[${tag:1}]} - tagtext ${post_text:${tagpos[${tag:1}]}:${taglen[${tag:1}]}} - newstring: $post_text"
 done
 
-post_text="${post_text:0:300}"      # limit to 300 characters
+# add links
+linkcounter=0
 
+for url in "${urls[@]}"; do
+    urlfound=false
+    for mapurl in "${mapurls[@]}"; do
+        if [[ "$url" == *"$mapurl"* ]] && (( ${#post_text} + ${#mapurl} + 3 <= BLUESKY_MAXLENGTH )); then
+            # We have a link to one of the map services. Add it to the post text
+            post_text+=" - ${mapurl}"
+            index="$mapurl$((linkcounter++))"
+            urlstart["$index"]="$((${#post_text} - ${#mapurl}))"
+            urlend["$index"]="${#post_text}"
+            urluri["$index"]="$url"
+            urlfound=true
+            break
+        fi
+    done
+    if ! $urlfound && (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )); then
+        # We have a generic link. Add it to the post text
+        post_text+=" - link"
+        index="link$((linkcounter++))"
+        urlstart["$index"]="$((${#post_text} - 4))"
+        urlend["$index"]="${#post_text}"
+        urluri["$index"]="$url"
+        break
+    fi
+    if (( ${#post_text} + 7 > BLUESKY_MAXLENGTH )); then
+        # we have reached the maximum length of the post text
+        break
+    fi
+done
+
+# echo "DEBUG: urlstart: ${urlstart[*]} for indices ${!urlstart[*]}"
+# echo "DEBUG: urlend: ${urlend[*]} for indices ${!urlend[*]}"
+# echo "DEBUG: urluri: ${urluri[*]} for indices ${!urluri[*]}"
+
+post_text="${post_text:0:$BLUESKY_MAXLENGTH}"      # limit to 300 characters
+post_text="${post_text//[[:cntrl:]]/\\n}"
 #echo "DEBUG: post_text after URL/hashtag processing: $post_text"
 
 # Prepare the post data
@@ -118,24 +160,41 @@ if (( ${#cid[@]} == 0 )); then
             \"\$type\": \"app.bsky.feed.post\",
             \"text\": \"$post_text\",
             \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\""
-    # add hashtags:
-    if (( ${#hashtags[@]} > 0 )); then
+    # add hashtags and links:
+    if (( ${#hashtags[@]} + ${#urlstart[@]} > 0 )); then
         post_data+=",
             \"facets\": [
                 "
-        for tag in "${hashtags[@]}"; do
-            post_data+="
-                {
-                    \"index\": {
-                        \"byteStart\": ${tagpos[${tag:1}]},
-                        \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
-                    },
-                    \"features\": [{
-                        \"\$type\": \"app.bsky.richtext.facet#tag\",
-                        \"tag\": \"${tag:1}\"
-                    }]
-                },"
-        done
+        if (( ${#hashtags[@]} > 0 )); then
+            for tag in "${hashtags[@]}"; do
+                post_data+="
+                    {
+                        \"index\": {
+                            \"byteStart\": ${tagstart[${tag:1}]},
+                            \"byteEnd\": ${tagend[${tag:1}]}
+                        },
+                        \"features\": [{
+                            \"\$type\": \"app.bsky.richtext.facet#tag\",
+                            \"tag\": \"${tag:1}\"
+                        }]
+                    },"
+            done
+        fi
+        if (( ${#urlstart[@]} > 0 )); then
+            for url in "${!urlstart[@]}"; do
+                post_data+="
+                    {
+                        \"index\": {
+                            \"byteStart\": ${urlstart[${url}]},
+                            \"byteEnd\": ${urlend[${url}]}
+                        },
+                        \"features\": [{
+                            \"\$type\": \"app.bsky.richtext.facet#link\",
+                            \"uri\": \"${urluri[${url}]}\"
+                        }]
+                    },"
+            done
+        fi
         post_data="${post_data%,}"  # remove last comma
         post_data+="
             ]"
@@ -176,28 +235,49 @@ else
                 ]
             }"
 
-    # add hashtags:
-    if (( ${#hashtags[@]} > 0 )); then
+    # add hashtags and links:
+    if (( ${#hashtags[@]} + ${#urlstart[@]} > 0 )); then
         post_data+=",
             \"facets\": [
                 "
-        for tag in "${hashtags[@]}"; do
-            post_data+="
-                {
-                    \"index\": {
-                        \"byteStart\": ${tagpos[${tag:1}]},
-                        \"byteEnd\": $(( ${tagpos[${tag:1}]} + ${taglen[${tag:1}]} ))
-                    },
-                    \"features\": [{
-                        \"\$type\": \"app.bsky.richtext.facet#tag\",
-                        \"tag\": \"${tag:1}\"
-                    }]
-                },"
-        done
+        if (( ${#hashtags[@]} > 0 )); then
+            for tag in "${hashtags[@]}"; do
+                post_data+="
+                    {
+                        \"index\": {
+                            \"byteStart\": ${tagstart[${tag:1}]},
+                            \"byteEnd\": ${tagend[${tag:1}]}
+                        },
+                        \"features\": [{
+                            \"\$type\": \"app.bsky.richtext.facet#tag\",
+                            \"tag\": \"${tag:1}\"
+                        }]
+                    },"
+            done
+        fi
+        if (( ${#urlstart[@]} > 0 )); then
+            for url in "${!urlstart[@]}"; do
+                post_data+="
+                    {
+                        \"index\": {
+                            \"byteStart\": ${urlstart[${url}]},
+                            \"byteEnd\": ${urlend[${url}]}
+                        },
+                        \"features\": [{
+                            \"\$type\": \"app.bsky.richtext.facet#link\",
+                            \"uri\": \"${urluri[${url}]}\"
+                        }]
+                    },"
+            done
+        fi
         post_data="${post_data%,}"  # remove last comma
         post_data+="
             ]"
     fi
+
+    post_data+="
+            }
+        }"
 
     post_data+="
         }
@@ -205,6 +285,8 @@ else
 fi
 
 #echo "DEBUG: post_data: $post_data"
+echo "$post_data" >> /tmp/bsky.json
+echo "-------------------------------------------------" >> /tmp/bsky.json
 
 # Send the post to Bluesky
 response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
