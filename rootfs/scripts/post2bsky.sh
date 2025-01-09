@@ -106,7 +106,7 @@ done
 
 post_text="${post_text:0:300}"      # limit to 300 characters
 
-echo "DEBUG: post_text after URL/hashtag processing: $post_text"
+#echo "DEBUG: post_text after URL/hashtag processing: $post_text"
 
 # Prepare the post data
 if (( ${#cid[@]} == 0 )); then
@@ -204,7 +204,7 @@ else
     }"
 fi
 
-echo "DEBUG: post_data: $post_data"
+#echo "DEBUG: post_data: $post_data"
 
 # Send the post to Bluesky
 response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
