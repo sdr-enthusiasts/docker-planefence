@@ -50,7 +50,7 @@ access_jwt=$(echo "$auth_response" | jq -r '.accessJwt')
 did=$(echo "$auth_response" | jq -r '.did')
 
 if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
-    echo "[$(date)][$APPNAME] Error: Failed to authenticate with Bluesky"
+    "${s6wrap[@]}" echo "Error: Failed to authenticate with Bluesky. Returned response was $auth_response"
     exit 1
 fi
 
@@ -285,8 +285,8 @@ else
 fi
 
 #echo "DEBUG: post_data: $post_data"
-echo "$post_data" >> /tmp/bsky.json
-echo "-------------------------------------------------" >> /tmp/bsky.json
+#echo "$post_data" >> /tmp/bsky.json
+#echo "-------------------------------------------------" >> /tmp/bsky.json
 
 # Send the post to Bluesky
 response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
