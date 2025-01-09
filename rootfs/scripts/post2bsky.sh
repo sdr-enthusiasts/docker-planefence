@@ -42,15 +42,22 @@ TEXT="${args[0]}"
 IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
 
 # First get an auth token
-auth_response=$(curl -s -X POST "$BLUESKY_API/com.atproto.server.createSession" \
+auth_response="$(curl -s -X POST "$BLUESKY_API/com.atproto.server.createSession" \
     -H "Content-Type: application/json" \
-    -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}")
+    -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}")"
 
-access_jwt=$(echo "$auth_response" | jq -r '.accessJwt')
-did=$(echo "$auth_response" | jq -r '.did')
+access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
+did="$(jq -r '.did' <<< "$auth_response")"
 
 if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
-    "${s6wrap[@]}" echo "Error: Failed to authenticate with Bluesky. Returned response was $auth_response"
+    "${s6wrap[@]}" echo "Error: Failed to authenticate with BlueSky. Returned response was $auth_response"
+    if [[ "$(jq -r '.error' <<< "$auth_response")" == "RateLimitExceeded" ]]; then
+        resettime="$(curl -v -s -X POST "$BLUESKY_API/com.atproto.server.createSession" \
+            -H "Content-Type: application/json" \
+            -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}" 2>&1 \
+            | awk '{if ($2 == "ratelimit-reset:") {print $3; exit}}')"
+        "${s6wrap[@]}" echo "Rate limit exceeded. Posting to BlueSky is suspended until $(date -d@"$resettime")."
+    fi
     exit 1
 fi
 
