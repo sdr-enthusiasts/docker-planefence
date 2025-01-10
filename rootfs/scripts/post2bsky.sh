@@ -73,12 +73,12 @@ for image in "${IMAGES[@]}"; do
      # figure out what type the image is: jpeg, png, gif.
      mimetype_local="$(file --mime-type -b "$image")"
 
-     if (( $(stat -c%s "$image") >= 9500000 )); then
+     if (( $(stat -c%s "$image") >= 950000 )); then
          if [[ "$mimetype_local" == "image/jpeg" ]]; then
              jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
          elif [[ "$mimetype_local" == "image/png" ]]; then
-             pngquant -f  o "$image" "$image"	# if it's PNG and > 1 MB, we can optimize for it
-             if (( $(stat -c%s "$image") >= 9500000 )); then continue; fi # skip if it's still > 1MB
+             pngquant -f  -o "$image" "$image"	# if it's PNG and > 1 MB, we can optimize for it
+             if (( $(stat -c%s "$image") >= 950000 )); then continue; fi # skip if it's still > 1MB
          else
              continue # skip if it's > 1MB and not JPG or PNG
          fi
@@ -111,13 +111,13 @@ post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove UR
 if [[ "${post_text: -3}" == " - " ]]; then post_text="${post_text:0:-3}"; fi  # remove trailing " - "
 
 # extract hashtags
-readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g') 2>/dev/null"
+readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g' 2>/dev/null)"
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
     tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
     tagend[${tag:1}]="$((${tagstart[${tag:1}]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
     post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
-    #echo "DEBUG: $tag - ${tagpos[${tag:1}]} - ${taglen[${tag:1}]} - tagtext ${post_text:${tagpos[${tag:1}]}:${taglen[${tag:1}]}} - newstring: $post_text"
+    # echo "DEBUG: $tag - ${tagpos[${tag:1}]} - ${taglen[${tag:1}]} - tagtext ${post_text:${tagpos[${tag:1}]}:${taglen[${tag:1}]}} - newstring: $post_text"
 done
 
 # add links
@@ -302,7 +302,7 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
         "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response"
-        echo "$response" >> /tmp/bsky.json
-        echo "$post_data" >> /tmp/bsky.json
-        echo "-------------------------------------------------" >> /tmp/bsky.json
+        { echo "$response"
+          echo "$post_data"
+          echo "-------------------------------------------------"; } >> /tmp/bsky.json
 fi
