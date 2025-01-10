@@ -498,7 +498,7 @@ then
 			done
 
 			# now send the BlueSky message:
-			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
+			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed >> /tmp/bsky.json-e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
 			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" "${images[@]}" || true
 			rm -f "/tmp/planeimg-*"
 
