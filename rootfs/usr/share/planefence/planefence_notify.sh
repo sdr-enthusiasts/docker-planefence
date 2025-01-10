@@ -149,7 +149,7 @@ getRoute()
 
 	if [[ -n "$origin" ]] && [[ -n "$destination" ]]
 	then
-		response="#$origin-#$destination"
+		response="#$origin - #$destination"
 	elif [[ -n "$origin" ]]
 	then
 		response="org: #$origin"
