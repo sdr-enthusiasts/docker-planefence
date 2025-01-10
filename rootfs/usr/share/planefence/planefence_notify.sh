@@ -304,8 +304,8 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-            fi
+      	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+                        fi
 
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
@@ -316,7 +316,7 @@ then
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
-                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
 								
 				if [[ "$GOTSNAP" == "true" ]]
 				then
@@ -427,7 +427,7 @@ then
 
 			# Insert BlueSky notifications here:
 			if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
-				/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")" "$([[ "$GOTSNAP" == "true" ]] && echo "$snapfile") || echo "")"|| true
+				/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")" "$(if [[ "$GOTSNAP" == "true" ]]; then echo "$snapfile"; fi))" || true
 			fi
 
 			# And now, let's tweet!
