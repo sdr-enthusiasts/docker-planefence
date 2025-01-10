@@ -303,6 +303,7 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
         "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response"
+        echo "$response" >> /tmp/bsky.json
         echo "$post_data" >> /tmp/bsky.json
         echo "-------------------------------------------------" >> /tmp/bsky.json
 fi
