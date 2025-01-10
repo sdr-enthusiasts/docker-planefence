@@ -283,10 +283,6 @@ else
     fi
 
     post_data+="
-            }
-        }"
-
-    post_data+="
         }
     }"
 fi
