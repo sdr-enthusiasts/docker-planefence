@@ -111,7 +111,7 @@ post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove UR
 if [[ "${post_text: -3}" == " - " ]]; then post_text="${post_text:0:-3}"; fi  # remove trailing " - "
 
 # extract hashtags
-readarray -t hashtags <<< "$(grep -o '#[[:alnum:]]*' <<< "$post_text")"
+readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g') 2>/dev/null"
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
     tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
