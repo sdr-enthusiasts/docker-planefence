@@ -292,8 +292,6 @@ else
 fi
 
 #echo "DEBUG: post_data: $post_data"
-#echo "$post_data" >> /tmp/bsky.json
-#echo "-------------------------------------------------" >> /tmp/bsky.json
 
 # Send the post to Bluesky
 response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
@@ -305,4 +303,6 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
         "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response"
+        echo "$post_data" >> /tmp/bsky.json
+        echo "-------------------------------------------------" >> /tmp/bsky.json
 fi
