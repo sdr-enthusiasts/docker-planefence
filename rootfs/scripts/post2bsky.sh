@@ -49,7 +49,7 @@ args=("$@")
 TEXT="${args[0]}"
 IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
 
-if [[ -z "$TEXT ]]; then
+if [[ -z "$TEXT" ]]; then
     "{s6wrap[@]}" echo "Fatal: a post text must be included in the request to $0"
     exit 1
 fi
@@ -123,13 +123,14 @@ for image in "${IMAGES[@]}"; do
              fi
          elif [[ "$mimetype_local" == "image/png" ]]; then
              pngquant -f  -o "${image}.tmp" "$image"	# if it's PNG and > 1 MB, we can optimize for it
-             mv "${image}.tmp" "$image"
+             mv -f "${image}.tmp" "$image"
          else
+             "${s6wrap[@]}" echo "Omitting image $image as it is too big"
              continue # skip if it's not JPG or PNG
          fi
      fi
      if (( $(stat -c%s "$image") >= 950000 )); then
-         "${s6wrap[@]}" echo "Omitting image as the size reduction was insufficient: $image $(wc --bytes < "$image") $(stat -c%s "$image")"
+         "${s6wrap[@]}" echo "Omitting image $image as the size reduction was insufficient: $image $(wc --bytes < "$image") $(stat -c%s "$image")"
          continue;
      fi # skip if it's still > 1MB
 
