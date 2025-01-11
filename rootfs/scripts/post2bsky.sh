@@ -49,6 +49,11 @@ args=("$@")
 TEXT="${args[0]}"
 IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
 
+if [[ -z "$TEXT ]]; then
+    "{s6wrap[@]}" echo "Fatal: a post text must be included in the request to $0"
+    exit 1
+fi
+
 # First get an auth token
 active=false
 # if we have previous authentication date stored, use that to refresh the token
@@ -109,12 +114,12 @@ for image in "${IMAGES[@]}"; do
      # figure out what type the image is: jpeg, png, gif.
      mimetype_local="$(file --mime-type -b "$image")"
 
-     if (( $(stat -c%s "$image") >= 950000 )); then
+     if (( $(stat -c%s "$image") >= 850000 )); then
          if [[ "$mimetype_local" == "image/jpeg" ]]; then
-             jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
+             jpegoptim -q -S850 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
          elif [[ "$mimetype_local" == "image/png" ]]; then
              pngquant -f  -o "$image" "$image"	# if it's PNG and > 1 MB, we can optimize for it
-             if (( $(stat -c%s "$image") >= 950000 )); then continue; fi # skip if it's still > 1MB
+             if (( $(stat -c%s "$image") >= 850000 )); then continue; fi # skip if it's still > 1MB
          else
              continue # skip if it's > 1MB and not JPG or PNG
          fi
