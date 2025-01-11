@@ -131,11 +131,11 @@ for image in "${IMAGES[@]}"; do
      # figure out what type the image is: jpeg, png, gif.
      mimetype_local="$(file --mime-type -b "$image")"
 
-     if (( $(stat -c%s "$image") >= 850000 )); then
+     if (( $(stat -c%s "$image") >= 950000 )); then
          if [[ "$mimetype_local" == "image/jpeg" ]]; then
-             jpegoptim -q -S850 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
+             jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
              # try again if still too big
-             if (( $(stat -c%s "$image") >= 850000 )); then
+             if (( $(stat -c%s "$image") >= 950000 )); then
                  jpegoptim -q -S850 -s "$image"
              fi
          elif [[ "$mimetype_local" == "image/png" ]]; then
