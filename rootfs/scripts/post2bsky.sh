@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001
 # -----------------------------------------------------------------------------------
-# Copyright 2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2025 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/docker-planefence/
@@ -18,11 +18,73 @@ if (( ${#@} < 1 )); then
 fi
 
 function get_rate_str() {
+    if [[ ! -f /tmp/bsky.headers ]]; then return; fi
     ratelimit_reset="$(awk '{if ($2 == "ratelimit-reset:") {print $3; exit}}' < /tmp/bsky.headers)"
     ratelimit_limit="$(awk '{if ($2 == "ratelimit-limit:") {print $3; exit}}' < /tmp/bsky.headers)"
     ratelimit_remaining="$(awk '{if ($2 == "ratelimit-remaining:") {print $3; exit}}' < /tmp/bsky.headers)"
-    ratelimit_str="Rate limits: ${ratelimit_remaining//[^[:digit:]]/} of ${ratelimit_limit//[^[:digit:]]/}; $(if [[ -n "${ratelimit_reset//[^[:digit:]]/}" ]]; then date -d @"${ratelimit_reset//[^[:digit:]]/}" +"resets at %c"; fi)"
+    ratelimit_str="Rate Limits: ${ratelimit_remaining//[^[:digit:]]/} of ${ratelimit_limit//[^[:digit:]]/}; $(if [[ -n "${ratelimit_reset//[^[:digit:]]/}" ]]; then date -d @"${ratelimit_reset//[^[:digit:]]/}" +"resets at %c"; fi)"
     rm -f /tmp/bsky.headers
+}
+
+function bsky_auth() {
+    # function to authenticate with BlueSky
+
+    local active=false
+    local refresh_jwt auth_response
+
+    # if we have previous authentication data stored, use that to refresh the token
+    if [[ -f /tmp/bsky.auth ]]; then
+        source /tmp/bsky.auth
+        auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.refreshSession" \
+            -H "Authorization: Bearer $refresh_jwt" 2>/tmp/bsky.headers)"
+
+        access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
+        did="$(jq -r '.did' <<< "$auth_response")"
+        refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
+        active="$(jq -r '.active' <<< "$auth_response")"
+        handle="$(jq -r '.handle' <<< "$auth_response")"
+        #if ! $active; then echo "DEBUG: auth through refreshSession failed: $auth_response"; else echo "DEBUG: auth through refreshSession successful"; fi
+    fi
+
+    # if that didn't work, create a new session
+    if ! $active || [[ "$active" == "null" ]] \
+    || [[ -z "$access_jwt" ]] || [[ "$access_jwt" == "null" ]] \
+    || [[ -z "$did" ]] || [[ "$did" == "null" ]] \
+    || [[ -z "$refresh_jwt" ]] || [[ "$refresh_jwt" == "null" ]]; then
+        auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.createSession" \
+            -H "Content-Type: application/json" \
+            -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}" 2>/tmp/bsky.headers)"
+
+        access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
+        did="$(jq -r '.did' <<< "$auth_response")"
+        refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
+        active="$(jq -r '.active' <<< "$auth_response")"
+        handle="$(jq -r '.handle' <<< "$auth_response")"
+        #if ! $active; then echo "DEBUG: auth through createSession failed: $auth_response"; else echo "DEBUG: auth through createSession successful";  fi
+    fi
+
+    get_rate_str
+
+    # if that didn't work, give up
+    if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
+        "${s6wrap[@]}" echo "Error: Failed to authenticate with BlueSky. Returned response was $auth_response. $ratelimit_str"
+        "${s6wrap[@]}" echo "BlueSky Authentication Error: $auth_response. $ratelimit_str"
+        { echo "{ \"title\": \"BlueSky Posting Error\""
+          echo "  \"response\": $auth_response ,"
+          echo "  \"ratelimit\": $ratelimit_str } ,"
+        } >> /tmp/bsky.json
+        err="$(</tmp/bsky.json)"; if [[ "${err: -1}" == "," ]]; then printf "%s\n" "${err:0:-1}" >/tmp/bsky.json; fi
+        exit 1
+    fi
+
+    "${s6wrap[@]}" echo "BlueSky authentication OK. Welcome, $handle! Your $ratelimit_str";
+
+    # write back the token info to the authentication file
+    cat >/tmp/bsky.auth <<EOF
+access_jwt="$access_jwt"
+refresh_jwt="$refresh_jwt"
+EOF
+
 }
 
 # Set the default values
@@ -50,57 +112,12 @@ TEXT="${args[0]}"
 IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
 
 if [[ -z "$TEXT" ]]; then
-    "{s6wrap[@]}" echo "Fatal: a post text must be included in the request to $0"
+    "${s6wrap[@]}" echo "Fatal: a post text must be included in the request to $0"
     exit 1
 fi
 
-# First get an auth token
-active=false
-# if we have previous authentication date stored, use that to refresh the token
-if [[ -f /tmp/bsky.auth ]]; then
-    source /tmp/bsky.auth
-    auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.refreshSession" \
-        -H "Authorization: Bearer $refresh_jwt" 2>/tmp/bsky.headers)"
-
-    access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
-    did="$(jq -r '.did' <<< "$auth_response")"
-    refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
-    active="$(jq -r '.active' <<< "$auth_response")"
-    #if ! $active; then echo "DEBUG: auth through refreshSession failed: $auth_response"; else echo "DEBUG: auth through refreshSession successful"; fi
-fi
-
-# if that didn't work, create a new session
-if ! $active \
-   || [[ -z "$access_jwt" ]] || [[ "$access_jwt" == "null" ]] \
-   || [[ -z "$did" ]] || [[ "$did" == "null" ]] \
-   || [[ -z "$refresh_jwt" ]] || [[ "$refresh_jwt" == "null" ]]; then
-    auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.createSession" \
-        -H "Content-Type: application/json" \
-        -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}" 2>/tmp/bsky.headers)"
-
-    access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
-    did="$(jq -r '.did' <<< "$auth_response")"
-    refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
-    active="$(jq -r '.active' <<< "$auth_response")"
-    #if ! $active; then echo "DEBUG: auth through createSession failed: $auth_response"; else echo "DEBUG: auth through createSession successful";  fi
-fi
-
-get_rate_str
-
-# if that didn't work, give up
-if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
-    "${s6wrap[@]}" echo "Error: Failed to authenticate with BlueSky. Returned response was $auth_response. $ratelimit_str"
-    exit 1
-fi
-
-"${s6wrap[@]}" echo "BlueSky authentication OK. $ratelimit_str";
-
-# write back the token info to the authentication file
-cat >/tmp/bsky.auth <<EOF
-access_jwt="$access_jwt"
-refresh_jwt="$refresh_jwt"
-EOF
-
+# Authenticate with BlueSky
+bsky_auth
 
 # send pictures to Bluesky
 unset cid size mimetype tagstart tagend urlstart urlend urluri
@@ -144,12 +161,16 @@ for image in "${IMAGES[@]}"; do
     size_local="$(jq -r '.blob.size' <<< "$response")"
     get_rate_str
     if [[ -z "$cid_local" ]] || [[ "$cid_local" == "null" ]]; then
-        "${s6wrap[@]}" echo "Error uploading image to BlueSky: $response. $ratelimit_str"
+        "${s6wrap[@]}" echo "Error uploading $image to BlueSky: $response. $ratelimit_str. Local size is $(stat -c%s "$image"); reported blob size is $size_local."
+        { echo "{ \"title\": \"BlueSky Image Upload Error\""
+          echo "  \"response\": $response ,"
+          echo "  \"ratelimit\": $ratelimit_str } ,"
+        } >> /tmp/bsky.json
     else
         cid+=("$cid_local")
         size["$cid_local"]="$size_local"
         mimetype["$cid_local"]="$mimetype_local"
-        "${s6wrap[@]}" echo "Image uploaded to Bluesky: $cid_local. $ratelimit_str"
+        "${s6wrap[@]}" echo "$image uploaded succesfully to BlueSky. $ratelimit_str"
     fi
 done
 
@@ -352,12 +373,15 @@ response=$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
 get_rate_str
 
 if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
-        "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response"). $ratelimit_str"
+        uri="$(jq -r '.uri' <<< "$response")"
+        "${s6wrap[@]}" echo "BlueSky Post successful. Post available at https://bsky.app/profile/$handle/post/${uri##*/}. $ratelimit_str"
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response. $ratelimit_str"
-        { echo "$response"
-          echo "$ratelimit_str"
-          echo "$post_data"
-          echo "-------------------------------------------------"
+        { echo "{ \"title\": \"BlueSky Posting Error\""
+          echo "  \"response\": $response ,"
+          echo "  \"ratelimit\": $ratelimit_str ,"
+          echo "  \"postdata\": $post_data } ,"
         } >> /tmp/bsky.json
+        err="$(</tmp/bsky.json)"; if [[ "${err: -1}" == "," ]]; then printf "%s\n" "${err:0:-1}" >/tmp/bsky.json; fi
+        exit 1
 fi
