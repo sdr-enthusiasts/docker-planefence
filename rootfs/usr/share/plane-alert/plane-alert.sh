@@ -896,6 +896,12 @@ else
     sed -i "s|##MASTODONLINK##||g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##MASTOHEADER##||g" "$TMPDIR"/plalert-index.tmp
 fi
+if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
+	sed -i "s|##BLUESKYLINK##|<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/$BLUESKY_HANDLE\" target=\"_blank\">@$BLUESKY_HANDLE</a> at BlueSky.Social|g" "$TMPDIR"/plalert-index.tmp
+else
+	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
+fi
+
 if (( $(cat "$OUTFILE" | wc -l ) > 0 )); then
 	# shellcheck disable=SC2046
 	sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icao=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' "$OUTFILE" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp

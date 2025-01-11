@@ -860,9 +860,9 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # You are taking an interest in this code! Great!
 # I'm not a professional programmer, and your suggestions and contributions
 # are always welcome. Join me at the GitHub link shown below, or via email
-# at kx1t (at) amsat (dot) org.
+# at kx1t (at) kx1t (dot) com.
 #
-# Copyright 2020-2024 Ramon. Kolb, kx1t - licensed under the terms and conditions
+# Copyright 2020-20245 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/
@@ -996,6 +996,7 @@ EOF
 	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
 	[[ "$PLANEALERT" == "ON" ]] && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"plane-alert\" target=\"_blank\">here</a>\n"
 	printf "<li> A RSS feed of the aircraft detected with Planefence is available at <a href=\"planefence.rss\">planefence.rss</a>\n"
+	if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then printf "<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a> at BlueSky \n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"; fi 
 	printf "<li> Press the header of any of the columns to sort by that column\n"
 	printf "</ul>\n"
 } >> "$OUTFILEHTMTMP"
