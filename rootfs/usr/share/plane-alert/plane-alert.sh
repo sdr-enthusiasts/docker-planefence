@@ -378,6 +378,7 @@ then
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}")"
 
 		TWITTEXT+="\n\n$ATTRIB"
+                TWITTEXT="${TWITTEXT//\'/}"
 
 		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
 		then
