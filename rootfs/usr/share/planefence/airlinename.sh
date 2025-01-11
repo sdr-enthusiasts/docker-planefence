@@ -174,7 +174,7 @@ if [[ -n "$b" ]] && [[ "$q" == "" ]]; then q="rdb"; fi
 # Clean up the results
 if [[ -n "$b" ]]; then
         b="${b^^}"
-        b="$(echo "$b"|xargs -0)" #clean up extra spaces
+        b="$(echo "$b"|xargs)" #clean up extra spaces
         b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
         b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
         b="${b% TRUSTEE}"
