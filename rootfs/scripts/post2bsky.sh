@@ -17,6 +17,14 @@ if (( ${#@} < 1 )); then
     exit 1
 fi
 
+function get_rate_str() {
+    ratelimit_reset="$(awk '{if ($2 == "ratelimit-reset:") {print $3; exit}}' < /tmp/bsky.headers)"
+    ratelimit_limit="$(awk '{if ($2 == "ratelimit-limit:") {print $3; exit}}' < /tmp/bsky.headers)"
+    ratelimit_remaining="$(awk '{if ($2 == "ratelimit-remaining:") {print $3; exit}}' < /tmp/bsky.headers)"
+    ratelimit_str="Rate limits: ${ratelimit_remaining//[^[:digit:]]/} of ${ratelimit_limit//[^[:digit:]]/}; $(if [[ -n "${ratelimit_reset//[^[:digit:]]/}" ]]; then date -d @"${ratelimit_reset//[^[:digit:]]/}" +"resets at %c"; fi)"
+    rm -f /tmp/bsky.headers
+}
+
 # Set the default values
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
 BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
@@ -42,24 +50,52 @@ TEXT="${args[0]}"
 IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
 
 # First get an auth token
-auth_response="$(curl -s -X POST "$BLUESKY_API/com.atproto.server.createSession" \
-    -H "Content-Type: application/json" \
-    -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}")"
+active=false
+# if we have previous authentication date stored, use that to refresh the token
+if [[ -f /tmp/bsky.auth ]]; then
+    source /tmp/bsky.auth
+    auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.refreshSession" \
+        -H "Authorization: Bearer $refresh_jwt" 2>/tmp/bsky.headers)"
 
-access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
-did="$(jq -r '.did' <<< "$auth_response")"
+    access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
+    did="$(jq -r '.did' <<< "$auth_response")"
+    refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
+    active="$(jq -r '.active' <<< "$auth_response")"
+    #if ! $active; then echo "DEBUG: auth through refreshSession failed: $auth_response"; else echo "DEBUG: auth through refreshSession successful"; fi
+fi
 
+# if that didn't work, create a new session
+if ! $active \
+   || [[ -z "$access_jwt" ]] || [[ "$access_jwt" == "null" ]] \
+   || [[ -z "$did" ]] || [[ "$did" == "null" ]] \
+   || [[ -z "$refresh_jwt" ]] || [[ "$refresh_jwt" == "null" ]]; then
+    auth_response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.server.createSession" \
+        -H "Content-Type: application/json" \
+        -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}" 2>/tmp/bsky.headers)"
+
+    access_jwt="$(jq -r '.accessJwt' <<< "$auth_response")"
+    did="$(jq -r '.did' <<< "$auth_response")"
+    refresh_jwt="$(jq -r '.refreshJwt' <<< "$auth_response")"
+    active="$(jq -r '.active' <<< "$auth_response")"
+    #if ! $active; then echo "DEBUG: auth through createSession failed: $auth_response"; else echo "DEBUG: auth through createSession successful";  fi
+fi
+
+get_rate_str
+
+# if that didn't work, give up
 if [[ -z "$access_jwt" || "$access_jwt" == "null" ]]; then
-    "${s6wrap[@]}" echo "Error: Failed to authenticate with BlueSky. Returned response was $auth_response"
-    if [[ "$(jq -r '.error' <<< "$auth_response")" == "RateLimitExceeded" ]]; then
-        resettime="$(curl -v -s -X POST "$BLUESKY_API/com.atproto.server.createSession" \
-            -H "Content-Type: application/json" \
-            -d "{\"identifier\":\"$BLUESKY_HANDLE\",\"password\":\"$BLUESKY_APP_PASSWORD\"}" 2>&1 \
-            | awk '{if ($2 == "ratelimit-reset:") {print $3; exit}}')"
-        "${s6wrap[@]}" echo "Rate limit exceeded. Posting to BlueSky is suspended until $(date -d@"$resettime")."
-    fi
+    "${s6wrap[@]}" echo "Error: Failed to authenticate with BlueSky. Returned response was $auth_response. $ratelimit_str"
     exit 1
 fi
+
+"${s6wrap[@]}" echo "BlueSky authentication OK. $ratelimit_str";
+
+# write back the token info to the authentication file
+cat >/tmp/bsky.auth <<EOF
+access_jwt="$access_jwt"
+refresh_jwt="$refresh_jwt"
+EOF
+
 
 # send pictures to Bluesky
 unset cid size mimetype tagstart tagend urlstart urlend urluri
@@ -85,20 +121,21 @@ for image in "${IMAGES[@]}"; do
      fi
 
     #Send the image to Bluesky
-    response="$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.uploadBlob" \
+    response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.uploadBlob" \
        -H "Content-Type: $mimetype_local" \
        -H "Authorization: Bearer $access_jwt" \
-       --data-binary "@$image")"
+       --data-binary "@$image" 2>/tmp/bsky.headers)"
 
     cid_local="$(jq -r '.blob.ref."$link"' <<< "$response")"
     size_local="$(jq -r '.blob.size' <<< "$response")"
+    get_rate_str
     if [[ -z "$cid_local" ]] || [[ "$cid_local" == "null" ]]; then
-        "${s6wrap[@]}" echo "Error uploading image to BlueSky: $response"
+        "${s6wrap[@]}" echo "Error uploading image to BlueSky: $response. $ratelimit_str"
     else
         cid+=("$cid_local")
         size["$cid_local"]="$size_local"
         mimetype["$cid_local"]="$mimetype_local"
-        "${s6wrap[@]}" echo "Image uploaded to Bluesky: $cid_local"
+        "${s6wrap[@]}" echo "Image uploaded to Bluesky: $cid_local. $ratelimit_str"
     fi
 done
 
@@ -293,16 +330,20 @@ fi
 #echo "DEBUG: post_data: $post_data"
 
 # Send the post to Bluesky
-response=$(curl -s -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
+response=$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $access_jwt" \
-    -d "$post_data")
+    -d "$post_data" 2>/tmp/bsky.headers)
+
+get_rate_str
 
 if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
-        "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response")"
+        "${s6wrap[@]}" echo "BlueSky Post successful. Post available at $(jq -r '.uri' <<< "$response"). $ratelimit_str"
 else
-        "${s6wrap[@]}" echo "BlueSky Posting Error: $response"
+        "${s6wrap[@]}" echo "BlueSky Posting Error: $response. $ratelimit_str"
         { echo "$response"
+          echo "$ratelimit_str"
           echo "$post_data"
-          echo "-------------------------------------------------"; } >> /tmp/bsky.json
+          echo "-------------------------------------------------"
+        } >> /tmp/bsky.json
 fi
