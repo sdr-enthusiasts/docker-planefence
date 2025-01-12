@@ -5,7 +5,7 @@
 #
 # Usage: ./plane-alert.sh <inputfile>
 #
-# Copyright 2021-2024 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence/
@@ -120,10 +120,6 @@ fi
 
 [ "$TESTING" == "true" ] && echo "2. $TMPDIR/plalert.out.tmp contains $(cat "$TMPDIR"/plalert.out.tmp | wc -l) lines"
 # Now plalert.out.tmp contains SBS data
-
-
-# echo xx1 ; cat $TMPDIR/plalert.out.tmp
-
 
 # Let's figure out if we also need to find SQUAWKS
 rm -f "$TMPDIR"/patmp
@@ -499,6 +495,7 @@ then
 
 			# now send the BlueSky message:
 			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
+			# shellcheck disable=SC2068
 			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]} || true
 			rm -f "/tmp/planeimg*"
 
@@ -685,31 +682,6 @@ cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
 
 # Create a FD for plalert-index.tml to reduce write cycles
 exec 3>> "$TMPDIR"/plalert-index.tmp
-
-SB="$(sed -n 's|^\s*SPORTSBADGER=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-if [[ -n "$SB" ]]
-then
-	cat <<EOF >&3
-<!-- special feature for @Sportsbadger only -->
-<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
-	<article>
-        <details>
-            <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
-			<h2>Per special request of @SportsBadger, here's the initial implementation of the "PlaneLatte" feature</h2>
-            Unfortunately, the IFTTT integration between the home espresso machine and PlaneLatte is still under development and will probably never be implemented. In the meantime, feel free to
-            pre-order your favo(u)rite drink at a Starbucks nearby. Future features will include a choice of Starbucks, Costa, and Pret-a-Manger, as well
-            as the local New England favorite: Dunkin' Donuts.
-            <ul>
-                <li><a href="https://www.starbucks.com/menu/product/407/hot?parent=%2Fdrinks%2Fhot-coffees%2Flattes" target="_blank">Caffe Latte</a>
-                <li><a href="https://www.starbucks.com/menu/product/409/hot?parent=%2Fdrinks%2Fhot-coffees%2Fcappuccinos" target="_blank">Cappuccino</a>
-				<li><a href="https://www.starbucks.com/menu/product/462/iced?parent=%2Fdrinks%2Ficed-teas%2Ficed-herbal-teas" target="_blank">Iced Passion Tango&reg; Tea Lemonade</a>, handshaken with ice, lemonade and, of course, passion.
-				<li>Additional beverages available upon request
-			</ul>
-		</details>
-	</article>
-</section>
-EOF
-fi
 
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"

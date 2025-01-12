@@ -128,10 +128,11 @@ for image in "${IMAGES[@]}"; do
      if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
          continue
      fi
-     # figure out what type the image is: jpeg, png, gif.
-     mimetype_local="$(file --mime-type -b "$image")"
 
-     if (( $(stat -c%s "$image") >= 950000 )); then
+     # figure out what type the image is: jpeg, png, gif, and reduce size if necessary/possible.
+     mimetype_local="$(file --mime-type -b "$image")"
+     imgsize_org="$(stat -c%s "$image")"
+     if (( imgsize_org >= 950000 )); then
          if [[ "$mimetype_local" == "image/jpeg" ]]; then
              jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
              # try again if still too big
@@ -139,15 +140,16 @@ for image in "${IMAGES[@]}"; do
                  jpegoptim -q -S850 -s "$image"
              fi
          elif [[ "$mimetype_local" == "image/png" ]]; then
-             pngquant -f  -o "${image}.tmp" "$image"	# if it's PNG and > 1 MB, we can optimize for it
+             pngquant -f -o "${image}.tmp" 64 "$image"	# if it's PNG and > 1 MB, we can optimize for it
              mv -f "${image}.tmp" "$image"
          else
-             "${s6wrap[@]}" echo "Omitting image $image as it is too big"
+             "${s6wrap[@]}" echo "Omitting image $image as it is too big ($imgsize)"
              continue # skip if it's not JPG or PNG
          fi
+         "${s6wrap[@]}" echo "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
      fi
      if (( $(stat -c%s "$image") >= 950000 )); then
-         "${s6wrap[@]}" echo "Omitting image $image as the size reduction was insufficient: $image $(wc --bytes < "$image") $(stat -c%s "$image")"
+         "${s6wrap[@]}" echo "Omitting image $image as the size reduction was insufficient: before: $imgsize_org; now: $(stat -c%s "$image")"
          continue;
      fi # skip if it's still > 1MB
 
@@ -156,7 +158,7 @@ for image in "${IMAGES[@]}"; do
        -H "Content-Type: $mimetype_local" \
        -H "Authorization: Bearer $access_jwt" \
        --data-binary "@$image" 2>/tmp/bsky.headers)"
-
+    #Get the CID, size, and official MIME type of the image. Need need this to correctly refer to it in the subsequent post
     cid_local="$(jq -r '.blob.ref."$link"' <<< "$response")"
     size_local="$(jq -r '.blob.size' <<< "$response")"
     get_rate_str
@@ -182,7 +184,8 @@ post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove UR
 # further cleanup:
 if [[ "${post_text: -3}" == " - " ]]; then post_text="${post_text:0:-3}"; fi  # remove trailing " - "
 
-# extract hashtags
+# extract hashtags, store them, and find their start/end positions.
+# This is necessary because BSky tags text portions as Facets, with a start/end position
 readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g' 2>/dev/null)"
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
