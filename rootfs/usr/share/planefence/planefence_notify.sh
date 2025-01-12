@@ -68,7 +68,7 @@ PLANEFILE=/usr/share/planefence/persist/plane-alert-db.txt
 (( TWEET_MINTIME > 0 )) && MINTIME=$TWEET_MINTIME || MINTIME=100
 
 # $ATTRIB contains the attribution line at the bottom of the tweet
-[[ -z "$ATTRIB" ]] && ATTRIB="#adsb #planefence by kx1t - http://github.com/sdr-enthusiasts/docker-planefence"
+ATTRIB="${ATTRIB:-#adsb #planefence by kx1t - https://sdr-e.com/docker-planefence}"
 
 if [ "$SOCKETCONFIG" != "" ]
 then
@@ -149,7 +149,7 @@ getRoute()
 
 	if [[ -n "$origin" ]] && [[ -n "$destination" ]]
 	then
-		response="#$origin-#$destination"
+		response="#$origin - #$destination"
 	elif [[ -n "$origin" ]]
 	then
 		response="org: #$origin"
@@ -304,8 +304,8 @@ then
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]
 			then
 				LOG "Planefence sending Discord notification"
-      	        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
-            fi
+      	                        timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
+                        fi
 
 			# log the message we will try to tweet or toot:
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]
@@ -316,7 +316,7 @@ then
 			if [[ -n "$MASTODON_SERVER" ]]
 			then
 				mast_id="null"
-                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
+                                MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")"
 								
 				if [[ "$GOTSNAP" == "true" ]]
 				then
@@ -351,7 +351,7 @@ then
 
 				msg_array[icao]="${RECORD[0]}"
 				msg_array[flight]="${RECORD[1]#@}"
-				msg_array[operator]="$(echo "${AIRLINE}" | xargs -0)"
+				msg_array[operator]="$(echo "${AIRLINE}" | xargs)"
 				if [[ -n "$ROUTE" ]]; then
 					if [[ "${ROUTE:0:4}" == "org:" ]]; then msg_array[origin]="${ROUTE:6}"
 					elif [[ "${ROUTE:0:5}" == "dest:" ]]; then msg_array[destination]="${ROUTE:7}"
@@ -423,6 +423,11 @@ then
 				if chk_enabled "$MQTT_DEBUG"; then echo "[$(date)][$APPNAME] Results string: ${outputmsg//$'\n'/ }"; fi
 			fi
 
+			fi
+
+			# Insert BlueSky notifications here:
+			if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+				/scripts/post2bsky.sh "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")" "$(if [[ "$GOTSNAP" == "true" ]]; then echo "$snapfile"; fi)" || true
 			fi
 
 			# And now, let's tweet!

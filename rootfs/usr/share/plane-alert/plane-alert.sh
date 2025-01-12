@@ -5,7 +5,7 @@
 #
 # Usage: ./plane-alert.sh <inputfile>
 #
-# Copyright 2021-2024 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence/
@@ -120,10 +120,6 @@ fi
 
 [ "$TESTING" == "true" ] && echo "2. $TMPDIR/plalert.out.tmp contains $(cat "$TMPDIR"/plalert.out.tmp | wc -l) lines"
 # Now plalert.out.tmp contains SBS data
-
-
-# echo xx1 ; cat $TMPDIR/plalert.out.tmp
-
 
 # Let's figure out if we also need to find SQUAWKS
 rm -f "$TMPDIR"/patmp
@@ -378,10 +374,10 @@ then
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}")"
 
 		TWITTEXT+="\n\n$ATTRIB"
+                TWITTEXT="${TWITTEXT//\'/}"
 
-		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
-		then
-			echo "[$(date)][$APPNAME] Attempting to Tweet or Toot this message:"
+		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]] || [[ -n "$BLUESKY_HANDLE" ]]; then
+			echo "[$(date)][$APPNAME] Attempting to Tweet, Toot, or Post this message:"
 			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
 		fi
 
@@ -422,7 +418,7 @@ then
 			done
 
 			# convert $msg_array[@] into a JSON object:
-            MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+                        MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
 			# prep the MQTT host, port, etc
 			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
@@ -441,7 +437,7 @@ then
 			fi
 			if [[ $MQTT_HOST == *":"* ]]; then MQTT_PORT="${MQTT_PORT:-${MQTT_HOST#*:}}"; fi
 			MQTT_HOST="${MQTT_HOST%:*}" # finally strip the host so there's only a hostname or ip address
-			
+
 			# log the message we are going to send:
 			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
 			echo "[$(date)][$APPNAME] MQTT Host: ${MQTT_HOST}"
@@ -475,6 +471,36 @@ then
 			fi
 		fi
 
+		# Inject BlueSky integration here:
+		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+			# get a list of images to upload
+			unset images
+			if [[ "$GOTSNAP" == "true" ]]; then images+=("$snapfile"); fi
+
+			# check if there are any images in the plane-alert-db
+			field=()
+			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]#\#}]}"
+			rm -f "/tmp/planeimg*"
+			for (( i=0 ; i<=20; i++ ))
+			do
+				fld="$(echo ${field[$i]}|xargs -0)"
+				if  [[ " jpg peg png gif " =~ " ${fld: -3} " ]] && (( ${#images[@]} < 4)); then
+					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg-$i.${fld: -3}"
+					then
+						images+=("/tmp/planeimg-$i.${fld: -3}")
+					fi
+				fi
+			done
+
+			# now send the BlueSky message:
+			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
+			# shellcheck disable=SC2068
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]} || true
+			rm -f "/tmp/planeimg*"
+
+		fi
+
 		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
@@ -485,7 +511,7 @@ then
 			if [[ "$GOTSNAP" == "true" ]]
 			then
 				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
-				mast_id+=("$(jq '.id' <<< "$response"|xargs)")
+				mast_id+=("$(jq '.id' <<< "$response"|xargs -0)")
 
 			fi
 
@@ -495,7 +521,7 @@ then
 
 			for (( i=0 ; i<=20; i++ ))
 			do
-				fld="$(echo ${field[$i]}|xargs)"
+				fld="$(echo ${field[$i]}|xargs -0)"
 				ext="${fld: -3}"
 				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < MASTODON_MAXIMGS ))
 				then
@@ -505,7 +531,7 @@ then
 					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
 					then
 						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
-						[[ "$(jq '.id' <<< "$response" | xargs)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs)") || true
+						[[ "$(jq '.id' <<< "$response" | xargs -0)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs -0)") || true
 						rm -f "/tmp/planeimg.$ext"
 					fi
 				fi
@@ -521,11 +547,11 @@ then
 			# now send the Mastodon Toot.
 			response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 			# check if there was an error
-			if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
+			if [[ "$(jq '.error' <<< "$response"|xargs -0)" == "null" ]]
 			then
 				echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
 			else
-				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs)"
+				echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.error' <<< "$response"|xargs -0)"
 			fi
 		fi
 
@@ -656,31 +682,6 @@ cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
 
 # Create a FD for plalert-index.tml to reduce write cycles
 exec 3>> "$TMPDIR"/plalert-index.tmp
-
-SB="$(sed -n 's|^\s*SPORTSBADGER=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-if [[ -n "$SB" ]]
-then
-	cat <<EOF >&3
-<!-- special feature for @Sportsbadger only -->
-<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
-	<article>
-        <details>
-            <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Special Feature - only for @SportsBadger</summary>
-			<h2>Per special request of @SportsBadger, here's the initial implementation of the "PlaneLatte" feature</h2>
-            Unfortunately, the IFTTT integration between the home espresso machine and PlaneLatte is still under development and will probably never be implemented. In the meantime, feel free to
-            pre-order your favo(u)rite drink at a Starbucks nearby. Future features will include a choice of Starbucks, Costa, and Pret-a-Manger, as well
-            as the local New England favorite: Dunkin' Donuts.
-            <ul>
-                <li><a href="https://www.starbucks.com/menu/product/407/hot?parent=%2Fdrinks%2Fhot-coffees%2Flattes" target="_blank">Caffe Latte</a>
-                <li><a href="https://www.starbucks.com/menu/product/409/hot?parent=%2Fdrinks%2Fhot-coffees%2Fcappuccinos" target="_blank">Cappuccino</a>
-				<li><a href="https://www.starbucks.com/menu/product/462/iced?parent=%2Fdrinks%2Ficed-teas%2Ficed-herbal-teas" target="_blank">Iced Passion Tango&reg; Tea Lemonade</a>, handshaken with ice, lemonade and, of course, passion.
-				<li>Additional beverages available upon request
-			</ul>
-		</details>
-	</article>
-</section>
-EOF
-fi
 
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"
@@ -865,6 +866,12 @@ else
     sed -i "s|##MASTODONLINK##||g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##MASTOHEADER##||g" "$TMPDIR"/plalert-index.tmp
 fi
+if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
+	sed -i "s|##BLUESKYLINK##|<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/$BLUESKY_HANDLE\" target=\"_blank\">@$BLUESKY_HANDLE</a> at BlueSky.Social|g" "$TMPDIR"/plalert-index.tmp
+else
+	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
+fi
+
 if (( $(cat "$OUTFILE" | wc -l ) > 0 )); then
 	# shellcheck disable=SC2046
 	sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icao=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' "$OUTFILE" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp
