@@ -380,9 +380,8 @@ then
 		TWITTEXT+="\n\n$ATTRIB"
                 TWITTEXT="${TWITTEXT//\'/}"
 
-		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]]
-		then
-			echo "[$(date)][$APPNAME] Attempting to Tweet or Toot this message:"
+		if [[ -n "$MASTODON_SERVER" ]] || [[ "$TWITTER" != "false" ]] || [[ -n "$BLUESKY_HANDLE" ]]; then
+			echo "[$(date)][$APPNAME] Attempting to Tweet, Toot, or Post this message:"
 			echo "[$(date)][$APPNAME] $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<< "${TWITTEXT}")"
 		fi
 
@@ -423,7 +422,7 @@ then
 			done
 
 			# convert $msg_array[@] into a JSON object:
-            MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+                        MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
 			# prep the MQTT host, port, etc
 			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
@@ -442,7 +441,7 @@ then
 			fi
 			if [[ $MQTT_HOST == *":"* ]]; then MQTT_PORT="${MQTT_PORT:-${MQTT_HOST#*:}}"; fi
 			MQTT_HOST="${MQTT_HOST%:*}" # finally strip the host so there's only a hostname or ip address
-			
+
 			# log the message we are going to send:
 			echo "[$(date)][$APPNAME] Attempting to send a MQTT notification:"
 			echo "[$(date)][$APPNAME] MQTT Host: ${MQTT_HOST}"
@@ -499,12 +498,11 @@ then
 			done
 
 			# now send the BlueSky message:
-			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed >> /tmp/bsky.json-e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
-			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" "${images[@]}" || true
-			rm -f "/tmp/planeimg-*"
+			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]} || true
+			rm -f "/tmp/planeimg*"
 
 		fi
-
 
 		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
