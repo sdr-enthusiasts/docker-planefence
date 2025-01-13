@@ -797,7 +797,7 @@ fi
 if [[ -n "$PLANETWEET" ]] \
    ||  chk_enabled "${PF_DISCORD}" \
    || [[ -n "$MASTODON_SERVER" ]] \
-   || chk_enabled "$PF_BLUESKY_ENABLED"; then
+   || [[ -n "$BLUESKY_HANDLE" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
 	{ timeout 120 $PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"; } &
 else
