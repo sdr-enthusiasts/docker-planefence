@@ -866,7 +866,7 @@ else
     sed -i "s|##MASTODONLINK##||g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##MASTOHEADER##||g" "$TMPDIR"/plalert-index.tmp
 fi
-if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
+if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
 	sed -i "s|##BLUESKYLINK##|<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/$BLUESKY_HANDLE\" target=\"_blank\">@$BLUESKY_HANDLE</a> at BlueSky.Social|g" "$TMPDIR"/plalert-index.tmp
 else
 	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
