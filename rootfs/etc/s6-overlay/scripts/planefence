@@ -50,6 +50,7 @@ do
               # BASETIME is used for run time measurements
               # shellcheck disable=SC2155
               if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
+              [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Starting Planefence run..." || true
               $PLANEFENCEDIR/planefence.sh
               endtime=$(date +%s)
               [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%Y/%m/%d %H:%M:%S")." || true

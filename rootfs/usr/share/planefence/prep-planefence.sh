@@ -77,7 +77,8 @@ mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-a
 rm -f /usr/share/planefence/html/background.jpg
 [[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
 #
-cp -u /usr/share/planefence/stage/*.template /usr/share/planefence/persist >/dev/null 2>&1
+# maybe for future use
+# cp -u /usr/share/planefence/stage/*.template /usr/share/planefence/persist >/dev/null 2>&1
 #
 #--------------------------------------------------------------------------------
 #

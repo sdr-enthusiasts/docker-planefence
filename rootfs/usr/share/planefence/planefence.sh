@@ -794,16 +794,18 @@ fi
 # see if we need to invoke PlaneTweet:
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ -n "$PLANETWEET"  ||  "${PF_DISCORD,,}" == "true" || "${PF_DISCORD,,}" == "on" || -n "$MASTODON_SERVER" ]] && [[ -z "$1" ]]
-then
+if [[ -n "$PLANETWEET" ]] \
+   ||  chk_enabled "${PF_DISCORD}" \
+   || [[ -n "$MASTODON_SERVER" ]] \
+   || chk_enabled "$PF_BLUESKY_ENABLED"; then
 	LOG "Invoking planefence_notify.sh for notifications"
-	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
+	{ timeout 120 $PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"; } &
 else
 	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
 # run planefence-rss.sh in the background:
-/usr/share/planefence/planefence-rss.sh &
+{ timeout 120 /usr/share/planefence/planefence-rss.sh; } &
 
 [[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
@@ -1122,5 +1124,10 @@ echo "$FENCEDATE" > "$LASTFENCEFILE"
 # That's all
 # This could probably have been done more elegantly. If you have changes to contribute, I'll be happy to consider them for addition
 # to the GIT repository! --Ramon
+
+# Wait for any background processes to finish
+# Currently, planefence_notify.sh and planefence-rss.sh are the only background processes that are invoked, and those have a time limit of 120 secs
+wait $!
+
 LOG "Finishing PlaneFence... sayonara!"
 [[ "$BASETIME" != "" ]] && echo "17. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done final cleanup" || true
