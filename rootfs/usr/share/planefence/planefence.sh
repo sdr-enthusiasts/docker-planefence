@@ -963,7 +963,7 @@ EOF
 		printf   "<li>Get notified instantaneously of aircraft in range by following <a href=\"https://%s/@%s\" rel=\"me\">@%s@%s</a> on Mastodon" \
 			"$MASTODON_SERVER" "$MASTODON_NAME" "$MASTODON_NAME" "$MASTODON_SERVER"
 	fi
-	if chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then printf "<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a> at BlueSky \n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"; fi
+	if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then printf "<li>Planefence notifications are sent to <a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a> at BlueSky \n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"; fi
 	[[ "$PLANETWEET" != "" ]] && printf "<li>Get notified instantaneously of aircraft in range by following <a href=\"http://twitter.com/%s\" target=\"_blank\">@%s</a> on Twitter!\n" "$PLANETWEET" "$PLANETWEET"
 	printf "<li> A RSS feed of the aircraft detected with Planefence is available at <a href=\"planefence.rss\">planefence.rss</a>\n"
 	[[ -n "$PA_LINK" ]] && printf "<li> Additionally, click <a href=\"%s\" target=\"_blank\">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station\n" "$PA_LINK" 
