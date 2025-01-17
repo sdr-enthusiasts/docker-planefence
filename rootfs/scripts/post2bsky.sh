@@ -380,11 +380,15 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
         "${s6wrap[@]}" echo "BlueSky Post successful. Post available at https://bsky.app/profile/$handle/post/${uri##*/}. $ratelimit_str"
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response. $ratelimit_str"
+        if [[ -f /tmp/bsky.json ]]; then
+           err="$(</tmp/bsky.json)"
+           if [[ "${err: -1}" != "," ]]; then echo " ," >>/tmp/bsky.json; fi
+        fi
         { echo "{ \"title\": \"BlueSky Posting Error\" ,"
           echo "  \"response\": $response ,"
           echo "  \"ratelimit\": $ratelimit_str ,"
           echo "  \"postdata\": $post_data } ,"
-        } >> /tmp/bsky.json
+        } >> /tmp/bsky.jsone
         err="$(</tmp/bsky.json)"; if [[ "${err: -1}" == "," ]]; then printf "%s\n" "${err:0:-1}" >/tmp/bsky.json; fi
         exit 1
 fi
