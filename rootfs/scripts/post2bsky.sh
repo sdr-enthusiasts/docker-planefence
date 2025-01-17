@@ -388,7 +388,7 @@ else
           echo "  \"response\": $response ,"
           echo "  \"ratelimit\": $ratelimit_str ,"
           echo "  \"postdata\": $post_data } ,"
-        } >> /tmp/bsky.jsone
+        } >> /tmp/bsky.json
         err="$(</tmp/bsky.json)"; if [[ "${err: -1}" == "," ]]; then printf "%s\n" "${err:0:-1}" >/tmp/bsky.json; fi
         exit 1
 fi
