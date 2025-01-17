@@ -1,4 +1,4 @@
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:wreadsb
 
 RUN set -xe && \
     # define packages needed for installation and general management of the container:
@@ -10,15 +10,13 @@ RUN set -xe && \
     TEMP_PACKAGES+=(pkg-config) && \
     TEMP_PACKAGES+=(git) && \
     TEMP_PACKAGES+=(gcc) && \
-    TEMP_PACKAGES+=(python3-dev) && \
     TEMP_PACKAGES+=(pkg-config) && \
+    TEMP_PACKAGES+=(python3-pip) && \
     #
     KEPT_PACKAGES+=(unzip) && \
     KEPT_PACKAGES+=(psmisc) && \
     KEPT_PACKAGES+=(procps nano) && \
-    KEPT_PACKAGES+=(python3-numpy) && \
-    KEPT_PACKAGES+=(python3-pandas) && \
-    KEPT_PACKAGES+=(python3-dateutil) && \
+    KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-paho-mqtt) && \
     KEPT_PACKAGES+=(jq) && \
     KEPT_PACKAGES+=(gnuplot-nox) && \
