@@ -799,7 +799,7 @@ if [[ -n "$PLANETWEET" ]] \
    || [[ -n "$MASTODON_SERVER" ]] \
    || [[ -n "$BLUESKY_HANDLE" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
-	{ timeout 120 $PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"; } &
+	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
 else
 	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
