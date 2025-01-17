@@ -56,6 +56,7 @@ RUN set -xe && \
     apt-get clean -y -q && \
     rm -rf \
     /src/* \
+    /var/cache/* \
     /tmp/* \
     /var/lib/apt/lists/* \
     /.dockerenv \
@@ -65,7 +66,9 @@ COPY rootfs/ /
 #
 COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
-RUN set -xe && \
+RUN \
+    --mount=type=bind,source=./,target=/app/ \
+    set -xe \
     #
     #
     # Install Planefence (it was copied in with /rootfs, so this is
@@ -94,7 +97,7 @@ RUN set -xe && \
     ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
     # Install dump1090.socket30003. Note - this could move to a lower layer, but we need to have rootfs copied in.
     # In any case, it doesn't take much (build)time.
-    pushd /src/socket30003 && \
+    pushd /app/socket30003 && \
     ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
     chmod a+x /usr/share/socket30003/*.pl && \
     rm -rf /run/socket30003/install-* && \
