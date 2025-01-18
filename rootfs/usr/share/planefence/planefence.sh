@@ -6,7 +6,7 @@
 #
 # Usage: ./planefence.sh
 #
-# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2025 Ramon F. Kolb (kx1t) - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence/
@@ -1094,7 +1094,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
 <hr/>PlaneFence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
-<br/>&copy; Copyright 2020-2024 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
 <br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 </div>
