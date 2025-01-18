@@ -333,7 +333,7 @@ then
 		[[ "${header[0]:0:1}" == "$" ]] && pa_record[0]="#${pa_record[0]}" 	# ICAO field
 
 		[[ "${header[1]:0:1}" == "$" ]] && [[ -n "${pa_record[1]}" ]] && pa_record[1]="#${pa_record[1]//[[:space:]-]/}" 	# tail field
-		#[[ "${header[2]:0:1}" == "$" ]] && [[ -n "${pa_record[2]}" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
+		[[ "${header[2]:0:1}" == "$" ]] && [[ -n "${pa_record[2]}" ]] && pa_record[2]="#${pa_record[2]//[[:space:]]/}" 	# owner field, stripped off spaces
 		[[ "${header[3]:0:1}" == "$" ]] && [[ -n "${pa_record[2]}" ]] && pa_record[3]="#${pa_record[3]}" # equipment field
 		[[ "${header[1]:0:1}" == "$" ]] && [[ -n "${pa_record[8]}" ]] && pa_record[8]="#${pa_record[8]//[[:space:]-]/}" # flight nr field (connected to tail header)
 		[[ -n "${pa_record[10]}" ]] && pa_record[10]="#${pa_record[10]}" # 	# squawk
