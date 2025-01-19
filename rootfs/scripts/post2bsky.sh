@@ -187,10 +187,14 @@ if [[ "${post_text: -3}" == " - " ]]; then post_text="${post_text:0:-3}"; fi  # 
 # extract hashtags, store them, and find their start/end positions.
 # This is necessary because BSky tags text portions as Facets, with a start/end position
 readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g' 2>/dev/null)"
+
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
-    tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
-    tagend[${tag:1}]="$((${tagstart[${tag:1}]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
+    if [[ -z "${tagstart[${tag:1}]}" ]]; then
+        # first occurrence of the tag in the string
+        tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
+        tagend[${tag:1}]="$((${tagstart[${tag:1}]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
+    fi
     post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
     # echo "DEBUG: $tag - ${tagpos[${tag:1}]} - ${taglen[${tag:1}]} - tagtext ${post_text:${tagpos[${tag:1}]}:${taglen[${tag:1}]}} - newstring: $post_text"
 done
@@ -250,21 +254,22 @@ if (( ${#cid[@]} == 0 )); then
         post_data+=",
             \"facets\": [
                 "
-        if (( ${#hashtags[@]} > 0 )); then
-            for tag in "${hashtags[@]}"; do
+        if (( ${#tagstart[@]} > 0 )); then
+            for tag in "${!tagstart[@]}"; do
                 post_data+="
                     {
                         \"index\": {
-                            \"byteStart\": ${tagstart[${tag:1}]},
-                            \"byteEnd\": ${tagend[${tag:1}]}
+                            \"byteStart\": ${tagstart[${tag}]},
+                            \"byteEnd\": ${tagend[${tag}]}
                         },
                         \"features\": [{
                             \"\$type\": \"app.bsky.richtext.facet#tag\",
-                            \"tag\": \"${tag:1}\"
+                            \"tag\": \"${tag}\"
                         }]
                     },"
             done
         fi
+
         if (( ${#urlstart[@]} > 0 )); then
             for url in "${!urlstart[@]}"; do
                 post_data+="
@@ -325,21 +330,23 @@ else
         post_data+=",
             \"facets\": [
                 "
-        if (( ${#hashtags[@]} > 0 )); then
-            for tag in "${hashtags[@]}"; do
+
+        if (( ${#tagstart[@]} > 0 )); then
+            for tag in "${!tagstart[@]}"; do
                 post_data+="
                     {
                         \"index\": {
-                            \"byteStart\": ${tagstart[${tag:1}]},
-                            \"byteEnd\": ${tagend[${tag:1}]}
+                            \"byteStart\": ${tagstart[${tag}]},
+                            \"byteEnd\": ${tagend[${tag}]}
                         },
                         \"features\": [{
                             \"\$type\": \"app.bsky.richtext.facet#tag\",
-                            \"tag\": \"${tag:1}\"
+                            \"tag\": \"${tag}\"
                         }]
                     },"
             done
         fi
+
         if (( ${#urlstart[@]} > 0 )); then
             for url in "${!urlstart[@]}"; do
                 post_data+="

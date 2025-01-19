@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC1091,SC2174
+#shellcheck shell=bash disable=SC1091,SC2174,SC2154
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -12,9 +12,7 @@
 # ATTENTION -- DO NOT MAKE THIS SCRIPT INTO A S6 DEPENDENCY FOR RUNNING PLANEFENCE
 # IT SHOULD RUN AS A ONESHOT SERVICE IN PARALLEL WITH OTHER SERVICES
 
-APPNAME="$(hostname)/get-openskydb"
 source "/scripts/common"
-s6wrap=(s6wrap --quiet --timestamps --prepend="${APPNAME}" --args)
 
 # ----------------------------
 # First - householding stuff:
@@ -27,34 +25,27 @@ if [[ -z "$savedfile" ]]; then
   savedfile="$(find "/usr/share/planefence/persist/.internal/" -name "aircraft-database-complete-*" -print0 | xargs -r -0 ls -1 -t | head -1)"
 fi
 savedfile="${savedfile##*/}"
-latestfile="$(curl -sSL https://opensky-network.org/datasets/metadata/ | sed -n 's|.*/\(aircraft-database-complete-[0-9-]\+\.csv\).*|\1|p' | sort -ru | head -1)"
+latestfile="$(curl -sL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"
 
-# Cleanup all but the newest OpenSkyDB files
-find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
-find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
+# Get a new version if the current one  isn't the newest:
+# shellcheck disable=SC2001
+savedfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$savedfile")"
+# shellcheck disable=SC2001
+latestfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$latestfile")"
 
-# Create a link to savedfile early in the process so it's there when Planefence needs it.
-# If there's a new file, we'll replace it once we pull the latest OpenSkyDB
-if [[ -n "$savedfile" ]]; then ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"; fi
-
-# Now start checking for a newer version of OpenSkyDB:
-if [[ -n "$latestfile" && -n "$savedfile" && "$savedfile" != "$latestfile" ]]; then
-  # We gotta get a newer file. Note - it's initially written to /tmp to avoid the system thinking that a partial/failed download could be used
-  "${s6wrap[@]}" echo "Current OpenSky database: $savedfile. Getting newest one: $latestfile ... this may take a while!"
-  if ! "${s6wrap[@]}" curl --compressed -sSL --fail -o "/tmp/$latestfile" "https://opensky-network.org/datasets/metadata/$latestfile"; then
-    "${s6wrap[@]}" echo "Download of https://opensky-network.org/datasets/metadata/$latestfile failed; sticking with $savedfile"
-    rm -f "/tmp/$latestfile"
-  else
-    mv -f "/tmp/$latestfile" "/usr/share/planefence/persist/.internal/"
+if (( ${savedfile_date//-/} < ${latestfile_date//-/} )); then
+  if curl -sL "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
+    mv -f /tmp/"$latestfile" /usr/share/planefence/persist/.internal/
     ln -sf "/usr/share/planefence/persist/.internal/$latestfile" "/run/OpenSkyDB.csv"
+    touch -d "31-Dec-2099" "/usr/share/planefence/persist/.internal/$latestfile" /run/OpenSkyDB.csv
+
+    # Cleanup all but the newest OpenSkyDB files
+    find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
+    find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
     "${s6wrap[@]}" echo "Downloaded newest OpenSkyDB - $latestfile"
-    rm -f "$savedfile"
+  else
+    "${s6wrap[@]}" echo "Download of newest OpenSkyDB FAILED - $latestfile"
   fi
-elif [[ -n "$savedfile" && "$savedfile" == "$latestfile" ]]; then
-  "${s6wrap[@]}" echo "Current OpenSky database $savedfile is up to date! No download needed."
-elif [[ -n "$savedfile" ]]; then
-  "${s6wrap[@]}" echo "Couldn't download https://opensky-network.org/datasets/metadata/$latestfile; sticking with $savedfile"
 else
-  "${s6wrap[@]}" echo "Couldn't download https://opensky-network.org/datasets/metadata/$latestfile and no existing OpenSkyDB in container; disabling OpenSkyDB lookups" 
-  rm -f "/run/OpenSkyDB.csv"
+  "${s6wrap[@]}" echo "Current OpenSkyDB file ($savedfile) is up to date."
 fi
