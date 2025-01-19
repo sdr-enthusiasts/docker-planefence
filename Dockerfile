@@ -1,4 +1,4 @@
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:wreadsb
 
 RUN set -xe && \
     # define packages needed for installation and general management of the container:
@@ -10,15 +10,13 @@ RUN set -xe && \
     TEMP_PACKAGES+=(pkg-config) && \
     TEMP_PACKAGES+=(git) && \
     TEMP_PACKAGES+=(gcc) && \
-    TEMP_PACKAGES+=(python3-dev) && \
     TEMP_PACKAGES+=(pkg-config) && \
+    TEMP_PACKAGES+=(python3-pip) && \
     #
     KEPT_PACKAGES+=(unzip) && \
     KEPT_PACKAGES+=(psmisc) && \
     KEPT_PACKAGES+=(procps nano) && \
-    KEPT_PACKAGES+=(python3-numpy) && \
-    KEPT_PACKAGES+=(python3-pandas) && \
-    KEPT_PACKAGES+=(python3-dateutil) && \
+    KEPT_PACKAGES+=(python3) && \
     KEPT_PACKAGES+=(python3-paho-mqtt) && \
     KEPT_PACKAGES+=(jq) && \
     KEPT_PACKAGES+=(gnuplot-nox) && \
@@ -58,6 +56,7 @@ RUN set -xe && \
     apt-get clean -y -q && \
     rm -rf \
     /src/* \
+    /var/cache/* \
     /tmp/* \
     /var/lib/apt/lists/* \
     /.dockerenv \
@@ -67,7 +66,9 @@ COPY rootfs/ /
 #
 COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
-RUN set -xe && \
+RUN \
+    --mount=type=bind,source=./,target=/app/ \
+    set -xe \
     #
     #
     # Install Planefence (it was copied in with /rootfs, so this is
@@ -96,7 +97,7 @@ RUN set -xe && \
     ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
     # Install dump1090.socket30003. Note - this could move to a lower layer, but we need to have rootfs copied in.
     # In any case, it doesn't take much (build)time.
-    pushd /src/socket30003 && \
+    pushd /app/socket30003 && \
     ./install.pl -install /usr/share/socket30003 -data /run/socket30003 -log /run/socket30003 -output /run/socket30003 -pid /run/socket30003 && \
     chmod a+x /usr/share/socket30003/*.pl && \
     rm -rf /run/socket30003/install-* && \
