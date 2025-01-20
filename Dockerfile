@@ -79,19 +79,6 @@ RUN \
     if curl --compressed --fail -sSL https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt > /tmp/airlinecodes.txt; then mv -f /tmp/airlinecodes.txt /usr/share/planefence/airlinecodes.txt; fi && \
     if curl --compressed --fail -sSL https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip > /tmp/Silhouettes.zip; then mv -f /tmp/Silhouettes.zip /usr/share/planefence/stage/Silhouettes.zip; fi && \
     #
-    # Get OpenSkyDB file:
-    #latestfile="$(curl -L https://opensky-network.org/datasets/metadata/ | sed -n 's|.*/\(aircraft-database-complete-[0-9-]\+\.csv\).*|\1|p' | sort -ru | head -1)" && \
-    #safefile="aircraft-database-complete-2023-10.csv" && \
-    #if curl --compressed -L --fail -o "/usr/share/planefence/stage/$latestfile" "https://opensky-network.org/datasets/metadata/$latestfile"; then \
-    #    echo "Got new OpenSkyDb - $latestfile"; \
-    #elif curl --compressed -L --fail -o "/usr/share/planefence/stage/$safefile)" "https://opensky-network.org/datasets/metadata/$safefile)"; then \    
-    #    echo "Couldn't download latest OpenSKyDb ($latestfile) - got one we know exists ($safefile), but it may be out of date"; \
-    #    if [[ "$latestfile" != "$safefile" ]]; then rm -f $latestfile || true; fi \
-    #else \
-    #    echo "Couldn't download OpenSKyDb - continuing without"; \
-    #    rm -f /usr/share/planefence/stage/aircraft-database-complete-* || true; \
-    #fi && \
-    #
     # Ensure the planefence and plane-alert config is available for lighttpd:
     ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
     ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \

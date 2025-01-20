@@ -131,17 +131,7 @@ if [[ -z "$b" ]] && [[ "${a:0:1}" == "N" ]]; then
         if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="faa"; fi
 fi
 
-if [[ -z "$b" ]]; then
-        # check OpenSky DB -- this is a bit of a Last Resort as the OS database isn't too accurate
-        if [[ -f /run/OpenSkyDB.csv ]]; then
-                b="$(awk -F ","  -v p="${a,,}" '{IGNORECASE=1; gsub("-",""); gsub("\"",""); if(tolower($2)==p) {print $14;exit}}' /run/OpenSkyDB.csv)"
-        if [[ -n "$b" ]]; then MUSTCACHE=1; fi
-        if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="OpenSky"; fi
-  fi
-fi
-
 # If it's a Canadian tail number, let's use the Canadian lookup
-
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
         a_clean="${a//-/}"     # remove any -
         a_clean="${a_clean:1}" # remove the leading C
@@ -150,6 +140,21 @@ if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
         # If we got something, make sure it will get added to the cache:
         if [[ -n "$b" ]]; then MUSTCACHE=1; fi
         if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="caa"; fi
+fi
+
+# check OpenSky DB -- this is a bit of a Last Resort as the OS database isn't too accurate
+if [[ -z "$b" ]]; then
+        if [[ -f /run/OpenSkyDB.csv ]]; then
+                readarray -td, header <<< "$(head -1 /run/OpenSkyDB.csv | tr -d "'")"
+                for (( i=0; i < ${#header[@]}; i++ )); do
+                        if [[ "${header[i]}" == "registration" ]]; then OSDB_reg="$((i + 1))"; fi
+                        if [[ "${header[i]}" == "owner" ]]; then OSDB_owner="$((i + 1))"; fi
+                        # not needed -- if [[ "${header[i]}" == "icao24" ]]; then OSDB_icao="$((i + 1))"; fi
+                done
+                b="$(awk -F ","  -v p="${a,,}" -v reg="$OSDB_reg" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub("\"",""); if(tolower($reg)==p) {print $own;exit}}' /run/OpenSkyDB.csv)"
+        if [[ -n "$b" ]]; then MUSTCACHE=1; fi
+        if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="OpenSky"; fi
+  fi
 fi
 
 # Add additional database lookups in the future here:

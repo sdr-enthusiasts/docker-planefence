@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC1091,SC2174,SC2154
+#shellcheck shell=bash disable=SC1091,SC2001,SC2174,SC2154
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -21,19 +21,26 @@ mkdir -p -m 0700 /usr/share/planefence/persist/.internal
 
 savedfile="$(find "/usr/share/planefence/persist/.internal/" -name "aircraft-database-complete-*" -print0 | xargs -r -0 ls -1 -t | head -1)"
 if [[ -z "$savedfile" ]]; then
-  mv /usr/share/planefence/stage/aircraft-database-complete-*.csv "/usr/share/planefence/persist/.internal/" >/dev/null 2>&1 || true
+  # see if there's a OpenSky DB in the staging directory. (There probably isn't since we removed it to reduce the container size)
+  mv -f /usr/share/planefence/stage/aircraft-database-complete-*.csv "/usr/share/planefence/persist/.internal/" >/dev/null 2>&1 || true
   savedfile="$(find "/usr/share/planefence/persist/.internal/" -name "aircraft-database-complete-*" -print0 | xargs -r -0 ls -1 -t | head -1)"
 fi
-savedfile="${savedfile##*/}"
-latestfile="$(curl -sL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"
 
-# Get a new version if the current one  isn't the newest:
-# shellcheck disable=SC2001
-savedfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$savedfile")"
-# shellcheck disable=SC2001
+if [[ -n "$savedfile" ]]; then
+  savedfile="$(basename "$savedfile")"
+  savedfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$savedfile")"
+else
+  savedfile_date="1970-01"
+fi
+
+if ! latestfile="$(curl -sL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
+  "${s6wrap[@]}" echo "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Aborting update attempt."
+  exit
+fi
 latestfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$latestfile")"
 
 if (( ${savedfile_date//-/} < ${latestfile_date//-/} )); then
+  "${s6wrap[@]}" echo "Newer OpenSky database ($latestfile_date) available. Downloading it now"
   if curl -sL "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
     mv -f /tmp/"$latestfile" /usr/share/planefence/persist/.internal/
     ln -sf "/usr/share/planefence/persist/.internal/$latestfile" "/run/OpenSkyDB.csv"
