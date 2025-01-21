@@ -33,26 +33,32 @@ else
   savedfile_date="1970-01"
 fi
 
-if ! latestfile="$(curl -sL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
+if ! latestfile="$(curl -sfL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
   "${s6wrap[@]}" echo "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Aborting update attempt."
+  if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
+    ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
+  fi
   exit
 fi
 latestfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$latestfile")"
 
 if (( ${savedfile_date//-/} < ${latestfile_date//-/} )); then
   "${s6wrap[@]}" echo "Newer OpenSky database ($latestfile_date) available. Downloading it now"
-  if curl -sL "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
-    mv -f /tmp/"$latestfile" /usr/share/planefence/persist/.internal/
+  if curl -sfL "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
+    find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -delete
+    find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -delete
+    mv -f "/tmp/$latestfile" /usr/share/planefence/persist/.internal/
     ln -sf "/usr/share/planefence/persist/.internal/$latestfile" "/run/OpenSkyDB.csv"
-    touch -d "31-Dec-2099" "/usr/share/planefence/persist/.internal/$latestfile" /run/OpenSkyDB.csv
-
-    # Cleanup all but the newest OpenSkyDB files
-    find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
-    find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -printf '%T@ %p\n'| sort -g | head -n -1 | cut -d ' ' -f 2 | xargs rm -f
     "${s6wrap[@]}" echo "Downloaded newest OpenSkyDB - $latestfile"
   else
     "${s6wrap[@]}" echo "Download of newest OpenSkyDB FAILED - $latestfile"
+    if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
+      ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
+    fi
   fi
 else
   "${s6wrap[@]}" echo "Current OpenSkyDB file ($savedfile) is up to date."
+  if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
+    ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
+  fi
 fi
