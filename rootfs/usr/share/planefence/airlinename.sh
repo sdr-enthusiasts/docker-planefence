@@ -183,6 +183,7 @@ if [[ -n "$b" ]] && [[ "$q" == "" ]]; then q="rdb"; fi
 # Clean up the results
 if [[ -n "$b" ]]; then
         b="${b^^}"
+        b="${b//[^[:alnum:] ]/}"        # cleanup any non alphanumeric characters
         b="$(echo "$b"|xargs)" #clean up extra spaces
         b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
         b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
@@ -191,7 +192,7 @@ if [[ -n "$b" ]]; then
         b="${b% INC}"
         b="${b% LTD}"
         b="${b% PTY}"
-        b="${b% \& CO KG}"
+        b="${b% CO KG}"
         b="${b% AG}"
         b="${b% AB}"
         b="${b% VOF}"
