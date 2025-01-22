@@ -151,10 +151,10 @@ if [[ -z "$b" ]]; then
                         if [[ "${header[i]}" == "owner" ]]; then OSDB_owner="$((i + 1))"; fi
                         if [[ "${header[i]}" == "icao24" ]]; then OSDB_icao="$((i + 1))"; fi
                 done
-                b="$(awk -F ","  -v p="${a,,}" -v reg="$OSDB_reg" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub('\'',""); if(tolower($reg)==p) {print $own;exit}}' /run/OpenSkyDB.csv)"
+                b="$(awk -F ","  -v p="${a,,}" -v reg="$OSDB_reg" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub("\047",""); if(tolower($reg)==p) {print $own;exit}}' /run/OpenSkyDB.csv)"
                 if [[ -z "$b" ]] && [[ -n "$c" ]]; then
                         # there's an ICAO, let's try that...
-                        b="$(awk -F ","  -v p="${c,,}" -v icao="$OSDB_icao" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub('\''",""); if(tolower($icao)==p) {print $own;exit}}' /run/OpenSkyDB.csv)"
+                        b="$(awk -F ","  -v p="${c,,}" -v icao="$OSDB_icao" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub("\047",""); if(tolower($icao)==p) {print $own;exit}}' /run/OpenSkyDB.csv)"
                 fi
         if [[ -n "$b" ]]; then MUSTCACHE=1; fi
         if [[ -n "$b" ]] && [[ -z "$q" ]];  then q="OpenSky"; fi
