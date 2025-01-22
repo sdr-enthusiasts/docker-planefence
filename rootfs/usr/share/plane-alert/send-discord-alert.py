@@ -33,7 +33,7 @@ import csv
 import pflib as pf
 
 # Human readable location stuff
-from geopy.geocoders import Nominatim
+from geopy.geocoders import Nominatim # type: ignore
 geolocator = Nominatim(user_agent="plane-alert")
 
 def get_readable_location(plane):

@@ -484,6 +484,8 @@ EOF
 					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
 				elif [[ "${NEWVALUES[-1]::17}" == "https://bsky.app/" ]]; then
 				  printf "   <td><a href=\"%s\" target=\"_blank\">BlueSky</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
+				elif grep -qo "$MASTODON_SERVER" <<< "${NEWVALUES[-1]}"; then
+					printf "   <td><a href=\"%s\" target=\"_blank\">Mastodon</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
 				else
 					printf "   <td>yes</td>\n" >&3
 				fi
