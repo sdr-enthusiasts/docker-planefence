@@ -385,6 +385,7 @@ get_rate_str
 if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
         uri="$(jq -r '.uri' <<< "$response")"
         "${s6wrap[@]}" echo "BlueSky Post successful. Post available at https://bsky.app/profile/$handle/post/${uri##*/}. $ratelimit_str"
+        echo "https://bsky.app/profile/$handle/post/${uri##*/}" > /tmp/bsky.link
 else
         "${s6wrap[@]}" echo "BlueSky Posting Error: $response. $ratelimit_str"
         if [[ -f /tmp/bsky.json ]]; then

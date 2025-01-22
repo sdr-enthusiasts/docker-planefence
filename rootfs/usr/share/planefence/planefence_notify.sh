@@ -428,6 +428,11 @@ then
 			# Insert BlueSky notifications here:
 			if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
 				/scripts/post2bsky.sh "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWEET}")" "$(if [[ "$GOTSNAP" == "true" ]]; then echo "$snapfile"; fi)" || true
+				if [[ -f /tmp/bsky.link ]]; then
+					LINK="$(</tmp/bsky.link)"
+					(( RECORD[7] < 0 )) && RECORD[12]="$LINK" || RECORD[7]="$LINK"
+					rm -f /tmp/bsky.link
+				fi
 			fi
 
 			# And now, let's tweet!

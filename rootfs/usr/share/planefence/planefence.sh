@@ -482,8 +482,10 @@ EOF
 				# Print "yes" and add a link if available
 				if [[ "${NEWVALUES[-1]::13}" == "https://t.co/" ]]; then
 					printf "   <td><a href=\"%s\" target=\"_blank\">tweet</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
+				elif [[ "${NEWVALUES[-1]::17}" == "https://bsky.app/" ]]; then
+				  printf "   <td><a href=\"%s\" target=\"_blank\">BlueSky</a></td>\n" "$(tr -dc '[:print:]' <<< "${NEWVALUES[-1]}")" >&3
 				else
-					printf "   <td>discord</td>\n" >&3
+					printf "   <td>yes</td>\n" >&3
 				fi
 			else
 				# If this record doesnt have an "@" then print "no"
