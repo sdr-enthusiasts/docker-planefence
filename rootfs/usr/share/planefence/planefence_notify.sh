@@ -339,9 +339,9 @@ then
 				if [[ "$(jq '.error' <<< "$response"|xargs)" == "null" ]]
 				then
 					echo "[$(date)][$APPNAME] Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<< "$response"|xargs)"
+					(( RECORD[7] < 0 )) && RECORD[12]="$(jq '.url' <<< "${response}"|xargs)" || RECORD[7]="$(jq '.url' <<< "${response}"|xargs)"
 				else
 					echo "[$(date)][$APPNAME] Mastodon post error. Mastodon returned this error: $(jq '.url' <<< "$response"|xargs)"
-					(( RECORD[7] < 0 )) && RECORD[12]="$(jq '.url' <<< "${response}"|xargs)" || RECORD[7]="$(jq '.url' <<< "${response}"|xargs)"
 				fi
 			fi
 
