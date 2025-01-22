@@ -1,6 +1,6 @@
 # Python3 module of utilities for Plane Fence and Plane Alert
 #
-# Copyright 2022-2024 Ramon F. Kolb and Justin DiPierro - licensed under the terms and conditions
+# Copyright 2022-2025 Ramon F. Kolb and Justin DiPierro - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence/

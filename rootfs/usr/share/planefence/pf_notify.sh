@@ -6,7 +6,7 @@
 # This script is distributed as part of the PlaneFence package and is dependent
 # on that package for its execution.
 #
-# Copyright 2020-2024 by Ramon F. Kolb (kx1t) - licensed under the terms and conditions
+# Copyright 2020-2025 by Ramon F. Kolb (kx1t) - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence

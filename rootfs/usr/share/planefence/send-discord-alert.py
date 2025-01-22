@@ -4,7 +4,7 @@
 #
 # Usage: ./send-discord-alert.py <inputfile>
 #
-# Copyright 2022-2024 Ramon F. Kolb, kx1t
+# Copyright 2022-2025 Ramon F. Kolb, kx1t
 # Copyright 2022 Justin DiPierro
 #
 # Licensed under the terms and conditions

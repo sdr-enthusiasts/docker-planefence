@@ -1,5 +1,5 @@
 Planefence, and its associated programs, data, tools, documentation, and example code, is
-Copyright (C) 2020 - 2024 by Ramon F. Kolb, KX1T.
+Copyright (C) 2020 - 2025 by Ramon F. Kolb, KX1T.
 KX1T can be reached via email at k x 1 t   (at)   a m s a t   d o t  org
 or via snail mail at PO Box 11, Belmont, MA 02478, USA.
 

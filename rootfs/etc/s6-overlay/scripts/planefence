@@ -11,7 +11,7 @@ PLANEFENCEDIR=/usr/share/planefence
 [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence started as an s6 service" || true
 [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)" || true
 # -----------------------------------------------------------------------------------
-# Copyright 2020-2024 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence4docker/
