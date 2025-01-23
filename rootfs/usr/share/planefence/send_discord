@@ -17,13 +17,7 @@
 #---------------------------------------------------------------------------------------------
 # This script sends a Discord notification
 
-# redirect stderr to stdout so it's picked up in the docker logs
-exec 2>&1
-# all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
-trap 'echo -e "[$(date)][$APPNAME][ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND returned ${?}"' ERR
-
-APPNAME="$(hostname)/send-discord"
+source /scripts/common
 
 PF_CONFIGFILE="/usr/share/planefence/planefence.conf"
 PA_CONFIGFILE="/usr/share/plane-alert/planealert.conf"
@@ -35,7 +29,7 @@ then
     echo "Usage: $0 <hexid> <PF|PA>"
     exit 1
 else
-    echo "[$(date)][$APPNAME] Attempting Discord notification for $1"
+    "${s6wrap[@]}" echo "Attempting Discord notification for $1"
 fi
 
 if [[ "$2" == "PF" ]]
@@ -55,13 +49,13 @@ fi
 
 if [[ -z "${DISCORD_WEBHOOKS}" ]]
 then
-    echo "[$(date)][$APPNAME] Error: DISCORD_WEBHOOKS not defined. Cannot send a Discord notification"
+    "${s6wrap[@]}" echo "Error: DISCORD_WEBHOOKS not defined. Cannot send a Discord notification"
     exit 1
 fi
 
 if [[ -z "${DISCORD_FEEDER_NAME}" ]]
 then
-    echo "[$(date)][$APPNAME] Error: DISCORD_FEEDER_NAME not defined. Cannot send a Discord notification"
+    "${s6wrap[@]}" echo "Error: DISCORD_FEEDER_NAME not defined. Cannot send a Discord notification"
     exit 1
 fi
 
@@ -78,11 +72,11 @@ then
     notif_json="${notif_json//##SCREENSHOTFILE##/$1.jpg}"
     notif_json="${notif_json//##SCRSHT--/}"
     notif_json="${notif_json//--SCRSHT##/}"
-    echo "[$(date)][$APPNAME] Discord notification for $1 (${VESSELS[$1:shipname]}) - screenshot found"
+    "${s6wrap[@]}" echo "Discord notification for $1 (${VESSELS[$1:shipname]}) - screenshot found"
 else
     SCREENSHOTCURL=""
     notif_json="${notif_json//##SCRSHT--*---SCRSHT##/}"
-    echo "[$(date)][$APPNAME] Discord notification for $1 (${VESSELS[$1:shipname]}) - no screenshot found"
+    "${s6wrap[@]}" echo "Discord notification for $1 (${VESSELS[$1:shipname]}) - no screenshot found"
 fi
 
 # Add a Map URL if configured:
@@ -197,7 +191,7 @@ do
         # fi
 
     else
-        echo "[$(date)][$APPNAME] Discord post error for $1 (${VESSELS[$1:shipname]}). Discord returned this error: ${response}"
+        "${s6wrap[@]}" echo "Discord post error for $1 (${VESSELS[$1:shipname]}). Discord returned this error: ${response}"
         # if [[ -n "$DISCORD_ERROR_LOG" ]]
         # then
         #     {

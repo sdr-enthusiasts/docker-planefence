@@ -39,22 +39,20 @@ source /scripts/common
 PLANEFENCEDIR=/usr/share/planefence
 
 # Let's see if we must reload the parameters
-if [[ -f "/run/planefence/last-config-change" ]] && [[ -f "/usr/share/planefence/persist/planefence.config" ]]
-then
+if [[ -f "/run/planefence/last-config-change" ]] && [[ -f "/usr/share/planefence/persist/planefence.config" ]]; then
 	# if... the date-last-changed of config file on the exposed volume ... is newer than the last time we read it ... then ... rerun the prep routine (which will update the last-config-change)
 	[[ "$(stat -c %Y /usr/share/planefence/persist/planefence.config)" -gt "$(</run/planefence/last-config-change)" ]] && /usr/share/planefence/prep-planefence.sh
 fi
 # FENCEDATE will be the date [yymmdd] that we want to process PlaneFence for.
 # The default value is 'today'.
 
-if [ "$1" != "" ] && [ "$1" != "reset" ]
-then # $1 contains the date for which we want to run PlaneFence
+if [[ -n "$1" ]] && [[ "$1" != "reset" ]]; then # $1 contains the date for which we want to run PlaneFence
 FENCEDATE=$(date --date="$1" '+%y%m%d')
 else
 	FENCEDATE=$(date --date="today" '+%y%m%d')
 fi
 
-[ "$TRACKSERVICE" != "flightaware" ] && TRACKSERVICE="flightaware"
+[[ "$TRACKSERVICE" != "flightaware" ]] && TRACKSERVICE="flightaware" || true
 
 # -----------------------------------------------------------------------------------
 # Compare the original config file with the one in use, and call
@@ -62,8 +60,7 @@ fi
 #
 # -----------------------------------------------------------------------------------
 # Read the parameters from the config file
-if [ -f "$PLANEFENCEDIR/planefence.conf" ]
-then
+if [[ -f "$PLANEFENCEDIR/planefence.conf" ]]; then
 	source "$PLANEFENCEDIR/planefence.conf"
 else
 	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run PlaneFence!
@@ -105,8 +102,7 @@ fi
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
 # replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-if [[ "x$REMOTENOISE" != "x" ]]
-then
+if [[ "x$REMOTENOISE" != "x" ]]; then
 	if curl --fail -s "$REMOTENOISE/noisecapt-$FENCEDATE.log" > "/tmp/noisecapt-$FENCEDATE.log"; then
 		NOISECAPT=1
 	else
@@ -116,18 +112,14 @@ fi
 #
 #
 # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
-if [[ "$FUDGELOC" != "" ]]
-then
-	if [[ "$FUDGELOC" == "0" ]]
-	then
+if [[ "$FUDGELOC" != "" ]]; then
+	if [[ "$FUDGELOC" == "0" ]]; then
 		printf -v LON_VIS "%.0f" "$LON"
 		printf -v LAT_VIS "%.0f" "$LAT"
-	elif [[ "$FUDGELOC" == "1" ]]
-	then
+	elif [[ "$FUDGELOC" == "1" ]]; then
 		printf -v LON_VIS "%.1f" "$LON"
 		printf -v LAT_VIS "%.1f" "$LAT"
-	elif [[ "$FUDGELOC" == "2" ]]
-	then
+	elif [[ "$FUDGELOC" == "2" ]]; then
 		printf -v LON_VIS "%.2f" "$LON"
 		printf -v LAT_VIS "%.2f" "$LAT"
 	else
@@ -156,20 +148,18 @@ LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> 
 LOG ()
 {
 	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	while [ -n "$1" ] || read -r IN; do
-		if [ -n "$1" ]; then
+	while [[ -n "$1" ]] || read -r IN; do
+		if [[ -n "$1" ]]; then
 			IN="$1"
 		fi
-		if [ "$VERBOSE" != "" ]
-		then
-			if [ "$LOGFILE" == "logger" ]
-			then
+		if [[ "$VERBOSE" != "" ]]; then
+			if [[ "$LOGFILE" == "logger" ]]; then
 				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
 			else
 				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> "$LOGFILE"
 			fi
 		fi
-		if [ -n "$1" ]; then
+		if [[ -n "$1" ]]; then
 			break
 		fi
 	done
@@ -188,8 +178,7 @@ WRITEHTMLTABLE () {
 
 	export HASTWEET="false"
 	export HASNOISE="false"
-	if [ -f "$1" ]
-	then
+	if [[ -f "$1" ]]; then
 		while read -r NEWLINE
 		do
 			IFS=, read -ra RECORD <<< "$NEWLINE"
@@ -229,8 +218,8 @@ WRITEHTMLTABLE () {
 	<th class="js-sort-number">Min. Distance</th>
 EOF
 
-	if [[ "$HASNOISE" == "true" ]]
-	then
+	if [[ "$HASNOISE" == "true" ]]; then
+		SPECTROPRINT="true"
 		# print the headers for the standard noise columns
 		cat >&3 <<EOF
 		<th class="js-sort-number">Loudness</th>
@@ -241,22 +230,9 @@ EOF
 		<th class="js-sort-number">1 hr avg</th>
 		<th>Spectrogram</th>
 EOF
-		# # If there are spectrograms for today, then also make a column for these:
-		# if compgen -G "$OUTFILEDIR/noisecapt-spectro-$FENCEDATE*.png" >/dev/null; then
-		# 	printf "	<th>Spectrogram</th>\n" >&3
-		# 	SPECTROPRINT="true"
-		# else
-		# 	SPECTROPRINT="false"
-		# fi
-		# ^^^ this doesn't really work - there won't be any spectrograms at the beginning of the day, and 
-		# it will never create any, because SPECTROPRINT stays FALSE forever.
-		# Instead, we'll set SPECTROPRINT=true always when HASNOISE=true. This may cause an empty column, but that's
-		# preferred over not printing any spectrograms.
-		SPECTROPRINT="true"
 	fi
 
-	if [[ "$HASTWEET" == "true" ]]
-	then
+	if [[ "$HASTWEET" == "true" ]]; then
 		# print a header for the Tweeted column
 		printf "	<th>Notified</th>\n" >&3
 	fi
@@ -516,8 +492,7 @@ WRITEHTMLHISTORY () {
 	# Write history file from directory
 	# Usage: WRITEHTMLTABLE PLANEFENCEDIRECTORY OUTPUTFILE [standalone]
 	LOG "WRITEHTMLHISTORY $1 $2 $3"
-	if [ "$3" == "standalone" ]
-	then
+	if [[ "$3" == "standalone" ]]; then
 		printf "<html>\n<body>\n" >>"$2"
 	fi
 
@@ -564,8 +539,7 @@ LASTFENCEFILE=/usr/share/planefence/persist/.internal/lastfencedate
 LOG "Initiating PlaneFence"
 LOG "FENCEDATE=$FENCEDATE"
 # First - if there's any command line argument, we need to do a full run discarding all cached items
-if [ "$1" != "" ]
-then
+if [[ "$1" != "" ]]; then
 	rm "$LASTFENCEFILE"  2>/dev/null
 	rm "$PRUNESTARTFILE"  2>/dev/null
 	rm "$TMPLINES"  2>/dev/null
@@ -580,20 +554,18 @@ fi
 [[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- start prune socket30003 data" || true
 
 # find out the number of lines previously read
-if [ -f "$TMPLINES" ]
-then
+if [[ -f "$TMPLINES" ]]; then
 	read -r READLINES < "$TMPLINES"
 else
 	READLINES=0
 fi
 # shellcheck disable=SC2153
-if [ -f "$TOTLINES" ]
-then
+if [[ -f "$TOTLINES" ]]; then
 	read -r TOTALLINES < "$TOTLINES"
 else
 	TOTALLINES=0
 fi
-if [ -f "$LASTFENCEFILE" ]; then
+if [[ -f "$LASTFENCEFILE" ]]; then
 	read -r LASTFENCEDATE < "$LASTFENCEFILE"
 else
     # file is missing, assume we ran last yesterday
@@ -611,8 +583,7 @@ rm -f "$OUTFILETMP"
 SOCKETFILE="$LOGFILEBASE$FENCEDATE.txt"
 [[ -f "$SOCKETFILE" ]] && CURRCOUNT=$(wc -l "$SOCKETFILE" |cut -d ' ' -f 1) || CURRCOUNT=0
 
-if [[ "$READLINES" -gt "$CURRCOUNT" ]]
-then
+if [[ "$READLINES" -gt "$CURRCOUNT" ]]; then
 	# Houston, we have a problem. READLINES is an earlier snapshot of the number of records, which should always be GE CURRCOUNT.
 	# If it's not, this means most probably that the socket30003 logfile got reset, (again) probably because the container was restarted.
 	# In this case, we want to use all lines from the socket30003 logfile.
@@ -694,8 +665,7 @@ LOG "Returned from planefence.py..."
 
 [[ "$BASETIME" != "" ]] && echo "3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- returned from planefence.py, start pruning duplicates" || true
 
-if [ -f "$OUTFILETMP" ] && [ -f "$OUTFILECSV" ]
-then
+if [[ -f "$OUTFILETMP" ]] && [[ -f "$OUTFILECSV" ]]; then
 	while read -r newline
 	do
 		IFS="," read -ra newrec <<< "$newline"
@@ -741,8 +711,7 @@ rm -f "$OUTFILETMP"
 [[ "$BASETIME" != "" ]] && echo "4. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done pruning duplicates, invoking noise2fence" || true
 
 # Now check if we need to add noise data to the csv file
-if [[ "$NOISECAPT" == "1" ]]
-then
+if [[ "$NOISECAPT" == "1" ]]; then
 	LOG "Invoking noise2fence!"
 	$PLANEFENCEDIR/noise2fence.sh
 else
@@ -776,8 +745,7 @@ fi
 echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
 
 # if IGNOREDUPES is ON then remove duplicates
-if [[ "$IGNOREDUPES" == "ON" ]]
-then
+if [[ "$IGNOREDUPES" == "ON" ]]; then
 	LINESFILTERED=$(awk -F',' 'seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" 2>/dev/null | wc -l)
 	if (( i>0 ))
 	then
@@ -805,7 +773,7 @@ if [[ -n "$PLANETWEET" ]] \
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
 else
-	[ "$1" != "" ] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
+ [[ "$1" != "" ]] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
 fi
 
 # run planefence-rss.sh in the background:
@@ -814,7 +782,7 @@ fi
 [[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
 
 # And see if we need to run PLANEHEAT
-if chk_enabled "$PLANEHEAT" && [ -f "${PLANEHEATSCRIPT}" ] # && [ -f "$OUTFILECSV" ]  <-- commented out to create heatmap even if there's no data
+if chk_enabled "$PLANEHEAT" && [[ -f "${PLANEHEATSCRIPT}" ]] # && [[ -f "$OUTFILECSV" ]]  <-- commented out to create heatmap even if there's no data
 then
 	LOG "Invoking PlaneHeat!"
 	$PLANEHEATSCRIPT
@@ -826,8 +794,7 @@ fi
 # Now let's link to the latest Spectrogram, if one was generated for today:
 [[ "$BASETIME" != "" ]] && echo "9. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking invoking PlaneHeat, getting NoiseCapt stuff" || true
 
-if [ "$NOISECAPT" == "1" ]
-then
+if [[ "$NOISECAPT" == "1" ]]; then
 	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram" || true
 	# get the latest spectrogram from the remote server
 	curl --fail -s "$REMOTENOISE/noisecapt-spectro-latest.png" >"$OUTFILEDIR/noisecapt-spectro-latest.png"
@@ -912,8 +879,7 @@ fi
 
 echo "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
 
-if [ -f "$PLANEHEATHTML" ]
-then
+if [[ -f "$PLANEHEATHTML" ]]; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<link rel="stylesheet" href="leaflet.css" />
 	<script src="leaflet.js"></script>
@@ -1020,8 +986,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 EOF
 
 # Write some extra text if NOISE data is present
-if [[ "$HASNOISE" != "false" ]]
-then
+if [[ "$HASNOISE" != "false" ]]; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 	<article>
@@ -1045,8 +1010,7 @@ EOF
 fi
 
 # if $PLANEHEATHTML exists, then add the heatmap
-if chk_enabled "$PLANEHEAT" && [ -f "$PLANEHEATHTML" ]
-then
+if chk_enabled "$PLANEHEAT" && [[ -f "$PLANEHEATHTML" ]]; then
 	# shellcheck disable=SC2129
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
@@ -1056,7 +1020,7 @@ then
 	<ul>
 	<li>This heatmap reflects passing frequency and does not indicate perceived noise levels
 	<li>The heatmap is limited to the coverage area of PlaneFence, for any aircraft listed in the table above
-	$( [ -d "$OUTFILEDIR/../heatmap" ] && printf "<li>For a heatmap of all planes in range of the station, please click <a href=\"../heatmap\" target=\"_blank\">here</a>" )
+	$( [[ -d "$OUTFILEDIR/../heatmap" ]] && printf "<li>For a heatmap of all planes in range of the station, please click <a href=\"../heatmap\" target=\"_blank\">here</a>" )
 	</ul>
 EOF
 	cat "$PLANEHEATHTML" >>"$OUTFILEHTMTMP"
@@ -1069,8 +1033,7 @@ EOF
 fi
 
 # If there's a latest spectrogram, show it
-if [ -f "$OUTFILEDIR/noisecapt-spectro-latest.png" ]
-then
+if [[ -f "$OUTFILEDIR/noisecapt-spectro-latest.png" ]]; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 	<article>
@@ -1116,7 +1079,7 @@ ln -sf "${OUTFILEHTML##*/}" index.html
 popd > /dev/null || true
 
 # VERY last thing... ensure that the log doesn't overflow:
-if [ "$VERBOSE" != "" ] && [ "$LOGFILE" != "" ] && [ "$LOGFILE" != "logger" ] && [[ -f $LOGFILE ]] && (( $(wc -l < "$LOGFILE") > 8000 ))
+if [[ "$VERBOSE" != "" ]] && [[ "$LOGFILE" != "" ]] && [[ "$LOGFILE" != "logger" ]] && [[ -f $LOGFILE ]] && (( $(wc -l < "$LOGFILE") > 8000 ))
 then
     #sed -i -e :a -e '$q;N;8000,$D;ba'
     tail -n 4000 "$LOGFILE" > "$LOGFILE.tmp"

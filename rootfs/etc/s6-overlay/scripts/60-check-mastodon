@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2015,SC1091
+#shellcheck shell=bash disable=SC2015,SC1091,SC2154
 
-APPNAME="$(hostname)/check-mastodon"
+source /scripts/common
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2022 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -12,14 +12,14 @@ APPNAME="$(hostname)/check-mastodon"
 # -----------------------------------------------------------------------------------
 #
 
-echo "[$(date)][$APPNAME] Checking Mastodon server and access token"
+"${s6wrap[@]}" echo "Checking Mastodon server and access token"
 
 source /usr/share/planefence/persist/planefence.config
 rm -f /run/pf_mastodon_on /run/pa_mastodon_on
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]] || [[ -z "$MASTODON_SERVER" ]]
 then
-    echo "[$(date)][$APPNAME] Mastodon not configured"
+    "${s6wrap[@]}" echo "Mastodon not configured"
     exit 0
 else
     MASTODON_SERVER="${MASTODON_SERVER,,}"
@@ -30,10 +30,10 @@ else
     acct="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
     if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$result" >/dev/null 2>&1
     then
-        echo "[$(date)][$APPNAME] Mastodon configured correctly for @$MASTODON_SERVER@$(jq -r '.acct' <<< "$acct")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
-        [[ "${PF_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Planefence" || echo "[$(date)][$APPNAME] Mastodon disabled for Planefence"
-        [[ "${PA_MASTODON,,}" == "on" ]] && echo "[$(date)][$APPNAME] Mastodon enabled for Plane-Alert" || echo "[$(date)][$APPNAME] Mastodon disabled for Plane-Alert"
+        "${s6wrap[@]}" echo "Mastodon configured correctly for @$MASTODON_SERVER@$(jq -r '.acct' <<< "$acct")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
+        [[ "${PF_MASTODON,,}" == "on" ]] && "${s6wrap[@]}" echo "Mastodon enabled for Planefence" || "${s6wrap[@]}" echo "Mastodon disabled for Planefence"
+        [[ "${PA_MASTODON,,}" == "on" ]] && "${s6wrap[@]}" echo "Mastodon enabled for Plane-Alert" || "${s6wrap[@]}" echo "Mastodon disabled for Plane-Alert"
     else
-        echo "[$(date)][$APPNAME] Mastodon configured incorrectly. Check your setup"
+        "${s6wrap[@]}" echo "Mastodon configured incorrectly. Check your setup"
     fi
 fi
