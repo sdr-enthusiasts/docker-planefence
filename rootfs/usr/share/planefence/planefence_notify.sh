@@ -289,6 +289,7 @@ if [ -f "$CSVFILE" ]; then
 			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]; then
 				"${s6wrap[@]}" echo "Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<<"${TWEET}")"
 			fi
+
 			# Inject Mastodon integration here:
 			if [[ -n "$MASTODON_SERVER" ]]; then
 				mast_id="null"
@@ -312,7 +313,7 @@ if [ -f "$CSVFILE" ]; then
 				# check if there was an error
 				if [[ "$(jq '.error' <<<"$response" | xargs)" == "null" ]]; then
 					"${s6wrap[@]}" echo "Planefence post to Mastodon generated successfully with visibility=${MASTODON_VISIBILITY}. Mastodon post available at: $(jq '.url' <<<"$response" | xargs)"
-					LINK="$(jq '.url' <<<"${response}" | xargs)" || RECORD[7]="$(jq '.url' <<<"${response}" | xargs)"
+					LINK="$(jq '.url' <<<"${response}" | xargs)"
 				else
 					"${s6wrap[@]}" echo "Mastodon post error. Mastodon returned this error: $(jq '.url' <<<"$response" | xargs)"
 				fi
@@ -436,7 +437,7 @@ if [ -f "$CSVFILE" ]; then
 			fi
 
 			# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
-			if [[ -z "${RECORD[7]}" ]] && [[ -n "$LINK" ]]; then RECORD[12]="$LINK"; else RECORD[7]="$LINK"; fi
+			if [[ -n "${RECORD[7]}" ]] && [[ -n "$LINK" ]]; then RECORD[12]="$LINK"; else RECORD[7]="$LINK"; fi
 			# LOG "Tweet sent!"
 			LOG "TWURL results: $LINK"
 		else
