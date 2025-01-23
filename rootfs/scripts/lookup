@@ -1,0 +1,76 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2015,SC2164,SC1090,SC2154,SC1091
+#---------------------------------------------------------------------------------------------
+# Copyright (C) 2025, Ramon F. Kolb (kx1t)
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+#---------------------------------------------------------------------------------------------
+# This script searches for a term in the OpenSky database and returns formatted data
+
+source /scripts/common
+#set -x
+
+argc="${#@}"
+
+print_usage() {
+  echo "$0: look up information in OpenSky Database"
+  echo "Usage: $0 [<option>] <searchterm>"
+  echo "Where <option> can be one of the following:"
+  echo "-t (or omitted): text format"
+  echo "-j: JSON format"
+}
+
+if [[ -z "$1" ]] || (( argc > 2 )); then
+  print_usage
+  exit 1
+fi
+
+if [[ ! -f /run/OpenSkyDB.csv ]]; then
+  echo "Error: cannot find an OpenSky database at /run/OpenSkyDB.csv. Aborting."
+  exit 1
+fi
+
+# shellcheck disable=SC2124
+search="${@: -1}"
+if (( argc == 2 )); then option="$1"; fi
+
+readarray -d, -t header <<< "$(head -1 /run/OpenSkyDB.csv | tr -d "'\f\n\r")"
+readarray -d, -t record <<< "$(grep -i "$search" /run/OpenSkyDB.csv | tr -d "'\f\n\r")"
+if (( ${#record[@]} > 1 )); then
+
+  case "${option,,}" in
+    ""|"-t")
+      for (( i=0; i< "${#header[@]}"; i++)); do
+        echo "${header[i]//$'\n'/} --> ${record[i]//$'\n'/}"
+      done
+    ;;
+
+    "-j")
+      json="{"
+      for (( i=0; i< "${#header[@]}"; i++)); do
+        json+="\"${header[i]//$'\n'/}\": \"${record[i]//$'\n'/}\","
+      done
+      json="${json:0:-1}"   # remove last comma
+      json+="}"
+      if which jq >/dev/null 2>&1; then jq . <<< "$json"; else echo "$json"; fi
+    ;;
+    
+    *)
+      print_usage
+      exit 1
+    ;;
+  esac
+
+else
+  echo "Search term \"$1\" not found."
+fi
