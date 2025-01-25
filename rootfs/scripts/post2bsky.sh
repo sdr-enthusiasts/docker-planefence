@@ -205,7 +205,9 @@ linkcounter=0
 for url in "${urls[@]}"; do
     urlfound=false
     for mapurl in "${mapurls[@]}"; do
-        if [[ "$url" == *"$mapurl"* ]] && (( ${#post_text} + ${#mapurl} + 3 <= BLUESKY_MAXLENGTH )); then
+        if [[ "$url" == *"$mapurl"* ]] && \
+           (( ${#post_text} + ${#mapurl} + 3 <= BLUESKY_MAXLENGTH )) && \
+           [[ ! " JPG PEG PNG GIF jpg peg png gif " =~ " ${url: -3} " ]]; then
             # We have a link to one of the map services. Add it to the post text
             post_text+=" - ${mapurl}"
             index="$mapurl$((linkcounter++))"
@@ -216,7 +218,9 @@ for url in "${urls[@]}"; do
             break
         fi
     done
-    if ! $urlfound && (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )); then
+    if ! $urlfound && \
+       (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )) && \
+       [[ ! " JPG PEG PNG GIF jpg peg png gif " =~ " ${url: -3} " ]]; then
         # We have a generic link. Add it to the post text
         post_text+=" - link"
         index="link$((linkcounter++))"
