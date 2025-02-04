@@ -35,7 +35,7 @@ else
 fi
 
 # Unzip files to the target directory
-mkdir -p /usr/share/planefence/html/silhouettes # probably not necessary, but making sure the dir exists "just in case"
+mkdir -p /usr/share/planefence/html/plane-alert/silhouettes # probably not necessary, but making sure the dir exists "just in case"
 if ! unzip -qq -o -d /usr/share/planefence/html/plane-alert/silhouettes /tmp/silhouettes.zip
 then
 	echo "[$APPNAME][$(date)] Unzipping of silhouettes from $LINK failed. Could the URL source be corrupt? Using the existing list."
