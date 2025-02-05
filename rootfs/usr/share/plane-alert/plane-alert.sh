@@ -224,7 +224,8 @@ do
 	outrec+="${pa_record[11]/ */}," # callsign or flt nr (stripped spaces)
 
 	epoch_sec="$(date -d"${pa_record[4]} ${pa_record[5]}" +%s)"
-	outrec+="https://$TRACKSERVICE/?icao=${pa_record[0]}&showTrace=$(date -u -d@"${epoch_sec}" "+%Y-%m-%d")&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]}&timestamp=${epoch_sec},"	# ICAO for insertion into ADSBExchange link
+  if chk_enabled "$TRACK_FIRSTSEEN"; then TRACK_FIRSTSEEN="true"; else unset TRACK_FIRSTSEEN; fi
+	outrec+="https://$TRACKSERVICE/?icao=${pa_record[0]}&zoom=$MAPZOOM&lat=${pa_record[2]}&lon=${pa_record[3]}${TRACK_FIRSTSEEN:+&timestamp=${epoch_sec}&showTrace=$(date -u -d@"${epoch_sec}" "+%Y-%m-%d")},"	# ICAO for insertion into ADSBExchange link
 
 	# only add squawk if its in the list
 	x=""

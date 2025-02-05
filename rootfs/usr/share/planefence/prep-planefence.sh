@@ -373,6 +373,7 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 [[ -n "$PF_TRACKSERVICE" ]] && configure_planefence "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
 [[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
 [[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
+chk_disabled "$PA_TRACK_FIRSTSEEN" && configure_planealert "TRACK_FIRSTSEEN" "disabled" || configure_planealert "TRACK_FIRSTSEEN" "enabled"
 #
 #--------------------------------------------------------------------------------
 # Configure MQTT notifications for Planefence and plane-alert
