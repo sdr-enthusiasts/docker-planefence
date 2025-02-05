@@ -43,6 +43,12 @@
 source /scripts/common
 
 CACHEFILE="/usr/share/planefence/persist/.internal/planeownerscache.txt"
+
+OWNERDBCACHE="${OWNERDBCACHE:-7}"           # time in days
+REMOTEMISSCACHE="${REMOTEMISSCACHE:-3600}"  # time in seconds
+
+MUSTCACHE=0
+
 #
 # get the plane-alert configuration before the planefence configuration
 # so that any values redefined in planefence prevail over plane-alert
@@ -65,10 +71,6 @@ if [[ -z "$1" ]]; then
         echo "Usage: $0 <flight_or_tail_number> [<ICAO>]"
         exit 2
 fi
-
-if [[ -z "$OWNERDBCACHE" ]]; then OWNERDBCACHE=7;fi           # time in days
-if [[ -z "$REMOTEMISSCACHE" ]]; then REMOTEMISSCACHE=3600; fi  # time in seconds
-MUSTCACHE=0
 
 # Cache Cleanup Script
 # Syntax: CLEANUP_CACHE <cachefile> <max age in days>
@@ -116,8 +118,6 @@ if [[ -z "$b" ]] && [[ -f "$CACHEFILE" ]]; then
         echo "$a" | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
 fi
 if [[ -n "$b" ]] && [[ -z "$q" ]]; then q="ca-a"; fi
-
-
 if [[ -z "$b" ]] && [[ -f "$CACHEFILE" ]]; then
         b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $CACHEFILE)"
 fi
@@ -206,9 +206,17 @@ if [[ -n "$b" ]]; then
         b="${b/Ministry of Finance/MinFinance}"
 fi
 
+# If nothing was found, let's write the prefix to the cache as not found so we don't look up the same callsign for nothing all the time.
+# When the cache expires, we'll try the callsign again.
+
+if [[ -z "$b" ]]; then
+        b="#NOTFOUND"
+        MUSTCACHE=1
+fi
+
 # Write back to cache if needed
-if [[ "$MUSTCACHE" == "1" ]]; then printf "%s,%s,%s\n" "$a" "$b" "$(date +%s)" >> "$CACHEFILE"; fi
-if [[ "$MUSTCACHE" == "2" ]]; then printf "%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" >> "$CACHEFILE"; fi
+if [[ "$MUSTCACHE" == "1" ]]; then printf "%s,%s,%s,%s\n" "$a" "$b" "$(date +%s)" "$q" >> "$CACHEFILE"; fi
+if [[ "$MUSTCACHE" == "2" ]]; then printf "%s,%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" "$q" >> "$CACHEFILE"; fi
 if [[ "$MUSTCACHE" != "0" ]]; then CLEANUP_CACHE "$CACHEFILE" "$OWNERDBCACHE"; fi
 
 # prune dupes from cache
@@ -218,7 +226,7 @@ if [[ "$MUSTCACHE" != "0" ]] && [[ "$(awk -F',' 'seen[$1]++' $CACHEFILE 2>/dev/n
 fi
 
 # so.... if we got no reponse from the remote server, then remove it now:
-if  [[ "$b" == "#NOTFOUND" ]]; then b=""; fi
+if  [[ "$b" == "#NOTFOUND" ]] || [[ "$b" == "NOTFOUND" ]]; then b=""; fi
 
 # Lookup is done - return the result
 echo "$b"
