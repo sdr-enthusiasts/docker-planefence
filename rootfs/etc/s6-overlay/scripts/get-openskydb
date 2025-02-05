@@ -17,7 +17,7 @@ source "/usr/share/planefence/persist/planefence.config"
 
 if chk_disabled "${OPENSKYDB_DOWNLOAD:-enabled}"; then
   "${s6wrap[@]}" echo "OpenSky Database download disabled. Skipping."
-  exit 0
+  stop_service
 fi
 
 # ----------------------------
@@ -69,3 +69,5 @@ else
     ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
   fi
 fi
+
+stop_service
