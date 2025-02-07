@@ -47,7 +47,7 @@ function bsky_auth() {
     fi
 
     # if that didn't work, create a new session
-    if ! $active || [[ "$active" == "null" ]] \
+    if [[ -z "$active" ]] || ! $active || [[ "$active" == "null" ]] \
     || [[ -z "$access_jwt" ]] || [[ "$access_jwt" == "null" ]] \
     || [[ -z "$did" ]] || [[ "$did" == "null" ]] \
     || [[ -z "$refresh_jwt" ]] || [[ "$refresh_jwt" == "null" ]]; then
@@ -205,6 +205,7 @@ linkcounter=0
 for url in "${urls[@]}"; do
     urlfound=false
     for mapurl in "${mapurls[@]}"; do
+        # shellcheck disable=SC2076
         if [[ "$url" == *"$mapurl"* ]] && \
            (( ${#post_text} + ${#mapurl} + 3 <= BLUESKY_MAXLENGTH )) && \
            [[ ! " JPG PEG PNG GIF jpg peg png gif " =~ " ${url: -3} " ]]; then
@@ -218,6 +219,7 @@ for url in "${urls[@]}"; do
             break
         fi
     done
+    # shellcheck disable=SC2076
     if ! $urlfound && \
        (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )) && \
        [[ ! " JPG PEG PNG GIF jpg peg png gif " =~ " ${url: -3} " ]]; then
