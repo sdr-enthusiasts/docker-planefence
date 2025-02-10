@@ -420,17 +420,16 @@ chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planea
 replacement="${PF_TRACKSERVICE:-${PF_TRACKSVC:-https://globe.adsbexchange.com}}"
 replacement="${replacement,,}"
 if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
-nullglob=$(shopt -p nullglob) ; shopt -s nullglob		#save nullglob option and set it so empty queries don't give an error
+shopt -s nullglob
 for file in /usr/share/planefence/html/*.csv; do 
-	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=[^,]\)|'"$replacement"'/\2|gI' "$file"
+	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' "$file"
 done
-$nullglob	# restore the old nullglob value
 
 if [[ -f /usr/share/planefence/html/plane-alert/plane-alert.csv ]]; then
 	replacement="${PA_TRACKSERVICE:-https://globe.adsbexchange.com}"
 	replacement="${replacement,,}"
 	if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
-	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=[^,]\)|'"$replacement"'/\2|gI' "" /usr/share/planefence/html/plane-alert/plane-alert.csv
+	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' /usr/share/planefence/html/plane-alert/plane-alert.csv
 fi
 
 #--------------------------------------------------------------------------------
