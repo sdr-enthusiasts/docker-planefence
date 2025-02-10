@@ -11,7 +11,7 @@
 #
 # -----------------------------------------------------------------------------------
 #
-source /scripts/common 
+source /scripts/common
 
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
@@ -92,10 +92,10 @@ cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #
 # LOOPTIME is the time between two runs of PlaneFence (in seconds)
 if [[ "$PF_INTERVAL" != "" ]]; then
-        export LOOPTIME=$PF_INTERVAL
+	export LOOPTIME=$PF_INTERVAL
 
 else
-        export LOOPTIME=120
+	export LOOPTIME=120
 fi
 #
 # PLANEFENCEDIR contains the directory where planefence.sh is location
@@ -106,15 +106,15 @@ mkdir -p /run/planefence
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
-		sleep 10s
-		"${s6wrap[@]}" echo "----------------------------------------------------------"
-		"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
-		"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-		"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
-		"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
-		"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
-		"${s6wrap[@]}" echo "----------------------------------------------------------"
-		exec sleep infinity
+	sleep 10s
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
+	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
+	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
+	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
+	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	exec sleep infinity
 fi
 
 #
@@ -132,13 +132,19 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # -----------------------------------------------------------------------------------
 #
 # read the environment variables and put them in the planefence.conf file:
-[[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"; while :; do sleep 2073600; done; }
-[[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || { "${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"; while :; do sleep 2073600; done; }
+[[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || {
+	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
+	while :; do sleep 2073600; done
+}
+[[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || {
+	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
+	while :; do sleep 2073600; done
+}
 [[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
 [[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
 [[ -n "$PF_ELEVATION" ]] && sed -i 's/\(^\s*ALTCORR=\).*/\1'"\"$PF_ELEVATION\""'/' /usr/share/planefence/planefence.conf
 [[ -n "$PF_NAME" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf || sed -i 's/\(^\s*MY=\).*/\1\"My\"/' /usr/share/planefence/planefence.conf
-[[ -n "$PF_TRACKSVC" ]] && sed -i 's|\(^\s*TRACKSERVICE=\).*|\1'"\"$PF_TRACKSVC\""'|' /usr/share/planefence/planefence.conf
+
 [[ -n "$PF_MAPURL" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*MYURL=\).*|\1|' /usr/share/planefence/planefence.conf
 [[ -n "$PF_NOISECAPT" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*REMOTENOISE=\).*|\1|' /usr/share/planefence/planefence.conf
 [[ -n "$PF_FUDGELOC" ]] && sed -i 's|\(^\s*FUDGELOC=\).*|\1'"\"$PF_FUDGELOC\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*FUDGELOC=\).*|\1|' /usr/share/planefence/planefence.conf
@@ -146,13 +152,14 @@ chk_enabled "$PF_OPENAIP_LAYER" && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\"
 [[ -n "$PF_TWEET_MINTIME" ]] && sed -i 's|\(^\s*TWEET_MINTIME=\).*|\1'"$PF_TWEET_MINTIME"'|' /usr/share/planefence/planefence.conf
 [[ "$PF_TWEET_BEHAVIOR" == "PRE" ]] && sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1PRE|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1POST|' /usr/share/planefence/planefence.conf
 chk_enabled "$PF_PLANEALERT" && sed -i 's|\(^\s*PA_LINK=\).*|\1\"'"$PF_PA_LINK"'\"|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_LINK=\).*|\1|' /usr/share/planefence/planefence.conf
+configure_planealert "PF_LINK" "$PA_PF_LINK"
 chk_enabled "$PF_TWEETEVERY" && sed -i 's|\(^\s*TWEETEVERY=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEETEVERY=\).*|\1false|' /usr/share/planefence/planefence.conf
 [[ -n "$PA_HISTTIME" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
 [[ -n "$PF_ALERTHEADER" ]] && sed -i "s|\(^\s*ALERTHEADER=\).*|\1\'$PF_ALERTHEADER\'|" /usr/share/plane-alert/plane-alert.conf
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
-	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<< "$PF_SOCK30003HOST")
+	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<<"$PF_SOCK30003HOST")
 	sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
 	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
@@ -162,19 +169,18 @@ else
 	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
 	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
 	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
-	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
+	"${s6wrap[@]}" echo "sudo nano -l ~/planefence/planefence.config"
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	while true
-	do
-			sleep 99999
+	while true; do
+		sleep 99999
 	done
 fi
 #
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 [[ -n "$PF_IGNOREDUPES" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
 [[ -n "$PF_COLLAPSEWITHIN" ]] && sed -i 's|\(^\s*COLLAPSEWITHIN=\).*|\1'"$PF_COLLAPSEWITHIN"'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1300|' /usr/share/planefence/planefence.conf
-a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf  | sed 's/\"//g')"
+a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf | sed 's/\"//g')"
 [[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
 #
@@ -205,17 +211,17 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 chk_disabled "${PF_TWEET}" && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 if chk_enabled "${PF_TWEET,,}"; then
 	if [[ ! -f ~/.twurlrc ]]; then
-			"${s6wrap[@]}" echo "Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
-			"${s6wrap[@]}" echo "Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
-			"${s6wrap[@]}" echo "Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
-			"${s6wrap[@]}" echo "For more information on how to sign up for a Twitter Developer Account, see this link:"
-			"${s6wrap[@]}" echo "https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
-			"${s6wrap[@]}" echo "PlaneFence will continue to start without Twitter functionality."
-			sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
+		"${s6wrap[@]}" echo "Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
+		"${s6wrap[@]}" echo "Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
+		"${s6wrap[@]}" echo "Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
+		"${s6wrap[@]}" echo "For more information on how to sign up for a Twitter Developer Account, see this link:"
+		"${s6wrap[@]}" echo "https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
+		"${s6wrap[@]}" echo "PlaneFence will continue to start without Twitter functionality."
+		sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
-			sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-      [[ -n "$PF_TWATTRIB" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
-  fi
+		sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
+		[[ -n "$PF_TWATTRIB" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
+	fi
 fi
 
 # Despite the name, this variable also works for Mastodon and Discord notifications:
@@ -226,7 +232,6 @@ fi
 [[ -n "$PA_TWATTRIB$PA_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PA_TWATTRIB$PA_ATTRIB\""
 [[ -z "$PA_TWATTRIB$PA_ATTRIB" ]] && [[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
 [[ -n "$ATTRIB" ]] && configure_both "ATTRIB" "\"$ATTRIB\""
-
 
 # -----------------------------------------------------------------------------------
 #
@@ -240,7 +245,7 @@ chk_disabled "$PF_HEATMAP" && configure_planefence "PLANEHEAT" "OFF" || configur
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
 if compgen -G "$1/planefence-??????.html" >/dev/null; then
 	for i in /usr/share/planefence/html/planefence-??????.html; do
-		[[ -n "$PF_MAPWIDTH" ]] && sed  -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
+		[[ -n "$PF_MAPWIDTH" ]] && sed -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
 		[[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' "$i"
 		[[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' "$i"
 	done
@@ -259,11 +264,11 @@ fi
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
 if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && chk_enabled "$PF_PLANEALERT"; then
-		"${s6wrap[@]}" echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
-		"${s6wrap[@]}" echo "Do this on the host to get a base file:"
-		"${s6wrap[@]}" echo "curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
-		"${s6wrap[@]}" echo "and then restart this docker container"
-		PF_PLANEALERT="OFF"
+	"${s6wrap[@]}" echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
+	"${s6wrap[@]}" echo "Do this on the host to get a base file:"
+	"${s6wrap[@]}" echo "curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
+	"${s6wrap[@]}" echo "and then restart this docker container"
+	PF_PLANEALERT="OFF"
 fi
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
@@ -273,7 +278,7 @@ chk_enabled "$PF_PLANEALERT" && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /
 /usr/share/plane-alert/get-silhouettes.sh
 
 # Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
-[[ -n "$PF_PA_TWID" ]] && tr , "\n" <<< "$PF_PA_TWID" > /usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
+[[ -n "$PF_PA_TWID" ]] && tr , "\n" <<<"$PF_PA_TWID" >/usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
 # and write the rest of the parameters into their place
 [[ -n "$PF_PA_TWID" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 [[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
@@ -296,8 +301,8 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
 	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
 	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
-	if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$mast_result" >/dev/null 2>&1; then
-		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<< "$mast_result")" 
+	if ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
+		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<<"$mast_result")"
 	fi
 	if chk_enabled "${PF_MASTODON,,}"; then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
@@ -335,10 +340,10 @@ cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane
 # we need to restart socket30003 so these changes are picked up:
 # First, give the socket30003 startup routine a headstart so this doesn't compete with it:
 sleep 1
-if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
-	|| [[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] \
-	|| [[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]; then
-	[[ -n "$PF_DISTUNIT" ]] &&	sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]; then
+	[[ -n "$PF_DISTUNIT" ]] && sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_SPEEDUNIT" ]] && sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_ALTUNIT" ]] && sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 fi
@@ -370,8 +375,8 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #
 #--------------------------------------------------------------------------------
 # Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
-[[ -n "$PF_TRACKSERVICE" ]] && configure_planefence "TRACKSERVICE" "$PF_TRACKSERVICE" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
-[[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || true
+[[ -n "${PF_TRACKSERVICE:-$PF_TRACKSVC}" ]] && configure_planefence "TRACKSERVICE" "${PF_TRACKSERVICE:-$PF_TRACKSVC}" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
+[[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || configure_planealert "TRACKSERVICE" "globe.adsbexchange.com"
 [[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
 chk_disabled "$PA_TRACK_FIRSTSEEN" && configure_planealert "TRACK_FIRSTSEEN" "disabled" || configure_planealert "TRACK_FIRSTSEEN" "enabled"
 #
@@ -411,9 +416,24 @@ chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]] && configu
 chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planealert "BLUESKY_API" "$BLUESKY_API" || configure_planealert "BLUESKY_API" ""
 #
 #--------------------------------------------------------------------------------
+# Make sure that all past map links follow PA/PF_TRACKS
+replacement="${PF_TRACKSERVICE:-${PF_TRACKSVC:-https://globe.adsbexchange.com}}"
+replacement="${replacement,,}"
+if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
+nullglob=$(shopt -p nullglob) ; shopt -s nullglob		#save nullglob option and set it so empty queries don't give an error
+for file in /usr/share/planefence/html/*.csv; do 
+	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=[^,]\)|'"$replacement"'/\2|gI' "$file"
+done
+$nullglob	# restore the old nullglob value
+
+if [[ -f /usr/share/planefence/html/plane-alert/plane-alert.csv ]]; then
+	replacement="${PA_TRACKSERVICE:-https://globe.adsbexchange.com}"
+	replacement="${replacement,,}"
+	if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
+	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=[^,]\)|'"$replacement"'/\2|gI' "" /usr/share/planefence/html/plane-alert/plane-alert.csv
+fi
+
+#--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
-
-configure_planealert "PF_LINK" "$PA_PF_LINK"
-
-date +%s > /run/planefence/last-config-change
+date +%s >/run/planefence/last-config-change
