@@ -35,7 +35,7 @@ def publish_message(broker, port, topic, qos, message, client_id, username=None,
         # Connect to the MQTT broker
         client.connect(broker, port)
         # Publish the message
-        client.publish(topic, payload=message, qos=qos)
+        client.publish(topic, payload=message, qos=qos, retain=True)
         print(f"Message '{message}' published to topic '{topic}' with QoS {qos}.")
         # Disconnect from the broker
         client.disconnect()
