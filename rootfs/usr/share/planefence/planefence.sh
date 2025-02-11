@@ -925,7 +925,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
 </head>
 
-<body onload="sortTable(document.getElementById('mytable'), 5, -1);">
+<body onload="sortTable(document.getElementById('mytable'), 0, -1);">
 
 
 <h1>PlaneFence</h1>
