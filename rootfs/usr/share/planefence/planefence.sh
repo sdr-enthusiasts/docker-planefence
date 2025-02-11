@@ -861,7 +861,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 <script type="text/javascript" src="sort-table.js"></script>
 EOF
 
-if [[ "${AUTOREFRESH,,}" == "true" ]]; then
+if chk_enabled "${AUTOREFRESH,,}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<meta http-equiv="refresh" content="$REFRESH_INT">

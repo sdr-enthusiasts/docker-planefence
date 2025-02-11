@@ -330,7 +330,8 @@ fi
 [[ -n "$PF_PARANGE" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
 [[ -n "$PF_PA_SQUAWKS" ]] && sed -i 's|\(^\s*SQUAWKS=\).*|\1'"$PF_PA_SQUAWKS"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SQUAWKS=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
 
-configure_both "AUTOREFRESH" "${PF_AUTOREFRESH,,}"
+if chk_enabled "$PF_AUTOREFRESH"; then configure_planefence "AUTOREFRESH" "true"; else configure_planefence "AUTOREFRESH" "false"; fi
+if chk_enabled "${PA_AUTOREFRESH:-$PF_AUTOREFRESH}"; then configure_planealert "AUTOREFRESH" "true"; else configure_planealert "AUTOREFRESH" "false"; fi
 
 # Write the sort-table.js into the web directory as we cannot create it during build:
 cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
