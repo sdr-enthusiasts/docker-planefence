@@ -865,6 +865,13 @@ if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
 else
 	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
 fi
+if chk_enabled "$DARKMODE"; then
+	sed -i "s|##DARKMODE1##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##DARKMODE2##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
+else
+	sed -i "s|##DARKMODE1##|background-image: url(\'pa_background.jpg\'); background-repeat: no-repeat; background-attachment: fixed; background-size: cover;|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##DARKMODE2##|background-color: #f0f6f6; color: black;|g" "$TMPDIR"/plalert-index.tmp
+fi
 
 if (( $(cat "$OUTFILE" | wc -l ) > 0 )); then
 	# shellcheck disable=SC2046

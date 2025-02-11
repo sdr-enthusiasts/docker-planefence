@@ -880,10 +880,21 @@ fi
 cat <<EOF >>"$OUTFILEHTMTMP"
 <style>
 body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
+EOF
+if chk_enabled "$DARKMODE"; then
+	cat <<EOF >>"$OUTFILEHTMTMP"
+	   background-color: black;
+		 color: white;
+EOF
+else
+	cat <<EOF >>"$OUTFILEHTMTMP"
 	   background-image: url('pf_background.jpg');
 	   background-repeat: no-repeat;
 	   background-attachment: fixed;
-  	   background-size: cover;
+  	 background-size: cover;
+EOF
+fi
+cat <<EOF >>"$OUTFILEHTMTMP"
      }
 a { color: #0077ff; }
 h1 {text-align: center}
@@ -893,10 +904,22 @@ h2 {text-align: center}
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
 table thead tr th {
-background-color: #f0f6f6;
-position: sticky;
-z-index: 100;
-top: 0;
+EOF
+if chk_enabled "$DARKMODE"; then
+	cat <<EOF >>"$OUTFILEHTMTMP"
+	   background-color: black;
+		 color: white;
+EOF
+else
+	cat <<EOF >>"$OUTFILEHTMTMP"
+     background-color: #f0f6f6;
+		 color: white;
+EOF
+fi
+cat <<EOF >>"$OUTFILEHTMTMP"
+     position: sticky;
+     z-index: 100;
+     top: 0;
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)

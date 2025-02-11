@@ -432,6 +432,14 @@ if [[ -f /usr/share/planefence/html/plane-alert/plane-alert.csv ]]; then
 	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' /usr/share/planefence/html/plane-alert/plane-alert.csv
 fi
 
+# ---------------------------------------------------------------------
+# Set DARKMODE
+
+if chk_enabled "$PF_DARKMODE"; then configure_planefence "DARKMODE" "true"; else configure_planefence "DARKMODE" "false"; fi
+if chk_enabled "$PA_DARKMODE"; then configure_planealert "DARKMODE" "true"; else configure_planealert "DARKMODE" "false"; fi
+#
+# ---------------------------------------------------------------------
+
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!
