@@ -29,7 +29,13 @@
 -->
 <head>
     <##AUTOREFRESH##>
-    <script type="text/javascript" src="sort-table.js"></script>
+    <!-- script type="text/javascript" src="sort-table.js"></script -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css" />
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script type="text/javascript">
+        new DataTable('#mytable');
+    </script>
     <title>Plane-Alert</title>
     <style>
         body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; ##DARKMODE1##
@@ -51,7 +57,8 @@
     ##MASTOHEADER##
 </head>
 
-<body onload="sortTable(document.getElementById('mytable'), 0, -1);">
+<!-- body onload="sortTable(document.getElementById('mytable'), 0, -1);" -->
+ <body>
 
 <h1>Plane Alert</h1>
    <h2>This website shows a list of aircraft of interest that were heard by <a href="##ADSBLINK##" target="_blank">##NAME##</a>'s ADS-B station</h2>

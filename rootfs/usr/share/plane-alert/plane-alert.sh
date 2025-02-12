@@ -685,6 +685,7 @@ awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="
 # first add the fixed part of the header:
 cat <<EOF >&3
 <table border="1" class="js-sort-table" id="mytable">
+<thead>
 <tr>
 	<th class="js-sort-number">No.</th>
 	<th>Icon</th>
@@ -708,7 +709,7 @@ do
 	[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
 
 done
-echo "</tr>" >&3
+echo "</tr></thead><tbody>" >&3
 
 [[ -n "$BASETIME" ]] && echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" || true
 
