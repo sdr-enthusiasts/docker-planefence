@@ -942,8 +942,8 @@ $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "
 
 $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)>
 <script type="text/javascript">
-    $(document).ready(function() { 
-        $('#mytable').dataTable( {
+    \$(document).ready(function() { 
+        \$('#mytable').dataTable( {
             order: [[0, 'desc']],
             pageLength: 50,
             lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
