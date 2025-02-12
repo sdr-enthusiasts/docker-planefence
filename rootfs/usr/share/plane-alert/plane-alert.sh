@@ -844,6 +844,7 @@ exec 3>&-
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
 sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##TRACKSERVICE##|$TRACKSERVICE|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##TABLESIZE##|$TABLESIZE|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp

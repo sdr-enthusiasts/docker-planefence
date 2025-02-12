@@ -953,7 +953,7 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
     \$(document).ready(function() { 
         \$('#mytable').dataTable( {
             order: [[0, 'desc']],
-            pageLength: 50,
+            pageLength: $TABLESIZE,
             lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
             layout: { top2Start: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] },
                       top1Start: { search: { placeholder: 'Type search here' } }, 
