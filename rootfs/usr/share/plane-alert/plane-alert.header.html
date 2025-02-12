@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html ##DARKMODE0##>
 <!--
 # You are taking an interest in this code! Great!
 # I'm not a professional programmer, and your suggestions and contributions
 # are always welcome. Join me at the GitHub link shown below, or via email
 # at kx1t (at) amsat (dot) org.
 #
-# Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2025 Ramon F. Kolb (kx1t) - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/plane-alert/
+# https://github.com/sdr-enthusiasts/planefence/
 #
 # The package contains parts of, links to, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
@@ -29,10 +29,21 @@
 -->
 <head>
     <!-- ##AUTOREFRESH## -->
-    <!-- script type="text/javascript" src="sort-table.js"></script -->
+
+    <!-- scripts and stylesheets related to the datatables functionality: -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css" />
-    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+
+    <link href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css" rel="stylesheet" integrity="sha384-lidBvvi7oLJ2j9e3nFlBSXfo+giBJ9L7QnUdgjc3AvLiynS0HdKEEEZtvZ4izE46" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/buttons/3.2.2/css/buttons.dataTables.min.css" rel="stylesheet" integrity="sha384-gZdV4/a6Gt/Qu0qCP3bchrOj0WlpkAfszB1m4/eFzOSnvvHUFMv9+C/KcgMO8CeR" crossorigin="anonymous">
+ 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js" integrity="sha384-AenwROccLjIcbIsJuEZmrLlBzwrhvO94q+wm9RwETq4Kkqv9npFR2qbpdMhsehX3" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/dataTables.buttons.min.js" integrity="sha384-DmaAfo+/+UjRKHPidNNswlNqd9ybuE6yx9zKHyMY+vYy9SZhQEu4nauMVgwSx4Z/" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.html5.min.js" integrity="sha384-+E6fb8f66UPOVDHKlEc1cfguF7DOTQQ70LNUnlbtywZiyoyQWqtrMjfTnWyBlN/Y" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.print.min.js" integrity="sha384-FvTRywo5HrkPlBKFrm2tT8aKxIcI/VU819roC/K/8UrVwrl4XsF3RKRKiCAKWNly" crossorigin="anonymous"></script>
+
     <title>Plane-Alert</title>
     <style>
         body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; ##DARKMODE1##
@@ -55,9 +66,16 @@
 </head>
 
 <!-- body onload="sortTable(document.getElementById('mytable'), 0, -1);" -->
- <body>
+<body>
 <script type="text/javascript">
-    new DataTable('#mytable');
+    $(document).ready(function() { 
+        $('#mytable').dataTable( {
+            order: [[0, 'desc']],
+            pageLength: 50,
+            lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
+            layout: { topStart: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] } }
+        }); 
+    });
 </script>
 <h1>Plane Alert</h1>
    <h2>This website shows a list of aircraft of interest that were heard by <a href="##ADSBLINK##" target="_blank">##NAME##</a>'s ADS-B station</h2>
