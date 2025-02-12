@@ -918,7 +918,7 @@ h2 {text-align: center}
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
-table thead tbody tr th {
+table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td{
 EOF
 if chk_enabled "$DARKMODE"; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
