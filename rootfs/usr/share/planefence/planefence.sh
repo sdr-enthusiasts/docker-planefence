@@ -206,29 +206,29 @@ WRITEHTMLTABLE () {
 
 	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
-	<table border="1" class="js-sort-table" id="mytable">
+	<table border="1" class="display" id="mytable">
 	<thead>
 	<tr>
-	<th class="js-sort-number">No.</th>
+	<th>No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
 	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
-	<th class="js-sort-date">Time First Seen</th>
-	<th class="js-sort-date">Time Last Seen</th>
-	<th class="js-sort-number">Min. Altitude</th>
-	<th class="js-sort-number">Min. Distance</th>
+	<th>Time First Seen</th>
+	<th>Time Last Seen</th>
+	<th>Min. Altitude</th>
+	<th>Min. Distance</th>
 EOF
 
 	if [[ "$HASNOISE" == "true" ]]; then
 		SPECTROPRINT="true"
 		# print the headers for the standard noise columns
 		cat >&3 <<EOF
-		<th class="js-sort-number">Loudness</th>
-		<th class="js-sort-number">Peak RMS sound</th>
-		<th class="js-sort-number">1 min avg</th>
-		<th class="js-sort-number">5 min avg</th>
-		<th class="js-sort-number">10 min avg</th>
-		<th class="js-sort-number">1 hr avg</th>
+		<th>Loudness</th>
+		<th>Peak RMS sound</th>
+		<th>1 min avg</th>
+		<th>5 min avg</th>
+		<th>10 min avg</th>
+		<th>1 hr avg</th>
 		<th>Spectrogram</th>
 EOF
 	fi
@@ -859,7 +859,6 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # If not, see https://www.gnu.org/licenses/.
 -->
 <head>
-<script type="text/javascript" src="sort-table.js"></script>
 EOF
 
 if chk_enabled "${AUTOREFRESH,,}"; then
@@ -941,7 +940,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
 </head>
 
-<body onload="sortTable(document.getElementById('mytable'), 0, -1);">
+$(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)>
 <script type="text/javascript">
     $(document).ready(function() { 
         $('#mytable').dataTable( {
