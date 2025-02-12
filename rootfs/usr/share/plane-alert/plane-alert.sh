@@ -854,9 +854,9 @@ sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
 sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" "$TMPDIR"/plalert-index.tmp
 if chk_enabled "${AUTOREFRESH,,}"; then
-     sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\" >
+     sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\"|g" "$TMPDIR"/plalert-index.tmp
 else
-     sed -i "s|##AUTOREFRESH##||g" "$TMPDIR"/plalert-index.>
+     sed -i "s|##AUTOREFRESH##||g" "$TMPDIR"/plalert-index.tmp
 fi
 [[ -n "$PF_LINK"  ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit Planefence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
 if [[ -n "$MASTODON_SERVER" && -n "$MASTODON_ACCESS_TOKEN" && -n "$MASTODON_NAME" ]]; then
