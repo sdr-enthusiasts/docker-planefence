@@ -907,6 +907,7 @@ else
 	   background-repeat: no-repeat;
 	   background-attachment: fixed;
   	 background-size: cover;
+		 color: black;
 EOF
 fi
 cat <<EOF >>"$OUTFILEHTMTMP"
@@ -928,7 +929,7 @@ EOF
 else
 	cat <<EOF >>"$OUTFILEHTMTMP"
      background-color: #f0f6f6;
-		 color: white;
+		 color: black;
 EOF
 fi
 cat <<EOF >>"$OUTFILEHTMTMP"
