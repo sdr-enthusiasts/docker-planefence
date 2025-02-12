@@ -882,7 +882,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
     <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.html5.min.js" integrity="sha384-+E6fb8f66UPOVDHKlEc1cfguF7DOTQQ70LNUnlbtywZiyoyQWqtrMjfTnWyBlN/Y" crossorigin="anonymous"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.print.min.js" integrity="sha384-FvTRywo5HrkPlBKFrm2tT8aKxIcI/VU819roC/K/8UrVwrl4XsF3RKRKiCAKWNly" crossorigin="anonymous"></script>
 
-    <title>ADS-B 1090 MHz PlaneFence</title>"
+    <title>ADS-B 1090 MHz PlaneFence</title>
 EOF
 	
 if [[ -f "$PLANEHEATHTML" ]]; then
