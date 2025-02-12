@@ -915,11 +915,11 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 a { color: #0077ff; }
 h1 {text-align: center}
 h2 {text-align: center}
-.planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+.planetable { border: 1; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
-table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td{
+table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td {
 EOF
 if chk_enabled "$DARKMODE"; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
@@ -939,6 +939,10 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 		 padding: 0 !important;
 		 margin-top: 0 !important;
 		 margin-bottom: 0 !important;
+}
+td {
+	style="text-align: center;
+	vertical-align: middle;"
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)

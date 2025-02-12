@@ -324,7 +324,7 @@ cat <<EOF >"$PLANEHEATHTML"
 <script src="planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js"></script>
 <script>
 	var map = L.map('map').setView([parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], parseInt("$HEATMAPZOOM"));
-	var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 	    attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
 	    }).addTo(map);
 
