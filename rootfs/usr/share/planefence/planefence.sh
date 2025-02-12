@@ -918,7 +918,7 @@ h2 {text-align: center}
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
-table thead tr th {
+table thead tbody tr th {
 EOF
 if chk_enabled "$DARKMODE"; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
@@ -935,6 +935,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
      position: sticky;
      z-index: 100;
      top: 0;
+		 padding: 0;
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)

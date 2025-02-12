@@ -684,17 +684,17 @@ awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="
 
 # first add the fixed part of the header:
 cat <<EOF >&3
-<table border="1" class="js-sort-table" id="mytable">
+<table border="1" class="display" id="mytable">
 <thead>
 <tr>
-	<th class="js-sort-number">No.</th>
+	<th>No.</th>
 	<th>Icon</th>
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[3]}")</th> <!-- equipment -->
-	<th class="js-sort-date">Date/Time First Seen</th>
-	<th class="js-sort-number">Lat/Lon First Seen</th>
+	<th >Date/Time First Seen</th>
+	<th>Lat/Lon First Seen</th>
 	<th>Flight No.</th>
 	$([[ "$sqx" == "true" ]] && echo "<th>Squawk</th>")
 	<!-- th>Flight Map</th -->
