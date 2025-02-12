@@ -942,7 +942,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
 </head>
 
-$(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)>
+$(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)
 <script type="text/javascript">
     \$(document).ready(function() { 
         \$('#mytable').dataTable( {
