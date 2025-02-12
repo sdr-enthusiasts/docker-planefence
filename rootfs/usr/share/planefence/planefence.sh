@@ -935,8 +935,10 @@ fi
 cat <<EOF >>"$OUTFILEHTMTMP"
      position: sticky;
      z-index: 100;
-     top: 0;
-		 padding: 0;
+		 top: 0 !important;
+		 padding: 0 !important;
+		 margin-top: 0 !important;
+		 margin-bottom: 0 !important;
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
