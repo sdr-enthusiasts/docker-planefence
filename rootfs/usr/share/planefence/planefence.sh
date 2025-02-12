@@ -206,8 +206,8 @@ WRITEHTMLTABLE () {
 
 	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
-	<table border="1" class="display" id="mytable">
-	<thead>
+	<table border="1" class="display planetable" id="mytable" style="width: auto; align: left" align="left">
+	<thead border="1">
 	<tr>
 	<th>No.</th>
 	<th>Transponder ID</th>
@@ -237,7 +237,7 @@ EOF
 		# print a header for the Tweeted column
 		printf "	<th>Notified</th>\n" >&3
 	fi
-	printf "</tr></thead>\n<tbody>\n" >&3
+	printf "</tr></thead>\n<tbody border=\"1\">\n" >&3
 
 	# cache file for airline names
 	ANAME_CACHEFILE="/tmp/airlinename_cachefile.txt"
@@ -369,7 +369,7 @@ EOF
 		CALLSIGN="${NEWVALUES[1]#@}"
 
 		printf "<tr>\n" >&3
-		printf "   <td>%s</td>\n" "$((COUNTER++))" >&3 # table index number
+		printf "   <td style=\"text-align: center\">%s</td>\n" "$((COUNTER++))" >&3 # table index number
 		#printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >&3 # ICAO
 		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${NEWVALUES[0]}" >&3 # ICAO
@@ -406,8 +406,8 @@ EOF
 				printf "   <td></td>\n" >&3
 			fi
 		fi
-		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >&3 # time first seen
-		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >&3 # time last seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "${NEWVALUES[2]}" >&3 # time first seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "${NEWVALUES[3]}" >&3 # time last seen
 		printf "   <td>%s %s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
 		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >&3 # min distance
 
@@ -940,8 +940,8 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 		 margin-top: 0 !important;
 		 margin-bottom: 0 !important;
 }
-td {
-	style="text-align: center;
+td, table.dataTable tbody td {
+	text-align: center;
 	vertical-align: middle;"
 }
 </style>
@@ -1000,7 +1000,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 </article>
 </section>
 
-<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<section style="border: none; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Flights In Range Table</summary>
