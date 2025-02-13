@@ -273,7 +273,7 @@ if [ -f "$CSVFILE" ]; then
 				fi
 			fi
 			"${s6wrap[@]}" echo "Getting screenshot for ${RECORD[0]}..."
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" "$SCREENSHOTURL/snap/${RECORD[0]#\#/$LAT/$LON}" -o "/tmp/snapshot.png"; then
+			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" "$SCREENSHOTURL/snap/${RECORD[0]#\#}" -o "/tmp/snapshot.png"; then
 				GOTSNAP="true"
 				"${s6wrap[@]}" echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
 			fi
