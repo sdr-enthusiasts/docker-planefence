@@ -206,28 +206,29 @@ WRITEHTMLTABLE () {
 
 	cat >&3 <<EOF
 	<!-- table border="1" class="planetable" -->
-	<table border="1" class="js-sort-table" id="mytable">
+	<table border="1" class="display planetable" id="mytable" style="width: auto; align: left" align="left">
+	<thead border="1">
 	<tr>
-	<th class="js-sort-number">No.</th>
+	<th>No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
 	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
-	<th class="js-sort-date">Time First Seen</th>
-	<th class="js-sort-date">Time Last Seen</th>
-	<th class="js-sort-number">Min. Altitude</th>
-	<th class="js-sort-number">Min. Distance</th>
+	<th>Time First Seen</th>
+	<th>Time Last Seen</th>
+	<th>Min. Altitude</th>
+	<th>Min. Distance</th>
 EOF
 
 	if [[ "$HASNOISE" == "true" ]]; then
 		SPECTROPRINT="true"
 		# print the headers for the standard noise columns
 		cat >&3 <<EOF
-		<th class="js-sort-number">Loudness</th>
-		<th class="js-sort-number">Peak RMS sound</th>
-		<th class="js-sort-number">1 min avg</th>
-		<th class="js-sort-number">5 min avg</th>
-		<th class="js-sort-number">10 min avg</th>
-		<th class="js-sort-number">1 hr avg</th>
+		<th>Loudness</th>
+		<th>Peak RMS sound</th>
+		<th>1 min avg</th>
+		<th>5 min avg</th>
+		<th>10 min avg</th>
+		<th>1 hr avg</th>
 		<th>Spectrogram</th>
 EOF
 	fi
@@ -236,7 +237,7 @@ EOF
 		# print a header for the Tweeted column
 		printf "	<th>Notified</th>\n" >&3
 	fi
-	printf "</tr>\n" >&3
+	printf "</tr></thead>\n<tbody border=\"1\">\n" >&3
 
 	# cache file for airline names
 	ANAME_CACHEFILE="/tmp/airlinename_cachefile.txt"
@@ -368,7 +369,7 @@ EOF
 		CALLSIGN="${NEWVALUES[1]#@}"
 
 		printf "<tr>\n" >&3
-		printf "   <td>%s</td>\n" "$((COUNTER++))" >&3 # table index number
+		printf "   <td style=\"text-align: center\">%s</td>\n" "$((COUNTER++))" >&3 # table index number
 		#printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >&3 # ICAO
 		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${NEWVALUES[0]}" >&3 # ICAO
@@ -405,8 +406,8 @@ EOF
 				printf "   <td></td>\n" >&3
 			fi
 		fi
-		printf "   <td>%s</td>\n" "${NEWVALUES[2]}" >&3 # time first seen
-		printf "   <td>%s</td>\n" "${NEWVALUES[3]}" >&3 # time last seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "${NEWVALUES[2]}" >&3 # time first seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "${NEWVALUES[3]}" >&3 # time last seen
 		printf "   <td>%s %s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
 		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >&3 # min distance
 
@@ -481,7 +482,7 @@ EOF
 		echo "${key},${NEWNAMES[$key]}" >> "$ANAME_CACHEFILE"
 	done
 
-	printf "</table>\n" >&3
+	printf "</tbody>\n</table>\n" >&3
 	exec 3>&-
 }
 
@@ -858,7 +859,6 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # If not, see https://www.gnu.org/licenses/.
 -->
 <head>
-<script type="text/javascript" src="sort-table.js"></script>
 EOF
 
 if chk_enabled "${AUTOREFRESH,,}"; then
@@ -867,9 +867,24 @@ if chk_enabled "${AUTOREFRESH,,}"; then
 	<meta http-equiv="refresh" content="$REFRESH_INT">
 EOF
 fi
+cat <<EOF >>"$OUTFILEHTMTMP"
+    <!-- scripts and stylesheets related to the datatables functionality: -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
-echo "<title>ADS-B 1090 MHz PlaneFence</title>" >>"$OUTFILEHTMTMP"
+    <link href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css" rel="stylesheet" integrity="sha384-lidBvvi7oLJ2j9e3nFlBSXfo+giBJ9L7QnUdgjc3AvLiynS0HdKEEEZtvZ4izE46" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/buttons/3.2.2/css/buttons.dataTables.min.css" rel="stylesheet" integrity="sha384-gZdV4/a6Gt/Qu0qCP3bchrOj0WlpkAfszB1m4/eFzOSnvvHUFMv9+C/KcgMO8CeR" crossorigin="anonymous">
+ 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js" integrity="sha384-AenwROccLjIcbIsJuEZmrLlBzwrhvO94q+wm9RwETq4Kkqv9npFR2qbpdMhsehX3" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/dataTables.buttons.min.js" integrity="sha384-DmaAfo+/+UjRKHPidNNswlNqd9ybuE6yx9zKHyMY+vYy9SZhQEu4nauMVgwSx4Z/" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.html5.min.js" integrity="sha384-+E6fb8f66UPOVDHKlEc1cfguF7DOTQQ70LNUnlbtywZiyoyQWqtrMjfTnWyBlN/Y" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.2/js/buttons.print.min.js" integrity="sha384-FvTRywo5HrkPlBKFrm2tT8aKxIcI/VU819roC/K/8UrVwrl4XsF3RKRKiCAKWNly" crossorigin="anonymous"></script>
 
+    <title>ADS-B 1090 MHz PlaneFence</title>
+EOF
+	
 if [[ -f "$PLANEHEATHTML" ]]; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
 	<link rel="stylesheet" href="leaflet.css" />
@@ -892,6 +907,7 @@ else
 	   background-repeat: no-repeat;
 	   background-attachment: fixed;
   	 background-size: cover;
+		 color: black;
 EOF
 fi
 cat <<EOF >>"$OUTFILEHTMTMP"
@@ -899,11 +915,11 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 a { color: #0077ff; }
 h1 {text-align: center}
 h2 {text-align: center}
-.planetable { border: 1; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+.planetable { border: 1; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 .history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
-table thead tr th {
+table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td {
 EOF
 if chk_enabled "$DARKMODE"; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
@@ -913,20 +929,39 @@ EOF
 else
 	cat <<EOF >>"$OUTFILEHTMTMP"
      background-color: #f0f6f6;
-		 color: white;
+		 color: black;
 EOF
 fi
 cat <<EOF >>"$OUTFILEHTMTMP"
      position: sticky;
      z-index: 100;
-     top: 0;
+		 top: 0 !important;
+		 padding: 0 !important;
+		 margin-top: 0 !important;
+		 margin-bottom: 0 !important;
+}
+td, table.dataTable tbody td {
+	text-align: center;
+	vertical-align: middle;"
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
 </head>
 
-<body onload="sortTable(document.getElementById('mytable'), 0, -1);">
-
+$(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)
+<script type="text/javascript">
+    \$(document).ready(function() { 
+        \$('#mytable').dataTable( {
+            order: [[0, 'desc']],
+            pageLength: $TABLESIZE,
+            lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
+            layout: { top2Start: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] },
+                      top1Start: { search: { placeholder: 'Type search here' } }, 
+                      topEnd: '',
+                    }
+        }); 
+    });
+</script>
 
 <h1>PlaneFence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
@@ -968,7 +1003,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 </article>
 </section>
 
-<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<section style="border: none; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Flights In Range Table</summary>

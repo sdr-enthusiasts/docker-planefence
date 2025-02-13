@@ -441,7 +441,9 @@ if chk_enabled "$PF_DARKMODE"; then configure_planefence "DARKMODE" "true"; else
 if chk_enabled "$PA_DARKMODE"; then configure_planealert "DARKMODE" "true"; else configure_planealert "DARKMODE" "false"; fi
 #
 # ---------------------------------------------------------------------
-
+# Set default table sizes:
+configure_planefence "TABLESIZE" "${PF_TABLESIZE:-50}"
+configure_planealert "TABLESIZE" "${PA_TABLESIZE:-50}"
 #--------------------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
 # we know that we need to re-run this prep routine!

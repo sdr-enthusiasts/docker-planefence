@@ -684,16 +684,17 @@ awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="
 
 # first add the fixed part of the header:
 cat <<EOF >&3
-<table border="1" class="js-sort-table" id="mytable">
+<table border="1" id="mytable" class="display" id="mytable" style="width: auto; align: left" align="left">
+<thead border="1">
 <tr>
-	<th class="js-sort-number">No.</th>
+	<th style="text-align: center">No.</th>
 	<th>Icon</th>
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
-	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
+	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
+	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[3]}")</th> <!-- equipment -->
-	<th class="js-sort-date">Date/Time First Seen</th>
-	<th class="js-sort-number">Lat/Lon First Seen</th>
+	<th style="text-align: center">Date/Time First Seen</th>
+	<th style="text-align: center">Lat/Lon First Seen</th>
 	<th>Flight No.</th>
 	$([[ "$sqx" == "true" ]] && echo "<th>Squawk</th>")
 	<!-- th>Flight Map</th -->
@@ -708,7 +709,7 @@ do
 	[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
 
 done
-echo "</tr>" >&3
+echo "</tr></thead><tbody border=\"1\">" >&3
 
 [[ -n "$BASETIME" ]] && echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" || true
 
@@ -733,7 +734,7 @@ do
 		else
 			printf "%s\n" "<tr>" >&3
 		fi
-		printf "    %s%s%s\n" "<td>" "$((COUNTER++))" "</td>" >&3 # column: Number
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td>" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
 		IMGURL="$IMGBASE"
@@ -800,15 +801,15 @@ do
 			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
 		fi
 
-		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >>"$TMPDIR"/plalert-index.tmp # column: ICAO
-		printf "    <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>"$TMPDIR"/plalert-index.tmp # column: Tail
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >>"$TMPDIR"/plalert-index.tmp # column: ICAO
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>"$TMPDIR"/plalert-index.tmp # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
 		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >&3 # column: Plane Type
-		printf "    %s%s%s\n" "<td>" "${pa_record[4]} ${pa_record[5]}" "</td>" >&3 # column: Date Time
-		# printf "    %s%s%s\n" "<td>" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
-		printf "    %s%s%s\n" "<td>" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE with link to adsbexchange
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "${pa_record[4]} ${pa_record[5]}" "</td>" >&3 # column: Date Time
+		# printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE with link to adsbexchange
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >&3 # column: Flight No
 		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
@@ -843,6 +844,7 @@ exec 3>&-
 # Now the basics have been written, we need to replace some of the variables in the template with real data:
 sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##TRACKSERVICE##|$TRACKSERVICE|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##TABLESIZE##|$TABLESIZE|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp
@@ -854,7 +856,7 @@ sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planef
 if chk_enabled "${AUTOREFRESH,,}"; then
     sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\" content=\"$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)\"|g" "$TMPDIR"/plalert-index.tmp
 else
-    sed -i "s|##AUTOREFRESH##||g" "$TMPDIR"/plalert-index.tmp
+    sed -i "s|##AUTOREFRESH##|!-- autorefresh disabled--|g" "$TMPDIR"/plalert-index.tmp
 fi
 [[ -n "$PF_LINK"  ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit Planefence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
 if [[ -n "$MASTODON_SERVER" && -n "$MASTODON_ACCESS_TOKEN" && -n "$MASTODON_NAME" ]]; then
@@ -870,9 +872,11 @@ else
 	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
 fi
 if chk_enabled "$DARKMODE"; then
+  sed -i "s|##DARKMODE0##|class=\"dark\"|g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##DARKMODE1##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##DARKMODE2##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
 else
+	sed -i "s|##DARKMODE0##||g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##DARKMODE1##|background-image: url(\'pa_background.jpg\'); background-repeat: no-repeat; background-attachment: fixed; background-size: cover;|g" "$TMPDIR"/plalert-index.tmp
 	sed -i "s|##DARKMODE2##|background-color: #f0f6f6; color: black;|g" "$TMPDIR"/plalert-index.tmp
 fi
