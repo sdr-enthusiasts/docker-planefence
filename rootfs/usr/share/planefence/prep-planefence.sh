@@ -418,11 +418,11 @@ chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planea
 #
 #--------------------------------------------------------------------------------
 # Make sure that all past map links follow PA/PF_TRACKS
-replacement="${PF_TRACKSERVICE:-${PF_TRACKSVC:-https://globe.adsbexchange.com}}"
+replacement="${PF_TRACKSERVICE:-https://globe.adsbexchange.com}"
 replacement="${replacement,,}"
 if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
 shopt -s nullglob
-for file in /usr/share/planefence/html/*.csv; do 
+for file in /usr/share/planefence/html/*.csv; do
 	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' "$file"
 done
 
