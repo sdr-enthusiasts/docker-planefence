@@ -25,7 +25,7 @@ This repository contains Planefence, which is an add-on to `ultrafeeder`, `reads
 
 Planefence will create a log of aircraft heard by your Feeder Station that are within a "fence", that is, less than a certain distance and lower than a certain
 altitude from your station. This log is displayed on a website and is also made available in daily CSV files.
-Furthermore, Planefence can send a notification for every plane in the fence to Mastodon, Discord, and/or Twitter, and with some add-on software/hardware, you will be able to collect noise figures to see how loud the aircraft are that fly above your Feeder Station.
+Furthermore, Planefence can send a notification for every plane in the fence to BlueSky, Mastodon, Discord, and/or MQTT. We used to support Twitter/X as well but this was deprecated when they started charging for API use. With some add-on software/hardware, you will be able to collect audio noise figures to see how loud the aircraft are that fly above your Feeder Station.
 
 Planefence is deployed as a Docker container and is pre-built for the following architectures:
 
@@ -127,7 +127,7 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 - Planefence deployment example: <https://planefence.com/planefence>
 - Plane-Alert deployment example: <https://planefence.com/plane-alert>
-- Mastodon notifications: <https://airwaves.social/@planeboston>
+- BlueSky notifications: <https://bsky.app/profile/aboveboston.bsky.social>
 
 ## API access to your data
 
@@ -198,7 +198,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 
 ## Getting help
 
-- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV) and look for "@kx1t" to your message. Alternatively, email me at <kx1t@amsat.org>.
+- If you need further support, please join the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV) and look for "@kx1t" to your message. Alternatively, email me at `kx1t {at} kx1t {dot} com`.
 
 That's all!
 
