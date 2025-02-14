@@ -45,11 +45,17 @@ function configure_both() {
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
 mkdir -p /usr/share/planefence/persist/planepix
-chmod -f a=rwx /usr/share/planefence/persist
+mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
+mkdir -p /usr/share/planefence/html/scripts
+chmod -f a=rwx /usr/share/planefence/persist /usr/share/planefence/persist/planepix
 chmod -fR a+rw /usr/share/planefence/persist/{.[!.]*,*}
-chmod u=rwx,go=rx /usr/share/planefence/persist/.internal
-
-chmod a=rwx /usr/share/planefence/persist/planepix
+chmod u=rwx,go=rx \
+	/usr/share/planefence/persist/.internal \
+	/usr/share/planefence/html \
+	/usr/share/planefence/html/plane-alert \
+	/usr/share/planefence/html/plane-alert/silhouettes \
+	/usr/share/planefence/html/scripts
+ln -sf /usr/share/planefence/html/scripts /usr/share/planefence/html/plane-alert/scripts
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
 	# shellcheck disable=SC1091
@@ -62,14 +68,12 @@ fi
 #
 # -----------------------------------------------------------------------------------
 #
-# Move the jscript files from the staging directory into the html directory.
+# Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-
-mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
-mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
-
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+mv -f /usr/share/planefence/html/{*.js,*.css} /usr/share/planefence/html/scripts
+mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 rm -f /usr/share/planefence/html/planefence.config /usr/share/planefence/html/*.template /usr/share/planefence/html/aircraft-database-complete-
 mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
 [[ ! -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
@@ -333,8 +337,6 @@ fi
 if chk_enabled "$PF_AUTOREFRESH"; then configure_planefence "AUTOREFRESH" "true"; else configure_planefence "AUTOREFRESH" "false"; fi
 if chk_enabled "${PA_AUTOREFRESH:-$PF_AUTOREFRESH}"; then configure_planealert "AUTOREFRESH" "true"; else configure_planealert "AUTOREFRESH" "false"; fi
 
-# Write the sort-table.js into the web directory as we cannot create it during build:
-cp -f /usr/share/planefence/stage/sort-table.js /usr/share/planefence/html/plane-alert
 #
 #--------------------------------------------------------------------------------
 # Check if the dist/alt/speed units haven't changed. If they have changed,
