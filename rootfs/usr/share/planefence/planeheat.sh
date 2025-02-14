@@ -304,7 +304,7 @@ fi
 if [[ -f "$INFILECSV" ]]
 then
     [[ "$BASETIME" != "" ]] && echo "8d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Invoke planeheat.pl" || true
-    $PLANEFENCEDIR/planeheat.pl -silent -lon "$LON" -lat "$LAT" -data "$TMPDIR" -output "$OUTFILEDIR" -degrees "$DEGDIST" -maxpositions 200000 -resolution 100 -override -file "planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"  -filemask "${PH_LINESBASE::-1}""*"
+    $PLANEFENCEDIR/planeheat.pl -silent -lon "$LON" -lat "$LAT" -data "$TMPDIR" -output "$OUTFILEDIR" -degrees "$DEGDIST" -maxpositions 200000 -resolution 100 -override -file "scripts/planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"  -filemask "${PH_LINESBASE::-1}""*"
     #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
     LOG "Returned from planeheat.pl"
 else
@@ -324,7 +324,7 @@ cat <<EOF >"$PLANEHEATHTML"
 
 <script src="scripts/HeatLayer.js"></script>
 <script src="scripts/leaflet-heat.js"></script>
-<script src="planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"></script>
+<script src="scripts/planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"></script>
 <script>
 	var map = L.map('map').setView([parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], parseInt("$HEATMAPZOOM"));
 	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
