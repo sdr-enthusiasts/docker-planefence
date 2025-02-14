@@ -887,7 +887,7 @@ EOF
 	
 if [[ -f "$PLANEHEATHTML" ]]; then
 	cat <<EOF >>"$OUTFILEHTMTMP"
-	<link rel="stylesheet" href="leaflet.css" />
+	<link rel="stylesheet" href="scripts/leaflet.css" />
 	<script src="scripts/leaflet.js"></script>
 EOF
 fi
