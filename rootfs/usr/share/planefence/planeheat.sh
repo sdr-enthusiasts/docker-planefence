@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck shell=bash disable=SC1091,SC2001,SC2015
 # PLANEHEAT - a Bash shell script to render a heatmap based on Planefence CSV entries
 # Only to be used in the context of PlaneFence -- the code to create whole websites was removed from this version of the file
 #
@@ -29,7 +30,7 @@
 # STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
 # These are the input and output directories and file names:
   PLANEFENCEDIR=/usr/share/planefence # the directory where this file and planefence.py are located
-  GRIDSIZE=100
+  #GRIDSIZE=100
 
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
@@ -63,32 +64,32 @@
 #       LOGFILE=/dev/stdout
         CURRENT_PID=$$
         PROCESS_NAME=$(basename "$0")
-        TIMELOG=$(date +%s)
+        #TIMELOG=$(date +%s)
 
         # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
         if [[ "$FUDGELOC" != "" ]]
         then
             if [[ "$FUDGELOC" == "0" ]]
             then
-              printf -v LON_VIS "%.0f" $LON
-              printf -v LAT_VIS "%.0f" $LAT
+              printf -v LON_VIS "%.0f" "$LON"
+              printf -v LAT_VIS "%.0f" "$LAT"
             elif [[ "$FUDGELOC" == "1" ]]
             then
-              printf -v LON_VIS "%.1f" $LON
-              printf -v LAT_VIS "%.1f" $LAT
+              printf -v LON_VIS "%.1f" "$LON"
+              printf -v LAT_VIS "%.1f" "$LAT"
             elif [[ "$FUDGELOC" == "2" ]]
             then
-              printf -v LON_VIS "%.2f" $LON
-              printf -v LAT_VIS "%.2f" $LAT
+              printf -v LON_VIS "%.2f" "$LON"
+              printf -v LAT_VIS "%.2f" "$LAT"
             else
               # If $FUDGELOC != "" but also != "2", then assume it is "3"
-              printf -v LON_VIS "%.3f" $LON
-              printf -v LAT_VIS "%.3f" $LAT
+              printf -v LON_VIS "%.3f" "$LON"
+              printf -v LAT_VIS "%.3f" "$LAT"
             fi
             # clean up the strings:
-            LON_VIS="$(sed 's/^00*\|00*$//g' <<< $LON_VIS)"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+            LON_VIS="$(sed 's/^00*\|00*$//g' <<< "$LON_VIS")"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
             LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
-            LAT_VIS="$(sed 's/^00*\|00*$//g' <<< $LAT_VIS)" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
+            LAT_VIS="$(sed 's/^00*\|00*$//g' <<< "$LAT_VIS")" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
             LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
         else
             LON_VIS="$LON"
@@ -97,9 +98,8 @@
 
         # Now determine the conversion factor for the circle on the map
         # The leaflet parameter wants input in meters
-        if [ "$SOCKETCONFIG" != "" ]
-        then
-        	case "$(grep "^distanceunit=" $SOCKETCONFIG |sed "s/distanceunit=//g")" in
+        if [[ -n "$SOCKETCONFIG" ]]; then
+        	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
         		nauticalmile)
                 # 1 NM is 1852 meters
         		TO_METER=1852
@@ -127,7 +127,7 @@
 LOG ()
 {
 	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	while [ -n "$1" ] || read IN; do
+	while [ -n "$1" ] || read -r IN; do
 		if [ -n "$1" ]; then
 			IN="$1"
 		fi
@@ -148,7 +148,7 @@ LOG ()
 # -----------------------------
 
 # check if the CSV file exists, if not, exit
-[ ! -f "$INFILECSV" ] && INFILE=true || INFILE=false
+# [ ! -f "$INFILECSV" ] && INFILE=true || INFILE=false
 
 #  Define some vars:
 LASTFENCE=0
@@ -158,14 +158,14 @@ COUNTER=0
 # Clear out $PH_LINES if it exists:
 if [ -f "$PH_LINES" ] && [ ! -f "$TMPVARS" ]
 then
-	 rm -f $PH_LINES
+	 rm -f "$PH_LINES"
 fi
 
 # delete the history if the command line arg is "reset"
 if [ "$1" == "reset" ]
 then
-	rm -f $PH_LINES 2>/dev/null
-	rm -f $TMPVARS 2>/dev/null
+	rm -f "$PH_LINES" 2>/dev/null
+	rm -f "$TMPVARS" 2>/dev/null
 fi
 
 # get some variables from the previous run(s):
@@ -205,10 +205,12 @@ then
         IFS="," read -r -aRECORD <<< "$line" || continue
         icao="${RECORD[0]}"
         alt="${RECORD[1]}"
-        [[ -z "$icao" ]] && continue
-        [[ "$icao" == "hex_ident" ]] && continue     # it's a header line in this case
-        [[ -z "$alt" ]] && continue
-        (( alt > MAXALT )) && continue
+        if [[ -z "$icao" ]] || \
+          [[ "$icao" == "hex_ident" ]] || \
+          [[ -z "$alt" ]] || \
+          (( alt > MAXALT )); then
+            continue
+        fi
         DICT["${icao}"]+="$line"$'\n'
         ((ENTRIES=ENTRIES+1))
     done < "$INFILETMP"
@@ -225,14 +227,14 @@ then
         (( COUNTER++ ))
 
         icao="${RECORD[0]}"
-        INFILETMP_LINE=${DICT["${icao}"]}
+        INFILETMP_LINE="${DICT["${icao}"]}"
         # check if the icao is in DICT
         if [[ -n "$INFILETMP_LINE" ]]; then
 
             # first make sure there are at least $MINTIME samples that are being considered
-            if (( $(date -d ${RECORD[3]:11:8} +%s) - $(date -d ${RECORD[2]:11:8} +%s) < MINTIME ))
+            if (( $(date -d "${RECORD[3]:11:8}" +%s) - $(date -d "${RECORD[2]:11:8}" +%s) < MINTIME ))
             then
-                ENDTIME=$(date -d @$(( $(date -d ${RECORD[2]:11:8} +%s) + MINTIME)) +%T)
+                ENDTIME=$(date -d @$(( $(date -d "${RECORD[2]:11:8}" +%s) + MINTIME)) +%T)
                 LOG "(Corrected ENDTIME to $ENDTIME)"
             else
                 ENDTIME="${RECORD[3]:11:8}"
@@ -282,18 +284,18 @@ LOG "Creating Heatmap Data"
 
 # Now we need to "box" the parameters
 # Let's first figure out the min/max latitude of the map.
-# $DIST contains the radius of the map, and $LON/$LAT contain the coordinates of the map's center
+# $DIST contains the radius of the map (from planefence.conf), and $LON/$LAT contain the coordinates of the map's center
 #
 
 if [[ -f $PH_LINES ]]; then
 
     # Determine the distance in degrees for a square box around the center point
 
-    DEGDIST=$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")
+    DEGDIST="$(awk 'BEGIN { FS=","; minlat=180; maxlat=-180; minlon=180; maxlon=-180 } { minlat=(minlat<$3)?minlat:$3; maxlat=(maxlat>$3)?maxlat:$3; minlon=(minlon<$4)?minlon:$4; maxlon=(maxlon>$4)?maxlon:$4 } END {dist=(maxlat-minlat)>(maxlon-minlon)?(maxlat-minlat)/2:(maxlon-minlon)/2; print dist}' "$PH_LINES")"
     LOG "Dist=$DEGDIST"
 
     # determine start time and end time
-    read -raREC <<< $(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")
+    read -raREC <<< "$(awk 'BEGIN { FS=","; maxtime="00:00:00.000"; mintime="23:59:59.999"} { mintime=(mintime<$6)?mintime:$6; maxtime=(maxtime>$6)?maxtime:$6 } END {print mintime,maxtime}' "$PH_LINES")"
     LOG "Start time=${REC[0]}, End time=${REC[1]}"
 
 fi
@@ -302,14 +304,15 @@ fi
 if [[ -f "$INFILECSV" ]]
 then
     [[ "$BASETIME" != "" ]] && echo "8d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Invoke planeheat.pl" || true
-    $PLANEFENCEDIR/planeheat.pl -silent -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
+    $PLANEFENCEDIR/planeheat.pl -silent -lon "$LON" -lat "$LAT" -data "$TMPDIR" -output "$OUTFILEDIR" -degrees "$DEGDIST" -maxpositions 200000 -resolution 100 -override -file "scripts/planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"  -filemask "${PH_LINESBASE::-1}""*"
     #echo $PLANEFENCEDIR/planeheat.pl -lon $LON -lat $LAT -data $TMPDIR -output $OUTFILEDIR -degrees $DEGDIST -maxpositions 200000 -resolution 100 -override -file planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js  -filemask "${PH_LINESBASE::-1}""*"
     LOG "Returned from planeheat.pl"
 else
-    echo "var addressPoints = [ ];" >$OUTFILEDIR/planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js
+    echo "var addressPoints = [ ];" >"$OUTFILEDIR/scripts/planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"
 fi
 
-
+# Note - $DIST is read from planefence.conf
+# shellcheck disable=SC2153
 DISTMTS=$(bc <<< "$DIST * $TO_METER")
 
 [[ "$BASETIME" != "" ]] && echo "8e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- Build html file" || true
@@ -319,9 +322,9 @@ cat <<EOF >"$PLANEHEATHTML"
 
 <div id="map" style="width: $HEATMAPWIDTH; height: $HEATMAPHEIGHT"></div>
 
-<script src="HeatLayer.js"></script>
-<script src="leaflet-heat.js"></script>
-<script src="planeheatdata-$(date -d $FENCEDATE +"%y%m%d").js"></script>
+<script src="scripts/HeatLayer.js"></script>
+<script src="scripts/leaflet-heat.js"></script>
+<script src="scripts/planeheatdata-$(date -d "$FENCEDATE" +"%y%m%d").js"></script>
 <script>
 	var map = L.map('map').setView([parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], parseInt("$HEATMAPZOOM"));
 	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
@@ -334,7 +337,7 @@ cat <<EOF >"$PLANEHEATHTML"
         radius: 7,
         maxZoom: 14,
         blur: 11,
-        attribution: "<a href=https://github.com/sdr-enthusiasts/docker-planefence target=_blank>docker:ghcr.io/sdr-enthusiasts/docker-planefence</a>"
+        attribution: "<a href=https://github.com/sdr-enthusiasts/docker-planefence target=_blank>docker-planefence</a>"
         }).addTo(map);
     var circle = L.circle([ parseFloat("$LAT_VIS"), parseFloat("$LON_VIS")], {
         color: 'blue',
