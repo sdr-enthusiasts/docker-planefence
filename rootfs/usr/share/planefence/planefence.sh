@@ -770,7 +770,9 @@ fi
 if [[ -n "$PLANETWEET" ]] \
    ||  chk_enabled "${PF_DISCORD}" \
    || [[ -n "$MASTODON_SERVER" ]] \
-   || [[ -n "$BLUESKY_HANDLE" ]]; then
+   || [[ -n "$BLUESKY_HANDLE" ]] \
+   || [[ -n "$RSS_SITELINK" ]] \
+   || [[ -n "$MQTT_URL" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
 else
