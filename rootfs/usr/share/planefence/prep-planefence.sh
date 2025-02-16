@@ -238,7 +238,11 @@ fi
 [[ -n "$ATTRIB" ]] && configure_both "ATTRIB" "\"$ATTRIB\""
 
 # -----------------------------------------------------------------------------------
-#
+# Set notifications date/time format:
+[[ -n "$NOTIF_DATEFORMAT" ]] && configure_both "NOTIF_DATEFORMAT" "\"$NOTIF_DATEFORMAT\"" || true
+
+# ---------------------------------------------------------------------
+
 # enable/disable planeheat;
 chk_disabled "$PF_HEATMAP" && configure_planefence "PLANEHEAT" "OFF" || configure_planefence "PLANEHEAT" "ON"
 # Change the heatmap height and width if they are defined in the .env parameter file:

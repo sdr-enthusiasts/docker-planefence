@@ -344,7 +344,8 @@ then
 		[[ "${pa_record[10]//#/}" == "7700 " ]] && TWITTEXT+=" #EMERGENCY!"
 		[[ -n "${pa_record[2]}" ]] && TWITTEXT+="\nOwner: ${pa_record[2]//[ &\']/}" # trailing ']}" for vim broken syntax
 		TWITTEXT+="\nAircraft: ${pa_record[3]}\n"
-		TWITTEXT+="${pa_record[4]} $(sed 's|/|\\/|g' <<< "${pa_record[5]}")\n"
+                twdate="$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")"
+		TWITTEXT+="${twdate//\//\\\/}\n"
 
 		PLANELINE="${ALERT_DICT["${ICAO}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
@@ -807,7 +808,7 @@ do
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
 		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >&3 # column: Plane Type
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "${pa_record[4]} ${pa_record[5]}" "</td>" >&3 # column: Date Time
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")" "</td>" >&3 # column: Date Time
 		# printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
 		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE with link to adsbexchange
 		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >&3 # column: Flight No

@@ -215,7 +215,7 @@ if [ -f "$CSVFILE" ]; then
 			fi
 			[[ "$AIRLINETAG" != "#" ]] && TWEET+=" ${AIRLINETAG//[&\'-]/_}" || true
 			[[ -n "$ROUTE" ]] && TWEET+=" $ROUTE" || true
-			TWEET+="%0A${HEADR[3]}: ${RECORD[2]}%0A"
+			TWEET+="%0A${HEADR[3]}: $(date -d "${RECORD[2]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")%0A"
 			TWEET+="${HEADR[5]}: ${RECORD[4]} $ALTUNIT $ALTPARAM%0A"
 			TWEET+="${HEADR[6]}: ${RECORD[5]} $DISTUNIT%0A"
 
@@ -340,6 +340,7 @@ if [ -f "$CSVFILE" ]; then
 				msg_array[first_seen]="$(date -d "${RECORD[2]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[last_seen]="$(date -d "${RECORD[3]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[min_alt]="${RECORD[4]} $ALTUNIT $ALTPARAM"
+                                msg_array[timezone]="$(date +%Z)"
 				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
 				msg_array[link]="${RECORD[6]//globe.adsbexchange.com/$TRACKSERVICE}"
 				if ((RECORD[7] < 0)); then
