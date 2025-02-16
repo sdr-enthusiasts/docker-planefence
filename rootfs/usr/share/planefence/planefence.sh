@@ -406,8 +406,8 @@ EOF
 				printf "   <td></td>\n" >&3
 			fi
 		fi
-		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" +"${NOTIF_DATEFORMAT:%F %T %Z}")" >&3 # time first seen
-		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[3]}" +"${NOTIF_DATEFORMAT:%F %T %Z}")" >&3 # time last seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
+		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[3]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
 		printf "   <td>%s %s %s</td>\n" "${NEWVALUES[4]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
 		printf "   <td>%s %s</td>\n" "${NEWVALUES[5]}" "$DISTUNIT" >&3 # min distance
 
