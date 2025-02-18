@@ -17,7 +17,7 @@ echo "[$APPNAME][$(date)] Running config_tweeting"
 #
 # -----------------------------------------------------------------------------------
 
-echo Configure Tweeting for PlaneFence
+echo Configure Tweeting for Planefence
 echo
 echo Prerequisite -- you should already have signed up for an Developer Account
 echo with Twitter, and created an application with Read/Write/Direct message

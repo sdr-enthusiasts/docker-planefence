@@ -41,9 +41,13 @@ source /usr/share/planefence/prep-planefence.sh
 #
 initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
 
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence is deployed and will be starting in $initial_looptime..." || "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs." || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then 
+    "${s6wrap[@]}" echo "Planefence is deployed and will first run at $(date -d @"+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
+else
+    "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
+fi
 sleep "$initial_looptime"
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence starting its initial run now" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Planefence starting its initial run now"; fi
 
 while true
 do

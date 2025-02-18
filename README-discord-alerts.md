@@ -1,14 +1,14 @@
-# Send a message to Discord for each new plane in PlaneFence
+# Send a message to Discord for each new plane in Planefence
 
 Setting up Discord notifications involves only two simple steps:
 
 - Create a Webhook
-- Configure PlaneFence
+- Configure Planefence
 
 We'll go into the details of each step below.
 
 ## Table of Contents
-- [Send a message to Discord for each new plane in PlaneFence](#send-a-message-to-discord-for-each-new-plane-in-planefence)
+- [Send a message to Discord for each new plane in Planefence](#send-a-message-to-discord-for-each-new-plane-in-planefence)
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
   - [Creating a Webhook URL](#creating-a-webhook-url)

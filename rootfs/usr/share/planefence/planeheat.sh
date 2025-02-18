@@ -1,7 +1,7 @@
 #!/bin/bash
 # shellcheck shell=bash disable=SC1091,SC2001,SC2015
 # PLANEHEAT - a Bash shell script to render a heatmap based on Planefence CSV entries
-# Only to be used in the context of PlaneFence -- the code to create whole websites was removed from this version of the file
+# Only to be used in the context of Planefence -- the code to create whole websites was removed from this version of the file
 #
 # Usage: ./planeheat.sh [date]
 #
@@ -35,7 +35,7 @@
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
         if [ "$1" != "" ] && [ "$1" != "reset" ]
-        then # $1 contains the date for which we want to run PlaneFence
+        then # $1 contains the date for which we want to run Planefence
                 FENCEDATE=$(date --date="$1" '+%y%m%d')
         else
                 FENCEDATE=$(date --date=today '+%y%m%d')

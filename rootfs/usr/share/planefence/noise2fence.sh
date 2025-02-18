@@ -1,6 +1,6 @@
 #!/bin/bash
 # NOISE2FENCE -- a script for extracting recorded noise values from NOISECAPT
-# and adding them to CSV files that have been created by PlaneFence
+# and adding them to CSV files that have been created by Planefence
 #
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -52,7 +52,7 @@ LOG ()
 }
 
 if [ "$1" != "" ] && [ "$1" != "reset" ]
-then # $1 contains the date for which we want to run PlaneFence
+then # $1 contains the date for which we want to run Planefence
 	NOISEDATE=$(date --date="$1" '+%y%m%d')
 else
 	NOISEDATE=$(date --date="today" '+%y%m%d')

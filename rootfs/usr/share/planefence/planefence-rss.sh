@@ -2,11 +2,11 @@
 #shellcheck shell=bash
 #shellcheck disable=SC1091,SC2154
 # planefence-rss.sh
-# A script to generate RSS feeds from PlaneFence CSV files
+# A script to generate RSS feeds from Planefence CSV files
 #
 # Usage: ./planefence-rss.sh 
 #
-# This script is distributed as part of the PlaneFence package and is dependent
+# This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.
 #
 # Based on a script provided by @randomrobbie - https://github.com/sdr-enthusiasts/docker-planefence/issues/211
@@ -26,7 +26,7 @@ PLANEFENCEDIR=/usr/share/planefence
 FENCEDATE=$(date --date="today" '+%y%m%d')
 
 # Site configuration - you can modify these
-SITE_TITLE="PlaneFence Aircraft Detections"
+SITE_TITLE="Planefence Aircraft Detections"
 SITE_DESC="Recent aircraft detected within range of our ADS-B receiver"
 SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image

@@ -38,7 +38,7 @@ function configure_both() {
 	configure_planealert "$1" "$2"
 }
 
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running PlaneFence configuration - either the container is restarted or a config change was detected." || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running Planefence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # (by default exposed to ~/.planefence) then export all of those variables as well
@@ -94,7 +94,7 @@ mkdir -p /usr/share/planefence/html/plane-alert
 # Sync the plane-alert DB with a preference for newer versions on the persist volume:
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #
-# LOOPTIME is the time between two runs of PlaneFence (in seconds)
+# LOOPTIME is the time between two runs of Planefence (in seconds)
 if [[ "$PF_INTERVAL" != "" ]]; then
 	export LOOPTIME=$PF_INTERVAL
 
@@ -112,7 +112,7 @@ mkdir -p /run/planefence
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
 	sleep 10s
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for PlaneFence !!!!"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
 	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
 	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
 	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
@@ -170,7 +170,7 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 else
 	sleep 10s
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for PlaneFence !!!!"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for Planefence !!!!"
 	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
 	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
 	"${s6wrap[@]}" echo "sudo nano -l ~/planefence/planefence.config"
@@ -220,7 +220,7 @@ if chk_enabled "${PF_TWEET,,}"; then
 		"${s6wrap[@]}" echo "Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
 		"${s6wrap[@]}" echo "For more information on how to sign up for a Twitter Developer Account, see this link:"
 		"${s6wrap[@]}" echo "https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
-		"${s6wrap[@]}" echo "PlaneFence will continue to start without Twitter functionality."
+		"${s6wrap[@]}" echo "Planefence will continue to start without Twitter functionality."
 		sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
 	else
 		sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf

@@ -34,7 +34,7 @@ source /scripts/common
 
 # We need to define the directory where the config file is located:
 
-[[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started PlaneFence" || true
+[[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started Planefence" || true
 
 PLANEFENCEDIR=/usr/share/planefence
 
@@ -43,10 +43,10 @@ if [[ -f "/run/planefence/last-config-change" ]] && [[ -f "/usr/share/planefence
 	# if... the date-last-changed of config file on the exposed volume ... is newer than the last time we read it ... then ... rerun the prep routine (which will update the last-config-change)
 	[[ "$(stat -c %Y /usr/share/planefence/persist/planefence.config)" -gt "$(</run/planefence/last-config-change)" ]] && /usr/share/planefence/prep-planefence.sh
 fi
-# FENCEDATE will be the date [yymmdd] that we want to process PlaneFence for.
+# FENCEDATE will be the date [yymmdd] that we want to process Planefence for.
 # The default value is 'today'.
 
-if [[ -n "$1" ]] && [[ "$1" != "reset" ]]; then # $1 contains the date for which we want to run PlaneFence
+if [[ -n "$1" ]] && [[ "$1" != "reset" ]]; then # $1 contains the date for which we want to run Planefence
 FENCEDATE=$(date --date="$1" '+%y%m%d')
 else
 	FENCEDATE=$(date --date="today" '+%y%m%d')
@@ -63,7 +63,7 @@ fi
 if [[ -f "$PLANEFENCEDIR/planefence.conf" ]]; then
 	source "$PLANEFENCEDIR/planefence.conf"
 else
-	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run PlaneFence!
+	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run Planefence!
 	exit 2
 fi
 
@@ -486,7 +486,7 @@ EOF
 	exec 3>&-
 }
 
-# Function to write the PlaneFence history file
+# Function to write the Planefence history file
 LOG "Defining WRITEHTMLHISTORY"
 WRITEHTMLHISTORY () {
 	# -----------------------------------------
@@ -537,7 +537,7 @@ PRUNESTARTFILE=/run/socket30003/.lastprunecount
 LASTFENCEFILE=/usr/share/planefence/persist/.internal/lastfencedate
 
 # Here we go for real:
-LOG "Initiating PlaneFence"
+LOG "Initiating Planefence"
 LOG "FENCEDATE=$FENCEDATE"
 # First - if there's any command line argument, we need to do a full run discarding all cached items
 if [[ "$1" != "" ]]; then
@@ -634,7 +634,7 @@ elif [[ $(find $PRUNESTARTFILE -mmin +$PRUNEMINS | wc -l) == 1 ]]; then
     echo $READLINES > $PRUNESTARTFILE
 fi
 
-# Now write the $CURRCOUNT back to the TMP file for use next time PlaneFence is invoked:
+# Now write the $CURRCOUNT back to the TMP file for use next time Planefence is invoked:
 echo "$CURRCOUNT" > "$TMPLINES"
 
 if [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
@@ -890,7 +890,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
     <!-- plugin to make JQuery table columns resizable by the user: -->
     <script src="scripts/colResizable-1.6.min.js"></script>
 
-    <title>ADS-B 1090 MHz PlaneFence</title>
+    <title>ADS-B 1090 MHz Planefence</title>
 EOF
 	
 if [[ -f "$PLANEHEATHTML" ]]; then
@@ -1083,7 +1083,7 @@ if chk_enabled "$PLANEHEAT" && [[ -f "$PLANEHEATHTML" ]]; then
 	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Heatmap</summary>
 	<ul>
 	<li>This heatmap reflects passing frequency and does not indicate perceived noise levels
-	<li>The heatmap is limited to the coverage area of PlaneFence, for any aircraft listed in the table above
+	<li>The heatmap is limited to the coverage area of Planefence, for any aircraft listed in the table above
 	$( [[ -d "$OUTFILEDIR/../heatmap" ]] && printf "<li>For a heatmap of all planes in range of the station, please click <a href=\"../heatmap\" target=\"_blank\">here</a>" )
 	</ul>
 EOF
@@ -1123,7 +1123,7 @@ LOG "Done writing history"
 
 cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
-<hr/>PlaneFence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's PlaneFence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
+<hr/>Planefence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's Planefence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
 <br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
 <br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
@@ -1160,5 +1160,5 @@ echo "$FENCEDATE" > "$LASTFENCEFILE"
 # Currently, planefence_notify.sh and planefence-rss.sh are the only background processes that are invoked, and those have a time limit of 120 secs
 wait $!
 
-LOG "Finishing PlaneFence... sayonara!"
+LOG "Finishing Planefence... sayonara!"
 [[ "$BASETIME" != "" ]] && echo "17. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done final cleanup" || true
