@@ -1,15 +1,10 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2154,SC2015
 
 # redirect stderr to stdout so it's picked up in the docker logs
-exec 2>&1
-# all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
-trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
+source /scripts/common
 
-APPNAME="$(hostname)/socket30003"
-
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Socket30003 started as an s6 service" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Socket30003 started as an s6 service" || true
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
@@ -32,7 +27,7 @@ mkdir -p /run/socket30003
 # If things went wrong then simply sleep forever.
 # No need to notify -- .../run/planefence is doing the same thing and is
 # screaming all over the logs by now.
-if [[ "x$FEEDER_LAT" == "x" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
+if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]
 then
 	sleep infinity
 fi
@@ -63,42 +58,47 @@ then
 else
 	sed -i 's/\(^\s*speedunit=\).*/\1knotph/' /usr/share/socket30003/socket30003.cfg
 fi
-[[ "x$PF_SOCK30003PORT" == "x" ]] && PF_SOCK30003PORT=30003 || true
+
+PF_SOCK30003PORT="${PF_SOCK30003PORT:-30003}"
 sed -i 's|\(^\s*PEER_PORT=\).*|\1'"$PF_SOCK30003PORT"'|' /usr/share/socket30003/socket30003.cfg
 
 # -----------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------
 # Now start dump1090.socket30003 in a loop that restarts it $LOOPTIME seconds after it exits or crashes:
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 starting its initial run now" || true
+[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "socket30003 starting its initial run now" || true
 while true
 do
 
 	# First make sure that $PF_SOCK30003HOST is defined
-	if [[ "x$PF_SOCK30003HOST" == "x" ]]
+	if [[ -z "$PF_SOCK30003HOST" ]]
 	then
-		echo "[$APPNAME][$(date)] \$PF_SOCK30003HOST is not set in the .env or docker-compose.yml file. Cannot run! Please update and restart the container."
+		"${s6wrap[@]}" echo "\$PF_SOCK30003HOST is not set in the .env or docker-compose.yml file. Cannot run! Please update and restart the container."
 	else
 		# if $PF_SOCK30003HOST is defined, then check if we can reach it. Execute socket30003 if we can reach it, complain if we can't
 		# we do this inside this endless loop so it will show in the logs regularly
-		if timeout --preserve-status 5 netcat -z -v $PF_SOCK30003HOST $PF_SOCK30003PORT >/dev/null 2>&1
+		if timeout --preserve-status 5 netcat -z -v "$PF_SOCK30003HOST" "$PF_SOCK30003PORT" >/dev/null 2>&1
 		then
       sleep .4 # delay startup a little bit as to not interrupt file pruning
-      echo "[$APPNAME][$(date)] socket30003 starting up."
-			/usr/share/socket30003/socket30003.pl >/dev/null 2>&1 && [[ ! -f /tmp/socket-cleanup ]] && echo "[$APPNAME][$(date)] /usr/share/socket30003/socket30003.pl exited with code $?"
+      "${s6wrap[@]}" echo "socket30003 starting up."
+			touch /run/socket30003.up
+			/usr/share/socket30003/socket30003.pl >/dev/null 2>&1
+			exitcode="$?"
+			if [[ ! -f /tmp/socket-cleanup ]]; then "${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with code $exitcode"; fi
+			rm -f /run/socket30003.up
 		else
-			echo "[$APPNAME][$(date)] We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
-			echo "[$APPNAME][$(date)] If this error keeps on repeating, please make sure that"
-			echo "[$APPNAME][$(date)] readsb/dump1090[-fa]/tar1090 is running and producing SBS data on port $PF_SOCK30003PORT!"
+			"${s6wrap[@]}" echo "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
+			"${s6wrap[@]}" echo "If this error keeps on repeating, please make sure that"
+			"${s6wrap[@]}" echo "readsb/dump1090[-fa]/ultrafeeder is running and producing SBS data on port $PF_SOCK30003PORT!"
 		fi
 	fi
 	if [[ ! -f /tmp/socket-cleanup ]]
 	then
-		echo "[$APPNAME][$(date)] socket30003 has exited... restarting in $LOOPTIME"
+		"${s6wrap[@]}" echo "socket30003 has exited... restarting in $LOOPTIME"
 		sleep $LOOPTIME
 	else
 		sleep 1s
 		rm -f /tmp/socket-cleanup
 	fi
-	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] socket30003 restarting now" || true
+	[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "socket30003 restarting now" || true
 done
