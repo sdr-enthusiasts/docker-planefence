@@ -29,7 +29,7 @@ do
 		if curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT"
 		then
 			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
-			((i++))
+			((i++)) || true
 		else
 			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
 			inhibit_update="true"
