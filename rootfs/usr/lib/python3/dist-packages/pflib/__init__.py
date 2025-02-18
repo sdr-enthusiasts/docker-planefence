@@ -48,8 +48,8 @@ def init_log(system):
     global log
 
     def systemlog(msg):
-        timestamp = datetime.now().strftime('%c')
-        print(f"[{system}][{timestamp}] {msg}")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{timestamp}   ][{system}] {msg}")
     log = systemlog
 
 
