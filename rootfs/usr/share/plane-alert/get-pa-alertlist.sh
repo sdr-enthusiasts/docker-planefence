@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2154
 
-APPNAME="$(hostname)/get-pa-alertlist"
+source /scripts/common
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -12,10 +12,10 @@ APPNAME="$(hostname)/get-pa-alertlist"
 # -----------------------------------------------------------------------------------
 #
 # Make sure the /run directory exists
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh started" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "get-pa-alertlist.sh started"; fi
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-[[ "$ALERTLIST" != "" ]] && IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt")
+if [[ -z "$ALERTLIST" ]]; then IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt"); fi
 
 # now iterate though them an put them in sequential files:
 rm -f /tmp/alertlist*.txt
@@ -28,10 +28,10 @@ do
 		# it's a URL and we need to CURL it
 		if curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT"
 		then
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
+			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
 			((i++))
 		else
-			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
+			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
 			inhibit_update="true"
 		fi
 	else
@@ -39,10 +39,10 @@ do
 		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
 			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
-			[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] ALERTLIST $ALERT ($i) retrieval succeeded" || true
+			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
 			((i++))
 		else
-			echo "[$APPNAME][$(date)] ALERTLIST $ALERT retrieval failed"
+			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
 		fi
 	fi
 done
@@ -51,7 +51,7 @@ if [[ $inhibit_update == "false" ]]; then
 	touch /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	cat /tmp/alertlist*.txt |  tr -dc "[:alnum:][:blank:]+':/?&=%#\$\\\[\].,\{\};\-_\n" | awk -F',' '!seen[$1]++'  >/usr/share/planefence/persist/.internal/plane-alert-db.txt 2>/dev/null
 	EXCLUDE="$(sed -n 's|^\s*PA_EXCLUSIONS=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-	[[ "$EXCLUDE" != "" ]] && IFS="," read -ra EXCLUSIONS <<< "$EXCLUDE"
+	if [[ -n "$EXCLUDE" ]]; then IFS="," read -ra EXCLUSIONS <<< "$EXCLUDE"; fi
 	count_start="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 	for TYPE in "${EXCLUSIONS[@]}"
 	do
@@ -66,20 +66,21 @@ if [[ $inhibit_update == "false" ]]; then
 		elif [[ -n "$TYPE" ]]
 		then
 			echo "$TYPE appears to be a freeform search pattern, entries excluded:" "$(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			# shellcheck disable=SC1087
 			sed -r -i "/,[A-Za-z0-9\-\.\+ ]*$TYPE[A-Za-z0-9\-\.\+ ]*,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		else
 			echo "$TYPE is invalid, skipping!"
 		fi
 	done
 	count_end="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
-	if (("$count_start - $count_end")) > 0 
-		then echo "$(("$count_start - $count_end")) entries excluded."
-	chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
+	if (( count_start - count_end > 0 )); then  
+		echo "$(( count_start -  count_end )) entries excluded."
+		chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	fi
 	ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
 else
-	echo "[$APPNAME][$(date)] At least one http retrieval failed, using old list!"
+	"${s6wrap[@]}" echo "At least one http retrieval failed, using old list!"
 fi
 
 rm -f /tmp/alertlist*.txt
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] get-pa-alertlist.sh finished" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "get-pa-alertlist.sh finished"; fi

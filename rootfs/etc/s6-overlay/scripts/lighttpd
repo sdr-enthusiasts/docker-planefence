@@ -1,19 +1,13 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2154
 
-# redirect stderr to stdout so it's picked up in the docker logs
-exec 2>&1
-# all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
-trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
-
-APPNAME="$(hostname)/lighttpd"
+source /scripts/common
 APPPATH="/usr/sbin/lighttpd"
 CONFIGPATH="/etc/lighttpd/lighttpd.conf"
 OWNER=www-data
 GROUP=www-data
 
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Lighttpd started as an s6 service" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Lighttpd started as an s6 service"; fi
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
@@ -30,25 +24,26 @@ GROUP=www-data
 # The directory is defined as volatile and may thus be non-existing
 # after a boot (DPM §9.3.2)
 
-[[ ! -d /var/cache/lighttpd ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd"
-[[ ! -d /var/cache/lighttpd/compress ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/compress"
-[[ ! -d /var/cache/lighttpd/uploads ]] && install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/uploads"
-[[ ! -d /var/log/lighttpd ]] &&	install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"
-[[ ! -d /var/run/lighttpd ]] &&	install -d -o $OWNER -g $GROUP -m 0750 "/var/run/lighttpd"
+if [[ ! -d /var/cache/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd"; fi
+if [[ ! -d /var/cache/lighttpd/compress ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/compress"; fi
+if [[ ! -d /var/cache/lighttpd/uploads ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/cache/lighttpd/uploads"; fi
+if [[ ! -d /var/log/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"; fi
+if [[ ! -d /var/log/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"; fi
+if [[ ! -d /var/run/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/run/lighttpd"; fi
 #
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Starting FastCGI" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Starting FastCGI"; fi
 lighttpd-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
 #
 # -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:
 #
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Checking Lighttpd configuration" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Checking Lighttpd configuration"; fi
 $APPPATH -tt -f $CONFIGPATH || exit $?
 #
 # -----------------------------------------------------------------------------------
 # Now run ligghttpd for real
 #
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Bringing Lighttpd Up" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Bringing Lighttpd Up"; fi
 $APPPATH -f $CONFIGPATH -D

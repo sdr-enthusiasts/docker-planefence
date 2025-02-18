@@ -1,15 +1,9 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC1091,SC2154
 
-# redirect stderr to stdout so it's picked up in the docker logs
-exec 2>&1
-# all errors will show a line number and the command used to produce the error
-SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd)/$(basename "$0")"
-trap 'echo -e "[ERROR] $SCRIPT_PATH in line $LINENO when executing: $BASH_COMMAND"' ERR
+source /scripts/common
 
-APPNAME="$(hostname)/get-pa-alertlist"
-
-[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Get-PA-Alertlist started as an s6 service" || true
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Get-PA-Alertlist started as an s6 service"; fi
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
@@ -31,7 +25,7 @@ LOOPTIME=6h
 
 while true
 do
-	[[ "$LOGLEVEL" != "ERROR" ]] && echo "[$APPNAME][$(date)] Restarting in $LOOPTIME" || true
+	if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Restarting in $LOOPTIME"; fi 
 	sleep $LOOPTIME
 	/usr/share/plane-alert/get-pa-alertlist.sh
 	/usr/share/plane-alert/get-silhouettes.sh
