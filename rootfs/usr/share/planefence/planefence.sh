@@ -871,11 +871,14 @@ EOF
 fi
 cat <<EOF >>"$OUTFILEHTMTMP"
     <!-- scripts and stylesheets related to the datatables functionality: -->
+    <!-- please note that these scripts and plugins are licensed by their authors and IP owners
+         For license terms and copyright ownership, see each linked file -->
+    <!-- JQuery itself: -->
     <script src="scripts/jquery-3.7.1.min.js"></script>
 
+    <!-- DataTables CSS and plugins: -->
     <link href="scripts/dataTables.dataTables.min.css" rel="stylesheet">
     <link href="scripts/buttons.dataTables.min.css" rel="stylesheet">
- 
     <script src="scripts/jszip.min.js"></script>
     <script src="scripts/pdfmake.min.js"></script>
     <script src="scripts/vfs_fonts.js"></script>
@@ -883,6 +886,9 @@ cat <<EOF >>"$OUTFILEHTMTMP"
     <script src="scripts/dataTables.buttons.min.js"></script>
     <script src="scripts/buttons.html5.min.js"></script>
     <script src="scripts/buttons.print.min.js"></script>
+
+    <!-- plugin to make JQuery table columns resizable by the user: -->
+    <script src="scripts/colResizable-1.6.min.js"></script>
 
     <title>ADS-B 1090 MHz PlaneFence</title>
 EOF
@@ -953,7 +959,7 @@ $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "
 $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<body>"; fi)
 <script type="text/javascript">
     \$(document).ready(function() { 
-        \$('#mytable').dataTable( {
+        \$("#mytable").dataTable( {
             order: [[0, 'desc']],
             pageLength: $TABLESIZE,
             lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
@@ -961,11 +967,17 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
                       top1Start: { search: { placeholder: 'Type search here' } }, 
                       topEnd: '',
                     }
-        }); 
+        });
+		    \$("#mytable").colResizable({
+            liveDrag:true, 
+            gripInnerHtml:"<div class='grip'></div>", 
+            draggingClass:"dragging", 
+            resizeMode:'flex'
+        });
     });
 </script>
 
-<h1>PlaneFence</h1>
+<h1>Planefence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
 ${PF_MOTD}
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
