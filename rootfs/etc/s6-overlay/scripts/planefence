@@ -11,9 +11,6 @@
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
 # These packages may incorporate other software and license terms.
 #
-# Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
-# as command separator, but use something else instead, for example '|'
-#
 # -----------------------------------------------------------------------------------
 #
 # We moved the initialization sequence to /usr/share/planefence/prep-planefence.sh
@@ -42,7 +39,7 @@ source /usr/share/planefence/prep-planefence.sh
 initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then 
-    "${s6wrap[@]}" echo "Planefence is deployed and will first run at $(date -d @"+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
+    "${s6wrap[@]}" echo "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
 else
     "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
 fi
