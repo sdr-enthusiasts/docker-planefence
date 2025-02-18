@@ -9,7 +9,7 @@
 # Note: this script is meant to be run as a daemon using SYSTEMD
 # If run manually, it will continuously loop to listen for new planes
 #
-# This script is distributed as part of the PlaneFence package and is dependent
+# This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.
 #
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
@@ -153,7 +153,7 @@ getRoute() {
 	echo "$response"
 }
 
-if [ "$1" != "" ] && [ "$1" != "reset" ]; then # $1 contains the date for which we want to run PlaneFence
+if [ "$1" != "" ] && [ "$1" != "reset" ]; then # $1 contains the date for which we want to run Planefence
 	TWEETDATE=$(date --date="$1" '+%y%m%d')
 else
 	TWEETDATE=$(date --date="today" '+%y%m%d')
@@ -430,7 +430,7 @@ if [ -f "$CSVFILE" ]; then
 				fi
 
 				# shellcheck disable=SC2028
-				[[ "${LINK:0:12}" == "https://t.co" ]] && "${s6wrap[@]}" echo "Planefence post to Twitter generated successfully. Tweet available at: $LINK" || "${s6wrap[@]}" echo "PlaneFence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
+				[[ "${LINK:0:12}" == "https://t.co" ]] && "${s6wrap[@]}" echo "Planefence post to Twitter generated successfully. Tweet available at: $LINK" || "${s6wrap[@]}" echo "Planefence Tweet error. Twitter returned:\n$(tail -1 /tmp/tweets.log)"
 				rm -f $snapfile
 
 			else

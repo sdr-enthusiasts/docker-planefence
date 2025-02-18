@@ -36,9 +36,9 @@
   } else { $outputtype = ""; }
 
   if (strcmp($hex . $tail . $name . $equipment . $timestamp . $call . $lat . $lon , "") == 0) {
-	   echo "<html><body><H1>PlaneFence Query Interface</H1>";
+	   echo "<html><body><H1>Planefence Query Interface</H1>";
 	   echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=regex&amp;tail=regex&name=regex&amp;equipment=regex&amp;timestamp=regex&amp;call=regex&amp;lat=regex&amp;lon=regex&amp;type=csv|json</h3>";
-	   echo "This will read the PlaneFence database and return matching records in JSON format.<br />";
+	   echo "This will read the Planefence database and return matching records in JSON format.<br />";
 	   echo "<br />";
 	   echo "At least one argument of hex, tail, name, equipment, timestamp, call, lat, lon must be present.<br />";
 	   echo "It will do a &quot;fuzzy&quot; match, or you can use a Regular Expression.<br />";
@@ -50,7 +50,7 @@
 	   echo "will return records of tail N141NE, N142NE, N143NE, and that have a timestamp that contains 2021/12/20 - 2021/21/29.<br />";
 	   echo "<br />";
 	   echo "Note that the date range is limited to the data available to Plane-Alert.<hr />";
-	   echo "(C)opyright 2021-2025 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
+	   echo "(C)opyright 2021-2025 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the Planefence repository at GitHub</a>.<br />";
      echo "<hr>" . $hex . $tail . $name . $equipment . $timestamp . $call . $lat . $lon;
 	   echo "</body></html>";
   } else {

@@ -1,15 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2015,SC2154
 
-source /scripts/common
-
-LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
-LOOPTIME="${LOOPTIME:-60}"
-
-PLANEFENCEDIR=/usr/share/planefence
-
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence started as an s6 service" || true
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)" || true
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -20,44 +11,57 @@ PLANEFENCEDIR=/usr/share/planefence
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
 # These packages may incorporate other software and license terms.
 #
-# Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
-# as command separator, but use something else instead, for example '|'
-#
 # -----------------------------------------------------------------------------------
 #
 # We moved the initialization sequence to /usr/share/planefence/prep-planefence.sh
 # because then we can re-run the sequence if we detect changes to the config file
 # Also, this time needs to be sourced otherwise it won't pick up $LOOPTIME as variables
 # can't be exported back to parent processes.
+
+source /scripts/common
+
+LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
+LOOPTIME="${LOOPTIME:-60}"
+
+PLANEFENCEDIR=/usr/share/planefence
+
+if [[ "$LOGLEVEL" != "ERROR" ]]; then
+    "${s6wrap[@]}" echo "Planefence started as an s6 service"
+    "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
+fi
+
 source /usr/share/planefence/prep-planefence.sh
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call Planefence
+# We are randomizing the initial looptime in case there are multiple Planefence instances running. That way the load will be spread out a bit
 #
 #
-#
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence is deployed and will be starting in $LOOPTIME..." || "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs." || true
-sleep "$LOOPTIME"
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence starting its initial run now" || true
+initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
+
+if [[ "$LOGLEVEL" != "ERROR" ]]; then 
+    "${s6wrap[@]}" echo "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
+else
+    "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
+fi
+sleep "$initial_looptime"
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Planefence starting its initial run now"; fi
 
 while true
 do
-    LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
-    [[ "$LOOPTIME" == "" ]] && LOOPTIME=60
 	sleep "$LOOPTIME" &
-	if [[ $(find /run/socket30003/ -name "dump1090-*-$(date +%y%m%d).txt") ]]
-        then
-              starttime=$(date +%s)
-              # BASETIME is used for run time measurements
-              # shellcheck disable=SC2155
-              if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
-              [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Starting Planefence run..." || true
-              $PLANEFENCEDIR/planefence.sh
-              endtime=$(date +%s)
-              [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%Y/%m/%d %H:%M:%S")." || true
-        else
-              "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-(date +%y%m%d).txt not found."
-              "${s6wrap[@]}" echo "If this continues to happen after 5-10 minutes, check this:"
-              "${s6wrap[@]}" echo "Is \"socket30003\" running? Is your feeder producing data?"
+	if [[ $(find /run/socket30003/ -name "dump1090-*-$(date +%y%m%d).txt") ]] && [[ -f /run/socket30003.up ]]; then
+        starttime=$(date +%s)
+        # BASETIME is used for run time measurements
+        # shellcheck disable=SC2155
+        if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
+        [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Starting Planefence run..." || true
+        $PLANEFENCEDIR/planefence.sh
+        endtime=$(date +%s)
+        [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")." || true
+    else
+        "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-(date +%y%m%d).txt not found or socket30003 not running."
+        "${s6wrap[@]}" echo "If this continues to happen after 5-10 minutes, check your \$PF_SOCK30003HOST setting and check your data source"
+        "${s6wrap[@]}" echo "We will try again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")."
     fi
 	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
     wait

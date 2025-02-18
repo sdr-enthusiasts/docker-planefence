@@ -3,7 +3,7 @@
 - [Docker-Planefence](#docker-planefence)
   - [What is it?](#what-is-it)
   - [Who is it for?](#who-is-it-for)
-  - [Install PlaneFence - Prerequisites](#install-planefence---prerequisites)
+  - [Install Planefence - Prerequisites](#install-planefence---prerequisites)
     - [Getting ready](#getting-ready)
     - [Planefence Configuration](#planefence-configuration)
       - [Initial docker configuration](#initial-docker-configuration)
@@ -44,14 +44,14 @@ Here are some assumptions or prerequisites:
 - You use `docker compose`. This README has been written assuming `docker compose`. If you don't have it, feel free to `apt-get install` it. It should be easy to convert the `docker-compose.yml` instructions to a command-line `docker run` string, but you are on your own to do this.
 - Further support is provided at the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please tag "@k1xt" to your message.
 
-## Install PlaneFence - Prerequisites
+## Install Planefence - Prerequisites
 
 Note - this guide assumes that `/home/pi` is your home directory. If it is not (for example, Ubuntu builds use `/home/ubuntu` as their default account), please change all mentions of `/home/pi` to the applicable home directory path.
 
 There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, or `readsb` connected to a SDR somewhere in reach of your Planefence machine:
 
 - This could be in the same stack of containers, separately on the same machine, or even on another machine.
-- It is important to enable SBS data on port 30003 on that instance. PlaneFence will use this to get its data. See the [Troubleshooting](#troubleshooting) section for help to get this done.
+- It is important to enable SBS data on port 30003 on that instance. Planefence will use this to get its data. See the [Troubleshooting](#troubleshooting) section for help to get this done.
 
 ### Getting ready
 
@@ -81,7 +81,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - After you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work!
 - MANDATORY: First -- copy the template config file in place: `sudo cp /opt/adsb/planefence/config/planefence.config-RENAME-and-EDIT-me /opt/adsb/planefence/config/planefence.config`
 - MANDATORY: `sudo nano /opt/adsb/planefence/config/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
-- OPTIONAL: `sudo nano /opt/adsb/planefence/config/planefence-ignore.txt`. In this file, you can add aircraft that PlaneFence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
+- OPTIONAL: `sudo nano /opt/adsb/planefence/config/planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
 - OPTIONAL: `sudo nano /opt/adsb/planefence/config/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/README-nginx-rev-proxy.md).
@@ -133,7 +133,7 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 ### Introduction
 
-Planefence and Plane-Alert keep a limited amount of data available. By default, PlaneFence keeps 2 weeks of data around, while Plane-Alert isn't time limited. This data is accessible using a REST interface that makes use of HTTP GET. You can access this API from the directory where your Planefence or Plane-Alert web pages are deployed. For example:
+Planefence and Plane-Alert keep a limited amount of data available. By default, Planefence keeps 2 weeks of data around, while Plane-Alert isn't time limited. This data is accessible using a REST interface that makes use of HTTP GET. You can access this API from the directory where your Planefence or Plane-Alert web pages are deployed. For example:
 
 - If Planefence is available at <https://planefence.com/planefence>, then you can reach the Planefence API at <https://planefence.com/planefence/pf-query.php>
 - If Plane-Alert is available at <https://planefence.com/plane-alert>, then you can reach the Plane-Alert API at <https://planefence.com/plane-alert/pa-query.php>
@@ -168,7 +168,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 
 ## Troubleshooting
 
-- Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in PlaneFence range or is detected by Plane-Alert. This includes the planes table and the heatmap.
+- Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in Planefence range or is detected by Plane-Alert. This includes the planes table and the heatmap.
 - If your system doesn't behave as expected: check, check, double-check. Did you configure the correct container in `docker-compose.yml`? Did you edit the `planefence.config` file?
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: <http://myip:8088> should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.

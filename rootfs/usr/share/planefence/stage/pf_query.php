@@ -20,9 +20,9 @@
   } else { $outputtype = ""; }
 
   if (strcmp($hex . $call . $start . $end , "") == 0) {
-	   echo "<html><body><H1>PlaneFence Query Interface</H1>";
+	   echo "<html><body><H1>Planefence Query Interface</H1>";
 	   echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=regex&call=regex&start=regex&end=regex&type=csv|json</h3>";
-	   echo "This will read the PlaneFence database and return matching records in JSON format.<br />";
+	   echo "This will read the Planefence database and return matching records in JSON format.<br />";
 	   echo "<br />";
 	   echo "At least one argument of hex, call, start, end must be present.<br />";
 	   echo "It will do a &quot;fuzzy&quot; match, or you can use a Regular Expression.<br />";
@@ -33,8 +33,8 @@
 	   echo "<b>http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=^A[DE]&start=2021/12/1[345]</b><br />";
 	   echo "will return records of which the Hex ID starts with A followed by a D or E, and that have a start date/time that contains 2021/12/13, 2021/12/14, or 2021/12/15.<br />";
 	   echo "<br />";
-	   echo "Note that the date range is limited to the data available to PlaneFence. By default, this is set to the last 14 days.<hr />";
-	   echo "(C)opyright 2021-2025 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the PlaneFence repository at GitHub</a>.<br />";
+	   echo "Note that the date range is limited to the data available to Planefence. By default, this is set to the last 14 days.<hr />";
+	   echo "(C)opyright 2021-2025 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the Planefence repository at GitHub</a>.<br />";
 	   echo "</body></html>";
   } else {
      if (strcmp($outputtype, "csv") == 0) {

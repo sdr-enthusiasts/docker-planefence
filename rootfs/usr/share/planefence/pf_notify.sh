@@ -3,7 +3,7 @@
 # PF_ALERT - a Bash shell script to send a notification to the Notification Server when a plane is detected in the
 # user-defined fence area.
 #
-# This script is distributed as part of the PlaneFence package and is dependent
+# This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.
 #
 # Copyright 2020-2025 by Ramon F. Kolb (kx1t) - licensed under the terms and conditions
@@ -210,7 +210,7 @@ if [[ -f "$CSVFILE" ]]; then
 					LINK="$(twurl -r "status=$TWEET" /1.1/statuses/update.json 2>&1 | tee -a /tmp/tweets.log | jq '.entities."urls" | .[] | .url' | tr -d '\"')"
 				fi
 
-				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "PlaneFence Tweet generated successfully with content: $TWEET" || echo "PlaneFence Tweet error. Twitter returned: $(tail -1 /tmp/tweets.log)"
+				[[ "${LINK:0:12}" == "https://t.co" ]] && echo "Planefence Tweet generated successfully with content: $TWEET" || echo "Planefence Tweet error. Twitter returned: $(tail -1 /tmp/tweets.log)"
 			else
 				LOG "(A tweet would have been sent but \$TWEETON=\"$TWEETON\")"
 			fi

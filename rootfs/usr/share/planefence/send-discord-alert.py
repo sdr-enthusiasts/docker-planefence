@@ -1,6 +1,6 @@
 #!/command/with-contenv python3
 
-# Send Discord Alerts is a utility for PlaneFence
+# Send Discord Alerts is a utility for Planefence
 #
 # Usage: ./send-discord-alert.py <inputfile>
 #

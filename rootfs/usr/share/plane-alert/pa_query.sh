@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pf_php.sh -- Script to be called from PHP - returns REGEX subset of PlaneFence
+# pf_php.sh -- Script to be called from PHP - returns REGEX subset of Planefence
 #
 # Usage: pf_php.sh [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>
 #        File argument is always required and at least 1 additional argument is required.

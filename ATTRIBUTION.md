@@ -18,7 +18,7 @@ If you think that we included parts of your software but we didn't attribute you
 
 - Many thanks to @Wiedehopf, @Mikenye and @fredclausen for all of their coding advice and troubleshooting. Without them the learning curve would have been much steeper!
 
-- Especially @Wiedehopf who spent many hours optimizing PlaneFence and Plane-Alert for speed, which resulting in a 90% reduction of runtime! He also helped with timezone conversion when upgrading from Python2 to Python3
+- Especially @Wiedehopf who spent many hours optimizing Planefence and Plane-Alert for speed, which resulting in a 90% reduction of runtime! He also helped with timezone conversion when upgrading from Python2 to Python3
 
 - Sorttable.js  is Copyright (c) 2013 Tyler Uebele. Released under the MIT license.  See included LICENSE.txt or http://opensource.org/licenses/MIT.
   The latest version is available at https://github.com/tyleruebele/sort-table

@@ -1,6 +1,6 @@
-# Send a Mastodon Post for each new plane in PlaneFence
+# Send a Mastodon Post for each new plane in Planefence
 
-- [Send a Mastodon Post for each new plane in PlaneFence](#send-a-mastodon-post-for-each-new-plane-in-planefence)
+- [Send a Mastodon Post for each new plane in Planefence](#send-a-mastodon-post-for-each-new-plane-in-planefence)
   - [Prerequisites](#prerequisites)
   - [Signing up for a Mastodon Account and creating an Application](#signing-up-for-a-mastodon-account-and-creating-an-application)
   - [Configuring Planefence to use Mastodon](#configuring-planefence-to-use-mastodon)
@@ -13,7 +13,7 @@ This utility enables sending Mastodon posts of new events. Ever since Twitter st
 There are two major parts to install this. Each of these parts is described below.
 
 - You must have a Mastodon account and create an Application in it.
-- You must follow the instructions below to configure PlaneFence to use the credentials that Mastodon provides you during this sign-up process.
+- You must follow the instructions below to configure Planefence to use the credentials that Mastodon provides you during this sign-up process.
 
 ## Prerequisites
 
@@ -61,7 +61,7 @@ MASTODON_RETENTION_TIME=7
 ```
 
 - Replace the values with the applicable server name and access token.
-- If `PF_MASTODON` is not set to `ON`, then no PlaneFence Mastodon notifications will be sent.
+- If `PF_MASTODON` is not set to `ON`, then no Planefence Mastodon notifications will be sent.
 - If `PA_MASTODON` is not set to `ON`, then no Plane-Alert Mastodon notifications will be sent.
 - `Px_MASTODON_VISIBILITY` can be `public` (visible in everyone's feed), `unlisted` (only visible on your profile page), or `private` (invisible to anyone except for you).
 
