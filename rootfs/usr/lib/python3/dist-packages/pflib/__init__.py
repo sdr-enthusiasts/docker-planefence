@@ -49,7 +49,7 @@ def init_log(system):
 
     def systemlog(msg):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{timestamp}   ][{system}] {msg}")
+        print(f"[{timestamp}    ][{system}] {msg}")
     log = systemlog
 
 
