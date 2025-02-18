@@ -15,7 +15,7 @@ source /scripts/common
 if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "get-pa-alertlist.sh started"; fi
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-if [[ -z "$ALERTLIST" ]]; then IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt"); fi
+if [[ -n "$ALERTLIST" ]]; then IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt"); fi
 
 # now iterate though them an put them in sequential files:
 rm -f /tmp/alertlist*.txt
@@ -40,7 +40,7 @@ do
 		then
 			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
 			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
-			((i++))
+			((i++)) || true
 		else
 			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
 		fi
