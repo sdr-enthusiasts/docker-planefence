@@ -970,7 +970,7 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
         });
 		    \$("#mytable").colResizable({
             liveDrag: true, 
-            gripInnerHtml: <div class='grip'></div>", 
+            gripInnerHtml: "<div class='grip'></div>", 
             draggingClass: "dragging", 
             resizeMode: 'flex',
 						postbackSave: true
