@@ -6,7 +6,7 @@ source /scripts/common
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/planefence4docker/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
