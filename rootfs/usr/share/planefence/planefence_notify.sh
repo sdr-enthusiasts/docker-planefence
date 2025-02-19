@@ -326,7 +326,9 @@ if [ -f "$CSVFILE" ]; then
 
 				msg_array[icao]="${RECORD[0]}"
 				msg_array[flight]="${RECORD[1]#@}"
-				msg_array[operator]="$(echo "${AIRLINE}" | xargs)"
+				msg_array[operator]="${AIRLINE//[\'\"]/ }"
+				msg_array[operator]="${msg_array[operator]//[&]/ and }"
+				msg_array[operator]="$(echo "${msg_array[operator]//#/}" | xargs)"
 				if [[ -n "$ROUTE" ]]; then
 					if [[ "${ROUTE:0:4}" == "org:" ]]; then
 						msg_array[origin]="${ROUTE:6}"
@@ -340,7 +342,7 @@ if [ -f "$CSVFILE" ]; then
 				msg_array[first_seen]="$(date -d "${RECORD[2]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[last_seen]="$(date -d "${RECORD[3]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
 				msg_array[min_alt]="${RECORD[4]} $ALTUNIT $ALTPARAM"
-                                msg_array[timezone]="$(date +%Z)"
+        msg_array[timezone]="$(date +%Z)"
 				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
 				msg_array[link]="${RECORD[6]//globe.adsbexchange.com/$TRACKSERVICE}"
 				if ((RECORD[7] < 0)); then

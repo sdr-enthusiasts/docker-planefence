@@ -393,7 +393,8 @@ then
 			msg_array[flight]="${pa_record[8]//#/}"
 			if [[ -n "${pa_record[2]}" ]]; then
 				msg_array[operator]="${pa_record[2]//[\'\"]/ }"
-				msg_array[operator]="$(echo "${pa_record[2]//[&]/ and }" | xargs -0)"
+				msg_array[operator]="${msg_array[operator]//[&]/ and }"
+				msg_array[operator]="$(echo "${msg_array[operator]//#/}" | xargs)"
 			fi
 			msg_array[type]="${pa_record[3]//#/}"
 			msg_array[datetime]="$(date -d "${pa_record[4]} ${pa_record[5]}" "+${MQTT_DATETIME_FORMAT:-%s}")"
