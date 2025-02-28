@@ -53,7 +53,7 @@ RUN set -xe && \
 #
 COPY rootfs/ /
 #
-COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
+# COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
 RUN \
     --mount=type=bind,source=./,target=/app/ \
