@@ -147,8 +147,8 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 configure_planefence "MAXALT" "$PF_MAXALT"
 configure_planefence "DIST" "$PF_MAXDIST"
 configure_planefence "ALTCORR" "$PF_ELEVATION"
-configure_planefence "MY" "$PF_NAME"
-configure_planefence "MYURL" "$PF_MAPURL"
+configure_planefence "MY" "\"$PF_NAME\""
+configure_planefence "MYURL" "\"$PF_MAPURL\""
 configure_planefence "REMOTENOISE" "$PF_NOISECAPT"
 configure_planefence "FUDGELOC" "$PF_FUDGELOC"
 chk_enabled "$PF_OPENAIP_LAYER" && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
