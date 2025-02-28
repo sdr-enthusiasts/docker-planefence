@@ -88,7 +88,7 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt).
 - OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/sdr-enthusiasts/docker-planefence/issues/38) on how to do that.
 - OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `/opt/adsb/planefence/config/pf_background.jpg` for Planefence and `/opt/adsb/planefence/config/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch /opt/adsb/planefence/config/planefence.config` in order for these backgrounds to become effective.)
-- OPTIONAL: Add images of tar1090 to your Tweets in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
+- OPTIONAL: Add images of tar1090 to your notifications in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
 - OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `/opt/adsb/planefence/config/planefence.config`
 
 ---
@@ -142,14 +142,14 @@ Planefence and Plane-Alert keep a limited amount of data available. By default, 
 
 The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Query arguments are case-insensitive: looking for `n` or for `N` yields the same results.
 Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
-Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if the entry was tweeted. So make sure to start your `call` query with `^@?` to include both tweeted an non-tweeted calls.
+Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if a notification was sent for the entry. So make sure to start your `call` query with `^@?`.
 
 #### Planefence Query parameters
 
 | Parameter | Description | Example |
 |---|---|---|
 | `hex` | Hex ID to return | <https://planeboston.com/planefence/pf_query.php?hex=^A[AB>][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits |
-| `tail` | Call sign (flight number or tail) to return | <https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json> returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if the entry was tweeted, in which case the `tweet_url` field contains a link to the tweet.) |
+| `tail` | Call sign (flight number or tail) to return | <https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json> returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if a notification for the entry was sent, in which case the `tweet_url` field contains a link to the notification (legacy field name - notification is probably NOT to X/Twitter!)) |
 | `start` | Start time, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/planefence/pf_query.php?start=2021/12/19.*&type=csv> returns all entries that started on Dec 19, 2021. |
 | `end` | End time, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/planefence/pf_query.php?end=2021/12/19.*&type=csv> returns all entries that ended on Dec 19, 2021. |
 
@@ -173,7 +173,7 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: <http://myip:8088> should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at <http://myip:8088/plane-alert>
-- Twitter setup is complex and Elon will ban you if you publish anything about one of his planes. [Here](https://github.com/sdr-enthusiasts/docker-planefence#setting-up-tweeting)'s a description on what to do. We advise you to skip Twitter and send notifications to [Mastodon](README-Mastodon.md) instead.
+- Sending notifications to X (Twitter) has now been disabled and the corresponding code has been removed. This is done for several reasons (insert politics here), but mainly because there is no longer a free API available to send tweets. Please consider sending notifications to any of the currently supported media, including BlueSky, Mastodon, Discord, and MQTT.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
   - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be:
     - The name of another container in the same Docker compose stack, e.g., `ultrafeeder` or `tar1090`

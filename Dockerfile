@@ -23,7 +23,6 @@ RUN set -xe && \
     KEPT_PACKAGES+=(lighttpd) && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
-    KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
     KEPT_PACKAGES+=(html-xml-utils) && \
     KEPT_PACKAGES+=(file) && \
@@ -36,12 +35,9 @@ RUN set -xe && \
     KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_PIP3_PACKAGES+=(geopy) && \
     #
-    KEPT_RUBY_PACKAGES+=(twurl) && \
-    #
     # Install all the apt, pip3, and gem (ruby) packages:
     apt-get update -q && \
     apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
-    gem install twurl && \
     pip3 install --break-system-packages --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
     #
     # Do this here while we still have git installed:

@@ -21,8 +21,11 @@ source /scripts/common
 mkdir -p /run/socket30003
 #
 # Load parameters from the config file:
-#[[ -f /usr/share/planefence/persist/planefence.config ]] && export $(grep -v '^\s*#' /usr/share/planefence/persist/planefence.config | xargs)
-[[ -f /usr/share/planefence/persist/planefence.config ]] && set -o allexport && source /usr/share/planefence/persist/planefence.config && set +o allexport
+if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
+	set -o allexport
+	source /usr/share/planefence/persist/planefence.config
+	set +o allexport
+fi
 
 # If things went wrong then simply sleep forever.
 # No need to notify -- .../run/planefence is doing the same thing and is
@@ -38,7 +41,7 @@ LOOPTIME=15
 # set params in socket30003.conf
 sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
 sed -i 's/\(^\s*longitude=\).*/\1'"$FEEDER_LONG"'/' /usr/share/socket30003/socket30003.cfg
-[[ "x$PF_SOCK30003HOST" != "x" ]] && sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
+sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
 
 if [[ "x$PF_DISTUNIT" != "x" ]]
 then
