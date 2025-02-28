@@ -54,6 +54,8 @@ RUN set -xe && \
     apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y -q && \
+    # remove pycache
+    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
     rm -rf \
     /src/* \
     /var/cache/* \
