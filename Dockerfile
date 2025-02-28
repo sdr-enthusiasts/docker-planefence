@@ -7,10 +7,6 @@ RUN set -xe && \
     KEPT_PIP3_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
     #
-    TEMP_PACKAGES+=(pkg-config) && \
-    TEMP_PACKAGES+=(git) && \
-    TEMP_PACKAGES+=(gcc) && \
-    TEMP_PACKAGES+=(pkg-config) && \
     TEMP_PACKAGES+=(python3-pip) && \
     #
     KEPT_PACKAGES+=(unzip) && \
@@ -44,11 +40,6 @@ RUN set -xe && \
     gem install twurl && \
     pip3 install --break-system-packages --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
     #
-    # Do this here while we still have git installed:
-    git config --global advice.detachedHead false && \
-    branch="##main##" && \
-    echo "${branch//#/}_($(git ls-remote https://github.com/sdr-enthusiasts/docker-planefence refs/heads/${branch//#/} | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
-    cp -f /root/.buildtime /.VERSION && \
     # Clean up
     echo Uninstalling $TEMP_PACKAGES && \
     apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
@@ -94,6 +85,10 @@ RUN \
     # Move the mqtt.py script to an executable directory
     mv -f /scripts/mqtt.py /usr/local/bin/mqtt && \
     #
+    # version
+    branch="##main##" && \
+    echo "${branch//#/}_($(curl -ssL "https://api.github.com/repos/sdr-enthusiasts/docker-planefence/commits/main" |  awk '{if ($1=="\"sha\":") {print substr($2,2,7); exit}}'))_$(date +%y-%m-%d-%T%Z)" | tee /root/.buildtime && \
+    cp -f /root/.buildtime /.VERSION && \
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc
