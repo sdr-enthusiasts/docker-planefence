@@ -845,8 +845,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 #
 # The package contains contributions from several other packages, that may be licensed
 # under different terms. Attributions and our thanks can be found at
-# https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md, or at "/attribution.txt"
-# using the same base URL as you used to get to this web page.
+# https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md
 #
 # Summary of License Terms
 # This program is free software: you can redistribute it and/or modify it under the terms of
@@ -1125,7 +1124,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <div class="footer">
 <hr/>Planefence $VERSION is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's Planefence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
 $(if [[ -f /root/.buildtime ]]; then printf " Build: %s" "$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"; fi)
-<br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="attribution.txt" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">here</a> for attributions to our contributors and open source packages used.
 <br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
 <a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
 </div>
