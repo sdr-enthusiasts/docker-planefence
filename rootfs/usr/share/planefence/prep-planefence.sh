@@ -138,28 +138,28 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # read the environment variables and put them in the planefence.conf file:
 [[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || {
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
-	while :; do sleep 2073600; done
+	exec sleep infinity
 }
 [[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || {
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
-	while :; do sleep 2073600; done
+	exec sleep infinity
 }
-[[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planefence.conf
-[[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planefence.conf
-[[ -n "$PF_ELEVATION" ]] && sed -i 's/\(^\s*ALTCORR=\).*/\1'"\"$PF_ELEVATION\""'/' /usr/share/planefence/planefence.conf
-[[ -n "$PF_NAME" ]] && sed -i 's/\(^\s*MY=\).*/\1'"\"$PF_NAME\""'/' /usr/share/planefence/planefence.conf || sed -i 's/\(^\s*MY=\).*/\1\"My\"/' /usr/share/planefence/planefence.conf
-
-[[ -n "$PF_MAPURL" ]] && sed -i 's|\(^\s*MYURL=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*MYURL=\).*|\1|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_NOISECAPT" ]] && sed -i 's|\(^\s*REMOTENOISE=\).*|\1'"\"$PF_NOISECAPT\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*REMOTENOISE=\).*|\1|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_FUDGELOC" ]] && sed -i 's|\(^\s*FUDGELOC=\).*|\1'"\"$PF_FUDGELOC\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*FUDGELOC=\).*|\1|' /usr/share/planefence/planefence.conf
+configure_planefence "MAXALT" "$PF_MAXALT"
+configure_planefence "DIST" "$PF_MAXDIST"
+configure_planefence "ALTCORR" "$PF_ELEVATION"
+configure_planefence "MY" "\"$PF_NAME\""
+configure_planefence "MYURL" "\"$PF_MAPURL\""
+configure_planefence "REMOTENOISE" "$PF_NOISECAPT"
+configure_planefence "FUDGELOC" "$PF_FUDGELOC"
 chk_enabled "$PF_OPENAIP_LAYER" && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_TWEET_MINTIME" ]] && sed -i 's|\(^\s*TWEET_MINTIME=\).*|\1'"$PF_TWEET_MINTIME"'|' /usr/share/planefence/planefence.conf
-[[ "$PF_TWEET_BEHAVIOR" == "PRE" ]] && sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1PRE|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEET_BEHAVIOR=\).*|\1POST|' /usr/share/planefence/planefence.conf
-chk_enabled "$PF_PLANEALERT" && sed -i 's|\(^\s*PA_LINK=\).*|\1\"'"$PF_PA_LINK"'\"|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PA_LINK=\).*|\1|' /usr/share/planefence/planefence.conf
+
+configure_planefence "TWEET_MINTIME" "${PF_NOTIF_MINTIME:-$PF_TWEET_MINTIME}"
+configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-$PF_TWEET_BEHAVIOR}"
+if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PA_LINK" "$PA_PF_LINK"; else configure_planefence "PA_LINK" ""; fi
 configure_planealert "PF_LINK" "$PA_PF_LINK"
-chk_enabled "$PF_TWEETEVERY" && sed -i 's|\(^\s*TWEETEVERY=\).*|\1true|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*TWEETEVERY=\).*|\1false|' /usr/share/planefence/planefence.conf
-[[ -n "$PA_HISTTIME" ]] && sed -i 's|\(^\s*HISTTIME=\).*|\1\"'"$PA_HISTTIME"'\"|' /usr/share/plane-alert/plane-alert.conf
-[[ -n "$PF_ALERTHEADER" ]] && sed -i "s|\(^\s*ALERTHEADER=\).*|\1\'$PF_ALERTHEADER\'|" /usr/share/plane-alert/plane-alert.conf
+if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then configure_planefence "TWEETEVERY" "true"; else configure_planefence "TWEETEVERY" "false"; fi
+configure_planealert "HISTTIME" "$PA_HISTTIME"
+configure_planealert "ALERTHEADER" "\"$PF_ALERTHEADER\""
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
@@ -182,8 +182,8 @@ else
 fi
 #
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
-[[ -n "$PF_IGNOREDUPES" ]] && sed -i 's|\(^\s*IGNOREDUPES=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1OFF|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_COLLAPSEWITHIN" ]] && sed -i 's|\(^\s*COLLAPSEWITHIN=\).*|\1'"$PF_COLLAPSEWITHIN"'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*IGNOREDUPES=\).*|\1300|' /usr/share/planefence/planefence.conf
+if chk_enabled "$PF_IGNOREDUPES"; then configure_planefence "IGNOREDUPES" "ON"; else configure_planefence "IGNOREDUPES" "OFF"; fi
+configure_planefence "COLLAPSEWITHIN" "${PF_COLLAPSEWITHIN:-300}"
 a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf | sed 's/\"//g')"
 [[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
@@ -197,58 +197,28 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 [[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planeheat.sh
 [[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planeheat.sh
 # -----------------------------------------------------------------------------------
-#
-
-# One-time action for builds after 20210218-094500EST: we moved the backup of .twurlrc from /run/planefence to /usr/share/planefence/persist
-# so /run/* can be TMPFS. As a result, if .twurlrc is still there, move it to its new location.
-# This one-time action can be obsoleted once all users have moved over.
-[[ -f /run/planefence/.twurlrc ]] && mv -n /run/planefence/.twurlrc /usr/share/planefence/persist
-# Now update the .twurlrc in /root if there is a newer version in the persist directory
-[[ -f /usr/share/planefence/persist/.twurlrc ]] && cp -u /usr/share/planefence/persist/.twurlrc /root
-# If there's still nothing in the persist directory or it appears out of date, back up the .twurlrc from /root to there
-[[ -f /root/.twurlrc ]] && cp -n /root/.twurlrc /usr/share/planefence/persist
-#
 # -----------------------------------------------------------------------------------
 #
 # enable or disable tweeting:
 #
-chk_disabled "${PF_TWEET}" && sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
-if chk_enabled "${PF_TWEET,,}"; then
-	if [[ ! -f ~/.twurlrc ]]; then
-		"${s6wrap[@]}" echo "Warning: PF_TWEET is set to ON in .env file, but the Twitter account is not configured."
-		"${s6wrap[@]}" echo "Sign up for a developer account at Twitter, create an app, and get a Consumer Key / Secret."
-		"${s6wrap[@]}" echo "Then run this from the host machine: \"docker exec -it planefence /root/config_tweeting.sh\""
-		"${s6wrap[@]}" echo "For more information on how to sign up for a Twitter Developer Account, see this link:"
-		"${s6wrap[@]}" echo "https://elfsight.com/blog/2020/03/how-to-get-twitter-api-key/"
-		"${s6wrap[@]}" echo "Planefence will continue to start without Twitter functionality."
-		sed -i 's/\(^\s*PLANETWEET=\).*/\1/' /usr/share/planefence/planefence.conf
-	else
-		sed -i 's|\(^\s*PLANETWEET=\).*|\1'"$(sed -n '/profiles:/{n;p;}' /root/.twurlrc | tr -d '[:blank:][=:=]')"'|' /usr/share/planefence/planefence.conf
-		[[ -n "$PF_TWATTRIB" ]] && sed -i 's|\(^\s*ATTRIB=\).*|\1'"\"$PF_TWATTRIB\""'|' /usr/share/planefence/planefence.conf
-	fi
-fi
 
 # Despite the name, this variable also works for Mastodon and Discord notifications:
 # You can use PF_TWATTRIB/PA_TWATTRIB or PF_ATTRIB/PA_ATTRIB or simply $ATTRIB
 # If PA_[TW]ATTRIB isn't set, but PF_[TW]ATTRIB has a value, then the latter will also be used for Plane-Alert
-# Finally, if you set ATTRIB to a value, we will use that for both PA and PF and ignore any PF_[TW]ATTRIB/PA_[TW]ATTRIB values
-[[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planefence "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
-[[ -n "$PA_TWATTRIB$PA_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PA_TWATTRIB$PA_ATTRIB\""
-[[ -z "$PA_TWATTRIB$PA_ATTRIB" ]] && [[ -n "$PF_TWATTRIB$PF_ATTRIB" ]] && configure_planealert "ATTRIB" "\"$PF_TWATTRIB$PF_ATTRIB\""
-[[ -n "$ATTRIB" ]] && configure_both "ATTRIB" "\"$ATTRIB\""
+if [[ -n "${PF_TWATTRIB:-${PF_ATTRIB:-$ATTRIB}}" ]]; then configure_planefence "ATTRIB" "\"${PF_TWATTRIB:-$PF_ATTRIB}\""; fi
+if [[ -n "${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}" ]]; then configure_planealert "ATTRIB" "\"${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}\""; fi
 
 # -----------------------------------------------------------------------------------
 # Set notifications date/time format:
-[[ -n "$NOTIF_DATEFORMAT" ]] && configure_both "NOTIF_DATEFORMAT" "\"$NOTIF_DATEFORMAT\"" || true
-
+if [[ -n "$NOTIF_DATEFORMAT" ]]; then configure_both "NOTIF_DATEFORMAT" "\"$NOTIF_DATEFORMAT\""; fi
 # ---------------------------------------------------------------------
 
 # enable/disable planeheat;
-chk_disabled "$PF_HEATMAP" && configure_planefence "PLANEHEAT" "OFF" || configure_planefence "PLANEHEAT" "ON"
+if chk_disabled "$PF_HEATMAP"; then configure_planefence "PLANEHEAT" "OFF"; else configure_planefence "PLANEHEAT" "ON"; fi
 # Change the heatmap height and width if they are defined in the .env parameter file:
-[[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(^\s*HEATMAPHEIGHT=\).*|\1'"\"$PF_MAPHEIGHT\""'|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_MAPWIDTH" ]] && sed -i 's|\(^\s*HEATMAPWIDTH=\).*|\1'"\"$PF_MAPWIDTH\""'|' /usr/share/planefence/planefence.conf
-[[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*HEATMAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/planefence/planefence.conf
+configure_planefence "HEATMAPHEIGHT" "$PF_MAPHEIGHT"
+configure_planefence "HEATMAPWIDTH" "$PF_MAPWIDTH"
+configure_planefence "HEATMAPZOOM" "$PF_MAPZOOM"
 #
 # Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
 if compgen -G "$1/planefence-??????.html" >/dev/null; then
@@ -262,12 +232,10 @@ fi
 # place the screenshotting URL in place:
 
 if [[ -n "$PF_SCREENSHOTURL" ]]; then
-	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/planefence/planefence.conf
-	sed -i 's|\(^\s*SCREENSHOTURL=\).*|\1'"\"$PF_SCREENSHOTURL\""'|' /usr/share/plane-alert/plane-alert.conf
+	configure_both "SCREENSHOTURL" "\"$PF_SCREENSHOTURL\""
 fi
 if [[ -n "$PF_SCREENSHOT_TIMEOUT" ]]; then
-	sed -i 's|\(^\s*SCREENSHOT_TIMEOUT=\).*|\1'"\"$PF_SCREENSHOT_TIMEOUT\""'|' /usr/share/planefence/planefence.conf
-	sed -i 's|\(^\s*SCREENSHOT_TIMEOUT=\).*|\1'"\"$PF_SCREENSHOT_TIMEOUT\""'|' /usr/share/plane-alert/plane-alert.conf
+	configure_both "SCREENSHOT_TIMEOUT" "$PF_SCREENSHOT_TIMEOUT"
 fi
 
 # if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
@@ -280,17 +248,11 @@ if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && chk_enabled "$
 fi
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
-chk_enabled "$PF_PLANEALERT" && sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*PLANEALERT=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
+if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PLANEALERT" "ON"; else configure_planefence "PLANEALERT" "OFF"; fi
 # Go get the plane-alert-db files:
 /usr/share/plane-alert/get-pa-alertlist.sh
 /usr/share/plane-alert/get-silhouettes.sh
 
-# Now make sure that the file containing the twitter IDs is rewritten with 1 ID per line
-[[ -n "$PF_PA_TWID" ]] && tr , "\n" <<<"$PF_PA_TWID" >/usr/share/plane-alert/plane-alert.twitterid || rm -f /usr/share/plane-alert/plane-alert.twitterid
-# and write the rest of the parameters into their place
-[[ -n "$PF_PA_TWID" ]] && [[ "$PF_PA_TWEET" == "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1DM|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PF_PA_TWEET" == "TWEET" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1TWEET|' /usr/share/plane-alert/plane-alert.conf
-[[ "$PF_PA_TWEET" != "TWEET" ]] && [[ "$PF_PA_TWEET" != "DM" ]] && sed -i 's|\(^\s*TWITTER=\).*|\1false|' /usr/share/plane-alert/plane-alert.conf
 configure_planefence "PF_DISCORD" "$PF_DISCORD"
 configure_planealert "PA_DISCORD" "$PA_DISCORD"
 configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
@@ -306,8 +268,8 @@ configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"
 if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	MASTODON_SERVER="${MASTODON_SERVER,,}"
 	# strip http:// https://
-	[[ "${MASTODON_SERVER:0:7}" == "http://" ]] && MASTODON_SERVER="${MASTODON_SERVER:7}" || true
-	[[ "${MASTODON_SERVER:0:8}" == "https://" ]] && MASTODON_SERVER="${MASTODON_SERVER:8}" || true
+	if [[ "${MASTODON_SERVER:0:7}" == "http://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:7}"; fi
+	if [[ "${MASTODON_SERVER:0:8}" == "https://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:8}"; fi
 	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
 	if ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
 		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<<"$mast_result")"
@@ -332,11 +294,10 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	fi
 fi
 
-[[ -n "$PF_NAME" ]] && sed -i 's|\(^\s*NAME=\).*|\1'"\"$PF_NAME\""'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*NAME=\).*|\1My|' /usr/share/plane-alert/plane-alert.conf
-[[ -n "$PF_MAPURL" ]] && sed -i 's|\(^\s*ADSBLINK=\).*|\1'"\"$PF_MAPURL\""'|' /usr/share/plane-alert/plane-alert.conf
-# removed for now - hardcoding PlaneAlert map zoom to 7 in plane-alert.conf: [[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*MAPZOOM=\).*|\1'"\"$PF_MAPZOOM\""'|' /usr/share/plane-alert/plane-alert.conf
-[[ -n "$PF_PARANGE" ]] && sed -i 's|\(^\s*RANGE=\).*|\1'"$PF_PARANGE"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*RANGE=\).*|\1999999|' /usr/share/plane-alert/plane-alert.conf
-[[ -n "$PF_PA_SQUAWKS" ]] && sed -i 's|\(^\s*SQUAWKS=\).*|\1'"$PF_PA_SQUAWKS"'|' /usr/share/plane-alert/plane-alert.conf || sed -i 's|\(^\s*SQUAWKS=\).*|\1|' /usr/share/plane-alert/plane-alert.conf
+configure_planealert "NAME" "\"${PF_NAME:-My}\""
+configure_planealert "ADSBLINK" "\"$PF_MAPURL\""
+configure_planealert "RANGE" "${PF_PARANGE:-999999}"
+configure_planealert "SQUAWKS" "$PF_PA_SQUAWKS"
 
 if chk_enabled "$PF_AUTOREFRESH"; then configure_planefence "AUTOREFRESH" "true"; else configure_planefence "AUTOREFRESH" "false"; fi
 if chk_enabled "${PA_AUTOREFRESH:-$PF_AUTOREFRESH}"; then configure_planealert "AUTOREFRESH" "true"; else configure_planealert "AUTOREFRESH" "false"; fi
@@ -346,13 +307,22 @@ if chk_enabled "${PA_AUTOREFRESH:-$PF_AUTOREFRESH}"; then configure_planealert "
 # Check if the dist/alt/speed units haven't changed. If they have changed,
 # we need to restart socket30003 so these changes are picked up:
 # First, give the socket30003 startup routine a headstart so this doesn't compete with it:
-sleep 1
+while [[ ! -f /run/socket30003.up ]]; do sleep 1; done
 if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
 	[[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
-	[[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]; then
+	[[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "$FEEDER_LAT" != $(sed -n 's/^\s*latitude=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "$FEEDER_LONG" != $(sed -n 's/^\s*longitude=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "$PF_SOCK30003HOST" != $(sed -n 's/^\s*PEER_HOST=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "${PF_SOCK30003PORT:-30003}" != $(sed -n 's/^\s*PEER_PORT=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]; then
 	[[ -n "$PF_DISTUNIT" ]] && sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_SPEEDUNIT" ]] && sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_ALTUNIT" ]] && sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
+	sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
+	sed -i 's/\(^\s*longitude=\).*/\1'"$FEEDER_LONG"'/' /usr/share/socket30003/socket30003.cfg
+	sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
+	sed -i 's|\(^\s*PEER_PORT=\).*|\1'"${PF_SOCK30003PORT:-30003}"'|' /usr/share/socket30003/socket30003.cfg
+	pkill socket30003.pl
 fi
 #
 #--------------------------------------------------------------------------------
@@ -368,14 +338,6 @@ fi
 [[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
 
 #--------------------------------------------------------------------------------
-# get the sample planepix file
-# if curl -L -s https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/planepix.txt > /usr/share/planefence/persist/planepix.txt.samplefile
-# then
-# 	chmod a+r /usr/share/planefence/persist/planepix.txt.samplefile
-# 	"${s6wrap[@]}" echo "Successfully downloaded planepix sample file to ~/.planefence/planepix.txt.samplefile directory."
-# 	"${s6wrap[@]}" echo "To use it, rename it to, or incorporate it into ~/.planefence/planepix.txt. Any entries in this file will replace the tar1090 screenshot with a picture of the plane."
-# fi
-#--------------------------------------------------------------------------------
 # Put the MOTDs in place:
 configure_planefence "PF_MOTD" "\"$PF_MOTD\""
 configure_planealert "PA_MOTD" "\"$PA_MOTD\""
@@ -383,45 +345,45 @@ configure_planealert "PA_MOTD" "\"$PA_MOTD\""
 #--------------------------------------------------------------------------------
 # Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
 # note that $PF_TRACKSVC has been deprecated/EOL'd
-[[ -n "${PF_TRACKSERVICE}" ]] && configure_planefence "TRACKSERVICE" "${PF_TRACKSERVICE}" || configure_planefence "TRACKSERVICE" "globe.adsbexchange.com"
-[[ -n "$PA_TRACKSERVICE" ]] && configure_planealert "TRACKSERVICE" "$PA_TRACKSERVICE" || configure_planealert "TRACKSERVICE" "globe.adsbexchange.com"
-[[ -n "$PA_TRACKLIMIT" ]] && configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT" || true
-chk_disabled "$PA_TRACK_FIRSTSEEN" && configure_planealert "TRACK_FIRSTSEEN" "disabled" || configure_planealert "TRACK_FIRSTSEEN" "enabled"
+configure_planefence "TRACKSERVICE" "${PF_TRACKSERVICE:-globe.adsbexchange.com}"
+configure_planealert "TRACKSERVICE" "${PA_TRACKSERVICE:-globe.adsbexchange.com}"
+configure_planealert "TRACKLIMIT" "$PA_TRACKLIMIT"
+if chk_disabled "$PA_TRACK_FIRSTSEEN"; then configure_planealert "TRACK_FIRSTSEEN" "disabled"; else configure_planealert "TRACK_FIRSTSEEN" "enabled"; fi
 #
 #--------------------------------------------------------------------------------
 # Configure MQTT notifications for Planefence and plane-alert
-[[ -n "$PF_MQTT_URL" ]] && configure_planefence "MQTT_URL" "$PF_MQTT_URL" || true
-[[ -n "$PF_MQTT_CLIENT_ID" ]] && configure_planefence "MQTT_CLIENT_ID" "$PF_MQTT_CLIENT_ID" || true
-[[ -n "$PF_MQTT_TOPIC" ]] && configure_planefence "MQTT_TOPIC" "$PF_MQTT_TOPIC" || true
-[[ -n "$PF_MQTT_DATETIME_FORMAT" ]] && configure_planefence "MQTT_DATETIME_FORMAT" "\"$PF_MQTT_DATETIME_FORMAT\"" || true
-[[ -n "$PF_MQTT_USERNAME" ]] && configure_planefence "MQTT_USERNAME" "$PF_MQTT_USERNAME" || true
-[[ -n "$PF_MQTT_PASSWORD" ]] && configure_planefence "MQTT_PASSWORD" "$PF_MQTT_PASSWORD" || true
-[[ -n "$PF_MQTT_QOS" ]] && configure_planefence "MQTT_QOS" "$PF_MQTT_QOS" || true
+configure_planefence "MQTT_URL" "$PF_MQTT_URL"
+configure_planefence "MQTT_CLIENT_ID" "$PF_MQTT_CLIENT_ID"
+configure_planefence "MQTT_TOPIC" "$PF_MQTT_TOPIC"
+configure_planefence "MQTT_DATETIME_FORMAT" "\"$PF_MQTT_DATETIME_FORMAT\""
+configure_planefence "MQTT_USERNAME" "$PF_MQTT_USERNAME"
+configure_planefence "MQTT_PASSWORD" "$PF_MQTT_PASSWORD"
+configure_planefence "MQTT_QOS" "$PF_MQTT_QOS"
 
-[[ -n "$PA_MQTT_URL" ]] && configure_planealert "MQTT_URL" "$PA_MQTT_URL" || true
-[[ -n "$PA_MQTT_CLIENT_ID" ]] && configure_planealert "MQTT_CLIENT_ID" "$PA_MQTT_CLIENT_ID" || true
-[[ -n "$PA_MQTT_TOPIC" ]] && configure_planealert "MQTT_TOPIC" "$PA_MQTT_TOPIC" || true
-[[ -n "$PA_MQTT_DATETIME_FORMAT" ]] && configure_planealert "MQTT_DATETIME_FORMAT" "\"$PA_MQTT_DATETIME_FORMAT\"" || true
-[[ -n "$PA_MQTT_USERNAME" ]] && configure_planealert "MQTT_USERNAME" "$PA_MQTT_USERNAME" || true
-[[ -n "$PA_MQTT_PASSWORD" ]] && configure_planealert "MQTT_PASSWORD" "$PA_MQTT_PASSWORD" || true
-[[ -n "$PA_MQTT_QOS" ]] && configure_planealert "MQTT_QOS" "$PA_MQTT_QOS" || true
+configure_planealert "MQTT_URL" "$PA_MQTT_URL"
+configure_planealert "MQTT_CLIENT_ID" "$PA_MQTT_CLIENT_ID"
+configure_planealert "MQTT_TOPIC" "$PA_MQTT_TOPIC"
+configure_planealert "MQTT_DATETIME_FORMAT" "\"$PA_MQTT_DATETIME_FORMAT\""
+configure_planealert "MQTT_USERNAME" "$PA_MQTT_USERNAME"
+configure_planealert "MQTT_PASSWORD" "$PA_MQTT_PASSWORD"
+configure_planealert "MQTT_QOS" "$PA_MQTT_QOS"
 #
 #--------------------------------------------------------------------------------
 # RSS related parameters:
-[[ -n "$PF_RSS_SITELINK" ]] && configure_planefence "RSS_SITELINK" "$PF_RSS_SITELINK" || true
-[[ -n "$PF_RSS_FAVICONLINK" ]] && configure_planefence "RSS_FAVICONLINK" "$PF_RSS_FAVICONLINK" || true
-[[ -n "$PA_RSS_SITELINK" ]] && configure_planealert "RSS_SITELINK" "$PA_RSS_SITELINK" || true
-[[ -n "$PA_RSS_FAVICONLINK" ]] && configure_planealert "RSS_FAVICONLINK" "$PA_RSS_FAVICONLINK" || true
+configure_planefence "RSS_SITELINK" "$PF_RSS_SITELINK"
+configure_planefence "RSS_FAVICONLINK" "$PF_RSS_FAVICONLINK"
+configure_planealert "RSS_SITELINK" "$PA_RSS_SITELINK"
+configure_planealert "RSS_FAVICONLINK" "$PA_RSS_FAVICONLINK"
 #
 #--------------------------------------------------------------------------------
 # BlueSky related parameters:
-chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && configure_planefence "BLUESKY_HANDLE" "$BLUESKY_HANDLE" || configure_planefence "BLUESKY_HANDLE" ""
-chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]] && configure_planefence "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD" || configure_planefence "BLUESKY_APP_PASSWORD" ""
-chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planefence "BLUESKY_API" "$BLUESKY_API" || configure_planefence "BLUESKY_API" ""
+if chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]]; then configure_planefence "BLUESKY_HANDLE" "$BLUESKY_HANDLE"; else configure_planefence "BLUESKY_HANDLE" ""; fi
+if chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then configure_planefence "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD"; else configure_planefence "BLUESKY_APP_PASSWORD" ""; fi
+if chk_enabled "$PF_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]]; then configure_planefence "BLUESKY_API" "$BLUESKY_API"; else configure_planefence "BLUESKY_API" ""; fi
 
-chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]] && configure_planealert "BLUESKY_HANDLE" "$BLUESKY_HANDLE" || configure_planealert "BLUESKY_HANDLE" ""
-chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]] && configure_planealert "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD" || configure_planealert "BLUESKY_APP_PASSWORD" ""
-chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]] && configure_planealert "BLUESKY_API" "$BLUESKY_API" || configure_planealert "BLUESKY_API" ""
+if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]]; then configure_planealert "BLUESKY_HANDLE" "$BLUESKY_HANDLE"; else configure_planealert "BLUESKY_HANDLE" ""; fi
+if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then configure_planealert "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD"; else configure_planealert "BLUESKY_APP_PASSWORD" ""; fi
+if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]]; then configure_planealert "BLUESKY_API" "$BLUESKY_API"; else configure_planealert "BLUESKY_API" ""; fi
 #
 #--------------------------------------------------------------------------------
 # Make sure that all past map links follow PA/PF_TRACKS

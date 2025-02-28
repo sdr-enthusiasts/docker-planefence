@@ -7,10 +7,6 @@ RUN set -xe && \
     KEPT_PIP3_PACKAGES=() && \
     KEPT_RUBY_PACKAGES=() && \
     #
-    TEMP_PACKAGES+=(pkg-config) && \
-    TEMP_PACKAGES+=(git) && \
-    TEMP_PACKAGES+=(gcc) && \
-    TEMP_PACKAGES+=(pkg-config) && \
     TEMP_PACKAGES+=(python3-pip) && \
     #
     KEPT_PACKAGES+=(unzip) && \
@@ -23,7 +19,6 @@ RUN set -xe && \
     KEPT_PACKAGES+=(lighttpd) && \
     KEPT_PACKAGES+=(perl) && \
     KEPT_PACKAGES+=(iputils-ping) && \
-    KEPT_PACKAGES+=(ruby) && \
     KEPT_PACKAGES+=(php-cgi) && \
     KEPT_PACKAGES+=(html-xml-utils) && \
     KEPT_PACKAGES+=(file) && \
@@ -36,24 +31,18 @@ RUN set -xe && \
     KEPT_PIP3_PACKAGES+=(requests) && \
     KEPT_PIP3_PACKAGES+=(geopy) && \
     #
-    KEPT_RUBY_PACKAGES+=(twurl) && \
-    #
     # Install all the apt, pip3, and gem (ruby) packages:
     apt-get update -q && \
     apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
-    gem install twurl && \
     pip3 install --break-system-packages --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
     #
-    # Do this here while we still have git installed:
-    git config --global advice.detachedHead false && \
-    branch="##main##" && \
-    echo "${branch//#/}_($(git ls-remote https://github.com/sdr-enthusiasts/docker-planefence refs/heads/${branch//#/} | awk '{ print substr($1,1,7)}'))_$(date +%y-%m-%d-%T%Z)" > /root/.buildtime && \
-    cp -f /root/.buildtime /.VERSION && \
     # Clean up
     echo Uninstalling $TEMP_PACKAGES && \
     apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y -q && \
+    # remove pycache
+    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
     rm -rf \
     /src/* \
     /var/cache/* \
@@ -64,7 +53,7 @@ RUN set -xe && \
 #
 COPY rootfs/ /
 #
-COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
+# COPY ATTRIBUTION.md /usr/share/planefence/stage/attribution.txt
 #
 RUN \
     --mount=type=bind,source=./,target=/app/ \
@@ -92,6 +81,10 @@ RUN \
     # Move the mqtt.py script to an executable directory
     mv -f /scripts/mqtt.py /usr/local/bin/mqtt && \
     #
+    # version
+    branch="##main##" && \
+    echo "${branch//#/}_($(curl -ssL "https://api.github.com/repos/sdr-enthusiasts/docker-planefence/commits/main" |  awk '{if ($1=="\"sha\":") {print substr($2,2,7); exit}}'))_$(date +%y-%m-%d-%T%Z)" | tee /root/.buildtime && \
+    cp -f /root/.buildtime /.VERSION && \
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc
