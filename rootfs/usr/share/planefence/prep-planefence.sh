@@ -159,7 +159,7 @@ if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PA_LINK" "$PA_PF_LIN
 configure_planealert "PF_LINK" "$PA_PF_LINK"
 if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then configure_planefence "TWEETEVERY" "true"; else configure_planefence "TWEETEVERY" "false"; fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
-configure_planealert "ALERTHEADER" "\"$PF_ALERTHEADER\""
+configure_planealert "ALERTHEADER" "\'$PF_ALERTHEADER\'"
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
