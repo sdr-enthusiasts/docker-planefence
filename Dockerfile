@@ -1,4 +1,4 @@
-FROM pbase
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:planefence_base
 
 # this layer currently installs nothing, it's kept around so other dependencies can easily be added
 # to planefence without changing the planefence_base image
