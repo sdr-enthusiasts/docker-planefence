@@ -1,40 +1,40 @@
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:planefence_base
+FROM pbase
 
 # this layer currently installs nothing, it's kept around so other dependencies can easily be added
 # to planefence without changing the planefence_base image
-RUN set -xe && \
-    # define packages needed for installation and general management of the container:
-    TEMP_PACKAGES=() && \
-    KEPT_PACKAGES=() && \
-    KEPT_PIP3_PACKAGES=() && \
-    KEPT_RUBY_PACKAGES=() && \
-    #
-    TEMP_PACKAGES+=(python3-pip) && \
-    #
-    #KEPT_PACKAGES+=(procps) && \
-    #
-    # tzlocal is already in planefence_base, this is just kept around so this layer builds nicely
-    KEPT_PIP3_PACKAGES+=(tzlocal) && \
-    #
-    # Install all the apt, pip3, and packages:
-    apt-get update -q && \
-    apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
-    pip3 install --break-system-packages --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
-    #
-    # Clean up
-    echo Uninstalling $TEMP_PACKAGES && \
-    apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
-    apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
-    apt-get clean -y -q && \
-    # remove pycache
-    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
-    rm -rf \
-    /src/* \
-    /var/cache/* \
-    /tmp/* \
-    /var/lib/apt/lists/* \
-    /.dockerenv \
-    /git
+#RUN set -xe && \
+#    # define packages needed for installation and general management of the container:
+#    TEMP_PACKAGES=() && \
+#    KEPT_PACKAGES=() && \
+#    KEPT_PIP3_PACKAGES=() && \
+#    KEPT_RUBY_PACKAGES=() && \
+#    #
+#    TEMP_PACKAGES+=(python3-pip) && \
+#    #
+#    #KEPT_PACKAGES+=(procps) && \
+#    #
+#    # tzlocal is already in planefence_base, this is just kept around so this layer builds nicely
+#    KEPT_PIP3_PACKAGES+=(tzlocal) && \
+#    #
+#    # Install all the apt, pip3, and packages:
+#    apt-get update -q && \
+#    apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests ${TEMP_PACKAGES[@]} ${KEPT_PACKAGES[@]} && \
+#    pip3 install --break-system-packages --no-cache-dir ${KEPT_PIP3_PACKAGES[@]} && \
+#    #
+#    # Clean up
+#    echo Uninstalling $TEMP_PACKAGES && \
+#    apt-get remove -y -q ${TEMP_PACKAGES[@]} && \
+#    apt-get autoremove -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
+#    apt-get clean -y -q && \
+#    # remove pycache
+#    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
+#    rm -rf \
+#    /src/* \
+#    /var/cache/* \
+#    /tmp/* \
+#    /var/lib/apt/lists/* \
+#    /.dockerenv \
+#    /git
 #
 COPY rootfs/ /
 #
