@@ -655,7 +655,7 @@ tail --lines=+"$READLINES" "$SOCKETFILE" > "$INFILETMP"
 
 # First, run planefence.py to create the CSV file:
 LOG "Invoking planefence.py..."
-$PLANEFENCEDIR/planefence.py --logfile="$INFILETMP" --outfile="$OUTFILETMP" --maxalt="$MAXALT" --altcorr="$ALTCORR" --dist="$DIST" --distunit="$DISTUNIT" --lat="$LAT" --lon="$LON" "$VERBOSE" "$CALCDIST" --trackservice="adsbexchange" | LOG
+$PLANEFENCEDIR/planefence.py --logfile="$INFILETMP" --outfile="$OUTFILETMP" --maxalt="$MAXALT" --altcorr="${ALTCORR:-0}" --dist="$DIST" --distunit="$DISTUNIT" --lat="$LAT" --lon="$LON" "$VERBOSE" "$CALCDIST" --trackservice="adsbexchange" | LOG
 LOG "Returned from planefence.py..."
 
 # Now we need to combine any double entries. This happens when a plane was in range during two consecutive Planefence runs
