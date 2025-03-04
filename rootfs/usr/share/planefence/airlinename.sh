@@ -191,7 +191,8 @@ fi
 
 # Clean up the results
 if [[ -n "$b" ]]; then
-  b="$(/scripts/to_ascii "${b^^}")" # convert to ASCII and uppercase
+  b="$(/scripts/to_ascii "$b")" # convert to ASCII
+  b="${b^^}" # uppercase the result
   b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
   b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
   b="${b% TRUSTEE}"

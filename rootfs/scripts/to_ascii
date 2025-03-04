@@ -39,7 +39,7 @@ function to_ascii() {
   conv[Ȧ]="A"
 
   conv[Ç]="C"
-  conv[Č]="C"
+  conv[Č]="Cz"
   conv[Ć]="C"
   conv[Ĉ]="C"
   conv[Ċ]="C"
@@ -212,7 +212,7 @@ function to_ascii() {
   conv[ḇ]="b"
   
   conv[ç]="c"
-  conv[č]="c"
+  conv[č]="cz"
   conv[ĉ]="c"
   conv[ċ]="c"
   conv[ć]="c"
