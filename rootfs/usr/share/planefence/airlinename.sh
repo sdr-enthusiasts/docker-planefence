@@ -78,7 +78,8 @@ CLEANUP_CACHE ()
   if [[ "$2" -gt "0" ]]; then CACHETIME="$2"; else CACHETIME=7; fi
   if [[ -f "$1" ]]; then
     # we could probably combine these, but... first remove the items that have expired in the cache
-    awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' "$1" >/tmp/namecache 2>/dev/null
+    awk -F ',' -v a="$(date -d "-$CACHETIME days" +%s)" -v b="$(date -d "-$REMOTEMISSCACHE seconds" +%s)" \
+      '{if ( ( $3 >= a && $2 != "#NOTFOUND") || ( $3 >= b && $2 == "#NOTFOUND")){print $1 "," $2 "," $3}}' "$1" >/tmp/namecache 2>/dev/null
     awk -F',' '!seen[$1]++' /tmp/namecache > "$1"
     rm -f /tmp/namecache
   fi
@@ -190,9 +191,7 @@ fi
 
 # Clean up the results
 if [[ -n "$b" ]]; then
-  b="${b^^}"
-  b="${b//[^[:alnum:] ]/}"        # cleanup any non alphanumeric characters
-  b="$(echo "$b"|xargs)" #clean up extra spaces
+  b="$(/scripts/to_ascii "${b^^}")" # convert to ASCII and uppercase
   b="${b% [A-Z0-9]}" #clean up single letters/numbers at the end, so "KENNEDY JOHN F" becomes "KENNEDY JOHN"
   b="${b% DBA}" #clean up some undesired suffices, mostly corporate entity names
   b="${b% TRUSTEE}"
