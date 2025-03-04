@@ -31,7 +31,6 @@ function to_ascii() {
   conv[Ā]="A"
   conv[Ă]="A"
   conv[Ą]="A"
-  conv[Ą]="A"
   conv[Ǎ]="A"
   conv[Ǟ]="A"
   conv[Ǡ]="A"
@@ -44,7 +43,6 @@ function to_ascii() {
   conv[Ć]="C"
   conv[Ĉ]="C"
   conv[Ċ]="C"
-  conv[Č]="C"
 
   conv[Ď]="D"
   conv[Đ]="D"
@@ -63,9 +61,6 @@ function to_ascii() {
   conv[Ę]="E"
   conv[Ė]="E"
   conv[Ě]="E"
-  conv[Ę]="E"
-  conv[Ė]="E"
-  conv[Ě]="E"
   conv[Ȅ]="E"
   conv[Ȇ]="E"
 
@@ -73,7 +68,6 @@ function to_ascii() {
   conv[Ğ]="G"
   conv[Ģ]="G"
   conv[Ġ]="G"
-  conv[Ĝ]="G"
 
   conv[Ĥ]="H"
   conv[Ħ]="H"
@@ -96,7 +90,6 @@ function to_ascii() {
   conv[Ĵ]="J"
 
   conv[Ķ]="K"
-  conv[ĸ]="K"
   conv[Ḱ]="K"
   conv[Ḳ]="K"
   conv[Ḵ]="K"
@@ -196,7 +189,6 @@ function to_ascii() {
   conv[Ẑ]="Z"
   conv[Ẓ]="Z"
   conv[Ẕ]="Z"
-  conv[Ẕ]="Z"
 
   conv[à]="a"
   conv[á]="a"
@@ -224,8 +216,6 @@ function to_ascii() {
   conv[ĉ]="c"
   conv[ċ]="c"
   conv[ć]="c"
-  conv[ċ]="c"
-  conv[ĉ]="c"
 
   conv[ď]="d"
   conv[đ]="d"
@@ -234,13 +224,7 @@ function to_ascii() {
   conv[ḏ]="d"
   conv[ḑ]="d"
   conv[ḓ]="d"
-  conv[ḋ]="d"
-  conv[ḍ]="d"
-  conv[ḏ]="d"
-  conv[ḑ]="d"
-  conv[ḓ]="d"
   conv[₫]="d"
-
 
   conv[è]="e"
   conv[é]="e"
@@ -251,8 +235,6 @@ function to_ascii() {
   conv[ė]="e"
   conv[ę]="e"
   conv[ě]="e"
-  conv[ė]="e"
-  conv[ĕ]="e"
   conv[ȅ]="e"
   conv[ȇ]="e"
 
@@ -263,7 +245,6 @@ function to_ascii() {
   conv[ğ]="g"
   conv[ģ]="g"
   conv[ġ]="g"
-  conv[ĝ]="g"
 
   conv[ĥ]="h"
   conv[ħ]="h"
@@ -273,7 +254,6 @@ function to_ascii() {
   conv[ḩ]="h"
   conv[ḫ]="h"
   conv[ẖ]="h"
-  conv[ḥ]="h"
 
   conv[ì]="i"
   conv[í]="i"
@@ -284,10 +264,6 @@ function to_ascii() {
   conv[ĭ]="i"
   conv[į]="i"
   conv[ı]="i"
-  conv[į]="i"
-  conv[ĭ]="i"
-  conv[ī]="i"
-  conv[ĩ]="i"
   conv[ɨ]="i"
   conv[ᵻ]="i"
 
@@ -312,7 +288,6 @@ function to_ascii() {
   conv[ṁ]="m"
   conv[ṃ]="m"
   conv[ḿ]="m"
-  conv[ṁ]="m"
 
   conv[ñ]="n"
   conv[ń]="n"
@@ -400,7 +375,6 @@ function to_ascii() {
   conv[ẑ]="z"
   conv[ẓ]="z"
   conv[ẕ]="z"
-
 
   conv[æ]="ae"
   conv[œ]="oe"
