@@ -138,28 +138,43 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 # -----------------------------------------------------------------------------------
 #
 # read the environment variables and put them in the planefence.conf file:
-[[ -n "$FEEDER_LAT" ]] && sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planefence.conf || {
+if [[ -n "$FEEDER_LAT" ]]; then
+	configure_planefence "LAT" "$FEEDER_LAT"
+else
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
 	exec sleep infinity
-}
-[[ -n "$FEEDER_LONG" ]] && sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planefence.conf || {
+fi
+
+if [[ -n "$FEEDER_LONG" ]]; then
+	configure_planefence "LON" "$FEEDER_LONG"
+else
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
 	exec sleep infinity
-}
+fi
+
 configure_planefence "MAXALT" "$PF_MAXALT"
 configure_planefence "DIST" "$PF_MAXDIST"
 configure_planefence "ALTCORR" "$PF_ELEVATION"
-configure_planefence "MY" "\"$PF_NAME\""
-configure_planefence "MYURL" "\"$PF_MAPURL\""
+configure_planefence "MY" "$PF_NAME"
+configure_planefence "MYURL" "$PF_MAPURL"
 configure_planefence "REMOTENOISE" "$PF_NOISECAPT"
 configure_planefence "FUDGELOC" "$PF_FUDGELOC"
-chk_enabled "$PF_OPENAIP_LAYER" && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\""'|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"OFF\""'|' /usr/share/planefence/planefence.conf
+
+if chk_enabled "$PF_OPENAIP_LAYER"; then
+	configure_planefence "OPENAIP_LAYER" "ON"
+else
+	configure_planefence "OPENAIP_LAYER" "OFF"
+fi
 
 configure_planefence "TWEET_MINTIME" "${PF_NOTIF_MINTIME:-$PF_TWEET_MINTIME}"
 configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-$PF_TWEET_BEHAVIOR}"
-configure_planefence "PA_LINK" "\"$PF_PA_LINK\""
-configure_planealert "PF_LINK" "\"$PA_PF_LINK\""
-if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then configure_planefence "TWEETEVERY" "true"; else configure_planefence "TWEETEVERY" "false"; fi
+configure_planefence "PA_LINK" "$PF_PA_LINK"
+configure_planealert "PF_LINK" "$PA_PF_LINK"
+if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then
+	configure_planefence "TWEETEVERY" "true"
+else
+	configure_planefence "TWEETEVERY" "false"
+fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "\'$PF_ALERTHEADER\'"
 
@@ -207,12 +222,12 @@ sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planehea
 # Despite the name, this variable also works for Mastodon and Discord notifications:
 # You can use PF_TWATTRIB/PA_TWATTRIB or PF_ATTRIB/PA_ATTRIB or simply $ATTRIB
 # If PA_[TW]ATTRIB isn't set, but PF_[TW]ATTRIB has a value, then the latter will also be used for Plane-Alert
-if [[ -n "${PF_TWATTRIB:-${PF_ATTRIB:-$ATTRIB}}" ]]; then configure_planefence "ATTRIB" "\"${PF_TWATTRIB:-$PF_ATTRIB}\""; fi
-if [[ -n "${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}" ]]; then configure_planealert "ATTRIB" "\"${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}\""; fi
+if [[ -n "${PF_TWATTRIB:-${PF_ATTRIB:-$ATTRIB}}" ]]; then configure_planefence "ATTRIB" "${PF_TWATTRIB:-$PF_ATTRIB}"; fi
+if [[ -n "${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}" ]]; then configure_planealert "ATTRIB" "${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}"; fi
 
 # -----------------------------------------------------------------------------------
 # Set notifications date/time format:
-if [[ -n "$NOTIF_DATEFORMAT" ]]; then configure_both "NOTIF_DATEFORMAT" "\"$NOTIF_DATEFORMAT\""; fi
+if [[ -n "$NOTIF_DATEFORMAT" ]]; then configure_both "NOTIF_DATEFORMAT" "$NOTIF_DATEFORMAT"; fi
 # ---------------------------------------------------------------------
 
 # enable/disable planeheat;
@@ -234,7 +249,7 @@ fi
 # place the screenshotting URL in place:
 
 if [[ -n "$PF_SCREENSHOTURL" ]]; then
-	configure_both "SCREENSHOTURL" "\"$PF_SCREENSHOTURL\""
+	configure_both "SCREENSHOTURL" "$PF_SCREENSHOTURL"
 fi
 if [[ -n "$PF_SCREENSHOT_TIMEOUT" ]]; then
 	configure_both "SCREENSHOT_TIMEOUT" "$PF_SCREENSHOT_TIMEOUT"
@@ -257,11 +272,11 @@ if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PLANEALERT" "ON"; el
 
 configure_planefence "PF_DISCORD" "$PF_DISCORD"
 configure_planealert "PA_DISCORD" "$PA_DISCORD"
-configure_planealert "PA_DISCORD_WEBHOOKS" "\"${PA_DISCORD_WEBHOOKS}\""
-configure_planefence "PF_DISCORD_WEBHOOKS" "\"${PF_DISCORD_WEBHOOKS}\""
-configure_both "DISCORD_FEEDER_NAME" "\"${DISCORD_FEEDER_NAME}\""
-configure_both "DISCORD_MEDIA" "\"${DISCORD_MEDIA}\""
-configure_both "NOTIFICATION_SERVER" "\"NOTIFICATION_SERVER\""
+configure_planealert "PA_DISCORD_WEBHOOKS" "${PA_DISCORD_WEBHOOKS}"
+configure_planefence "PF_DISCORD_WEBHOOKS" "${PF_DISCORD_WEBHOOKS}"
+configure_both "DISCORD_FEEDER_NAME" "${DISCORD_FEEDER_NAME}"
+configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
+configure_both "NOTIFICATION_SERVER" "NOTIFICATION_SERVER"
 
 # Add OPENAIPKEY for use with OpenAIP, necessary for it to work if PF_OPENAIP_LAYER is ON
 configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"
@@ -296,8 +311,8 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	fi
 fi
 
-configure_planealert "NAME" "\"${PF_NAME:-My}\""
-configure_planealert "ADSBLINK" "\"$PF_MAPURL\""
+configure_planealert "NAME" "${PF_NAME:-My}"
+configure_planealert "ADSBLINK" "$PF_MAPURL"
 configure_planealert "RANGE" "${PF_PARANGE:-999999}"
 configure_planealert "SQUAWKS" "$PF_PA_SQUAWKS"
 
@@ -341,8 +356,8 @@ fi
 
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
-configure_planefence "PF_MOTD" "\"$PF_MOTD\""
-configure_planealert "PA_MOTD" "\"$PA_MOTD\""
+configure_planefence "PF_MOTD" "$PF_MOTD"
+configure_planealert "PA_MOTD" "$PA_MOTD"
 #
 #--------------------------------------------------------------------------------
 # Set TRACKSERVICE and TRACKLIMIT for Planefence and plane-alert.
@@ -357,7 +372,7 @@ if chk_disabled "$PA_TRACK_FIRSTSEEN"; then configure_planealert "TRACK_FIRSTSEE
 configure_planefence "MQTT_URL" "$PF_MQTT_URL"
 configure_planefence "MQTT_CLIENT_ID" "$PF_MQTT_CLIENT_ID"
 configure_planefence "MQTT_TOPIC" "$PF_MQTT_TOPIC"
-configure_planefence "MQTT_DATETIME_FORMAT" "\"$PF_MQTT_DATETIME_FORMAT\""
+configure_planefence "MQTT_DATETIME_FORMAT" "$PF_MQTT_DATETIME_FORMAT"
 configure_planefence "MQTT_USERNAME" "$PF_MQTT_USERNAME"
 configure_planefence "MQTT_PASSWORD" "$PF_MQTT_PASSWORD"
 configure_planefence "MQTT_QOS" "$PF_MQTT_QOS"
@@ -365,7 +380,7 @@ configure_planefence "MQTT_QOS" "$PF_MQTT_QOS"
 configure_planealert "MQTT_URL" "$PA_MQTT_URL"
 configure_planealert "MQTT_CLIENT_ID" "$PA_MQTT_CLIENT_ID"
 configure_planealert "MQTT_TOPIC" "$PA_MQTT_TOPIC"
-configure_planealert "MQTT_DATETIME_FORMAT" "\"$PA_MQTT_DATETIME_FORMAT\""
+configure_planealert "MQTT_DATETIME_FORMAT" "$PA_MQTT_DATETIME_FORMAT"
 configure_planealert "MQTT_USERNAME" "$PA_MQTT_USERNAME"
 configure_planealert "MQTT_PASSWORD" "$PA_MQTT_PASSWORD"
 configure_planealert "MQTT_QOS" "$PA_MQTT_QOS"
