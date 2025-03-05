@@ -146,7 +146,7 @@ def _try_get_photo(row, index):
         return ""
 
 def get_plane_info(icao):
-    return planedb.get(icao, {})
+    return planedb.get(icao, { 'icao': icao })
 
 def altitude_str(config, alt):
     alt_actual = alt
