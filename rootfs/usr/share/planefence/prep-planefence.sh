@@ -19,8 +19,8 @@ function configure_planefence() {
 	local SETTING_NAME="$1"
 	local SETTING_VALUE="$2"
 	if [[ -n "$SETTING_VALUE" ]]; then
-		if [[ "${SETTINGS_VALUE:0:1}" != "\"" ]]; then SETTINGS_VALUE="\"$SETTINGS_VALUE"; fi
-		if [[ "${SETTINGS_VALUE: -1}" != "\"" ]]; then SETTINGS_VALUE="$SETTINGS_VALUE\""; fi
+		if [[ "${SETTING_VALUE:0:1}" != "\"" ]]; then SETTING_VALUE="\"$SETTING_VALUE"; fi
+		if [[ "${SETTING_VALUE: -1}" != "\"" ]]; then SETTING_VALUE="$SETTING_VALUE\""; fi
 		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/planefence/planefence.conf
 	else
 		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/planefence/planefence.conf
@@ -30,6 +30,8 @@ function configure_planealert() {
 	local SETTING_NAME="$1"
 	local SETTING_VALUE="$2"
 	if [[ -n "$SETTING_VALUE" ]]; then
+		if [[ "${SETTING_VALUE:0:1}" != "\"" ]]; then SETTING_VALUE="\"$SETTING_VALUE"; fi
+		if [[ "${SETTING_VALUE: -1}" != "\"" ]]; then SETTING_VALUE="$SETTING_VALUE\""; fi
 		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/plane-alert/plane-alert.conf
 	else
 		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/plane-alert/plane-alert.conf
