@@ -113,7 +113,9 @@ def process_alert(config, plane):
 
     # Attach data fields
     pf.discord.field(embed, "ICAO", plane['icao'])
-    pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
+
+    if plane.get('tail_num', "") != "":
+        pf.discord.field(embed, "Tail Number", f"[{plane['tail_num']}]({fa_link})")
 
     if plane.get('callsign', "") != "":
         pf.discord.field(embed, "Callsign", plane['callsign'])
