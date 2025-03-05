@@ -178,7 +178,7 @@ else
 	configure_planefence "TWEETEVERY" "false"
 fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
-configure_planealert "ALERTHEADER" "\'$PF_ALERTHEADER\'"
+configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
