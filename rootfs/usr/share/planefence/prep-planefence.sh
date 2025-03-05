@@ -155,8 +155,8 @@ chk_enabled "$PF_OPENAIP_LAYER" && sed -i 's|\(^\s*OPENAIP_LAYER=\).*|\1'"\"ON\"
 
 configure_planefence "TWEET_MINTIME" "${PF_NOTIF_MINTIME:-$PF_TWEET_MINTIME}"
 configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-$PF_TWEET_BEHAVIOR}"
-if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PA_LINK" "$PA_PF_LINK"; else configure_planefence "PA_LINK" ""; fi
-configure_planealert "PF_LINK" "$PA_PF_LINK"
+configure_planefence "PA_LINK" "\"$PF_PA_LINK\""
+configure_planealert "PF_LINK" "\"$PA_PF_LINK\""
 if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then configure_planefence "TWEETEVERY" "true"; else configure_planefence "TWEETEVERY" "false"; fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "\'$PF_ALERTHEADER\'"
