@@ -5,7 +5,7 @@
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/planefence/
+# https://github.com/sdr-enthusiasts/docker-planefence/
 #
 # The package contains parts of, and modifications or derivatives to the following:
 # Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
