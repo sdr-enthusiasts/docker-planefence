@@ -76,6 +76,7 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+cp -n /usr/share/planefence/stage/favicon.ico /usr/share/planefence/html/plane-alert
 mv -f /usr/share/planefence/html/{*.js,*.css} /usr/share/planefence/html/scripts
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
 rm -f /usr/share/planefence/html/planefence.config /usr/share/planefence/html/*.template /usr/share/planefence/html/aircraft-database-complete-

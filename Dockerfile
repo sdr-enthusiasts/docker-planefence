@@ -74,8 +74,4 @@ RUN \
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc
 
-#
-# No need for SHELL and ENTRYPOINT as those are inherited from the base image
-#
-
 EXPOSE 80
