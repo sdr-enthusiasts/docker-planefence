@@ -860,6 +860,8 @@ cat <<EOF >"$OUTFILEHTMTMP"
 # If not, see https://www.gnu.org/licenses/.
 -->
 <head>
+	<link rel="icon" href="favicon.ico">
+
 EOF
 
 if chk_enabled "${AUTOREFRESH,,}"; then
