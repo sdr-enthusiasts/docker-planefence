@@ -166,6 +166,10 @@ GET_PS_PHOTO () {
 	starttime="$(date +%s)"
 
 	if chk_disabled "$SHOWIMAGES"; then return 0; fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+	fi
 	
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
@@ -188,8 +192,8 @@ GET_PS_PHOTO () {
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
-		echo ""
-		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available" >> /tmp/getpi.log
+		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
 	fi
 }
 
