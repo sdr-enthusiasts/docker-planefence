@@ -65,11 +65,11 @@ CLEANUP ()
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    find /usr/share/planefence/persist/planepix/cache/*.jpg -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/planepix/cache/* -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/plane{fence,-alert}-discord.template.~[0-9]*~ -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    rm -f /tmp/timestamp
+    rm -f /tmp/timestamp /tmp/timestamp.planespottercache
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
         [[ "$f" == "" ]] && continue || true
