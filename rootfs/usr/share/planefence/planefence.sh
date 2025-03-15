@@ -240,6 +240,7 @@ WRITEHTMLTABLE () {
 	<th>Transponder ID</th>
 	<th>Flight</th>
 	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
+	<th>Aircraft Image</th>
 	<th>Time First Seen</th>
 	<th>Time Last Seen</th>
 	<th>Min. Altitude</th>
@@ -424,27 +425,21 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
-				photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"	# get the photo from PlaneSpotters.net
+
 				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]; then
-					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a>" "${CALLSIGN}" "${AIRLINENAME}" >&3
-					if [[ -n "$photo" ]]; then
-						printf " <a href=\"%s\" target=\"_blank\">[photo]</a>" "$photo" >&3
-					fi
-					printf "</td>\n" >&3
+					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
-					if [[ -z "$photo" ]]; then 
-						printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3
-					else
-						printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$photo" "${AIRLINENAME}" >&3
-					fi
+					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3
 				fi
 			else
-				if [[ -n "$photo" ]]; then
-						printf " <td><a href=\"%s\" target=\"_blank\">[photo]</a></td>\n" "$photo" >&3
-				else
 					printf "   <td></td>\n" >&3
-				fi
 			fi
+		fi
+		photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"	# get the photo from PlaneSpotters.net
+		if [[ -n "$photo" ]]; then
+			printf "   <td><img src=\"%s\" alt=\"%s\" style=\"width: 100px; height: auto;\"></td>\n" "$photo" "${NEWVALUES[0]}" >&3
+		else
+			printf "   <td></td>\n" >&3
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[3]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
