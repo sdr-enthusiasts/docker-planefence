@@ -180,6 +180,7 @@ GET_PS_PHOTO () {
 
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
 		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		return 0
 	fi
 	
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
