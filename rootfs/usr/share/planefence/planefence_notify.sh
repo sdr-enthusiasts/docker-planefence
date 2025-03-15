@@ -168,6 +168,7 @@ GET_PS_PHOTO () {
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
 		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		echo "pfn - $(date) - $1 - picture was in cache" >> /tmp/getpi.log
 		return 0
 	fi
 	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
@@ -180,10 +181,12 @@ GET_PS_PHOTO () {
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		echo "$link"
+		echo "pfn - $(date) - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		echo ""
+		echo "pfn - $(date) - $1 - no picture available" >> /tmp/getpi.log
 	fi
 }
 
@@ -288,7 +291,7 @@ if [ -f "$CSVFILE" ]; then
 			# echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
 			if [[ -n "$imgfile" ]]; then
 				GOTIMG=true
-				"${s6wrap[@]}" echo "Using picture from $newsnap"
+				"${s6wrap[@]}" echo "Using picture from $imgfile"
 			else
 				imglink=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
 				if [[ -n "$imglink" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail "$imglink" --clobber  -o $snapfile 2>/dev/stdout; then

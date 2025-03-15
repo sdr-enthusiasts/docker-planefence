@@ -180,6 +180,7 @@ GET_PS_PHOTO () {
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
 		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		echo "pf - $(date) - $1 - picture was in cache" >> /tmp/getpi.log
 		return 0
 	fi
 	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
@@ -192,10 +193,12 @@ GET_PS_PHOTO () {
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		echo "$link"
+		echo "pf - $(date) - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		echo ""
+		echo "pf - $(date) - $1 - no picture available" >> /tmp/getpi.log
 	fi
 }
 
