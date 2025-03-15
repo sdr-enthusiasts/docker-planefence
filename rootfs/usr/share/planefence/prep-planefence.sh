@@ -182,6 +182,7 @@ else
 fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
+configure_planefence "SHOWIMAGES" "$PF_SHOWIMAGES"
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001

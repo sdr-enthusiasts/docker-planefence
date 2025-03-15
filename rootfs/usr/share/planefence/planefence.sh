@@ -172,20 +172,29 @@ GET_PS_PHOTO () {
 	# First, let's see if we have a cache file for the photos
 
 	local link
+	local json
+
+	if chk_disabled "$SHOWIMAGES"; then return 0; fi
 	
-	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
-		echo "imgcache/$1.jpg"
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
 		return 0
 	fi
 	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
-	if link="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1" \
-          | jq -r 'try .photos[].thumbnail_large.src | select( . != null )')" \
-					&& [[ -n "$link" ]]; then
+	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
+          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
+				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
 		# If we have a link, let's download the photo
-		curl -ssL --fail "$link" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		echo "imgcache/$1.jpg"
+		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
+		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		echo "$link"
 	else
-		# If we don't have a link, let's return an empty string
+		# If we don't have a link, let's clear the cache and return an empty string
+		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		echo ""
 	fi
 }
@@ -239,8 +248,8 @@ WRITEHTMLTABLE () {
 	<th>No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
-	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
-	<th>Aircraft Image</th>
+	$([[ -n "${AIRLINECODES}" ]] && echo "<th>Airline or Owner</th>" || true)
+	$(! chk_disabled "${SHOW_IMAGES}" && echo "<th>Aircraft Image</th>" || true)
 	<th>Time First Seen</th>
 	<th>Time Last Seen</th>
 	<th>Min. Altitude</th>
@@ -435,10 +444,10 @@ EOF
 					printf "   <td></td>\n" >&3
 			fi
 		fi
-		photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"	# get the photo from PlaneSpotters.net
+		if ! chk_disabled "${SHOW_IMAGES}"; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
 		if [[ -n "$photo" ]]; then
-			printf "   <td><img src=\"%s\" alt=\"%s\" style=\"width: 100px; height: auto;\"></td>\n" "$photo" "${NEWVALUES[0]}" >&3
-		else
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "imgcache/${NEWVALUES[0]}.jpg" "${NEWVALUES[0]}" >&3
+		elif ! chk_disabled "${SHOW_IMAGES}"; then
 			printf "   <td></td>\n" >&3
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
