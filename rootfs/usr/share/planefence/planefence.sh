@@ -189,7 +189,7 @@ GET_PS_PHOTO () {
 		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
 		return 0
 	fi
-	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
+	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
 	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
 					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
           thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
@@ -204,7 +204,7 @@ GET_PS_PHOTO () {
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
 	fi
 }
 
