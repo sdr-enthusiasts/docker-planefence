@@ -22,7 +22,12 @@ LOOPTIME="3h"
 # It specifically applies to files in the HTML directory.
 # If $PF_DELETEAFTER is set to "0" then we never delete.
 # Note - files in /tmp will get deleted if they are older than 2 days.
-
+# -----------------------------------------------------------------------
+# CACHETIME is the time that the planespotters photo cache expires. By TOC of the planespotters site, 
+# we may not keep cached thumbnails for more than 24 hours.
+CACHETIME="${LOOPTIME//h/ hours}"
+CACHETIME="${CACHETIME//m/ minutes}"
+CACHETIME="${CACHETIME//s/ seconds}"
 
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
   source /usr/share/planefence/persist/planefence.config
@@ -35,7 +40,6 @@ OLDERTHAN=${PF_DELETEAFTER:-14}
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
-#
 #
 # this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
@@ -52,7 +56,8 @@ CLEANUP ()
     mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
     mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
 
-    touch -t "$(date -d "yesterday 00:00:00" +%Y%m%d%H%M)" /tmp/timestamp
+    touch -d "yesterday 00:00:00" /tmp/timestamp
+    touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
     find /usr/share/planefence/html/plane*{.html,.js,.csv,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
     find /usr/share/planefence/html/noise*.png -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
@@ -60,6 +65,7 @@ CLEANUP ()
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/planepix/cache/*.jpg -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/plane{fence,-alert}-discord.template.~[0-9]*~ -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null

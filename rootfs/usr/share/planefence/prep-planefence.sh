@@ -48,7 +48,7 @@ function configure_both() {
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
-mkdir -p /usr/share/planefence/persist/planepix
+mkdir -p /usr/share/planefence/persist/planepix/cache
 mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mkdir -p /usr/share/planefence/html/scripts
 chmod -f a=rwx /usr/share/planefence/persist /usr/share/planefence/persist/planepix

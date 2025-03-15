@@ -164,6 +164,33 @@ LOG ()
 		fi
 	done
 }
+
+GET_PS_PHOTO () {
+	# Function to get a photo from PlaneSpotters.net
+	# Usage: GET_PS_PHOTO ICAO
+	# Returns: file location of the photo
+	# First, let's see if we have a cache file for the photos
+
+	local link
+	
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
+		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		return 0
+	fi
+	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
+	if link="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1" \
+          | jq -r 'try .photos[].thumbnail_large.src | select( . != null )')" \
+					&& [[ -n "$link" ]]; then
+		# If we have a link, let's download the photo
+		curl -ssL --fail "$link" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+	else
+		# If we don't have a link, let's return an empty string
+		echo ""
+	fi
+}
+
+
 LOG "-----------------------------------------------------"
 # Function to write an HTML table from a CSV file
 LOG "Defining WRITEHTMLTABLE"
@@ -397,13 +424,26 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
+				photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"	# get the photo from PlaneSpotters.net
 				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]; then
-					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
+					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a>" "${CALLSIGN}" "${AIRLINENAME}" >&3
+					if [[ -n "$photo" ]]; then
+						printf " <a href=\"%s\" target=\"_blank\">[photo]</a>" "$photo" >&3
+					fi
+					printf "</td>\n" >&3
 				else
-					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3 || printf "   <td></td>\n" >&3
+					if [[ -z "$photo" ]]; then 
+						printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3
+					else
+						printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$photo" "${AIRLINENAME}" >&3
+					fi
 				fi
 			else
-				printf "   <td></td>\n" >&3
+				if [[ -n "$photo" ]]; then
+						printf " <td><a href=\"%s\" target=\"_blank\">[photo]</a></td>\n" "$photo" >&3
+				else
+					printf "   <td></td>\n" >&3
+				fi
 			fi
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
