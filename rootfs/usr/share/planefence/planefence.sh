@@ -174,7 +174,7 @@ GET_PS_PHOTO () {
 	local link
 	
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
-		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "imgcache/$1.jpg"
 		return 0
 	fi
 	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
@@ -183,7 +183,7 @@ GET_PS_PHOTO () {
 					&& [[ -n "$link" ]]; then
 		# If we have a link, let's download the photo
 		curl -ssL --fail "$link" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "imgcache/$1.jpg"
 	else
 		# If we don't have a link, let's return an empty string
 		echo ""
