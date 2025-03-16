@@ -48,7 +48,7 @@ function configure_both() {
 # (by default exposed to ~/.planefence) then export all of those variables as well
 # note that the grep strips off any spaces at the beginning of a line, and any commented line
 mkdir -p /usr/share/planefence/persist/.internal
-mkdir -p /usr/share/planefence/persist/planepix
+mkdir -p /usr/share/planefence/persist/planepix/cache
 mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
 mkdir -p /usr/share/planefence/html/scripts
 chmod -f a=rwx /usr/share/planefence/persist /usr/share/planefence/persist/planepix
@@ -60,6 +60,8 @@ chmod u=rwx,go=rx \
 	/usr/share/planefence/html/plane-alert/silhouettes \
 	/usr/share/planefence/html/scripts
 ln -sf /usr/share/planefence/html/scripts /usr/share/planefence/html/plane-alert/scripts
+if [[ ! -e /usr/share/planefence/html/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache; fi
+chmod a+rx /usr/share/planefence/html/imgcache
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
 	# shellcheck disable=SC1091
@@ -180,6 +182,7 @@ else
 fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
+configure_planefence "SHOWIMAGES" "$PF_SHOWIMAGES"
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001

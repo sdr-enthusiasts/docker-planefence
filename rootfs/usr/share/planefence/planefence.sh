@@ -164,6 +164,52 @@ LOG ()
 		fi
 	done
 }
+
+GET_PS_PHOTO () {
+	# Function to get a photo from PlaneSpotters.net
+	# Usage: GET_PS_PHOTO ICAO
+	# Returns: file location of the photo
+	# First, let's see if we have a cache file for the photos
+	local starttime
+	local link
+	local json
+
+	starttime="$(date +%s)"
+
+	if chk_disabled "$SHOWIMAGES"; then return 0; fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
+		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		return 0
+	fi
+	
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
+		return 0
+	fi
+	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
+	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
+          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
+				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
+		# If we have a link, let's download the photo
+		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
+		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		echo "$link"
+		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
+	else
+		# If we don't have a link, let's clear the cache and return an empty string
+		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
+		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
+		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+	fi
+}
+
+
 LOG "-----------------------------------------------------"
 # Function to write an HTML table from a CSV file
 LOG "Defining WRITEHTMLTABLE"
@@ -212,7 +258,8 @@ WRITEHTMLTABLE () {
 	<th>No.</th>
 	<th>Transponder ID</th>
 	<th>Flight</th>
-	$([[ "$AIRLINECODES" != "" ]] && echo "<th>Airline or Owner</th>")
+	$([[ -n "${AIRLINECODES}" ]] && echo "<th>Airline or Owner</th>" || true)
+	$(! chk_disabled "${SHOW_IMAGES}" && echo "<th>Aircraft Image</th>" || true)
 	<th>Time First Seen</th>
 	<th>Time Last Seen</th>
 	<th>Min. Altitude</th>
@@ -397,14 +444,21 @@ EOF
 					NEWNAMES[${CALLSIGN}]="${AIRLINENAME}"
 				fi
 
+
 				if [[ $CALLSIGN =~ ^N[0-9][0-9a-zA-Z]+$ ]] && [[ "${CALLSIGN:0:4}" != "NATO" ]] && [[ "${NEWVALUES[0]:0:1}" == "A" ]]; then
 					printf "   <td><a href=\"https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=%s\" target=\"_blank\">%s</a></td>\n" "${CALLSIGN}" "${AIRLINENAME}" >&3
 				else
-					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3 || printf "   <td></td>\n" >&3
+					printf "   <td>%s</td>\n" "${AIRLINENAME}" >&3
 				fi
 			else
-				printf "   <td></td>\n" >&3
+					printf "   <td></td>\n" >&3
 			fi
+		fi
+		if ! chk_disabled "${SHOW_IMAGES}"; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
+		if [[ -n "$photo" ]]; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "imgcache/${NEWVALUES[0]}.jpg" "${NEWVALUES[0]}" >&3
+		elif ! chk_disabled "${SHOW_IMAGES}"; then
+			printf "   <td></td>\n" >&3
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[3]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen

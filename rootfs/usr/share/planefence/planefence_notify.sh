@@ -153,6 +153,51 @@ getRoute() {
 	echo "$response"
 }
 
+GET_PS_PHOTO () {
+	# Function to get a photo from PlaneSpotters.net
+	# Usage: GET_PS_PHOTO ICAO
+	# Returns: link to photo page (and a cached image should become available)
+	# First, let's see if we have a cache file for the photos
+
+	local link
+	local json
+	local starttime
+
+	starttime="$(date +%s)"
+
+	if chk_disabled "$SHOWIMAGES"; then return 0; fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		return 0
+	fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
+		return 0
+	fi
+	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
+	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
+          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
+				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
+		# If we have a link, let's download the photo
+		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
+		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		echo "$link"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
+	else
+		# If we don't have a link, let's clear the cache and return an empty string
+		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
+		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+	fi
+}
+
 if [ "$1" != "" ] && [ "$1" != "reset" ]; then # $1 contains the date for which we want to run Planefence
 	TWEETDATE=$(date --date="$1" '+%y%m%d')
 else
@@ -234,16 +279,6 @@ if [ -f "$CSVFILE" ]; then
 			# swap adsbexchange for the $TRACKSERVICE:
 			TWEET="${TWEET//globe.adsbexchange.com/"$TRACKSERVICE"}"
 
-			# let's do some calcs on the actual tweet length, so we strip the minimum:
-			teststring="${TWEET//%0A/ }"                                                             # replace newlines with a single character
-			teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<<"$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-			tweetlength=$((${#teststring} - 1))
-			if ((tweetlength > 490)); then
-				"${s6wrap[@]}" echo "Warning: PF tweet length is $tweetlength > 490: tweet will be truncated!"
-				maxlength=$((${#TWEET} + 490 - tweetlength))
-				TWEET="${TWEET:0:$maxlength}"
-			fi
-
 			LOG "Assessing ${RECORD[0]}: ${RECORD[1]:0:1}; diff=$TIMEDIFF secs; Tweeting... msg body: $TWEET" 1
 
 			# Before anything else, let's add the "tweeted" flag to the flight number:
@@ -252,32 +287,45 @@ if [ -f "$CSVFILE" ]; then
 
 			# First, let's get a screenshot if there's one available!
 			rm -f /tmp/snapshot.png
-			GOTSNAP="false"
+			GOTSNAP=false
+			GOTIMG=false
 			snapfile="/tmp/snapshot.png"
 
-			newsnap="$(find /usr/share/planefence/persist/planepix -iname "${RECORD[0]}.jpg" -print -quit 2>/dev/null || true)"
+			# img will contain the path to an image file:
+			# - first prio is one that is stored in the planepix directory
+			# - second prio is one that is stored in the planepix/cache directory
+
+			imgfile="$(find /usr/share/planefence/persist/planepix -iname "${RECORD[0]}.jpg" -print -quit 2>/dev/null || true)"
 			# echo "-0- in planetweet: newsnap=\"$newsnap\" (find /usr/share/planefence/persist/planepix -iname ${RECORD[0]}.jpg -print -quit)"
-			if [[ "$newsnap" != "" ]]; then
-				GOTSNAP="true"
-				rm -f "$snapfile"
-				ln -sf "$newsnap" "$snapfile"
-				"${s6wrap[@]}" echo "Using picture from $newsnap"
+			if [[ -n "$imgfile" ]]; then
+				GOTIMG=true
+				"${s6wrap[@]}" echo "Using picture from $imgfile"
 			else
-				link=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-				if [[ "$link" != "" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail "$link" -o $snapfile --show-error 2>/dev/stdout; then
-					"${s6wrap[@]}" echo "Using picture from $link"
-					GOTSNAP="true"
-					[[ ! -f "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${RECORD[0]}.jpg" || true
-				else
-					[[ "$link" != "" ]] && "${s6wrap[@]}" echo "Failed attempt to get picture from $link" || true
+				imglink=$(awk -F "," -v icao="${RECORD[0],,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
+				if [[ -n "$imglink" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail "$imglink" --clobber  -o $snapfile 2>/dev/stdout; then
+					"${s6wrap[@]}" echo "Got picture from $link"
+					GOTIMG=true
+					cp -n "$snapfile" "/usr/share/planefence/persist/planepix/cache/${RECORD[0]}.jpg"
+					rm -f "$snapfile"
+					imgfile="/usr/share/planefence/persist/planepix/cache/${RECORD[0]}.jpg"
+				elif [[ -n "$imglink" ]]; then
+					"${s6wrap[@]}" echo "Failed attempt to get picture from planepix.txt link $link"
 				fi
 			fi
+
+			# If there's no image, let's see if we can get one from planespotters.net
+			if ! $GOTIMG && [[ -n "$(GET_PS_PHOTO "${RECORD[0]}")" ]]; then
+				imgfile="/usr/share/planefence/persist/planepix/cache/${RECORD[0]}.jpg"
+				GOTIMG=true
+				"${s6wrap[@]}" echo "Got picture from PlaneSpotters.net"
+			fi
+
 			"${s6wrap[@]}" echo "Getting screenshot for ${RECORD[0]}..."
-			if [[ "$GOTSNAP" == "false" ]] && curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" "$SCREENSHOTURL/snap/${RECORD[0]#\#}" -o "/tmp/snapshot.png"; then
-				GOTSNAP="true"
+			if curl -s -L --fail --max-time "$SCREENSHOT_TIMEOUT" "$SCREENSHOTURL/snap/${RECORD[0]#\#}" --clobber  -o "/tmp/snapshot.png"; then
+				GOTSNAP=true
 				"${s6wrap[@]}" echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${RECORD[0]}"
 			fi
-			[[ "$GOTSNAP" == "false" ]] && "${s6wrap[@]}" echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}" || true
+			if ! $GOTSNAP; then "${s6wrap[@]}" echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"; fi
 
 			# Inject the Discord integration in here so it doesn't have to worry about state management
 			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]; then
@@ -286,28 +334,35 @@ if [ -f "$CSVFILE" ]; then
 			fi
 
 			# log the message we will try to tweet or toot:
-			if [[ -n "$MASTODON_SERVER" ]] || [ "$TWEETON" == "yes" ]; then
+			if [[ -n "$MASTODON_SERVER" ]]; then
 				"${s6wrap[@]}" echo "Attempting to tweet or toot: $(sed -e 's|\\/|/|g' -e 's|\\n| |g' -e 's|%0A| |g' <<<"${TWEET}")"
 			fi
 
 			# Inject Mastodon integration here:
 			if [[ -n "$MASTODON_SERVER" ]]; then
-				mast_id="null"
+				mast_id=()
 				MASTTEXT="$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<<"${TWEET}")"
 
-				if [[ "$GOTSNAP" == "true" ]]; then
-					# we upload an image
-					response="$(curl -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
-					mast_id="$(jq '.id' <<<"$response" | xargs)"
+				if $GOTSNAP && response="$(curl -sS --fail -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"; then
+					# we upload an screenshot
+					mast_id+=("$(jq '.id' <<<"$response" | xargs)")
+				fi
+
+				if $GOTIMG && response="$(curl -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${imgfile}")"; then
+					# we upload an image file
+						mast_id+=("$(jq '.id' <<<"$response" | xargs)")
 				fi
 
 				# now send the message. API is different if text-only vs text+image:
-				if [[ "${mast_id,,}" == "null" ]]; then
-					# send without image
+				if [[ -z "${mast_id[*]}" ]]; then
+					# send without image(s)
 					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 				else
-					# send with image
-					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "https://${MASTODON_SERVER}/api/v1/statuses" -X POST -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}" -F "media_ids[]=${mast_id}")"
+					# send with image(s)
+					# shellcheck disable=SC2068
+					printf -v media_ids -- '-F media_ids[]=%s ' ${mast_id[@]}
+					# shellcheck disable=SC2086
+					response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "https://${MASTODON_SERVER}/api/v1/statuses" -X POST $media_ids -F "status=${MASTTEXT}" -F "language=eng" -F "visibility=${MASTODON_VISIBILITY}")"
 				fi
 
 				# check if there was an error
@@ -348,6 +403,12 @@ if [ -f "$CSVFILE" ]; then
 				if ((RECORD[7] < 0)); then
 					msg_array[peek_audio]="${RECORD[7]} dBFS"
 					msg_array[loudness]="$((RECORD[7] - RECORD[11])) dB"
+				fi
+				if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link" ]]; then
+					msg_array[thumbnail]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link")"
+				fi
+				if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link" ]]; then
+					msg_array[planespotter_link]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link")"
 				fi
 
 				# convert $msg_array[@] into a JSON object:
@@ -406,7 +467,7 @@ if [ -f "$CSVFILE" ]; then
 
 			# Insert BlueSky notifications here:
 			if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
-				/scripts/post2bsky.sh "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<<"${TWEET}")" "$(if [[ "$GOTSNAP" == "true" ]]; then echo "$snapfile"; fi)" || true
+				/scripts/post2bsky.sh "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<<"${TWEET}")" "$(if $GOTSNAP; then echo "$snapfile"; fi)" "$(if $GOTIMG; then echo "$imgfile"; fi)" || true
 				if [[ -f /tmp/bsky.link ]]; then
 					LINK="$(</tmp/bsky.link)"
 					rm -f /tmp/bsky.link
