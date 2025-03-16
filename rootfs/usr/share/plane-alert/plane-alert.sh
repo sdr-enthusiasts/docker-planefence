@@ -624,7 +624,7 @@ cat <<EOF >&3
 <tr>
 	<th style="text-align: center">No.</th>
 	<th>Icon</th>
-	$(! $SHOWIMAGES && echo "<th style=\"text-align: center\">Image</th>" || true)
+	$($SHOWIMAGES && echo "<th style=\"text-align: center\">Image</th>" || true)
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->

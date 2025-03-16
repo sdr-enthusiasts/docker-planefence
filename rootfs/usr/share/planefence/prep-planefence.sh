@@ -182,8 +182,8 @@ else
 fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
-configure_planefence "SHOWIMAGES" "$PF_SHOWIMAGES"
-configure_planealert "SHOWIMAGES" "$PA_SHOWIMAGES"
+if chk_disabled "$PF_SHOWIMAGES"; then configure_planefence "SHOWIMAGES" "false"; else configure_planefence "SHOWIMAGES" "true"; fi
+if chk_disabled "$PA_SHOWIMAGES"; then configure_planealert "SHOWIMAGES" "false"; else configure_planealert "SHOWIMAGES" "true"; fi
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
