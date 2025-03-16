@@ -60,7 +60,7 @@ chmod u=rwx,go=rx \
 	/usr/share/planefence/html/plane-alert/silhouettes \
 	/usr/share/planefence/html/scripts
 ln -sf /usr/share/planefence/html/scripts /usr/share/planefence/html/plane-alert/scripts
-ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache
+if [[ ! -e /usr/share/planefence/html/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache; fi
 chmod a+rx /usr/share/planefence/html/imgcache
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
