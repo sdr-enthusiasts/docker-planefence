@@ -739,12 +739,12 @@ do
 
 		if $SHOWIMAGES; then
 			if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
-				printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$(<"imgcache/${pa_record[0]}.link")" "imgcache/${pa_record[0]}.jpg" >&3 # column: image
+				printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")" "imgcache/${pa_record[0]}.jpg" >&3 # column: image
 			else
 				file="$(find /usr/share/planefence/persist/planepix/cache -iname "${RECORD[0]}*.jpg" -print -quit 2>/dev/null || true)"
 				file="${file##*/}"
 				if [[ -n "$file" ]]; then
-					printf "    <td style=\"text-align: center\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></td>\n" "$(<"imgcache/$file")" >&3 # column: image
+					printf "    <td style=\"text-align: center\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></td>\n" "imgcache/$file" >&3 # column: image
 				else
 					printf "    <td></td>\n" >&3
 				fi
