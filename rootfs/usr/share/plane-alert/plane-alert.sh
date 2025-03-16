@@ -740,7 +740,7 @@ do
 					file="$(find /usr/share/planefence/persist/planepix/cache -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
 					file="${file##*/}"
 					if [[ -n "$file" ]]; then
-						IMG="<img src=\"imgcache/${pa_record[0]}.jpg\" style=\"width: auto; height: 75px;\">" >&3 # column: image
+						IMG="<img src=\"imgcache/${file}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
 					fi
 				fi
 			fi
