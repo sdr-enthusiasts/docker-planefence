@@ -377,12 +377,13 @@ then
 		PLANELINE="${ALERT_DICT["${ICAO}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 		# Add any hashtags:
-		for i in {4..13}
+		counter=1
+		for i in {4..20}
 		do
 			(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+			tag="${TAGLINE[i]}"
 			if [[ "${header[i]:0:1}" == "$" ]] || [[ "${header[i]:0:2}" == '$#' ]]
 			then
-				tag="${TAGLINE[i]}"
 				if [[ "${tag:0:4}" == "http" ]]
 				then
 					TWITTEXT+="$(sed 's|/|\\/|g' <<< "$tag") "
@@ -391,11 +392,16 @@ then
 					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
 				fi
 			fi
-			if [[ " jpg peg png gif " =~ " ${TAGLINE[i]: -3} " ]]; then
-				if [[ "${fld:0:4}" != "http" ]]; then fld="https://$fld"; fi
-				if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$i.${fld: -3}"
-				then
-					images+=("/usr/share/planefence/persist/planepix/cache/$ICAO-$i.${fld: -3}")
+			if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
+				if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
+				if [[ ! -f "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}" ]]; then
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"; then
+						images+=("/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}")
+						(( counter=counter+1 ))
+					else
+						# remove any potential left-overs of failed curl attempts 
+						rm -f "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"
+					fi
 				fi
 			fi
 		done
@@ -623,8 +629,7 @@ cat <<EOF >&3
 <thead border="1">
 <tr>
 	<th style="text-align: center">No.</th>
-	<th>Icon</th>
-	$($SHOWIMAGES && echo "<th style=\"text-align: center\">Image</th>" || true)
+	<th>Image</th>
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
@@ -661,7 +666,7 @@ do
 	if [[ -n "${pa_record[0]}" ]] && [[ "${pa_record[4]} ${pa_record[5]}" > "$REFDATE" ]]
 	then
 		# prep-work for later use:
-        PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+    PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
 
 		if [[ "${pa_record[10]}" == "7700" ]]
@@ -685,7 +690,7 @@ do
 				IMGURL+="SQUAWK.bmp"
 			fi
 		else
-			# there is no squawk. If there's an ICAO_INDEX value, then try to get the image URL
+			# there is no squawk. If there's an ICAO_INDEX value, then try to get the silhouette URL
 			if [[ "$ICAO_INDEX" != "-1" ]]
 			then
 				if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]]
@@ -695,7 +700,7 @@ do
 					IMGURL+="BLNK.bmp"
 				fi
 			else
-				# there is no squawk and no known image, so use the blank
+				# there is no squawk and no known silhouette, so use the blank
 				IMGURL+="BLNK.bmp"
 			fi
 		fi
@@ -726,30 +731,29 @@ do
 			printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
 
 		else
-			# print aircraft silhouette if it exists
-			if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]
-			then
-				IMG="<img src=\"$IMGURL\">"
-			else
-				IMG=""
-			fi
-
-			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
-		fi
-
-		if $SHOWIMAGES; then
-			if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
-				printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")" "imgcache/${pa_record[0]}.jpg" >&3 # column: image
-			else
-				file="$(find /usr/share/planefence/persist/planepix/cache -iname "${RECORD[0]}*.jpg" -print -quit 2>/dev/null || true)"
-				file="${file##*/}"
-				if [[ -n "$file" ]]; then
-					printf "    <td style=\"text-align: center\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></td>\n" "imgcache/$file" >&3 # column: image
+			IMG=""
+			# get an image if it exists and if SHOWIMAGES==true
+			if $SHOWIMAGES; then
+				if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
+					IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"imgcache/${pa_record[0]}.jpg\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
 				else
-					printf "    <td></td>\n" >&3
+					file="$(find /usr/share/planefence/persist/planepix/cache -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
+					file="${file##*/}"
+					if [[ -n "$file" ]]; then
+						IMG="<img src=\"imgcache/${pa_record[0]}.jpg\" style=\"width: auto; height: 75px;\">" >&3 # column: image
+					fi
 				fi
 			fi
+
+			# print aircraft silhouette if it exists
+			if [[ -z "$IMG" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
+				IMG="<img src=\"$IMGURL\">"
+			fi
+
+			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
 		fi
+
+
 
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
