@@ -132,11 +132,16 @@ if [[ -z "$b" ]] && [[ "${a:0:1}" == "N" ]]; then
   fi
 fi
 
-# If it's a Canadian tail number, let's use the Canadian lookup
+# If it's a Canadian tail number, let's use the Transport Canada lookup
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
   a_clean="${a//-/}"     # remove any -
   a_clean="${a_clean:1}" # remove the leading C
-  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" | hxclean | hxselect -i -c div#dvOwnerName div.col-md-6 | xargs | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" | hxclean)"
+  name="$(hxselect -i -c div#divTradeName div.col-md-7 <<< "$b" | xargs)"
+  if [[ -z "$name" ]]; then
+    name="$(hxselect -i -c div#dvOwnerName div.col-md-6 <<< "$b" | xargs)"
+  fi
+  b="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$name")"
   # If we got something, make sure it will get added to the cache:
   if [[ -n "$b" ]]; then
     MUSTCACHE=1
