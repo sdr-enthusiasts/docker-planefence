@@ -55,8 +55,51 @@ trap cleanup EXIT
 [ -f "$PLANEALERTDIR/plane-alert.conf" ] && source "$PLANEALERTDIR/plane-alert.conf" || echo "Warning - cannot stat $PLANEALERTDIR/plane-alert.conf"
 # -----------------------------------------------------------------------------------
 #
+GET_PS_PHOTO () {
+	# Function to get a photo from PlaneSpotters.net
+	# Usage: GET_PS_PHOTO ICAO
+	# Returns: link to photo page (and a cached image should become available)
+	# First, let's see if we have a cache file for the photos
+
+	local link
+	local json
+	local starttime
+
+	starttime="$(date +%s)"
+
+	if chk_disabled "$SHOWIMAGES"; then return 0; fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		return 0
+	fi
+
+	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
+		return 0
+	fi
+	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
+	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
+          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
+				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
+		# If we have a link, let's download the photo
+		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
+		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		echo "$link"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
+	else
+		# If we don't have a link, let's clear the cache and return an empty string
+		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
+		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
+		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+	fi
+}
 # -----------------------------------------------------------------------------------
-# Mainly - add a random search item to the plane-alert db and add a plane into the CSV with the same hex ID we just added
 
 [[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
 
@@ -275,7 +318,7 @@ then
 		XX=$(echo -n "$line" | tr -d '[:cntrl:]')
 		line=$XX
 
-		unset pa_record
+		unset pa_record images
 		IFS=',' read -ra pa_record <<< "$line"
 
 		[[ -n "$BASETIME" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
@@ -285,35 +328,19 @@ then
 		# Get a screenshot if there\'s one available!
 		snapfile="/tmp/pasnapshot.png"
 		rm -f $snapfile
-		GOTSNAP="false"
-		newsnap="$(find /usr/share/planefence/persist/planepix -iname "${ICAO}.jpg" -print -quit 2>/dev/null || true)"
+		GOTSNAP=false
+		images+=("$(find /usr/share/planefence/persist/planepix -iname "${ICAO}.jpg" -print -quit 2>/dev/null || true)")
 
-		if [[ "${SCREENSHOTURL,,}" != "off" ]] && [[ -z "${newsnap}" ]] && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" -o $snapfile
+		if ! chk_disabled "${SCREENSHOTURL}" && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" --clobber -o $snapfile
 		then
-			GOTSNAP="true"
+			GOTSNAP=true
 			"${s6wrap[@]}" echo "Screenshot successfully retrieved at $SCREENSHOTURL for ${ICAO}; saved to $snapfile"
+		else
+			"${s6wrap[@]}" echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}"
 		fi
 
 		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
-		if [[ -n "$newsnap" ]] && [[ "$GOTSNAP" == "false" ]]
-		then
-			GOTSNAP="true"
-			ln -sf "$newsnap" "$snapfile"
-			"${s6wrap[@]}" echo "Replacing screenshot with picture from $newsnap"
-		else
-			link=$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)
-			[[ -n "$link" ]] && "${s6wrap[@]}" echo "Attempting to get screenshot from $link"
-			if [[ -n "$link" ]] && curl -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" -s -L --fail $link -o $snapfile --show-error 2>/dev/stdout
-			then
-				"${s6wrap[@]}" echo "Using picture from $link"
-				GOTSNAP="true"
-				[[ ! -f "/usr/share/planefence/persist/planepix/${ICAO}.jpg" ]] && cp "$snapfile" "/usr/share/planefence/persist/planepix/${ICAO}.jpg" || true
-			else
-				[[ -n "$link" ]] && "${s6wrap[@]}" echo "Failed attempt to get picture from $link" || true
-			fi
-		fi
-
-		[[ "$GOTSNAP" == "false" ]] && "${s6wrap[@]}" echo "Screenshot retrieval failed at $SCREENSHOTURL for ${ICAO}." || true
+		images+=("$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)")
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ -n "$PA_DISCORD_WEBHOOKS" ]] && [[ -n "$DISCORD_FEEDER_NAME" ]]
@@ -364,7 +391,23 @@ then
 					TWITTEXT+="#$(tr -dc '[:alnum:]' <<< "$tag") "
 				fi
 			fi
+			if [[ " jpg peg png gif " =~ " ${TAGLINE[i]: -3} " ]]; then
+				if [[ "${fld:0:4}" != "http" ]]; then fld="https://$fld"; fi
+				if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$i.${fld: -3}"
+				then
+					images+=("/usr/share/planefence/persist/planepix/cache/$ICAO-$i.${fld: -3}")
+				fi
+			fi
 		done
+		# see if we can get an image from PlaneSpotters.net - we'll do this always
+		# so we'll also get a link to the planespotters.net thumbnail and image pages to include in
+		# certain notifications
+		if $SHOWIMAGES && \
+			[[ -n "$(GET_PS_PHOTO "${pa_record[0]//#/}")" ]] && \
+			[[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]//#/}.jpg" ]]
+		then
+			images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]//#/}.jpg")
+		fi
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}")"
 
@@ -413,8 +456,22 @@ then
 				fi
 			done
 
+			# add any image links
+			if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link" ]]; then
+				msg_array[thumbnail]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link")"
+			fi
+			if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link" ]]; then
+				msg_array[planespotters_link]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link")"
+			fi
+			counter=0
+			for link in "${images[@],,}"; do
+				if [[ "${link:0:4}" == "http" ]]; then
+					msg_array[imglink-$((++counter))]="$link" || true
+				fi
+			done
+
 			# convert $msg_array[@] into a JSON object:
-                        MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+      MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
 
 			# prep the MQTT host, port, etc
 			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
@@ -477,8 +534,7 @@ then
 			field=()
 			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]#\#}]}"
 			rm -f "/tmp/planeimg*"
-			for (( i=0 ; i<=20; i++ ))
-			do
+			for (( i=0 ; i<=20; i++ )); do
 				fld="$(echo ${field[$i]}|xargs -0)"
 				if  [[ " jpg peg png gif " =~ " ${fld: -3} " ]] && (( ${#images[@]} < 4)); then
 					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
@@ -488,6 +544,10 @@ then
 					fi
 				fi
 			done
+			if $SHOWIMAGES && [[ -z "${images[*]}" ]] && [[ -n "$(GET_PS_PHOTO "${pa_record[0]//#/}")" ]]; then
+				# see if we can get an image from PlaneSpotters.net
+				images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]//#/}.jpg")
+			fi
 
 			# now send the BlueSky message:
 			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
@@ -511,30 +571,16 @@ then
 
 			fi
 
-			# check if there are any images in the plane-alert-db
-			field=()
-			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]#\#}]}"
-
-			for (( i=0 ; i<=20; i++ ))
-			do
-				fld="$(echo ${field[$i]}|xargs -0)"
-				ext="${fld: -3}"
-				if  [[ " jpg png peg bmp gif " =~ " $ext " ]] && (( ${#mast_id[@]} < MASTODON_MAXIMGS ))
-				then
-					rm -f "/tmp/planeimg.*"
-					[[ "$ext" == "peg" ]] && ext="jpeg" || true
-					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
-					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg.$ext"
-					then
-						response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@/tmp/planeimg.$ext")"
-						[[ "$(jq '.id' <<< "$response" | xargs -0)" != "null" ]] && mast_id+=("$(jq '.id' <<< "$response" | xargs -0)") || true
-						rm -f "/tmp/planeimg.$ext"
+			# upload all images
+			for img in "${images[@]}"; do
+					response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@$img")"
+					if [[ "$(jq '.id' <<< "$response" | xargs -0)" != "null" ]]; then
+						mast_id+=("$(jq '.id' <<< "$response" | xargs -0)") || true
 					fi
-				fi
 			done
+
 			#shellcheck disable=SC2068
-			if (( ${#mast_id[@]} > 0 ))
-			then
+			if [[ -n "${mast_id[*]}" ]]; then
 				printf -v media_ids -- '-F media_ids[]=%s ' ${mast_id[@]}
 				"${s6wrap[@]}" echo "${#mast_id[@]} images uploaded to Mastodon"
 			else
@@ -551,119 +597,6 @@ then
 			fi
 		fi
 
-		# Send Twitter alerts if that's enabled
-		if [[ "$TWITTER" != "false" ]]
-		then
-			# add a hashtag to the item if needed:
-
-			[ "$TESTING" == "true" ] && ( echo 6. TWITTEXT contains this: ; echo "$TWITTEXT" )
-			[ "$TESTING" == "true" ] && ( echo 7. Twitter IDs from "$TWIDFILE" )
-
-			# Upload a screenshot if there\'s one available!
-			TWIMG="false"
-			if [[ "$GOTSNAP" == "true" ]]
-			then
-				# If the curl call succeeded, we have a snapshot.png file saved!
-				TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f $snapfile -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-				[[ "$TW_MEDIA_ID" -gt "0"  ]] && TWIMG="true" || TW_MEDIA_ID=""
-
-				#else
-				# this entire ELSE statement is test code and should be removed
-				#	TW_MEDIA_ID=$(twurl -X POST -H upload.twitter.com "/1.1/media/upload.json" -f /tmp/test.png -F media | sed -n 's/.*\"media_id\":\([0-9]*\).*/\1/p')
-				#	[[ "$TW_MEDIA_ID" > 0 ]] && TWIMG="true" || TW_MEDIA_ID=""
-			fi
-			[[ "$TWIMG" == "true" ]] && "${s6wrap[@]}" echo "Twitter Media ID=$TW_MEDIA_ID" || "${s6wrap[@]}" echo "Twitter screenshot upload unsuccessful for ${pa_record[0]}"
-
-			if [[ "$TWITTER" == "DM" ]]
-			then
-				# Now loop through the Twitter IDs in $TWIDFILE and tweet the message:
-				while IFS= read -r twitterid
-				do
-					# tweet and add the processed output to $result:
-					[[ "$TESTING" == "true" ]] && echo Tweeting with the following data: recipient = \""$twitterid"\" Tweet DM = \""$TWITTEXT"\"
-					[[ "$twitterid" == "" ]] && continue
-
-					# send a tweet.
-					# the conditional makes sure that tweets can be sent with or without image:
-					if [[ "$TWIMG" == "true" ]] && [[ -f "$TWIDFILE" ]]
-					then
-						# Tweet a DM with a screenshot:
-						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{ "event": { "type": "message_create", "message_create": { "target": { "recipient_id": "'"$twitterid"'"}, "message_data": { "text": "'"$TWITTEXT"'", "attachment": { "type": "media", "media": { "id": "'"$TW_MEDIA_ID"'" }}}}}}')
-					elif [[ -f "$TWIDFILE" ]]
-					then
-						# Tweet a DM without a screenshot:
-						rawresult=$($TWURL -A 'Content-type: application/json' -X POST /1.1/direct_messages/events/new.json -d '{"event": {"type": "message_create", "message_create": {"target": {"recipient_id": "'"$twitterid"'"}, "message_data": {"text": "'"$TWITTEXT"'"}}}}')
-					fi
-
-					processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there\'s an error, provide the text to $result
-					if [[ -n "$processedresult"  ]]
-					then
-						"${s6wrap[@]}" echo "-alert Tweet error for ${pa_record[0]}: $rawresult"
-						"${s6wrap[@]}" echo "Diagnostics:"
-						"${s6wrap[@]}" echo "Error: $processedresult"
-						"${s6wrap[@]}" echo "Twitter ID: $twitterid"
-						"${s6wrap[@]}" echo "Text: $TWITTEXT"
-						(( ERRORCOUNT++ ))
-					else
-						"${s6wrap[@]}" echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
-					fi
-				done < "$TWIDFILE"	# done with the DM tweeting
-			elif [[ "$TWITTER" == "TWEET" ]]
-			then
-				# tweet and add the processed output to $result:
-				# replace \n by %0A -- for some reason, regular tweeting doesn't like \n's
-				# also replace \/ by a regular /
-				TWITTEXT="${TWITTEXT//\\n/%0A}"	# replace \n by %0A
-				TWITTEXT="${TWITTEXT//\\\//\/}" # replace \/ by a regular /
-				TWITTEXT="${TWITTEXT//\&/%26}" # replace & by %26
-
-				# let\'s do some calcs on the actual tweet length, so we only strip as much as necessary
-				# this problem is non trivial, so just cut 1 char at a time and loop until our teststring is short enough
-				truncated=0
-				while true; do
-					teststring="${TWITTEXT//%0A/ }" # replace newlines with a single character
-					teststring="${teststring//%26/_}" # replace %26 (&) with single char
-					teststring="$(sed 's/https\?:\/\/[^ ]*\s/12345678901234567890123 /g' <<< "$teststring ")" # replace all URLS with 23 spaces - note the extra space after the string
-					tweetlength=$(( ${#teststring} ))
-					if (( tweetlength > 280 )); then
-						truncated=$((truncated + 1))
-						TWITTEXT="${TWITTEXT:0:-1}"
-					else
-						break
-					fi
-				done
-				if (( truncated > 0 )); then
-					TWITTEXT="$(sed 's/ https\?:\///' <<< "${TWITTEXT}")"
-					"${s6wrap[@]}" echo "WARNING: Tweet has been truncated, cut $truncated characters at the end!"
-				fi
-
-				"${s6wrap[@]}" echo "Tweeting a regular tweet"
-
-				# send a tweet.
-				# the conditional makes sure that tweets can be sent with or without image:
-				if [[ "$TWIMG" == "true" ]]
-				then
-					# Tweet a regular message with a screenshot:
-					rawresult=$($TWURL -r "status=$TWITTEXT&media_ids=$TW_MEDIA_ID" /1.1/statuses/update.json)
-				else
-					# Tweet a regular message without a screenshot:
-					rawresult=$($TWURL -r "status=$TWITTEXT" /1.1/statuses/update.json)
-				fi
-
-				processedresult=$(echo "$rawresult" | jq '.errors[].message' 2>/dev/null || true) # parse the output through JQ and if there's an error, provide the text to $result
-				if [[ -n "$processedresult"  ]]
-				then
-					"${s6wrap[@]}" echo "Plane-alert Tweet error for ${pa_record[0]}: $rawresult"
-					"${s6wrap[@]}" echo "Diagnostics:"
-					"${s6wrap[@]}" echo "Error: $processedresult"
-					"${s6wrap[@]}" echo "Twitter ID: $twitterid"
-					"${s6wrap[@]}" echo "Text: $TWITTEXT"
-					(( ERRORCOUNT++ ))
-				else
-					"${s6wrap[@]}" echo "Plane-alert Tweet sent successfully to $twitterid for ${pa_record[0]} "
-				fi
-			fi
-		fi
 	done < /tmp/pa-diff.csv
 fi
 
@@ -691,6 +624,7 @@ cat <<EOF >&3
 <tr>
 	<th style="text-align: center">No.</th>
 	<th>Icon</th>
+	$(! $SHOWIMAGES && echo "<th style=\"text-align: center\">Image</th>" || true)
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[0]}")</th> <!-- ICAO -->
 	<th style="text-align: center">$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[1]}")</th> <!-- tail -->
 	<th>$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[2]}")</th> <!-- owner -->
@@ -803,8 +737,22 @@ do
 			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
 		fi
 
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >>"$TMPDIR"/plalert-index.tmp # column: ICAO
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >>"$TMPDIR"/plalert-index.tmp # column: Tail
+		if $SHOWIMAGES; then
+			if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
+				printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$(<"imgcache/${pa_record[0]}.link")" "imgcache/${pa_record[0]}.jpg" >&3 # column: image
+			else
+				file="$(find /usr/share/planefence/persist/planepix/cache -iname "${RECORD[0]}*.jpg" -print -quit 2>/dev/null || true)"
+				file="${file##*/}"
+				if [[ -n "$file" ]]; then
+					printf "    <td style=\"text-align: center\"><img src=\"%s\" style=\"width: auto; height: 75px;\"></td>\n" "$(<"imgcache/$file")" >&3 # column: image
+				else
+					printf "    <td></td>\n" >&3
+				fi
+			fi
+		fi
+
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
 		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
