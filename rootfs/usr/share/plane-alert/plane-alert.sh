@@ -599,6 +599,24 @@ rm -f "/usr/share/planefence/persist/planepix/cache/*-{2,3,4}.jpg"
 
 # Now everything is in place, let's update the website
 
+# read all planespotters.net thumbnail links into an array for fast access
+unset THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
+declare -A THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
+while read -r filename; do
+	icao="${filename##*/}"
+	THUMBS_ARRAY[${icao%%.*}]="$(<"$filename")"
+done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.thumb.link" -print)"
+while read -r filename; do
+	icao="${filename##*/}"
+	LINKS_ARRAY[${icao%%.*}]="$(<"$filename")"
+done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -regex '.*/[0-9A-F]+\.link' -print)"
+while read -r filename; do
+	icao="${filename##*/}"
+	if [[ -z "${FILES_ARRAY[${icao%%[-.]*}]}" ]]; then
+		FILES_ARRAY[${icao%%[-.]*}]="$filename"
+	fi
+done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.jpg" -print)"
+
 cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
@@ -722,50 +740,38 @@ do
 			# get an image if it exists and if SHOWIMAGES==true
 			if $SHOWIMAGES; then
 				# make sure we have an image to show
-				if [[ ! -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link" ]]; then
-					readarray -t images <<< "$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print)"
-					if [[ -z "${images[*]}" ]]; then
-						# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
-						if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
-							for tag in "${TAGLINE[@]}"; do
-								if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
-									if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
-										if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
-											images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}")
-											touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-											break
-										else
-											# remove any potential left-overs of failed curl attempts 
-											rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-										fi
+				if [[ -z "${THUMBS_ARRAY[${pa_record[0]}]}" ]] && [[ -z "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
+					# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
+					if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
+						for tag in "${TAGLINE[@]}"; do
+							if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
+								if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
+								if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
+									FILES_ARRAY[${pa_record[0]}]="/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+									touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+									break
+								else
+									# remove any potential left-overs of failed curl attempts 
+									rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
 								fi
-							done
-						fi
-					fi
-				
-					if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
-						IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+							fi
+						done
 					else
-						file="$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
-						file="${file##*/}"
-						if [[ -n "$file" ]]; then
-							IMG="<img src=\"imgcache/${file}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
-						fi
+						THUMBS_ARRAY[${pa_record[0]}]="$(<"usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")"
+						LINKS_ARRAY[${pa_record[0]}]="$(<"usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")"
 					fi
-				else
-						IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+				fi
+
+				if [[ -n "${THUMBS_ARRAY[${pa_record[0]}]}" ]]; then
+					IMG="<a href=\"${LINKS_ARRAY[${pa_record[0]}]}\" target=\"_blank\"><img src=\"${THUMBS_ARRAY[${pa_record[0]}]}\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+				elif [[ -n "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
+					IMG="<img src=\"imgcache/${FILES_ARRAY[${pa_record[0]}]##*/}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
+				elif [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
+					IMG="<img src=\"$IMGURL\">"
 				fi
 			fi
-
-			# print aircraft silhouette if it exists
-			if [[ -z "$IMG" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
-				IMG="<img src=\"$IMGURL\">"
-			fi
-
 			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
 		fi
-
-
 
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO -->\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail -->\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
