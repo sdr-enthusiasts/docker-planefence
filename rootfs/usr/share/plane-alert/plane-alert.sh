@@ -329,7 +329,7 @@ then
 		snapfile="/tmp/pasnapshot.png"
 		rm -f $snapfile
 		GOTSNAP=false
-		images+=("$(find /usr/share/planefence/persist/planepix -iname "${ICAO}.jpg" -print -quit 2>/dev/null || true)")
+		readarray -t images <<< "$(find /usr/share/planefence/persist/planepix -iname "${ICAO}*.jpg" -print)"
 
 		if ! chk_disabled "${SCREENSHOTURL}" && curl -L -s --max-time $SCREENSHOT_TIMEOUT --fail "$SCREENSHOTURL"/snap/"${pa_record[0]#\#}" --clobber -o $snapfile
 		then
@@ -340,7 +340,7 @@ then
 		fi
 
 		# Special feature for Denis @degupukas -- if no screenshot was retrieved, see if there is a picture we can add
-		images+=("$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)")
+		images+=("$(awk -F "," -v icao="${ICAO,,}" 'tolower($1) ==  icao { print "/usr/share/planefence/persist/planepix/" $2 ; exit }' /usr/share/planefence/persist/planepix.txt 2>/dev/null || true)")
 
 		# Send Discord alerts if that's enabled
 		if [[ "${PA_DISCORD,,}" != "false" ]] && [[ -n "$PA_DISCORD_WEBHOOKS" ]] && [[ -n "$DISCORD_FEEDER_NAME" ]]
@@ -376,7 +376,7 @@ then
 
 		PLANELINE="${ALERT_DICT["${ICAO}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
-		# Add any hashtags:
+		# Add any hashtags and extract images:
 		counter=1
 		for i in {4..20}
 		do
@@ -397,12 +397,13 @@ then
 				if [[ ! -f "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}" ]]; then
 					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"; then
 						images+=("/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}")
-						(( counter=counter+1 ))
+						touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"
 					else
 						# remove any potential left-overs of failed curl attempts 
 						rm -f "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"
 					fi
 				fi
+				(( counter=counter+1 ))
 			fi
 		done
 		# see if we can get an image from PlaneSpotters.net - we'll do this always
@@ -414,6 +415,10 @@ then
 		then
 			images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]//#/}.jpg")
 		fi
+
+		# shellcheck disable=SC2068
+		# shellcheck disable=SC2207
+		images=($(printf "%s\n" ${images[@]} | sort -u))
 
 		TWITTEXT+="\n$(sed 's|/|\\/|g' <<< "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}")"
 
@@ -533,34 +538,13 @@ then
 		# Inject BlueSky integration here:
 		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
 			# get a list of images to upload
-			unset images
-			if [[ "$GOTSNAP" == "true" ]]; then images+=("$snapfile"); fi
-
-			# check if there are any images in the plane-alert-db
-			field=()
-			readarray -td, field <<< "${ALERT_DICT[${pa_record[0]#\#}]}"
-			rm -f "/tmp/planeimg*"
-			for (( i=0 ; i<=20; i++ )); do
-				fld="$(echo ${field[$i]}|xargs -0)"
-				if  [[ " jpg peg png gif " =~ " ${fld: -3} " ]] && (( ${#images[@]} < 4)); then
-					[[ "${fld:0:4}" != "http" ]] && fld="https://$fld" || true
-					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$fld" -o "/tmp/planeimg-$i.${fld: -3}"
-					then
-						images+=("/tmp/planeimg-$i.${fld: -3}")
-					fi
-				fi
-			done
-			if $SHOWIMAGES && [[ -z "${images[*]}" ]] && [[ -n "$(GET_PS_PHOTO "${pa_record[0]//#/}")" ]]; then
-				# see if we can get an image from PlaneSpotters.net
-				images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]//#/}.jpg")
-			fi
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then images=("$snapfile" ${images[@]}); fi
 
 			# now send the BlueSky message:
-			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]}"
+			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
 			# shellcheck disable=SC2068
-			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]} || true
-			rm -f "/tmp/planeimg*"
-
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
 		fi
 
 		# Inject Mastodon integration here:
@@ -574,7 +558,6 @@ then
 			then
 				response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "https://${MASTODON_SERVER}/api/v1/media" --form file="@${snapfile}")"
 				mast_id+=("$(jq '.id' <<< "$response"|xargs -0)")
-
 			fi
 
 			# upload all images
@@ -610,7 +593,10 @@ fi
 
 (( ERRORCOUNT > 0 )) && "${s6wrap[@]}" echo "There were $ERRORCOUNT tweet errors."
 
-# Now everything is in place, let\'s update the website
+# We can also get rid of all-except-1 downloaded images from plane-alert-db.txt, as they are not needed anymore.
+rm -f "/usr/share/planefence/persist/planepix/cache/*-{2,3,4}.jpg"
+
+# Now everything is in place, let's update the website
 
 cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
 #cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
@@ -643,7 +629,7 @@ EOF
 
 #print the variable headers:
 ICAO_INDEX=-1
-for i in {4..13}
+for i in {4..20}
 do
 	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
 	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
@@ -675,7 +661,7 @@ do
 		else
 			printf "%s\n" "<tr>" >&3
 		fi
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td>" >&3 # column: Number
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
 		IMGURL="$IMGBASE"
@@ -728,16 +714,37 @@ do
 					;;
 			esac
 
-			printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td>" >&3
+			printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td><!-- squawk instead of silhouette/image -->" >&3
 
 		else
 			IMG=""
 			# get an image if it exists and if SHOWIMAGES==true
 			if $SHOWIMAGES; then
+				# make sure we have an image to show
+				readarray -t images <<< "$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print)"
+				if [[ -z "${images[*]}" ]]; then
+					# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
+					if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
+						for tag in "${TAGLINE[@]}"; do
+							if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
+								if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
+									if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
+										images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}")
+										touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+										break
+									else
+										# remove any potential left-overs of failed curl attempts 
+										rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+									fi
+							fi
+						done
+					fi
+				fi
+
 				if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
 					IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"imgcache/${pa_record[0]}.jpg\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
 				else
-					file="$(find /usr/share/planefence/persist/planepix/cache -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
+					file="$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
 					file="${file##*/}"
 					if [[ -n "$file" ]]; then
 						IMG="<img src=\"imgcache/${file}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
@@ -750,22 +757,22 @@ do
 				IMG="<img src=\"$IMGURL\">"
 			fi
 
-			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td>" >&3
+			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
 		fi
 
 
 
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO -->\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
+		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail -->\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
-		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td>" >&3 # column: Owner
-		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td>" >&3 # column: Plane Type
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")" "</td>" >&3 # column: Date Time
+		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td><!-- Owner -->" >&3 # column: Owner
+		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td><!-- Plane type -->" >&3 # column: Plane Type
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")" "</td><!-- date/time -->" >&3 # column: Date Time
 		# printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE with link to adsbexchange
-		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td>" >&3 # column: Flight No
-		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td>" >&3 # column: Squawk
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td><!-- lat/lon with link to tracking service -->" >&3 # column: LatN, LonE with link to adsbexchange
+		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td><!-- flight number -->" >&3 # column: Flight No
+		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td><!-- squawk -->" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
 
 
