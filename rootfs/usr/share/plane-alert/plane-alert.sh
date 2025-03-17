@@ -118,18 +118,12 @@ if [[ -n "$BASETIME" ]]; then echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETI
 #
 
 # create an associative array / dictionary from the plane alert list
-
 declare -A ALERT_DICT
-
-ALERT_ENTRIES=0
 while IFS="" read -r line; do
-	read -d , -r hex <<< "$line" || continue
-	[[ -n "$hex" ]] && ALERT_DICT["${hex}"]="$line" || echo "hey badger, bad alert-list entry: \"$line\"" && continue
-	((ALERT_ENTRIES=ALERT_ENTRIES+1))
+	 [[ -n "${line%%,*}" ]] && ALERT_DICT["${line%%,*}"]="$line" || "${s6wrap[@]}" echo "hey badger, bad alert-list entry: \"$line\""
 done < "$PLANEFILE"
 
 if [[ -n "$BASETIME" ]]; then echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: check input for hex numbers on alert list"; fi
-
 
 # Now search through the input file to see if we detect any planes in the alert list
 # note - we reverse the input file because later items have a higher chance to contain callsign and tail info
@@ -138,8 +132,7 @@ if [[ -n "$BASETIME" ]]; then echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETI
 
 tac "$INFILE" | {
     while IFS="" read -r line; do
-        read -d , -r hex <<< "$line"
-        if [[ -n ${ALERT_DICT["${hex}"]} ]]; then
+        if [[ -n ${ALERT_DICT["${line%%,*}"]} ]]; then
             echo "${line}"
         fi
     done
