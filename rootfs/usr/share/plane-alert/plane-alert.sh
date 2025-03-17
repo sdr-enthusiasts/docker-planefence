@@ -90,6 +90,7 @@ GET_PS_PHOTO () {
 		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		echo "$link"
 		echo "pfn - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
 	else
@@ -721,34 +722,38 @@ do
 			# get an image if it exists and if SHOWIMAGES==true
 			if $SHOWIMAGES; then
 				# make sure we have an image to show
-				readarray -t images <<< "$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print)"
-				if [[ -z "${images[*]}" ]]; then
-					# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
-					if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
-						for tag in "${TAGLINE[@]}"; do
-							if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
-								if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
-									if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
-										images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}")
-										touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-										break
-									else
-										# remove any potential left-overs of failed curl attempts 
-										rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-									fi
-							fi
-						done
+				if [[ ! -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link" ]]; then
+					readarray -t images <<< "$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print)"
+					if [[ -z "${images[*]}" ]]; then
+						# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
+						if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
+							for tag in "${TAGLINE[@]}"; do
+								if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
+									if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
+										if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
+											images+=("/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}")
+											touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+											break
+										else
+											# remove any potential left-overs of failed curl attempts 
+											rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+										fi
+								fi
+							done
+						fi
 					fi
-				fi
-
-				if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
-					IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"imgcache/${pa_record[0]}.jpg\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+				
+					if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then
+						IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+					else
+						file="$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
+						file="${file##*/}"
+						if [[ -n "$file" ]]; then
+							IMG="<img src=\"imgcache/${file}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
+						fi
+					fi
 				else
-					file="$(find /usr/share/planefence/persist/planepix -iname "${pa_record[0]}*.jpg" -print -quit 2>/dev/null || true)"
-					file="${file##*/}"
-					if [[ -n "$file" ]]; then
-						IMG="<img src=\"imgcache/${file}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
-					fi
+						IMG="<a href=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")\" target=\"_blank\"><img src=\"$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
 				fi
 			fi
 

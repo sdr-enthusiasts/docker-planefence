@@ -456,7 +456,7 @@ EOF
 		fi
 		if ! chk_disabled "${SHOW_IMAGES}"; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
 		if [[ -n "$photo" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "imgcache/${NEWVALUES[0]}.jpg" "${NEWVALUES[0]}" >&3
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "$(<"/usr/share/planefence/persist/planepix/cache/${NEWVALUES[0]}.thumb.link")" "${NEWVALUES[0]}" >&3
 		elif ! chk_disabled "${SHOW_IMAGES}"; then
 			printf "   <td></td>\n" >&3
 		fi
