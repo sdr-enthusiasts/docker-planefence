@@ -102,9 +102,9 @@ GET_PS_PHOTO () {
 }
 # -----------------------------------------------------------------------------------
 
-[[ "$SCREENSHOT_TIMEOUT" == "" ]] && SCREENSHOT_TIMEOUT=45
+if [[ -z "$SCREENSHOT_TIMEOUT" ]]; then SCREENSHOT_TIMEOUT=45; fi
 
-[[ -n "$BASETIME" ]] && echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: parse alert list into dictionary" || true
+if [[ -n "$BASETIME" ]]; then echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: parse alert list into dictionary"; fi
 
 #
 # Now let's start
@@ -128,7 +128,7 @@ while IFS="" read -r line; do
 	((ALERT_ENTRIES=ALERT_ENTRIES+1))
 done < "$PLANEFILE"
 
-[[ -n "$BASETIME" ]] && echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: check input for hex numbers on alert list" || true
+if [[ -n "$BASETIME" ]]; then echo "10a2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: check input for hex numbers on alert list"; fi
 
 
 # Now search through the input file to see if we detect any planes in the alert list
@@ -223,7 +223,7 @@ cp -f "$OUTFILE" /tmp/pa-old.csv
 # 0=hex_ident,1=altitude(feet),2=latitude,3=longitude,4=date,5=time,6=angle,7=distance(kilometer),8=squawk,9=ground_speed(knotph),10=track,11=callsign
 # A0B674,750,42.29663,-71.00664,2021/03/17,16:43:52.598,122.36,30.2,0305,139,321,N145NE
 
-[[ -n "$BASETIME" ]] && echo "10b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start processing new data" || true
+if [[ -n "$BASETIME" ]]; then echo "10b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start processing new data"; fi
 
 while IFS= read -r line
 do
@@ -287,7 +287,7 @@ sort -t',' -k5,5  -k1,1 -k11,11 -u -o /tmp/pa-new.csv "$OUTFILE" 	# sort by fiel
 sort -t',' -k5,5  -k6,6 -o "$OUTFILE" /tmp/pa-new.csv		# sort once more by date and time but keep all entries
 # the log files are now done, but we want to figure out what is new
 
-[[ -n "$BASETIME" ]] && echo "10c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done processing new data" || true
+if [[ -n "$BASETIME" ]]; then echo "10c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done processing new data"; fi
 
 # create some diff files
 rm -f /tmp/pa-diff.csv
@@ -307,7 +307,7 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 [[ -n "$ALERTHEADER" ]] && IFS="," read -ra header <<< "$(sed 's/\#\$/$#/g' <<< "$ALERTHEADER")" || IFS="," read -ra header <<< "$(head -n1 "$PLANEFILE" | sed 's/\#\$/$#/g')"
 # if ALERTHEADER is set, then use that one instead of
 
-[[ -n "$BASETIME" ]] && echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run" || true
+if [[ -n "$BASETIME" ]]; then echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run"; fi
 
 # If there's any new alerts send them out
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
@@ -322,7 +322,7 @@ then
 		unset pa_record images
 		IFS=',' read -ra pa_record <<< "$line"
 
-		[[ -n "$BASETIME" ]] && echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}" || true
+		if [[ -n "$BASETIME" ]]; then echo "10d1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: processing ${pa_record[1]}"; fi
 
 		ICAO="${pa_record[0]}"
 
@@ -590,7 +590,7 @@ then
 	done < /tmp/pa-diff.csv
 fi
 
-[[ -n "$BASETIME" ]] && echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage" || true
+if [[ -n "$BASETIME" ]]; then echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: finished Tweet run, start building webpage"; fi
 
 (( ERRORCOUNT > 0 )) && "${s6wrap[@]}" echo "There were $ERRORCOUNT tweet errors."
 
@@ -626,7 +626,7 @@ exec 3>> "$TMPDIR"/plalert-index.tmp
 # figure out if there are squawks:
 awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"
 
-[[ -n "$BASETIME" ]] && echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers" || true
+if [[ -n "$BASETIME" ]]; then echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers"; fi
 
 # first add the fixed part of the header:
 cat <<EOF >&3
@@ -657,19 +657,23 @@ do
 done
 echo "</tr></thead><tbody border=\"1\">" >&3
 
-[[ -n "$BASETIME" ]] && echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" || true
+if [[ -n "$BASETIME" ]]; then echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" && TABLESTARTTIME="$(date +%s.%2N)"; fi
 
 COUNTER=1
 REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
-OUTSTRING=$(tr -d -c '[:print:]\n' <"$OUTFILE")
+OUTSTRING="$(awk -F, -v d="$REFDATE" '$1 != "" && $5" "$6 > d' "$OUTFILE" | tr -d -c '[:print:]\n')"	# get only those lines within the REFTIME timeframe
 
 IMGBASE="silhouettes/"
+if [[ -n "$BASETIME" ]]; then echo "10e2.0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: ready to loop"; fi
 
-while read -r line
-do
-	IFS=',' read -ra pa_record <<< "$line"
-	if [[ -n "${pa_record[0]}" ]] && [[ "${pa_record[4]} ${pa_record[5]}" > "$REFDATE" ]]
-	then
+while read -r line; do
+	if [[ -n "$line" ]]; then
+		IFS=',' read -ra pa_record <<< "$line"
+
+		# print the row number
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
+		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then ITEMSTARTTIME="$(date +%s.%4N)" && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote item number for ${pa_record[0]} ($COUNTER)"; fi
+
 		# prep-work for later use:
     PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
 		IFS="," read -ra TAGLINE <<< "$PLANELINE"
@@ -680,7 +684,7 @@ do
 		else
 			printf "%s\n" "<tr>" >&3
 		fi
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
+
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
 		IMGURL="$IMGBASE"
@@ -775,6 +779,8 @@ do
 			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
 		fi
 
+		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote silhouette/image for ${pa_record[0]} ($COUNTER)"; fi
+
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO -->\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
 		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail -->\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
 		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
@@ -788,8 +794,9 @@ do
 		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td><!-- squawk -->" >&3 # column: Squawk
 		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
 
+		if [[ -n "$BASETIME" ]]; then echo "10e2c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote up to lat/lon for ${pa_record[0]} ($COUNTER)"; fi
 
-        # get appropriate entry from dictionary
+    # get appropriate entry from dictionary
 
 		#for i in {4..13}
 		for (( i=4; i<${#header[@]}; i++ ))
@@ -804,10 +811,13 @@ do
 			fi
 		done
 		printf "%s\n" "</tr>" >&3
+		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote remaining columns for ${pa_record[0]} ($COUNTER)"; fi
+
 	fi
+
 done <<< "$OUTSTRING"
 
-[[ -n "$BASETIME" ]] && echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content" || true
+if [[ -n "$BASETIME" ]]; then echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content"; fi
 
 cat $PLANEALERTDIR/plane-alert.footer.html >&3
 echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
@@ -864,4 +874,4 @@ fi
 
 #Finally, put the temp index into its place:
 mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
-[[ -n "$BASETIME" ]] && echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert" || true
+if [[ -n "$BASETIME" ]]; then echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert"; fi

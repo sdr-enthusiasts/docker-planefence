@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC2015,SC1091,SC2129
+#shellcheck disable=SC2015,SC1091,SC2129,SC2154
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 #
@@ -843,6 +843,7 @@ fi
 if chk_enabled "$PLANEHEAT" && [[ -f "${PLANEHEATSCRIPT}" ]] # && [[ -f "$OUTFILECSV" ]]  <-- commented out to create heatmap even if there's no data
 then
 	LOG "Invoking PlaneHeat!"
+	"${s6wrap[@]}" echo "Invoking PlaneHeat..."
 	$PLANEHEATSCRIPT
 	LOG "Returned from PlaneHeat"
 else
@@ -876,12 +877,14 @@ fi
 # If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
 if [[ "$PLANEALERT" == "ON" ]]; then
 	LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"
+	"${s6wrap[@]}" echo "Invoking Plane-Alert..."
 	$PLALERTFILE "$INFILETMP"
 fi
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
 
+"${s6wrap[@]}" echo "Writing Planefence web page..."
 [[ "$BASETIME" != "" ]] && echo "11. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking plane-alert.sh, starting to build the webpage" || true
 
 cat <<EOF >"$OUTFILEHTMTMP"
@@ -1217,3 +1220,4 @@ wait $!
 
 LOG "Finishing Planefence... sayonara!"
 [[ "$BASETIME" != "" ]] && echo "17. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done final cleanup" || true
+"${s6wrap[@]}" echo "Done"
