@@ -663,8 +663,6 @@ while read -r line; do
 	if [[ -n "$line" ]]; then
 		IFS=',' read -ra pa_record <<< "$line"
 
-		# print the row number
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
 		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then ITEMSTARTTIME="$(date +%s.%4N)" && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote item number for ${pa_record[0]} ($COUNTER)"; fi
 
 		# prep-work for later use:
@@ -678,6 +676,8 @@ while read -r line; do
 			printf "%s\n" "<tr>" >&3
 		fi
 
+		# print the row number
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
 		IMGURL="$IMGBASE"
