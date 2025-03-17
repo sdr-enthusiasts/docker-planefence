@@ -252,38 +252,37 @@ WRITEHTMLTABLE () {
 	# Now write the HTML table header
 
 	cat >&3 <<EOF
-	<!-- table border="1" class="planetable" -->
-	<table border="1" class="display planetable" id="mytable" style="width: auto; align: left" align="left">
+	<table border="1" class="display planetable" id="mytable" style="width: auto; text-align: left; align: left" align="left">
 	<thead border="1">
 	<tr>
-	<th>No.</th>
-	$(${SHOWIMAGES} && echo "<th>Aircraft Image</th>" || true)
-	<th>Transponder ID</th>
-	<th>Flight</th>
-	$([[ -n "${AIRLINECODES}" ]] && echo "<th>Airline or Owner</th>" || true)
-	<th>Time First Seen</th>
-	<th>Time Last Seen</th>
-	<th>Min. Altitude</th>
-	<th>Min. Distance</th>
+	<th style="width: auto; text-align: center">No.</th>
+	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
+	<th style="width: auto; text-align: center">Transponder ID</th>
+	<th style="width: auto; text-align: center">Flight</th>
+	$([[ -n "${AIRLINECODES}" ]] && echo "<th style=\"width: auto; text-align: center\">Airline or Owner</th>" || true)
+	<th style="width: auto; text-align: center">Time First Seen</th>
+	<th style="width: auto; text-align: center">Time Last Seen</th>
+	<th style="width: auto; text-align: center">Min. Altitude</th>
+	<th style="width: auto; text-align: center">Min. Distance</th>
 EOF
 
 	if [[ "$HASNOISE" == "true" ]]; then
 		SPECTROPRINT="true"
 		# print the headers for the standard noise columns
 		cat >&3 <<EOF
-		<th>Loudness</th>
-		<th>Peak RMS sound</th>
-		<th>1 min avg</th>
-		<th>5 min avg</th>
-		<th>10 min avg</th>
-		<th>1 hr avg</th>
-		<th>Spectrogram</th>
+		<th style="width: auto; text-align: center">Loudness</th>
+		<th style="width: auto; text-align: center">Peak RMS sound</th>
+		<th style="width: auto; text-align: center">1 min avg</th>
+		<th style="width: auto; text-align: center">5 min avg</th>
+		<th style="width: auto; text-align: center">10 min avg</th>
+		<th style="width: auto; text-align: center">1 hr avg</th>
+		<th style="width: auto; text-align: center">Spectrogram</th>
 EOF
 	fi
 
 	if [[ "$HASTWEET" == "true" ]]; then
 		# print a header for the Tweeted column
-		printf "	<th>Notified</th>\n" >&3
+		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
 	fi
 	printf "</tr></thead>\n<tbody border=\"1\">\n" >&3
 
