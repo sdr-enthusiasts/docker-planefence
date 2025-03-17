@@ -919,6 +919,7 @@ cat <<EOF >"$OUTFILEHTMTMP"
 -->
 <head>
 	<link rel="icon" href="favicon.ico">
+	<meta charset="UTF-8">
 EOF
 
 if chk_enabled "${AUTOREFRESH,,}"; then
