@@ -179,7 +179,7 @@ GET_PS_PHOTO () {
 	if chk_disabled "$SHOWIMAGES"; then return 0; fi
 
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log; fi
 		return 0
 	fi
 	
@@ -187,7 +187,7 @@ GET_PS_PHOTO () {
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
 		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log; fi
 		return 0
 	fi
 	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
@@ -201,12 +201,12 @@ GET_PS_PHOTO () {
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		echo "$link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log; fi
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log; fi
 	fi
 }
 
