@@ -865,9 +865,9 @@ else
 	sed -i "s|##DARKMODE2##|background-color: #f0f6f6; color: black;|g" "$TMPDIR"/plalert-index.tmp
 fi
 
-if (( $(cat "$OUTFILE" | wc -l ) > 0 )); then
+if (( $(wc -l <<< "$OUTSTRING") > 1 )); then
 	# shellcheck disable=SC2046
-	sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icaoFilter=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' "$OUTFILE" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icaoFilter=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' <<< "$OUTSTRING" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp
 else
 	sed -i "s|##MEGALINK##||g" "$TMPDIR"/plalert-index.tmp
 fi
