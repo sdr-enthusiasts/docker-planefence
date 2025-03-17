@@ -257,10 +257,10 @@ WRITEHTMLTABLE () {
 	<thead border="1">
 	<tr>
 	<th>No.</th>
+	$(${SHOWIMAGES} && echo "<th>Aircraft Image</th>" || true)
 	<th>Transponder ID</th>
 	<th>Flight</th>
 	$([[ -n "${AIRLINECODES}" ]] && echo "<th>Airline or Owner</th>" || true)
-	$(${SHOWIMAGES} && echo "<th>Aircraft Image</th>" || true)
 	<th>Time First Seen</th>
 	<th>Time Last Seen</th>
 	<th>Min. Altitude</th>
@@ -418,6 +418,12 @@ EOF
 
 		printf "<tr>\n" >&3
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$((COUNTER++))" >&3 # table index number
+		if ${SHOWIMAGES}; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
+		if [[ -n "$photo" ]]; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "$(<"/usr/share/planefence/persist/planepix/cache/${NEWVALUES[0]}.thumb.link")" "${NEWVALUES[0]}" >&3
+		elif ${SHOWIMAGES}; then
+			printf "   <td></td>\n" >&3
+		fi
 		#printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "$(tr -dc '[[:print:]]' <<< "${NEWVALUES[6]}")" "${NEWVALUES[0]}" >&3 # ICAO
 		# why check for non-printable characters, the file we process is trusted, if there are non-printable chars, fix the input file generation instead of this band-aid
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td>\n" "${NEWVALUES[6]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${NEWVALUES[0]}" >&3 # ICAO
@@ -454,12 +460,6 @@ EOF
 			else
 					printf "   <td></td>\n" >&3
 			fi
-		fi
-		if ${SHOWIMAGES}; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
-		if [[ -n "$photo" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "$(<"/usr/share/planefence/persist/planepix/cache/${NEWVALUES[0]}.thumb.link")" "${NEWVALUES[0]}" >&3
-		elif ${SHOWIMAGES}; then
-			printf "   <td></td>\n" >&3
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[3]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
@@ -1003,9 +1003,9 @@ cat <<EOF >>"$OUTFILEHTMTMP"
      position: sticky;
      z-index: 100;
 		 top: 0 !important;
-		 padding: 0 !important;
-		 margin-top: 0 !important;
-		 margin-bottom: 0 !important;
+		 padding: 2 !important;
+		 margin-top: 1 !important;
+		 margin-bottom: 1 !important;
 }
 td, table.dataTable tbody td {
 	text-align: center;
