@@ -176,10 +176,10 @@ GET_PS_PHOTO () {
 
 	starttime="$(date +%s)"
 
-	if chk_disabled "$SHOWIMAGES"; then return 0; fi
+	if ! $SHOWIMAGES; then return 0; fi
 
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log; fi
 		return 0
 	fi
 	
@@ -187,7 +187,7 @@ GET_PS_PHOTO () {
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
 		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log; fi
 		return 0
 	fi
 	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
@@ -200,12 +200,13 @@ GET_PS_PHOTO () {
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		echo "$link"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log
+		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log; fi
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-		echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log
+		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log; fi
 	fi
 }
 
@@ -259,7 +260,7 @@ WRITEHTMLTABLE () {
 	<th>Transponder ID</th>
 	<th>Flight</th>
 	$([[ -n "${AIRLINECODES}" ]] && echo "<th>Airline or Owner</th>" || true)
-	$(! chk_disabled "${SHOW_IMAGES}" && echo "<th>Aircraft Image</th>" || true)
+	$(${SHOWIMAGES} && echo "<th>Aircraft Image</th>" || true)
 	<th>Time First Seen</th>
 	<th>Time Last Seen</th>
 	<th>Min. Altitude</th>
@@ -454,10 +455,10 @@ EOF
 					printf "   <td></td>\n" >&3
 			fi
 		fi
-		if ! chk_disabled "${SHOW_IMAGES}"; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
+		if ${SHOWIMAGES}; then photo="$(GET_PS_PHOTO "${NEWVALUES[0]}")"; else photo=""; fi	# get the photo from PlaneSpotters.net. If a notification was sent, it should already be in the cache so this should be quick
 		if [[ -n "$photo" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "imgcache/${NEWVALUES[0]}.jpg" "${NEWVALUES[0]}" >&3
-		elif ! chk_disabled "${SHOW_IMAGES}"; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" alt=\"%s\" style=\"width: auto; height: 75px;\"></a></td>\n" "$photo" "$(<"/usr/share/planefence/persist/planepix/cache/${NEWVALUES[0]}.thumb.link")" "${NEWVALUES[0]}" >&3
+		elif ${SHOWIMAGES}; then
 			printf "   <td></td>\n" >&3
 		fi
 		printf "   <td style=\"text-align: center\">%s</td>\n" "$(date -d "${NEWVALUES[2]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen

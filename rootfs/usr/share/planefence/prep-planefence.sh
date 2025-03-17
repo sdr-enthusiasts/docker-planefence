@@ -61,7 +61,8 @@ chmod u=rwx,go=rx \
 	/usr/share/planefence/html/scripts
 ln -sf /usr/share/planefence/html/scripts /usr/share/planefence/html/plane-alert/scripts
 if [[ ! -e /usr/share/planefence/html/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache; fi
-chmod a+rx /usr/share/planefence/html/imgcache
+if [[ ! -e /usr/share/planefence/html/plane-alert/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/plane-alert/imgcache; fi
+chmod a+rx /usr/share/planefence/html/imgcache /usr/share/planefence/html/plane-alert/imgcache
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
 	# shellcheck disable=SC1091
@@ -182,7 +183,8 @@ else
 fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
-configure_planefence "SHOWIMAGES" "$PF_SHOWIMAGES"
+if chk_disabled "$PF_SHOWIMAGES"; then configure_planefence "SHOWIMAGES" "false"; else configure_planefence "SHOWIMAGES" "true"; fi
+if chk_disabled "$PA_SHOWIMAGES"; then configure_planealert "SHOWIMAGES" "false"; else configure_planealert "SHOWIMAGES" "true"; fi
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001

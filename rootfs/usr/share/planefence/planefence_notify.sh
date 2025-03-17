@@ -408,7 +408,7 @@ if [ -f "$CSVFILE" ]; then
 					msg_array[thumbnail]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link")"
 				fi
 				if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link" ]]; then
-					msg_array[planespotter_link]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link")"
+					msg_array[planespotters_link]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link")"
 				fi
 
 				# convert $msg_array[@] into a JSON object:
