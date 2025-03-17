@@ -766,9 +766,11 @@ do
 					IMG="<a href=\"${LINKS_ARRAY[${pa_record[0]}]}\" target=\"_blank\"><img src=\"${THUMBS_ARRAY[${pa_record[0]}]}\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
 				elif [[ -n "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
 					IMG="<img src=\"imgcache/${FILES_ARRAY[${pa_record[0]}]##*/}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
-				elif [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
-					IMG="<img src=\"$IMGURL\">"
 				fi
+			fi
+
+			if [[ -z "$IMG" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
+					IMG="<img src=\"$IMGURL\">"
 			fi
 			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
 		fi
