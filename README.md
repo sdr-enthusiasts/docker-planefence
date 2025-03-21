@@ -8,6 +8,7 @@
     - [Planefence Configuration](#planefence-configuration)
       - [Initial docker configuration](#initial-docker-configuration)
       - [Planefence Settings Configuration](#planefence-settings-configuration)
+      - [Staying up to date with new Planefence features](#staying-up-to-date-with-new-planefence-features)
       - [Plane-Alert Exclusions](#plane-alert-exclusions)
       - [Applying your setup](#applying-your-setup)
   - [What does it look like when it's running?](#what-does-it-look-like-when-its-running)
@@ -69,7 +70,6 @@ curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main
 
 In the `docker-compose.yml` file, you should configure the following:
 
-- IMPORTANT: The image, by default, points at the release image. For the DEV version, change this: `image: ghcr.io/sdr-enthusiasts/docker-planefence:dev`
 - IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these unless you know what you are doing
 - After you exit the editor, start the container (`docker compose up -d`). The first time you do this, it can take a minute or so.
@@ -91,7 +91,9 @@ In the `docker-compose.yml` file, you should configure the following:
 - OPTIONAL: Add images of tar1090 to your notifications in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
 - OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `/opt/adsb/planefence/config/planefence.config`
 
----
+#### Staying up to date with new Planefence features
+
+Generally, any new features will be described in the default/example [`planefence.config`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/rootfs/usr/share/planefence/stage/planefence.config) file. A raw version of this file can be downloaded here: <https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/refs/heads/main/rootfs/usr/share/planefence/stage/planefence.config>. Note - you cannot use this file as-is; you MUST configure the parameters as appropriate for your station.
 
 #### Plane-Alert Exclusions
 

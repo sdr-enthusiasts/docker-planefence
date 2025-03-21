@@ -132,21 +132,24 @@ for image in "${IMAGES[@]}"; do
      # figure out what type the image is: jpeg, png, gif, and reduce size if necessary/possible.
      mimetype_local="$(file --mime-type -b "$image")"
      imgsize_org="$(stat -c%s "$image")"
+     modtime_org="$(stat -c "%y" "$image")"
+
      if (( imgsize_org >= 950000 )); then
-         if [[ "$mimetype_local" == "image/jpeg" ]]; then
-             jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
-             # try again if still too big
-             if (( $(stat -c%s "$image") >= 950000 )); then
-                 jpegoptim -q -S850 -s "$image"
-             fi
-         elif [[ "$mimetype_local" == "image/png" ]]; then
-             pngquant -f -o "${image}.tmp" 64 "$image"	# if it's PNG and > 1 MB, we can optimize for it
-             mv -f "${image}.tmp" "$image"
-         else
-             "${s6wrap[@]}" echo "Omitting image $image as it is too big ($imgsize)"
-             continue # skip if it's not JPG or PNG
-         fi
-         "${s6wrap[@]}" echo "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
+        if [[ "$mimetype_local" == "image/jpeg" ]]; then
+            jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
+            # try again if still too big
+            if (( $(stat -c%s "$image") >= 950000 )); then
+                jpegoptim -q -S850 -s "$image"
+            fi
+        elif [[ "$mimetype_local" == "image/png" ]]; then
+            pngquant -f -o "${image}.tmp" 64 "$image"	# if it's PNG and > 1 MB, we can optimize for it
+            mv -f "${image}.tmp" "$image"
+        else
+            "${s6wrap[@]}" echo "Omitting image $image as it is too big ($imgsize)"
+            continue # skip if it's not JPG or PNG
+        fi
+        touch -d "$modtime_org" "$image"    # restore original modification date of the image (for cache management purposes)
+        "${s6wrap[@]}" echo "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
      fi
      if (( $(stat -c%s "$image") >= 950000 )); then
          "${s6wrap[@]}" echo "Omitting image $image as the size reduction was insufficient: before: $imgsize_org; now: $(stat -c%s "$image")"

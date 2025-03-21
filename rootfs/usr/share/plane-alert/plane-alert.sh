@@ -117,6 +117,8 @@ if [[ -n "$BASETIME" ]]; then echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETI
 # 42001,3CONM,GovernmentofEquatorialGuinea,DassaultFalcon900B
 #
 
+"${s6wrap[@]}" echo "Checking traffic against the alert-list..."
+
 # create an associative array / dictionary from the plane alert list
 declare -A ALERT_DICT
 while IFS="" read -r line; do
@@ -301,6 +303,8 @@ comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 # if ALERTHEADER is set, then use that one instead of
 
 if [[ -n "$BASETIME" ]]; then echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: start Tweet run"; fi
+
+"${s6wrap[@]}" echo "Checking if notifications need to be sent..."
 
 # If there's any new alerts send them out
 if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
@@ -592,6 +596,7 @@ rm -f "/usr/share/planefence/persist/planepix/cache/*-{2,3,4}.jpg"
 
 # Now everything is in place, let's update the website
 
+"${s6wrap[@]}" echo "Writing plane-alert webpage..."
 # read all planespotters.net thumbnail links into an array for fast access
 unset THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
 declare -A THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
@@ -663,8 +668,6 @@ while read -r line; do
 	if [[ -n "$line" ]]; then
 		IFS=',' read -ra pa_record <<< "$line"
 
-		# print the row number
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
 		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then ITEMSTARTTIME="$(date +%s.%4N)" && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote item number for ${pa_record[0]} ($COUNTER)"; fi
 
 		# prep-work for later use:
@@ -678,6 +681,8 @@ while read -r line; do
 			printf "%s\n" "<tr>" >&3
 		fi
 
+		# print the row number
+		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
 
 		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
 		IMGURL="$IMGBASE"
@@ -868,3 +873,4 @@ fi
 #Finally, put the temp index into its place:
 mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
 if [[ -n "$BASETIME" ]]; then echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert"; fi
+"${s6wrap[@]}" echo "Plane-alert is done. Returning to Planefence"
