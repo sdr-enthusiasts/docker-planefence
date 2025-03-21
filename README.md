@@ -118,8 +118,6 @@ UC-12W appears to be a freeform search pattern, entries excluded: 8
 
 Also note that after adding exclusions, any pre-existing entries for those excluded planes in your Plane Alert web user interface will not be entirely removed, but some fields will disappear. If you've made a mistake and revert your exclusion changes to `planefence.config`, affected entries in your web user interface will be fully restored after a few minutes.
 
----
-
 #### Applying your setup
 
 - If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `/opt/adsb/planefence/config/planefence.config` will be picked up automatically
@@ -205,3 +203,8 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 That's all!
 
 ![funny image](https://media.giphy.com/media/3oKHWikxKFJhjArSXm/giphy.gif)
+
+## License and Data Use/Privacy
+
+Planefence is licensed under the GNU Public License, version 3, which can be found [here](LICENSE).
+Planefence's Data Use and Privacy policy can be found [here](README-privacy.md).
