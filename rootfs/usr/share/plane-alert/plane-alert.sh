@@ -759,8 +759,8 @@ while read -r line; do
 							fi
 						done
 					else
-						THUMBS_ARRAY[${pa_record[0]}]="$(<"usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")"
-						LINKS_ARRAY[${pa_record[0]}]="$(<"usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")"
+						if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link" ]]; then THUMBS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")"; fi
+						if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then LINKS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")"; fi
 					fi
 				fi
 
