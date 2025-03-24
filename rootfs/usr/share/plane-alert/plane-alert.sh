@@ -501,8 +501,8 @@ then
 			MQTT_HOST="${MQTT_HOST%:*}" # finally strip the host so there's only a hostname or ip address
 
 			# log the message we are going to send:
-			"${s6wrap[@]}" echo "pting to send a MQTT notification:"
-			"${s6wrap[@]}" echo "TT_HOST}"
+			"${s6wrap[@]}" echo "Attempting to send a MQTT notification:"
+			"${s6wrap[@]}" echo "MQTT Host: ${MQTT_HOST}"
 			"${s6wrap[@]}" echo "MQTT Port: ${MQTT_PORT:-1883}"
 			"${s6wrap[@]}" echo "MQTT Topic: ${MQTT_TOPIC}"
 			"${s6wrap[@]}" echo "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
