@@ -433,6 +433,8 @@ WRITEHTMLTABLE () {
 	maxindex="$((--counter))"
 
 	# Now write the HTML table header
+	# open file for writing as fd 3
+	exec 3>>"$2"
 
 	cat >&3 <<EOF
 	<table border="1" class="display planetable" id="mytable" style="width: auto; text-align: left; align: left" align="left">
