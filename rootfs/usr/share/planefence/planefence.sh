@@ -214,9 +214,9 @@ CREATE_NOISEPLOT () {
 	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
 	local STARTTIME="$2"
 	local ENDTIME="$3"
-	local TITLE="Noise plot for $1 at $(date -d "$2" +"%y%m%d-%H%M%S")"
+	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
 	local NOWTIME="$(date +%s)"
-	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
+	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
 	# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 	if (( ENDTIME - STARTTIME < 15 )); then ENDTIME=$(( STARTTIME + 15 )); fi
 	STARTTIME=$(( STARTTIME - 15))
@@ -390,7 +390,7 @@ WRITEHTMLTABLE () {
 			records[$index:notif_link]="${data[12]}"
 			{ # get a noise graph if one doesn't exist
 				# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-				records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
+				records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
 				records[$index:noisegraph_link]="$(basename "${records[$index:noisegraph_file]}")"
 				# If no noisegraph exists, create one:
 				if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
@@ -491,9 +491,9 @@ EOF
 			printf "   <td>%s</td><!-- owner -->\n" "${records[$index:owner]}" >&3
 		fi
 
-		printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "${records[$index:firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
+		printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records[$index:firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
 
-		printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "${records[$index:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
+		printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records[$index:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
 
 		printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records[$index:altitude]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
 		printf "   <td>%s %s</td><!-- min distance -->\n" "${records[$index:distance]}" "$DISTUNIT" >&3 # min distance
