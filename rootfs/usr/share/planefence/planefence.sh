@@ -386,7 +386,7 @@ WRITEHTMLTABLE () {
 			records[$index:sound_5min]="${data[9]}"
 			records[$index:sound_10min]="${data[10]}"
 			records[$index:sound_1hour]="${data[11]}"
-			records[$index:sound_loudness]="$(( data[7] - data[11] ))"
+			if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
 			records[$index:notif_link]="${data[12]}"
 			{ # get a noise graph if one doesn't exist
 				# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
@@ -413,9 +413,11 @@ WRITEHTMLTABLE () {
 			fi
 			}
 			{ # determine loudness background color
-				records[$index:sound_color]="$RED"
-				if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
-				if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
+				if [[ -n "${records[$index:sound_loudness]}" ]]; then 
+					records[$index:sound_color]="$RED"
+					if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
+					if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
+				fi
 			}
 		fi
 
