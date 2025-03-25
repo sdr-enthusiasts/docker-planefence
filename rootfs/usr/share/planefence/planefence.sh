@@ -429,8 +429,8 @@ WRITEHTMLTABLE () {
 		# get an image links
 		records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
 		records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
-
-		if [[ -z "${data[7]//[0-9.-]/}" ]]; then
+  
+		if [[ -z "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
 			# there is sound level information
 			HASNOISE=true
 			records[$index:sound_peak]="${data[7]//$'\n'/}"
