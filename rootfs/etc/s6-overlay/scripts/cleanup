@@ -58,6 +58,7 @@ CLEANUP ()
 
     touch -d "yesterday 00:00:00" /tmp/timestamp
     touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
+    touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
     find /usr/share/planefence/html/plane*{.html,.js,.csv,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
     find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
@@ -69,7 +70,8 @@ CLEANUP ()
     find /usr/share/planefence/persist/plane{fence,-alert}-discord.template.~[0-9]*~ -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    rm -f /tmp/timestamp /tmp/timestamp.planespottercache
+    find /usr/share/planefence/persist/.internal/routecache* -type f ! -newer /tmp/timestamp.routecache -delete 2>/dev/null
+    rm -f /tmp/timestamp*
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
         [[ "$f" == "" ]] && continue || true

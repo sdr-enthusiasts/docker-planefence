@@ -165,6 +165,35 @@ LOG ()
 	done
 }
 
+GET_ROUTE () {
+		# function to get a route by callsign. Must have a callsign - ICAO won't work
+		# Usage: GET_ROUTE <callsign>
+		# Uses the adsb.lol API to retrieve the route
+
+		local route
+		
+		# first let's see if it's in the cache
+		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
+			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
+			if [[ -n "$route" ]]; then
+				echo "$route"
+				return
+			fi
+		fi
+
+		if route="$(curl -sSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
+		                      -H 'accept: application/json' \
+													-H 'Content-Type: application/json' \
+													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
+								| jq -r '.[]._airport_codes_iata')" \
+				&& [[ -n "$route" ]] && [[ "$route" != "unknown" ]] && [[ "$route" != "null" ]]
+		then
+			echo "${1^^},$route" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
+			echo "$route"
+		fi
+
+}
+
 GET_PS_PHOTO () {
 	# Function to get a photo from PlaneSpotters.net
 	# Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
