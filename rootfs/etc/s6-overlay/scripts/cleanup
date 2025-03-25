@@ -59,7 +59,7 @@ CLEANUP ()
     touch -d "yesterday 00:00:00" /tmp/timestamp
     touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
     find /usr/share/planefence/html/plane*{.html,.js,.csv,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
-    find /usr/share/planefence/html/noise*.png -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
