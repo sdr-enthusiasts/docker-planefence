@@ -298,7 +298,7 @@ CREATE_MP3 () {
 		# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
 		rm -f "$OUTFILEDIR/$mp3f"
 	else
-		echo "$sf"
+		echo "$mp3f"
 	fi
 }
 
@@ -423,7 +423,7 @@ WRITEHTMLTABLE () {
 			{ # get a MP3 if one doesn't exist
 			records[$index:mp3_file]="$(CREATE_MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
 			if [[ -n "${records[$index:mp3_file]}" ]]; then
-				records[$index:mp3_link]="$(basename "${records[$index:smp3_file]}")"
+				records[$index:mp3_link]="$(basename "${records[$index:mp3_file]}")"
 			fi
 			}
 			{ # determine loudness background color
@@ -461,7 +461,7 @@ WRITEHTMLTABLE () {
 	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
 	<th style="width: auto; text-align: center">Transponder ID</th>
 	<th style="width: auto; text-align: center">Flight</th>
-  <th style="width: auto; text-align: center">Airline or Owner</th>"
+	<th style="width: auto; text-align: center">Airline or Owner</th>"
 	<th style="width: auto; text-align: center">Time First Seen</th>
 	<th style="width: auto; text-align: center">Time Last Seen</th>
 	<th style="width: auto; text-align: center">Min. Altitude</th>
