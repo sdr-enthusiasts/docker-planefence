@@ -436,11 +436,14 @@ WRITEHTMLTABLE () {
 		fi
 
 		# get notification service name
+		if "${records[$index:notified}"; then
+			records[$index:notif_service]="yes"
+		else
+			records[$index:notif_service]="no"
+		fi
 		if [[ -n "${records[$index:notif_link]}" ]]; then
 			if [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
 			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
-			elif "${records[$index:notified}"; then records[$index:notif_service]="yes"
-			else records[$index:notif_service]="no"
 			fi
 		fi
 	done <<< "$INPUTFILE"
