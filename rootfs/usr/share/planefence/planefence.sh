@@ -176,7 +176,7 @@ GET_ROUTE () {
 		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
 			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
 			if [[ -n "$route" ]]; then
-				echo "$route"
+				if  [[ "$route" != "unknown" ]]; then echo "$route"; fi
 				return
 			fi
 		fi
@@ -190,8 +190,9 @@ GET_ROUTE () {
 		then
 			echo "${1^^},$route" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
 			echo "$route"
+		elif [[ "${route,,}" == "unknown" ]] || [[ "${route,,}" == "null" ]]; then
+			echo "${1^^},unknown" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
 		fi
-
 }
 
 GET_PS_PHOTO () {
@@ -348,6 +349,7 @@ WRITEHTMLTABLE () {
 	local counter=0
 	local HASNOISE=false
 	local HASNOTIFS=false
+	local HASROUTE=false
 	local INPUTFILE="$(<"$1")"
 
 	# Replace the map zoom by whatever $HEATMAPZOOM contains
@@ -359,6 +361,7 @@ WRITEHTMLTABLE () {
 		# $index is a counter starting at 0 for each of the times
 		# icao: ICAO hex ID
 		# callsign: flight number or tail number
+		# route: route (airport codes)
 		# notified: notification has been sent (true/false)
 		# firstseen: date/time first seen in secs since epoch
 		# lastseen: date/time last seen in secs since epoch
@@ -389,6 +392,7 @@ WRITEHTMLTABLE () {
 		# maxindex: highest index number (useful for looping)
 		# HASNOISE: true if noise data is present in the array
 		# HASNOTIFS: true if notifications have been sent
+		# HASROUTE: true if a route is available
 
 		if [[ -z "$line" ]]; then continue; fi
 		readarray -d, -t data <<< "$line"
@@ -401,6 +405,8 @@ WRITEHTMLTABLE () {
 		else
 			records[$index:notified]=false
 		fi
+		records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"
+		if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
 		records[$index:altitude]="${data[4]//$'\n'/}"
@@ -493,6 +499,7 @@ WRITEHTMLTABLE () {
 	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
 	<th style="width: auto; text-align: center">Transponder ID</th>
 	<th style="width: auto; text-align: center">Flight</th>
+	$(${HASROUTE} && echo "<th style=\"width: auto; text-align: center\">Flight Route</th>" || true)
 	<th style="width: auto; text-align: center">Airline or Owner</th>"
 	<th style="width: auto; text-align: center">Time First Seen</th>
 	<th style="width: auto; text-align: center">Time Last Seen</th>
@@ -536,6 +543,9 @@ EOF
 
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa_link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
 
+		if ${HASROUTE}; then 
+			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
+		fi
 		if [[ -n "${records[$index:faa_link]}" ]]; then
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}" >&3
 		else
