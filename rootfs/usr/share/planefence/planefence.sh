@@ -468,13 +468,13 @@ EOF
 	if "$HASNOISE"; then
 		# print the headers for the standard noise columns
 		cat >&3 <<EOF
-		<th style="width: auto; text-align: center">Loudness</th>
-		<th style="width: auto; text-align: center">Peak RMS sound</th>
-		<th style="width: auto; text-align: center">1 min avg</th>
-		<th style="width: auto; text-align: center">5 min avg</th>
-		<th style="width: auto; text-align: center">10 min avg</th>
-		<th style="width: auto; text-align: center">1 hr avg</th>
-		<th style="width: auto; text-align: center">Spectrogram</th>
+	<th style="width: auto; text-align: center">Loudness</th>
+	<th style="width: auto; text-align: center">Peak RMS sound</th>
+	<th style="width: auto; text-align: center">1 min avg</th>
+	<th style="width: auto; text-align: center">5 min avg</th>
+	<th style="width: auto; text-align: center">10 min avg</th>
+	<th style="width: auto; text-align: center">1 hr avg</th>
+	<th style="width: auto; text-align: center">Spectrogram</th>
 EOF
 	fi
 
@@ -482,7 +482,7 @@ EOF
 		# print a header for the Notified column
 		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
 	fi
-	printf "</tr></thead>\n<tbody border=\"1\">\n" >&3
+	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
 
 	# Now write the table
 
@@ -537,13 +537,12 @@ EOF
 		# Print a notification, if there are any:
 		if "$HASNOTIFS"; then
 				if [[ -n "${records[$index:notif_link]}" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif_link]}" "${records[$index:service]}" >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif_link]}" "${records[$index:notif_service]}" >&3
 				else
-					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:service]}" >&3
+					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}" >&3
 				fi
 		fi
 		printf "</tr>\n" >&3
-	
 
 	done
 	printf "</tbody>\n</table>\n" >&3
