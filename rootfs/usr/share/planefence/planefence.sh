@@ -436,7 +436,7 @@ WRITEHTMLTABLE () {
 		fi
 
 		# get notification service name
-		if "${records[$index:notified}"; then
+		if "${records[$index:notified]}"; then
 			records[$index:notif_service]="yes"
 		else
 			records[$index:notif_service]="no"
