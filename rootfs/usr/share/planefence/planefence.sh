@@ -181,6 +181,8 @@ GET_PS_PHOTO () {
 	returntype="${2:-link}"
 	returntype="${returntype,,}"
 
+#echo "returntype=$returntype"
+
 	# shellcheck disable=SC2076
 	if [[ ! " image link thumblink " =~ " $returntype " ]]; then
 		return 1
@@ -192,16 +194,20 @@ GET_PS_PHOTO () {
 		return 0
 	fi
 	
-	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
-		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
-		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]
-	then
-		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		elif returntype="link"; then echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		elif returntype="thumblink"; then echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.thumb.link")"
-		fi
+	if [[ "$returntype" == "image" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
+		#echo in cache
+		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		return 0
+	elif [[ "$returntype" == "link" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]]; then
+		#echo in cache
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		return 0
+	elif [[ "$returntype" == "thumblink" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
+		#echo in cache
+		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.thumb.link")"
 		return 0
 	fi
+
 	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
 	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
 					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
@@ -212,6 +218,7 @@ GET_PS_PHOTO () {
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
+		#echo newly obtained
 		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		elif returntype="link"; then echo "$link"
 		elif returntype="thumblink"; then echo "$thumb"
