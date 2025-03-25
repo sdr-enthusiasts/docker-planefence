@@ -182,7 +182,7 @@ GET_PS_PHOTO () {
 	returntype="${returntype,,}"
 
 	# shellcheck disable=SC2076
-	if [[ ! " image link thumbnail" =~ "$returntype " ]]; then
+	if [[ ! " image link thumblink " =~ " $returntype " ]]; then
 		return 1
 	fi
 
@@ -367,13 +367,13 @@ WRITEHTMLTABLE () {
 		fi
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-		records[$index:altitude]="${data[4]//$'\n'/}}"
-		records[$index:distance]="${data[5]//$'\n'/}}"
+		records[$index:altitude]="${data[4]//$'\n'/}"
+		records[$index:distance]="${data[5]//$'\n'/}"
 		records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
 		records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${CALLSIGN}/redirect"
 		records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
 		records[$index:owner]="${records[$index:owner]:-unknown}"
-		records[$index:notif_link]="${data[7]//$'\n'/}}" 	# this will be adjusted if there's noise data
+		records[$index:notif_link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
 		if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
 			 [[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
 			 [[ "${records[$index:icao]:0:1}" == "A" ]]
@@ -388,13 +388,13 @@ WRITEHTMLTABLE () {
 		if [[ -z "${data[7]//[0-9.-]/}" ]]; then
 			# there is sound level information
 			HASNOISE=true
-			records[$index:sound_peak]="${data[7]//$'\n'/}}"
-			records[$index:sound_1min]="${data[8]//$'\n'/}}"
-			records[$index:sound_5min]="${data[9]//$'\n'/}}"
-			records[$index:sound_10min]="${data[10]//$'\n'/}}"
-			records[$index:sound_1hour]="${data[11]//$'\n'/}}"
+			records[$index:sound_peak]="${data[7]//$'\n'/}"
+			records[$index:sound_1min]="${data[8]//$'\n'/}"
+			records[$index:sound_5min]="${data[9]//$'\n'/}"
+			records[$index:sound_10min]="${data[10]//$'\n'/}"
+			records[$index:sound_1hour]="${data[11]//$'\n'/}"
 			if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
-			records[$index:notif_link]="${data[12]//$'\n'/}}"
+			records[$index:notif_link]="${data[12]//$'\n'/}"
 			{ # get a noise graph if one doesn't exist
 				# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
 				records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
