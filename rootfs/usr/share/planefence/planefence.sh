@@ -263,6 +263,7 @@ GET_PS_PHOTO () {
 
 CREATE_NOISEPLOT () {
 	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
+        if [[ -z "$REMOTENOISE" ]]; then return; fi
 	local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
@@ -283,6 +284,7 @@ CREATE_NOISEPLOT () {
 CREATE_SPECTROGRAM () {
 	# usage: CREATE_SPECTROGRAM <starttime> <endtime>
 	# returns the file name of the spectrogram it got
+        if [[ -z "$REMOTENOISE" ]]; then return; fi
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local sf spectrotime
@@ -309,6 +311,7 @@ CREATE_SPECTROGRAM () {
 CREATE_MP3 () {
 	# usage: CREATE_MP3 <starttime> <endtime>
 	# returns the file name of the MP3 file it got
+        if [[ -z "$REMOTENOISE" ]]; then return; fi
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local mp3time mp3f
