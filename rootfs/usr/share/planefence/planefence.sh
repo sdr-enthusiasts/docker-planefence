@@ -167,27 +167,39 @@ LOG ()
 
 GET_PS_PHOTO () {
 	# Function to get a photo from PlaneSpotters.net
-	# Usage: GET_PS_PHOTO ICAO
-	# Returns: file location of the photo
-	# First, let's see if we have a cache file for the photos
-	local starttime
+	# Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
+	# if [image|link|thumblink] is omitted, "link" is assumed
+	# image: the path to the thumbnail image on disk
+	# link: a link to the planespotters.net image page (not the image itself!)
+	# thumblink: a link to the thumbnail image at planespotters.net's CDN
+
 	local link
 	local json
+	local returntype
+	local thumb
 
-	starttime="$(date +%s)"
+	returntype="${2:-link}"
+	returntype="${returntype,,}"
+
+	# shellcheck disable=SC2076
+	if [[ ! " image link thumbnail" =~ "$returntype " ]]; then
+		return 1
+	fi
 
 	if ! $SHOWIMAGES; then return 0; fi
 
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
-		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (checked previously)" >> /tmp/getpi.log; fi
 		return 0
 	fi
 	
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]] && \
 		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]] && \
-		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
-		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture was in cache" >> /tmp/getpi.log; fi
+		 [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]
+	then
+		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		elif returntype="link"; then echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
+		elif returntype="thumblink"; then echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.thumb.link")"
+		fi
 		return 0
 	fi
 	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
@@ -199,14 +211,16 @@ GET_PS_PHOTO () {
 		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		echo "$link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - picture retrieved from planespotters.net" >> /tmp/getpi.log; fi
+		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		elif returntype="link"; then echo "$link"
+		elif returntype="thumblink"; then echo "$thumb"
+		fi
+		return 0
 	else
 		# If we don't have a link, let's clear the cache and return an empty string
 		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
 		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-		if chk_enabled "$TESTING"; then echo "pf - $(date) - $(( $(date +%s) - starttime )) secs - $1 - no picture available (new)" >> /tmp/getpi.log; fi
 	fi
 }
 
@@ -319,8 +333,8 @@ WRITEHTMLTABLE () {
 		# owner: owner or airline name
 		# notif_link: link to notification
 		# notif_service: "BlueSky", "Mastodon", or "yes"
-		# image_file: path to aircraft image
-		# image_link: link to image page at planespotters.net
+		# image_thumblink: link to image thumbnail
+		# image_weblink: link to image page at planespotters.net
 		# sound_peak: peak sound level (if NoiseCapt is configured)
 		# sound_1min: 1 minute sound level (if NoiseCapt is configured)
 		# sound_5min: 5 minute sound level (if NoiseCapt is configured)
@@ -353,13 +367,13 @@ WRITEHTMLTABLE () {
 		fi
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-		records[$index:altitude]="${data[4]}"
-		records[$index:distance]="${data[5]}"
+		records[$index:altitude]="${data[4]//$'\n'/}}"
+		records[$index:distance]="${data[5]//$'\n'/}}"
 		records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
 		records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${CALLSIGN}/redirect"
 		records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
 		records[$index:owner]="${records[$index:owner]:-unknown}"
-		records[$index:notif_link]="${data[7]}" 	# this will be adjusted if there's noise data
+		records[$index:notif_link]="${data[7]//$'\n'/}}" 	# this will be adjusted if there's noise data
 		if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
 			 [[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
 			 [[ "${records[$index:icao]:0:1}" == "A" ]]
@@ -367,27 +381,20 @@ WRITEHTMLTABLE () {
 			records[$index:faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
 		fi
 
-		# get an image if SHOWIMAGES is on
-		if ${SHOWIMAGES}; then
-			records[$index:image_file]="$(GET_PS_PHOTO "${records[$index:icao]}")"
-			if [[ -n "${records[$index:image_file]}" ]] && \
-					[[ -s "records[$index:image_file]" ]] && \
-					[[ -s "${records[$index:image_file]//.jpg/.link}" ]]
-			then
-				records[$index:image_link]="$(<"${records[$index:image_file]//.jpg/.link}")"
-			fi
-		fi
+		# get an image links
+		records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
+		records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
 
 		if [[ -z "${data[7]//[0-9.-]/}" ]]; then
 			# there is sound level information
 			HASNOISE=true
-			records[$index:sound_peak]="${data[7]}"
-			records[$index:sound_1min]="${data[8]}"
-			records[$index:sound_5min]="${data[9]}"
-			records[$index:sound_10min]="${data[10]}"
-			records[$index:sound_1hour]="${data[11]}"
+			records[$index:sound_peak]="${data[7]//$'\n'/}}"
+			records[$index:sound_1min]="${data[8]//$'\n'/}}"
+			records[$index:sound_5min]="${data[9]//$'\n'/}}"
+			records[$index:sound_10min]="${data[10]//$'\n'/}}"
+			records[$index:sound_1hour]="${data[11]//$'\n'/}}"
 			if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
-			records[$index:notif_link]="${data[12]}"
+			records[$index:notif_link]="${data[12]//$'\n'/}}"
 			{ # get a noise graph if one doesn't exist
 				# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
 				records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
@@ -444,7 +451,7 @@ WRITEHTMLTABLE () {
 	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
 	<th style="width: auto; text-align: center">Transponder ID</th>
 	<th style="width: auto; text-align: center">Flight</th>
-  <th style=\"width: auto; text-align: center\">Airline or Owner</th>"
+  <th style="width: auto; text-align: center">Airline or Owner</th>"
 	<th style="width: auto; text-align: center">Time First Seen</th>
 	<th style="width: auto; text-align: center">Time Last Seen</th>
 	<th style="width: auto; text-align: center">Min. Altitude</th>
@@ -477,8 +484,8 @@ EOF
 		printf "<tr>\n" >&3
 		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" >&3 # table index number
 
-		if ${SHOWIMAGES} && [[ -n "${records[$index:image_file]}" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_file]}" "${records[$index:image_link]}" >&3
+		if ${SHOWIMAGES} && [[ -n "${records[$index:image_thumblink]}" ]]; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}" >&3
 		elif ${SHOWIMAGES}; then
 			printf "   <td></td><!-- images enabled but no image file available for this entry -->\n" >&3
 		fi
@@ -511,7 +518,7 @@ EOF
 			if [[ -n "${records[$index:mp3_link]}" ]]; then 
 				printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records[$index:mp3_link]}" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
 			else
-				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available)\n" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
+				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
 			fi
 			printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records[$index:sound_1min]}" >&3
 			printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records[$index:sound_5min]}" >&3
