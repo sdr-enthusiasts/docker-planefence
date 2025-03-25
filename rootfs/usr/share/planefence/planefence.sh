@@ -442,7 +442,10 @@ WRITEHTMLTABLE () {
 			records[$index:notif_service]="no"
 		fi
 		if [[ -n "${records[$index:notif_link]}" ]]; then
-			if [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+			if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
+				 records[$index:notif_service]="MQTT"
+				 records[$index:notif_link]=""
+			elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
 			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 			fi
 		fi
