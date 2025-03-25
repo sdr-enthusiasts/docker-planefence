@@ -401,7 +401,7 @@ if [ -f "$CSVFILE" ]; then
 				msg_array[min_dist]="${RECORD[5]} $DISTUNIT"
 				msg_array[link]="${RECORD[6]//globe.adsbexchange.com/$TRACKSERVICE}"
 				if ((RECORD[7] < 0)); then
-					msg_array[peek_audio]="${RECORD[7]} dBFS"
+					msg_array[peak_audio]="${RECORD[7]} dBFS"
 					msg_array[loudness]="$((RECORD[7] - RECORD[11])) dB"
 				fi
 				if [[ -f "/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.thumb.link" ]]; then
@@ -462,6 +462,7 @@ if [ -f "$CSVFILE" ]; then
 					"${s6wrap[@]}" echo "MQTT Delivery successful!"
 					if chk_enabled "$MQTT_DEBUG"; then "${s6wrap[@]}" echo "Results string: ${outputmsg//$'\n'/ }"; fi
 				fi
+				LINK="${LINK:-mqtt}"
 
 			fi
 
