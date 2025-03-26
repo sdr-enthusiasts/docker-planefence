@@ -263,8 +263,10 @@ GET_PS_PHOTO () {
 
 CREATE_NOISEPLOT () {
 	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
-        if [[ -z "$REMOTENOISE" ]]; then return; fi
-	local STARTTIME="$2"
+  
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+  
+  local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
 	local NOWTIME="$(date +%s)"
@@ -284,7 +286,9 @@ CREATE_NOISEPLOT () {
 CREATE_SPECTROGRAM () {
 	# usage: CREATE_SPECTROGRAM <starttime> <endtime>
 	# returns the file name of the spectrogram it got
-        if [[ -z "$REMOTENOISE" ]]; then return; fi
+
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+  
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local sf spectrotime
@@ -311,7 +315,9 @@ CREATE_SPECTROGRAM () {
 CREATE_MP3 () {
 	# usage: CREATE_MP3 <starttime> <endtime>
 	# returns the file name of the MP3 file it got
-        if [[ -z "$REMOTENOISE" ]]; then return; fi
+
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local mp3time mp3f
@@ -408,8 +414,10 @@ WRITEHTMLTABLE () {
 		else
 			records[$index:notified]=false
 		fi
+    
 		if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
 		if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
+
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
 		records[$index:altitude]="${data[4]//$'\n'/}"
@@ -549,6 +557,7 @@ EOF
 		if ${HASROUTE}; then 
 			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
 		fi
+
 		if [[ -n "${records[$index:faa_link]}" ]]; then
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}" >&3
 		else
