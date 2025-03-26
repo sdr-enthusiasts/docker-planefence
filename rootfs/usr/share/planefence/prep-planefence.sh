@@ -103,7 +103,7 @@ mkdir -p /usr/share/planefence/html/plane-alert
 cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #
 # LOOPTIME is the time between two runs of Planefence (in seconds)
-if [[ "$PF_INTERVAL" != "" ]]; then
+if [[ -n "$PF_INTERVAL" ]]; then
 	export LOOPTIME=$PF_INTERVAL
 
 else
@@ -185,6 +185,8 @@ configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
 if chk_disabled "$PF_SHOWIMAGES"; then configure_planefence "SHOWIMAGES" "false"; else configure_planefence "SHOWIMAGES" "true"; fi
 if chk_disabled "$PA_SHOWIMAGES"; then configure_planealert "SHOWIMAGES" "false"; else configure_planealert "SHOWIMAGES" "true"; fi
+
+if chk_disabled "$PF_CHECKROUTE"; then configure_planefence "CHECKROUTE" "false"; else configure_planefence "CHECKROUTE" "true"; fi
 
 if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001

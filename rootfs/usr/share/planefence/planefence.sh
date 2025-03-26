@@ -165,6 +165,36 @@ LOG ()
 	done
 }
 
+GET_ROUTE () {
+		# function to get a route by callsign. Must have a callsign - ICAO won't work
+		# Usage: GET_ROUTE <callsign>
+		# Uses the adsb.lol API to retrieve the route
+
+		local route
+		
+		# first let's see if it's in the cache
+		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
+			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
+			if [[ -n "$route" ]]; then
+				if  [[ "$route" != "unknown" ]]; then echo "$route"; fi
+				return
+			fi
+		fi
+
+		if route="$(curl -sSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
+		                      -H 'accept: application/json' \
+													-H 'Content-Type: application/json' \
+													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
+								| jq -r '.[]._airport_codes_iata')" \
+				&& [[ -n "$route" ]] && [[ "$route" != "unknown" ]] && [[ "$route" != "null" ]]
+		then
+			echo "${1^^},$route" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
+			echo "$route"
+		elif [[ "${route,,}" == "unknown" ]] || [[ "${route,,}" == "null" ]]; then
+			echo "${1^^},unknown" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
+		fi
+}
+
 GET_PS_PHOTO () {
 	# Function to get a photo from PlaneSpotters.net
 	# Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
@@ -233,7 +263,10 @@ GET_PS_PHOTO () {
 
 CREATE_NOISEPLOT () {
 	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
-	local STARTTIME="$2"
+  
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+  
+  local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
 	local NOWTIME="$(date +%s)"
@@ -253,6 +286,9 @@ CREATE_NOISEPLOT () {
 CREATE_SPECTROGRAM () {
 	# usage: CREATE_SPECTROGRAM <starttime> <endtime>
 	# returns the file name of the spectrogram it got
+
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+  
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local sf spectrotime
@@ -279,6 +315,9 @@ CREATE_SPECTROGRAM () {
 CREATE_MP3 () {
 	# usage: CREATE_MP3 <starttime> <endtime>
 	# returns the file name of the MP3 file it got
+
+  if [[ -z "$REMOTENOISE" ]]; then return; fi
+
 	local STARTTIME="$1"
 	local ENDTIME="$2"
 	local mp3time mp3f
@@ -319,6 +358,7 @@ WRITEHTMLTABLE () {
 	local counter=0
 	local HASNOISE=false
 	local HASNOTIFS=false
+	local HASROUTE=false
 	local INPUTFILE="$(<"$1")"
 
 	# Replace the map zoom by whatever $HEATMAPZOOM contains
@@ -330,6 +370,7 @@ WRITEHTMLTABLE () {
 		# $index is a counter starting at 0 for each of the times
 		# icao: ICAO hex ID
 		# callsign: flight number or tail number
+		# route: route (airport codes)
 		# notified: notification has been sent (true/false)
 		# firstseen: date/time first seen in secs since epoch
 		# lastseen: date/time last seen in secs since epoch
@@ -360,6 +401,7 @@ WRITEHTMLTABLE () {
 		# maxindex: highest index number (useful for looping)
 		# HASNOISE: true if noise data is present in the array
 		# HASNOTIFS: true if notifications have been sent
+		# HASROUTE: true if a route is available
 
 		if [[ -z "$line" ]]; then continue; fi
 		readarray -d, -t data <<< "$line"
@@ -372,6 +414,10 @@ WRITEHTMLTABLE () {
 		else
 			records[$index:notified]=false
 		fi
+    
+		if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
+		if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
+
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
 		records[$index:altitude]="${data[4]//$'\n'/}"
@@ -391,8 +437,8 @@ WRITEHTMLTABLE () {
 		# get an image links
 		records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
 		records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
-
-		if [[ -z "${data[7]//[0-9.-]/}" ]]; then
+  
+		if [[ -n "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
 			# there is sound level information
 			HASNOISE=true
 			records[$index:sound_peak]="${data[7]//$'\n'/}"
@@ -464,6 +510,7 @@ WRITEHTMLTABLE () {
 	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
 	<th style="width: auto; text-align: center">Transponder ID</th>
 	<th style="width: auto; text-align: center">Flight</th>
+	$(${HASROUTE} && echo "<th style=\"width: auto; text-align: center\">Flight Route</th>" || true)
 	<th style="width: auto; text-align: center">Airline or Owner</th>"
 	<th style="width: auto; text-align: center">Time First Seen</th>
 	<th style="width: auto; text-align: center">Time Last Seen</th>
@@ -506,6 +553,10 @@ EOF
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map_link]}" "${records[$index:icao]}" >&3 # ICAO
 
 		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa_link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
+
+		if ${HASROUTE}; then 
+			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
+		fi
 
 		if [[ -n "${records[$index:faa_link]}" ]]; then
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}" >&3
