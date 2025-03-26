@@ -408,7 +408,7 @@ WRITEHTMLTABLE () {
 		else
 			records[$index:notified]=false
 		fi
-		records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"
+		if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
 		if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
