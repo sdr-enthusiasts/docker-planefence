@@ -939,18 +939,12 @@ else
 fi
 
 [[ "$BASETIME" != "" ]] && echo "10. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done getting NoiseCapt stuff, invoking plane-alert.sh" || true
-# If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
-if [[ "$PLANEALERT" == "ON" ]]; then
-	LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"
-	"${s6wrap[@]}" echo "Invoking Plane-Alert..."
-	$PLALERTFILE "$INFILETMP"
-fi
 
 # Next, we are going to print today's HTML file:
 # Note - all text between 'cat' and 'EOF' is HTML code:
 
 "${s6wrap[@]}" echo "Writing Planefence web page..."
-[[ "$BASETIME" != "" ]] && echo "11. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking plane-alert.sh, starting to build the webpage" || true
+[[ "$BASETIME" != "" ]] && echo "11. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s --  starting to build the webpage" || true
 
 cat <<EOF >"$OUTFILEHTMTMP"
 <!DOCTYPE html>
@@ -1275,6 +1269,13 @@ then
 fi
 
 echo "$FENCEDATE" > "$LASTFENCEFILE"
+
+# If $PLANEALERT=on then lets call plane-alert to see if the new lines contain any planes of special interest:
+if chk_enabled "$PLANEALERT"; then
+	LOG "Calling Plane-Alert as $PLALERTFILE $INFILETMP"
+	"${s6wrap[@]}" echo "Invoking Plane-Alert..."
+	$PLALERTFILE "$INFILETMP"
+fi
 
 # That's all
 # This could probably have been done more elegantly. If you have changes to contribute, I'll be happy to consider them for addition
