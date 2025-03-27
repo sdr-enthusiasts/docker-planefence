@@ -831,6 +831,7 @@ sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##ALERTLIST##|$ALERTLIST|g" "$TMPDIR"/plalert-index.tmp
+sed -i "s|##ALERTLISTUPDATE##|$(stat -c "%y" /usr/share/planefence/persist/.internal/plane-alert-db.txt | sed 's/\.[0-9]*//')|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##CONCATLIST##|$CONCATLIST|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
 sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
