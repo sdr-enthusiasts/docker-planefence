@@ -502,7 +502,13 @@ if [ -f "$CSVFILE" ]; then
 			fi
 
 			# Add a reference to the tweet to RECORD[7] (if no audio is available) or RECORD[11] (if audio is available)
-			if [[ -n "${RECORD[7]}" ]] && [[ -n "$LINK" ]]; then RECORD[12]="$LINK"; else RECORD[7]="$LINK"; fi
+			if [[ -n "$LINK" ]]; then 
+				if [[ -n "${RECORD[7]}" ]]; then 
+					RECORD[12]="$LINK"
+				else 
+					RECORD[7]="$LINK"
+				fi
+			fi
 			# LOG "Tweet sent!"
 			LOG "TWURL results: $LINK"
 		else
