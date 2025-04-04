@@ -420,7 +420,7 @@ WRITEHTMLTABLE () {
 
 		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-		records[$index:altitude]="${data[4]//$'\n'/}"
+		records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
 		records[$index:distance]="${data[5]//$'\n'/}"
 		records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
 		records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${CALLSIGN}/redirect"
@@ -1106,8 +1106,8 @@ ${PF_MOTD}
 <ul>
   <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
   <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
-  <li>Only aircraft below $(printf "%'.0d" "$MAXALT") $ALTUNIT are reported
-  <li>Data extracted from $(printf "%'.0d" $TOTALLINES) <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
+  <li>Only aircraft below $(printf "%'.0d" "$MAXALT" | sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta') $ALTUNIT are reported
+  <li>Data extracted from $(printf "%'.0d" $TOTALLINES | sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta') <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 EOF
 {	[[ -n "$FUDGELOC" ]] && printf "  <li> Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station\n"
 	[[ -f "/run/planefence/filtered-$FENCEDATE" ]] && [[ -f "$IGNORELIST" ]] && (( $(grep -c "^[^#;]" "$IGNORELIST") > 0 )) && printf "  <li> %d entries were filtered out today because of an <a href=\"ignorelist.txt\" target=\"_blank\">ignore list</a>\n" "$(</run/planefence/filtered-"$FENCEDATE")"
