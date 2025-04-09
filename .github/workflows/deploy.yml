@@ -81,4 +81,3 @@ jobs:
       build_baseimage_url: :python/:python-test-pr
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
-      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
