@@ -84,6 +84,14 @@ def process_alert(config, plane):
 
     title = f"Plane Alert - {plane['plane_desc']}"
     color = config.get("PA_DISCORD_COLOR", "0xf2e718")
+    if not color.strip():
+        color = "0xf2e718"
+    try:
+        color = int(color, 16)
+    except ValueError:
+        pf.log("[error] Invalid PA_DISCORD_COLOR value in configuration. Using default color.")
+        color = 0xf2e718
+
     squawk = plane.get('squawk', "")
     if pf.is_emergency(squawk):
         title = f"Air Emergency! {plane['tail_num']} squawked {squawk}"
