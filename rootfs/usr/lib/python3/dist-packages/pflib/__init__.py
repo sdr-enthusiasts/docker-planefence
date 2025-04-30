@@ -65,7 +65,8 @@ def load_config():
         "PA_DISCORD_WEBHOOKS": os.getenv("PA_DISCORD_WEBHOOKS", ""),
         "PF_DISCORD_WEBHOOKS": os.getenv("PF_DISCORD_WEBHOOKS", ""),
         "DISCORD_FEEDER_NAME": os.getenv("DISCORD_FEEDER_NAME", ""),
-        "DISCORD_MEDIA": os.getenv("DISCORD_MEDIA", "")
+        "DISCORD_MEDIA": os.getenv("DISCORD_MEDIA", ""),
+        "PA_DISCORD_COLOR": os.getenv("PA_DISCORD_COLOR", "")
     }
 
     # Load config
