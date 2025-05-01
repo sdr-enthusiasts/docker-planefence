@@ -42,6 +42,8 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 
 - To get messages from Planefence set `PF_DISCORD=ON` and to get messages from plane-alert set `PA_DISCORD=ON`.
 
+- To set the highlight color of Plane-Alert messages, set `PA_DISCORD_COLOR` to a hexadecimal color code with a leading "0x" (`0xRRGGBB`, so for example `0x00FF00` would be pure green.) The default is `0xf2e718` (a yellow color). You can use [this site](https://www.w3schools.com/colors/colors_picker.asp) or [this site](https://www.color-hex.com) to pick a color and get its hex code. Note that planes with emergencies, i.e. squawking 7500, 7600, or 7700, will always be highlighted in red (`0xff0000`) regardless of the color you set, so you shouldn't use red for your normal alerts.
+
 # Summary of License Terms
 
 This program is free software: you can redistribute it and/or modify
