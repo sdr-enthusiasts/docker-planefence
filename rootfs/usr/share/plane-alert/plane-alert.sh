@@ -545,6 +545,19 @@ then
 			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
 		fi
 
+		# Inject Telegram integration here:
+
+		if chk_enabled "$TELEGRAM_ENABLED"; then
+			# get a list of images to upload
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then images=("$snapfile" ${images[@]}); fi
+
+			# now send the Telegram message:
+			echo "DEBUG: posting to Telegram: /scripts/post2telegram.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# shellcheck disable=SC2068
+			/scripts/post2telegram.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
+		fi
+
 		# Inject Mastodon integration here:
 		if [[ -n "$MASTODON_SERVER" ]]
 		then
