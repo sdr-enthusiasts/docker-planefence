@@ -31,6 +31,8 @@ if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
   exit 1
 fi
 
+if [[ "${TELEGRAM_CHAT_ID:0:4}" != "-100" ]]; then TELEGRAM_CHAT_ID="-100${TELEGRAM_CHAT_ID}"; fi
+
 # Extract info from the command line arguments
 args=("$@")
 TEXT="${args[0]}"
