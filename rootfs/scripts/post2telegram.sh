@@ -61,8 +61,8 @@ TAIL="$(sed -n 's/.*Tail: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]
 FLIGHT="$(sed -n 's/.*Flt: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
 
 if [[ -n "$ICAO" ]]; then image_header="ICAO $ICAO"; else image_header=""; fi
-if [[ -n "$TAIL" ]]; then image_header+="${image_header:+; }Tail $TAIL"; fi
-if [[ -n "$FLIGHT" ]]; then image_header+="${image_header:+; }Flight $FLIGHT"; fi
+if [[ -n "$TAIL" ]]; then image_header+="${image_header:+ - }Tail $TAIL"; fi
+if [[ -n "$FLIGHT" ]]; then image_header+="${image_header:+ - }Flight $FLIGHT"; fi
 image_header="${image_header:+$image_header - }"
 
 for image in "${IMAGES[@]}"; do
@@ -82,14 +82,14 @@ for image in "${IMAGES[@]}"; do
 
     # Send the photo with the message
     if (( image_counter == 1 )); then
-      response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
           -F "chat_id=${TELEGRAM_CHAT_ID}" \
           -F "photo=@${image}" \
           -F "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
           -F "parse_mode=HTML")"
       message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     else
-      response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
           -F "chat_id=${TELEGRAM_CHAT_ID}" \
           -F "photo=@${image}" \
           -F "caption=${image_text}" \
@@ -112,8 +112,8 @@ for image in "${IMAGES[@]}"; do
 done
 
 # If no images or image sending failed, send text only
-if ! $has_images; then
-    response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
+if (( image_count == 0 )); then
+    response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
         -F "chat_id=${TELEGRAM_CHAT_ID}" \
         -F "text=${TEXT}" \
         -F "parse_mode=HTML")"
