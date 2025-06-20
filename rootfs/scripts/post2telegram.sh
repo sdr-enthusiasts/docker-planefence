@@ -45,7 +45,7 @@ fi
 
 # Clean up the text
 TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters
-TEXT="${TEXT//[[:cntrl:]]/\n}"            # Replace control characters with newlines
+TEXT="${TEXT//[[:cntrl:]]/$'\n'}"            # Replace control characters with newlines
 
 # Send images to Telegram if available
 has_images=false
