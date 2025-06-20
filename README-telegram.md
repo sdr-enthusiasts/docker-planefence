@@ -11,7 +11,7 @@
 
 This README describes how to configure Planefence to send notifications for Planefence and/or Plane-Alert messages to Telegram.
 
-The examples described here use the Telegram web interface. You can do most of this also using one of the Telegram Apps, but please note that some apps (for example, the iPhone app) don't allow you to do steps 2.4 and 2.5. We therefore recommend you use a browser from your computer to set this up. Telegram in the browser interface can be reached [here](https://web.telegram.org/a/).
+The examples described here use the Telegram web interface. You can do most of this also using one of the Telegram Apps, but please note that some apps (for example, the iPhone app) don't allow you to do steps 2.4 and 2.5. We therefore recommend you use a browser from your computer to set this up. Telegram in the browser interface can be reached [at this link](https://web.telegram.org/a/).
 
 ## Prerequisites
 
