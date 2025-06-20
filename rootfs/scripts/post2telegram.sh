@@ -64,7 +64,11 @@ for image in "${IMAGES[@]}"; do
       continue
     fi
     if (( image_count > 1 )); then
-      image_text="ICAO $ICAO: Image $image_counter of $image_count"
+      if ((image_counter == 1 )); then
+        image_text="Image $image_counter of $image_count"
+      else
+        image_text="ICAO $ICAO: Image $image_counter of $image_count"
+      fi
     else
       image_text=""
     fi
