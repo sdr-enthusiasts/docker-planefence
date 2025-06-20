@@ -11,17 +11,17 @@
 
 This README describes how to configure Planefence to send notifications for Planefence and/or Plane-Alert messages to Telegram.
 
-The examples described here use the Telegram web interface. The process of creating a bot in Telegram using a mobile application is very similar.
+The examples described here use the Telegram web interface. You can do most of this also using one of the Telegram Apps, but please note that some apps (for example, the iPhone app) don't allow you to do steps 2.4 and 2.5. We therefore recommend you use a browser from your computer to set this up. Telegram in the browser interface can be reached [here](https://web.telegram.org/a/).
 
 ## Prerequisites
 
 This is part of the [sdr-enthusiasts/docker-planefence] docker container. Nothing in this document will make sense outside the context of this container. We assume that Planefence has been set up correctly and is working fine, and all you want to do is add Telegram notifications to your existing setup.
 
-You should also already have a Telegram account. If you don't, please go to [https://web.telegram.org/a/](Telegram) and sign up first.
+You should also already have a Telegram account. If you don't, please go to [Telegram](https://web.telegram.org/a/) on the web and sign up first.
 
 ## Step 1: Create and configure a Telegram bot
 
-1. Start a conversation with [https://web.telegram.org/a/#93372553](@BotFather) on Telegram
+1. Start a conversation with [@BotFather](https://web.telegram.org/a/#93372553) on Telegram
 2. Say: `/newbot`. Give it a name and a username that is unique
 ![Create a bot](.img/telegram-new-bot.png)
 3. Copy the HTTP API Token. This will be the value for the`TELEGRAM_BOT_TOKEN` parameter that we will discuss below.
@@ -31,7 +31,7 @@ You should also already have a Telegram account. If you don't, please go to [htt
 ### Posting to a newly created (private) channel for which you are an Administrator
 
 1. From the screen that lists all of your Chats, click the square-with-pencil icon and create a "New Channel".
-2. Add yourself and the bot you just created to the channel.
+2. Add **yourself** and **the bot you just created** to the channel.
 3. Send a test message to the channel
 4. Right-click the test message and select "Copy Message Link" *)
 5. Paste the link somewhere to see the URL, which will look like this: <https://t.me/c/123456789/2>. The numbers in `c/...../` are your CHAT_ID (in our case: `123456789`). Please note this as you  will use it below.
