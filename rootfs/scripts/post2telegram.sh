@@ -48,34 +48,56 @@ TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters
 TEXT="${TEXT//[[:cntrl:]]/$'\n'}"            # Replace control characters with newlines
 
 # Send images to Telegram if available
-has_images=false
+image_count=0
+for image in "${IMAGES[@]}"; do
+  if [[ -n "$image" ]]; then
+    image_count="$((image_count + 1))"  # only count non-empty image paths
+  fi
+done
+image_counter=1
+# shellcheck disable=SC2001
+ICAO="$(sed 's/.*ICAO: #\?\([A-Fa-f0-9]\{6\}\).*/\1/g' <<< "${TEXT//[[:cntrl:]]/ }")"
+
 for image in "${IMAGES[@]}"; do
     # Skip if the image is not a file that exists
     if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
       continue
     fi
-    
-    has_images=true
-    
-    # Send the photo with the message
-    response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-        -F "chat_id=${TELEGRAM_CHAT_ID}" \
-        -F "photo=@${image}" \
-        -F "caption=${TEXT}" \
-        -F "parse_mode=HTML")"
-    
-    message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
-    
-    if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-      "${s6wrap[@]}" echo "Error sending photo to Telegram: $response"
-      { echo "{ \"title\": \"Telegram Photo Send Error\","
-        echo "  \"response\": $response }"
-      } >> /tmp/telegram.json
+    if (( image_count > 1 )); then
+      image_text="ICAO $ICAO: Image $image_counter of $image_count"
     else
-      echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
-      "${s6wrap[@]}" echo "Photo message sent successfully to Telegram; link: $(</tmp/telegram.link)"
-      exit 0
+      image_text=""
     fi
+
+    # Send the photo with the message
+    if (( image_counter == 1 )); then
+      response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+          -F "chat_id=${TELEGRAM_CHAT_ID}" \
+          -F "photo=@${image}" \
+          -F "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
+          -F "parse_mode=HTML")"
+      message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
+    else
+      response="$(curl -s -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+          -F "chat_id=${TELEGRAM_CHAT_ID}" \
+          -F "photo=@${image}" \
+          -F "caption=${image_text}" \
+          -F "parse_mode=HTML")"
+    fi
+
+    if (( image_counter == 1)); then
+      if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
+        "${s6wrap[@]}" echo "Error sending photo to Telegram: $response"
+        { echo "{ \"title\": \"Telegram Photo Send Error\","
+          echo "  \"response\": $response }"
+        } >> /tmp/telegram.json
+      else
+        echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
+        "${s6wrap[@]}" echo "Photo message sent successfully to Telegram; link: $(</tmp/telegram.link)"
+      fi
+    fi
+
+    image_counter=$((image_counter + 1))
 done
 
 # If no images or image sending failed, send text only
