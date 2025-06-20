@@ -31,7 +31,7 @@ You should also already have a Telegram account. If you don't, please go to [Tel
 ### Posting to a newly created (private) channel for which you are an Administrator
 
 1. From the screen that lists all of your Chats, click the square-with-pencil icon and create a "New Channel".
-2. Add **yourself** and **the bot you just created** to the channel.
+2. Add **yourself** and **the bot you just created** to the channel. The bot must have **Admin privileges**, but the only attribute it needs is to "Post Messages". The other permissions can safely be switched off
 3. Send a test message to the channel
 4. Right-click the test message and select "Copy Message Link" *)
 5. Paste the link somewhere to see the URL, which will look like this: <https://t.me/c/123456789/2>. The numbers in `c/...../` are your CHAT_ID (in our case: `123456789`). Please note this as you  will use it below.
