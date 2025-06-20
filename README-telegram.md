@@ -23,7 +23,7 @@ You should also already have a Telegram account. If you don't, please go to [htt
 
 1. Start a conversation with [https://web.telegram.org/a/#93372553](@BotFather) on Telegram
 2. Say: `/newbot`. Give it a name and a username that is unique
-![Create a bot](.img/telegram-newbot.png)
+![Create a bot](.img/telegram-new-bot.png)
 3. Copy the HTTP API Token. This will be the value for the`TELEGRAM_BOT_TOKEN` parameter that we will discuss below.
 
 ## Step 2: Create a Telegram channel you will post to
