@@ -56,7 +56,14 @@ for image in "${IMAGES[@]}"; do
 done
 image_counter=1
 # shellcheck disable=SC2001
-ICAO="$(sed 's/.*ICAO: #\?\([A-Fa-f0-9]\{6\}\).*/\1/g' <<< "${TEXT//[[:cntrl:]]/ }")"
+ICAO="$(sed -n 's/.*ICAO: #\?\([A-Fa-f0-9]\{6\}\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
+TAIL="$(sed -n 's/.*Tail: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
+FLIGHT="$(sed -n 's/.*Flt: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
+
+if [[ -n "$ICAO" ]]; then image_header="ICAO $ICAO"; else image_header=""; fi
+if [[ -n "$TAIL" ]]; then image_header+="${image_header:+; }Tail $TAIL"; fi
+if [[ -n "$FLIGHT" ]]; then image_header+="${image_header:+; }Flight $FLIGHT"; fi
+image_header="${image_header:+$image_header - }"
 
 for image in "${IMAGES[@]}"; do
     # Skip if the image is not a file that exists
@@ -67,7 +74,7 @@ for image in "${IMAGES[@]}"; do
       if ((image_counter == 1 )); then
         image_text="Image $image_counter of $image_count"
       else
-        image_text="ICAO $ICAO: Image $image_counter of $image_count"
+        image_text="${image_header}Image $image_counter of $image_count"
       fi
     else
       image_text=""

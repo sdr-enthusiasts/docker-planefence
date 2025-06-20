@@ -533,29 +533,26 @@ then
 			fi
 		fi
 
+
 		# Inject BlueSky integration here:
 		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
-			# get a list of images to upload
-			# shellcheck disable=SC2206
-			if [[ "$GOTSNAP" == "true" ]]; then images=("$snapfile" ${images[@]}); fi
-
 			# now send the BlueSky message:
-			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then bsky_images=("$snapfile" ${images[@]}); else bsky_images=(${images[@]}); fi
 			# shellcheck disable=SC2068
-			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${bsky_images[@]::4} || true
 		fi
 
 		# Inject Telegram integration here:
 
 		if chk_enabled "$TELEGRAM_ENABLED"; then
-			# get a list of images to upload
-			# shellcheck disable=SC2206
-			if [[ "$GOTSNAP" == "true" ]]; then images=("$snapfile" ${images[@]}); fi
-
 			# now send the Telegram message:
-			echo "DEBUG: posting to Telegram: /scripts/post2telegram.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# echo "DEBUG: posting to Telegram: /scripts/post2telegram.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then telegram_images=("$snapfile" ${images[@]}); else telegram_images=(${images[@]}); fi
 			# shellcheck disable=SC2068
-			/scripts/post2telegram.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
+			/scripts/post2telegram.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${telegram_images[@]::4} || true
 		fi
 
 		# Inject Mastodon integration here:
