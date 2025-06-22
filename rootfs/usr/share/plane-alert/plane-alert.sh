@@ -307,8 +307,7 @@ if [[ -n "$BASETIME" ]]; then echo "10d. $(bc -l <<< "$(date +%s.%2N) - $BASETIM
 "${s6wrap[@]}" echo "Checking if notifications need to be sent..."
 
 # If there's any new alerts send them out
-if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]
-then
+if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
 	# Loop through the new planes and notify them. Initialize $ERRORCOUNT to capture the number of Tweet failures:
 	ERRORCOUNT=0
 	while IFS= read -r line
@@ -605,39 +604,39 @@ if [[ -n "$BASETIME" ]]; then echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIM
 rm -f "/usr/share/planefence/persist/planepix/cache/*-{2,3,4}.jpg"
 
 # Now everything is in place, let's update the website
+if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
+	"${s6wrap[@]}" echo "Writing full plane-alert webpage because there are new planes spotted..."
+	# read all planespotters.net thumbnail links into an array for fast access
+	unset THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
+	declare -A THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
+	while read -r filename; do
+		icao="${filename##*/}"
+		THUMBS_ARRAY[${icao%%.*}]="$(<"$filename")"
+	done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.thumb.link" -print)"
+	while read -r filename; do
+		icao="${filename##*/}"
+		LINKS_ARRAY[${icao%%.*}]="$(<"$filename")"
+	done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -regex '.*/[0-9A-F]+\.link' -print)"
+	while read -r filename; do
+		icao="${filename##*/}"
+		if [[ -z "${FILES_ARRAY[${icao%%[-.]*}]}" ]]; then
+			FILES_ARRAY[${icao%%[-.]*}]="$filename"
+		fi
+	done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.jpg" -print)"
 
-"${s6wrap[@]}" echo "Writing plane-alert webpage..."
-# read all planespotters.net thumbnail links into an array for fast access
-unset THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
-declare -A THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
-while read -r filename; do
-	icao="${filename##*/}"
-	THUMBS_ARRAY[${icao%%.*}]="$(<"$filename")"
-done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.thumb.link" -print)"
-while read -r filename; do
-	icao="${filename##*/}"
-	LINKS_ARRAY[${icao%%.*}]="$(<"$filename")"
-done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -regex '.*/[0-9A-F]+\.link' -print)"
-while read -r filename; do
-	icao="${filename##*/}"
-	if [[ -z "${FILES_ARRAY[${icao%%[-.]*}]}" ]]; then
-		FILES_ARRAY[${icao%%[-.]*}]="$filename"
-	fi
-done <<< "$(find /usr/share/planefence/persist/planepix/cache/ -iname "*.jpg" -print)"
+	cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
+	#cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
 
-cp -f $PLANEALERTDIR/plane-alert.header.html "$TMPDIR"/plalert-index.tmp
-#cat ${OUTFILE%.*}*.csv | tac > $WEBDIR/$CONCATLIST
+	# Create a FD for plalert-index.tml to reduce write cycles
+	exec 3>> "$TMPDIR"/plalert-index.tmp
 
-# Create a FD for plalert-index.tml to reduce write cycles
-exec 3>> "$TMPDIR"/plalert-index.tmp
+	# figure out if there are squawks:
+	awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"
 
-# figure out if there are squawks:
-awk -F "," '$12 != "" {rc = 1} END {exit !rc}' "$OUTFILE" && sqx="true" || sqx="false"
+	if [[ -n "$BASETIME" ]]; then echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers"; fi
 
-if [[ -n "$BASETIME" ]]; then echo "10e1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table headers"; fi
-
-# first add the fixed part of the header:
-cat <<EOF >&3
+	# first add the fixed part of the header:
+	cat <<EOF >&3
 <table border="1" id="mytable" class="display" id="mytable" style="width: auto; align: left" align="left">
 <thead border="1">
 <tr>
@@ -654,234 +653,239 @@ cat <<EOF >&3
 	<!-- th>Flight Map</th -->
 EOF
 
-#print the variable headers:
-ICAO_INDEX=-1
-for i in {4..20}
-do
-	(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-	[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
-	[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
+	#print the variable headers:
+	ICAO_INDEX=-1
+	for i in {4..20}
+	do
+		(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+		[[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && printf '<th>%s</th>  <!-- custom header %d -->\n' "$(sed 's/^[#$]*\(.*\)/\1/g' <<< "${header[i]}")" "$i" >&3
+		[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
 
-done
-echo "</tr></thead><tbody border=\"1\">" >&3
+	done
+	echo "</tr></thead><tbody border=\"1\">" >&3
 
-if [[ -n "$BASETIME" ]]; then echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" && TABLESTARTTIME="$(date +%s.%2N)"; fi
+	if [[ -n "$BASETIME" ]]; then echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" && TABLESTARTTIME="$(date +%s.%2N)"; fi
 
-COUNTER=1
-REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
-OUTSTRING="$(awk -F, -v d="$REFDATE" '$1 != "" && $5" "$6 > d' "$OUTFILE" | tr -d -c '[:print:]\n')"	# get only those lines within the REFTIME timeframe
+	COUNTER=1
+	REFDATE=$(date -d "$HISTTIME days ago" '+%Y/%m/%d %H:%M:%S')
+	OUTSTRING="$(awk -F, -v d="$REFDATE" '$1 != "" && $5" "$6 > d' "$OUTFILE" | tr -d -c '[:print:]\n')"	# get only those lines within the REFTIME timeframe
 
-IMGBASE="silhouettes/"
-if [[ -n "$BASETIME" ]]; then echo "10e2.0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: ready to loop"; fi
+	IMGBASE="silhouettes/"
+	if [[ -n "$BASETIME" ]]; then echo "10e2.0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: ready to loop"; fi
 
-while read -r line; do
-	if [[ -n "$line" ]]; then
-		IFS=',' read -ra pa_record <<< "$line"
+	while read -r line; do
+		if [[ -n "$line" ]]; then
+			IFS=',' read -ra pa_record <<< "$line"
 
-		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then ITEMSTARTTIME="$(date +%s.%4N)" && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote item number for ${pa_record[0]} ($COUNTER)"; fi
+			if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then ITEMSTARTTIME="$(date +%s.%4N)" && echo "10e2a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote item number for ${pa_record[0]} ($COUNTER)"; fi
 
-		# prep-work for later use:
-    PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
-		IFS="," read -ra TAGLINE <<< "$PLANELINE"
+			# prep-work for later use:
+			PLANELINE="${ALERT_DICT["${pa_record[0]}"]}"
+			IFS="," read -ra TAGLINE <<< "$PLANELINE"
 
-		if [[ "${pa_record[10]}" == "7700" ]]
-		then
-			printf "%s\n" "<tr style=\"vertical-align: middle; color:#D9EBF9; height:20px; line-height:20px; background:#7F0000;\">" >&3
-		else
-			printf "%s\n" "<tr>" >&3
-		fi
-
-		# print the row number
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
-
-		# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
-		IMGURL="$IMGBASE"
-
-		# If there's a squawk, use it to determine the image:
-		if [[ -n "${pa_record[10]}"  ]]
-		then
-			if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${pa_record[10]}.bmp ]]
+			if [[ "${pa_record[10]}" == "7700" ]]
 			then
-				IMGURL+="${pa_record[10]}.bmp"
+				printf "%s\n" "<tr style=\"vertical-align: middle; color:#D9EBF9; height:20px; line-height:20px; background:#7F0000;\">" >&3
 			else
-				IMGURL+="SQUAWK.bmp"
+				printf "%s\n" "<tr>" >&3
 			fi
-		else
-			# there is no squawk. If there's an ICAO_INDEX value, then try to get the silhouette URL
-			if [[ "$ICAO_INDEX" != "-1" ]]
+
+			# print the row number
+			printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$((COUNTER++))" "</td><!-- item number -->" >&3 # column: Number
+
+			# determine which icon is to be used. If there's no ICAO Type field, or if there's no type in the field, or if the corresponding file doesn't exist, then replace it by BLANK.bmp
+			IMGURL="$IMGBASE"
+
+			# If there's a squawk, use it to determine the image:
+			if [[ -n "${pa_record[10]}"  ]]
 			then
-				if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]]
+				if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${pa_record[10]}.bmp ]]
 				then
-					IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp
+					IMGURL+="${pa_record[10]}.bmp"
 				else
-					IMGURL+="BLNK.bmp"
+					IMGURL+="SQUAWK.bmp"
 				fi
 			else
-				# there is no squawk and no known silhouette, so use the blank
-				IMGURL+="BLNK.bmp"
-			fi
-		fi
-
-		if [[ -n "${pa_record[10]}"  ]]
-		then
-			# print Squawk
-
-			# determine text color for squawk
-			case "${pa_record[10]}" in
-				"7700")
-					SQCOLOR="#7F0000"
-					;;
-				"7600")
-					SQCOLOR="#FF6A00"
-					;;
-				"7500")
-					SQCOLOR="#00194C"
-					;;
-				"7400")
-					SQCOLOR="#2D3F00"
-					;;
-				*)
-					SQCOLOR="#000000"
-					;;
-			esac
-
-			printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td><!-- squawk instead of silhouette/image -->" >&3
-
-		else
-			IMG=""
-			# get an image if it exists and if SHOWIMAGES==true
-			if $SHOWIMAGES; then
-				# make sure we have an image to show
-				if [[ -z "${THUMBS_ARRAY[${pa_record[0]}]}" ]] && [[ -z "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
-					# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
-					if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
-						for tag in "${TAGLINE[@]}"; do
-							if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
-								if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
-								if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
-									FILES_ARRAY[${pa_record[0]}]="/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-									touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-									break
-								else
-									# remove any potential left-overs of failed curl attempts 
-									rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
-								fi
-							fi
-						done
+				# there is no squawk. If there's an ICAO_INDEX value, then try to get the silhouette URL
+				if [[ "$ICAO_INDEX" != "-1" ]]
+				then
+					if [[ -f /usr/share/planefence/html/plane-alert/$IMGURL${TAGLINE[$ICAO_INDEX]^^}.bmp ]]
+					then
+						IMGURL+=${TAGLINE[$ICAO_INDEX]^^}.bmp
 					else
-						if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link" ]]; then THUMBS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")"; fi
-						if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then LINKS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")"; fi
+						IMGURL+="BLNK.bmp"
+					fi
+				else
+					# there is no squawk and no known silhouette, so use the blank
+					IMGURL+="BLNK.bmp"
+				fi
+			fi
+
+			if [[ -n "${pa_record[10]}"  ]]
+			then
+				# print Squawk
+
+				# determine text color for squawk
+				case "${pa_record[10]}" in
+					"7700")
+						SQCOLOR="#7F0000"
+						;;
+					"7600")
+						SQCOLOR="#FF6A00"
+						;;
+					"7500")
+						SQCOLOR="#00194C"
+						;;
+					"7400")
+						SQCOLOR="#2D3F00"
+						;;
+					*)
+						SQCOLOR="#000000"
+						;;
+				esac
+
+				printf "    %s%s%s\n" "<td style=\"padding:0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; height:20px; text-align:center; line-height:20px; background:$SQCOLOR;\">" "SQUAWK ${pa_record[10]}" "</div></td><!-- squawk instead of silhouette/image -->" >&3
+
+			else
+				IMG=""
+				# get an image if it exists and if SHOWIMAGES==true
+				if $SHOWIMAGES; then
+					# make sure we have an image to show
+					if [[ -z "${THUMBS_ARRAY[${pa_record[0]}]}" ]] && [[ -z "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
+						# try to get at least 1 image. At this time, we need only 1 image for display only. This saves disk space
+						if [[ -z "$(GET_PS_PHOTO "${pa_record[0]}")" ]]; then
+							for tag in "${TAGLINE[@]}"; do
+								if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
+									if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
+									if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"; then
+										FILES_ARRAY[${pa_record[0]}]="/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+										touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+										break
+									else
+										# remove any potential left-overs of failed curl attempts 
+										rm -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}-1.${tag##*.}"
+									fi
+								fi
+							done
+						else
+							if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link" ]]; then THUMBS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.thumb.link")"; fi
+							if [[ -f "/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link" ]]; then LINKS_ARRAY[${pa_record[0]}]="$(<"/usr/share/planefence/persist/planepix/cache/${pa_record[0]}.link")"; fi
+						fi
+					fi
+
+					if [[ -n "${THUMBS_ARRAY[${pa_record[0]}]}" ]]; then
+						IMG="<a href=\"${LINKS_ARRAY[${pa_record[0]}]}\" target=\"_blank\"><img src=\"${THUMBS_ARRAY[${pa_record[0]}]}\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
+					elif [[ -n "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
+						IMG="<img src=\"imgcache/${FILES_ARRAY[${pa_record[0]}]##*/}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
 					fi
 				fi
 
-				if [[ -n "${THUMBS_ARRAY[${pa_record[0]}]}" ]]; then
-					IMG="<a href=\"${LINKS_ARRAY[${pa_record[0]}]}\" target=\"_blank\"><img src=\"${THUMBS_ARRAY[${pa_record[0]}]}\" style=\"width: auto; height: 75px;\"></a>" >&3 # column: image
-				elif [[ -n "${FILES_ARRAY[${pa_record[0]}]}" ]]; then
-					IMG="<img src=\"imgcache/${FILES_ARRAY[${pa_record[0]}]##*/}\" style=\"width: auto; height: 75px;\">" >&3 # column: image
+				if [[ -z "$IMG" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
+						IMG="<img src=\"$IMGURL\">"
 				fi
+				printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
 			fi
 
-			if [[ -z "$IMG" ]] && [[ -f /usr/share/planefence/html/plane-alert/$IMGURL ]]; then
-					IMG="<img src=\"$IMGURL\">"
-			fi
-			printf "    %s%s%s\n" "<td style=\"padding: 0;\"><div style=\"vertical-align: middle; font-weight:bold; color:#D9EBF9; text-align:center; line-height:20px; background:none;\">" "$IMG" "</div></td><!-- image or silhouette -->" >&3
+			if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote silhouette/image for ${pa_record[0]} ($COUNTER)"; fi
+
+			printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO -->\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
+			printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail -->\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
+			#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
+			#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
+			printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td><!-- Owner -->" >&3 # column: Owner
+			printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td><!-- Plane type -->" >&3 # column: Plane Type
+			printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")" "</td><!-- date/time -->" >&3 # column: Date Time
+			# printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
+			printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td><!-- lat/lon with link to tracking service -->" >&3 # column: LatN, LonE with link to adsbexchange
+			printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td><!-- flight number -->" >&3 # column: Flight No
+			[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td><!-- squawk -->" >&3 # column: Squawk
+			printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
+
+			if [[ -n "$BASETIME" ]]; then echo "10e2c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote up to lat/lon for ${pa_record[0]} ($COUNTER)"; fi
+
+			# get appropriate entry from dictionary
+
+			#for i in {4..13}
+			for (( i=4; i<${#header[@]}; i++ ))
+			do
+				#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
+				if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
+				then
+					printf '    <td><a href=\"%s\" target=\"_blank\">%s</a></td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "${TAGLINE[i]}" "$i" >&3
+				elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]]
+				then
+					printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >&3
+				fi
+			done
+			printf "%s\n" "</tr>" >&3
+			if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote remaining columns for ${pa_record[0]} ($COUNTER)"; fi
+
 		fi
 
-		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote silhouette/image for ${pa_record[0]} ($COUNTER)"; fi
+	done <<< "$OUTSTRING"
 
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO -->\n" "${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}" "${pa_record[0]}" >&3 # column: ICAO
-		printf "    <td style=\"text-align: center\"><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail -->\n" "https://flightaware.com/live/modes/${pa_record[0]}/ident/${pa_record[1]}/redirect" "${pa_record[1]}" >&3 # column: Tail
-		#		printf "    %s%s%s\n" "<td>" "${pa_record[0]}" "</td>" >&3 # column: ICAO
-		#		printf "    %s%s%s\n" "<td>" "${pa_record[1]}" "</td>" >&3 # column: Tail
-		printf "    %s%s%s\n" "<td>" "${pa_record[2]}" "</td><!-- Owner -->" >&3 # column: Owner
-		printf "    %s%s%s\n" "<td>" "${pa_record[3]}" "</td><!-- Plane type -->" >&3 # column: Plane Type
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "$(date -d "${pa_record[4]} ${pa_record[5]}" +"${NOTIF_DATEFORMAT:-%F %T %Z}")" "</td><!-- date/time -->" >&3 # column: Date Time
-		# printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"http://www.openstreetmap.org/?mlat=${pa_record[6]}&mlon=${pa_record[7]}&zoom=$MAPZOOM\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td>" >&3 # column: LatN, LonE
-		printf "    %s%s%s\n" "<td style=\"text-align: center\">" "<a href=\"${pa_record[9]//globe.adsbexchange.com/"$TRACKSERVICE"}\" target=\"_blank\">${pa_record[6]}N, ${pa_record[7]}E</a>" "</td><!-- lat/lon with link to tracking service -->" >&3 # column: LatN, LonE with link to adsbexchange
-		printf "    %s%s%s\n" "<td>" "${pa_record[8]}" "</td><!-- flight number -->" >&3 # column: Flight No
-		[[ "$sqx" == "true" ]] && printf "    %s%s%s\n" "<td>" "${pa_record[10]}" "</td><!-- squawk -->" >&3 # column: Squawk
-		printf "    %s%s%s\n" "<!-- td>" "<a href=\"${pa_record[9]}\" target=\"_blank\">ADSBExchange link</a>" "</td -->" >&3 # column: ADSBX link
+	if [[ -n "$BASETIME" ]]; then echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content"; fi
 
-		if [[ -n "$BASETIME" ]]; then echo "10e2c. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote up to lat/lon for ${pa_record[0]} ($COUNTER)"; fi
+	cat $PLANEALERTDIR/plane-alert.footer.html >&3
+	echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
 
-    # get appropriate entry from dictionary
+	# Close the FD for $TMPDIR/plalert-index.tmp:
+	exec 3>&-
 
-		#for i in {4..13}
-		for (( i=4; i<${#header[@]}; i++ ))
-		do
-			#(( i >= ${#header[@]} )) && break 	# don't print headers if they don't exist
-			if [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]] && [[ "${TAGLINE[i]:0:4}" == "http" ]]
-			then
-				printf '    <td><a href=\"%s\" target=\"_blank\">%s</a></td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "${TAGLINE[i]}" "$i" >&3
-			elif [[ "${header[i]:0:1}" != "#" ]] && [[ "${header[i]:0:2}" != '$#' ]]
-			then
-				printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >&3
-			fi
-		done
-		printf "%s\n" "</tr>" >&3
-		if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote remaining columns for ${pa_record[0]} ($COUNTER)"; fi
-
+	# Now the basics have been written, we need to replace some of the variables in the template with real data:
+	sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##TRACKSERVICE##|$TRACKSERVICE|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##TABLESIZE##|$TABLESIZE|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##ALERTLIST##|$ALERTLIST|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##ALERTLISTUPDATE##|$(date -d "$(stat -c "%y" /usr/share/planefence/persist/.internal/plane-alert-db.txt)")|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##CONCATLIST##|$CONCATLIST|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
+	sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" "$TMPDIR"/plalert-index.tmp
+	if chk_enabled "${AUTOREFRESH,,}"; then
+			sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\" content=\"$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)\"|g" "$TMPDIR"/plalert-index.tmp
+	else
+			sed -i "s|##AUTOREFRESH##|!-- autorefresh disabled--|g" "$TMPDIR"/plalert-index.tmp
+	fi
+	[[ -n "$PF_LINK"  ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit Planefence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
+	if [[ -n "$MASTODON_SERVER" && -n "$MASTODON_ACCESS_TOKEN" && -n "$MASTODON_NAME" ]]; then
+		sed -i "s|##MASTODONLINK##|<li>Get notified instantaneously of aircraft in range by following <a rel=\"me\" href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" target=\"_blank\">@$MASTODON_NAME</a> on the <a rel=\"me\" href=\"https://$MASTODON_SERVER/\" target=\"_blank\">$MASTODON_SERVER</a> Mastodon Server|g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##MASTOHEADER##|<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">|g" "$TMPDIR"/plalert-index.tmp
+	else
+			sed -i "s|##MASTODONLINK##||g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##MASTOHEADER##||g" "$TMPDIR"/plalert-index.tmp
+	fi
+	if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
+		sed -i "s|##BLUESKYLINK##|<li>Plane-Alert notifications are sent to <a href=\"https://bsky.app/profile/$BLUESKY_HANDLE\" target=\"_blank\">@$BLUESKY_HANDLE</a> at BlueSky|g" "$TMPDIR"/plalert-index.tmp
+	else
+		sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
+	fi
+	if chk_enabled "$DARKMODE"; then
+		sed -i "s|##DARKMODE0##|class=\"dark\"|g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##DARKMODE1##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##DARKMODE2##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
+	else
+		sed -i "s|##DARKMODE0##||g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##DARKMODE1##|background-image: url(\'pa_background.jpg\'); background-repeat: no-repeat; background-attachment: fixed; background-size: cover;|g" "$TMPDIR"/plalert-index.tmp
+		sed -i "s|##DARKMODE2##|background-color: #f0f6f6; color: black;|g" "$TMPDIR"/plalert-index.tmp
 	fi
 
-done <<< "$OUTSTRING"
+	if (( $(wc -l <<< "$OUTSTRING") > 1 )); then
+		# shellcheck disable=SC2046
+		sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icaoFilter=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' <<< "$OUTSTRING" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp
+	else
+		sed -i "s|##MEGALINK##||g" "$TMPDIR"/plalert-index.tmp
+	fi
 
-if [[ -n "$BASETIME" ]]; then echo "10e3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - done writing table content"; fi
-
-cat $PLANEALERTDIR/plane-alert.footer.html >&3
-echo "<!-- ALERTLIST = $ALERTLIST -->" >&3
-
-# Close the FD for $TMPDIR/plalert-index.tmp:
-exec 3>&-
-
-# Now the basics have been written, we need to replace some of the variables in the template with real data:
-sed -i "s|##PA_MOTD##|$PA_MOTD|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##TRACKSERVICE##|$TRACKSERVICE|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##TABLESIZE##|$TABLESIZE|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##NAME##|$NAME|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##ADSBLINK##|$ADSBLINK|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##LASTUPDATE##|$LASTUPDATE|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##ALERTLIST##|$ALERTLIST|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##ALERTLISTUPDATE##|$(date -d "$(stat -c "%y" /usr/share/planefence/persist/.internal/plane-alert-db.txt)")|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##CONCATLIST##|$CONCATLIST|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##HISTTIME##|$HISTTIME|g" "$TMPDIR"/plalert-index.tmp
-sed -i "s|##BUILD##|$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)|g"  "$TMPDIR"/plalert-index.tmp
-sed -i "s|##VERSION##|$(sed -n 's/\(^\s*VERSION=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)|g" "$TMPDIR"/plalert-index.tmp
-if chk_enabled "${AUTOREFRESH,,}"; then
-    sed -i "s|##AUTOREFRESH##|meta http-equiv=\"refresh\" content=\"$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)\"|g" "$TMPDIR"/plalert-index.tmp
+	#Finally, put the temp index into its place:
+	mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
 else
-    sed -i "s|##AUTOREFRESH##|!-- autorefresh disabled--|g" "$TMPDIR"/plalert-index.tmp
+	"${s6wrap[@]}" echo "No new planes spotted, only updating LASTUPDATE time on plane-alert webpage"
+	# update the LASTUPDATE time on the plane-alert webpage
+	sed -i "s|<!-- STARTLASTUPDATE -->.*<!-- ENDLASTUPDATE-->|<!-- STARTLASTUPDATE -->$LASTUPDATE<!-- ENDLASTUPDATE-->|g" "$WEBDIR"/index.html
 fi
-[[ -n "$PF_LINK"  ]] && sed -i "s|##PFLINK##|<li> Additionally, click <a href=\"$PF_LINK\" target=\"_blank\">here</a> to visit Planefence: a list of aircraft heard that are within a short distance of the station.|g" "$TMPDIR"/plalert-index.tmp || sed -i "s|##PFLINK##||g" "$TMPDIR"/plalert-index.tmp
-if [[ -n "$MASTODON_SERVER" && -n "$MASTODON_ACCESS_TOKEN" && -n "$MASTODON_NAME" ]]; then
-	sed -i "s|##MASTODONLINK##|<li>Get notified instantaneously of aircraft in range by following <a rel=\"me\" href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" target=\"_blank\">@$MASTODON_NAME</a> on the <a rel=\"me\" href=\"https://$MASTODON_SERVER/\" target=\"_blank\">$MASTODON_SERVER</a> Mastodon Server|g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##MASTOHEADER##|<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">|g" "$TMPDIR"/plalert-index.tmp
-else
-    sed -i "s|##MASTODONLINK##||g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##MASTOHEADER##||g" "$TMPDIR"/plalert-index.tmp
-fi
-if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then 
-	sed -i "s|##BLUESKYLINK##|<li>Plane-Alert notifications are sent to <a href=\"https://bsky.app/profile/$BLUESKY_HANDLE\" target=\"_blank\">@$BLUESKY_HANDLE</a> at BlueSky|g" "$TMPDIR"/plalert-index.tmp
-else
-	sed -i "s|##BLUESKYLINK##||g" "$TMPDIR"/plalert-index.tmp
-fi
-if chk_enabled "$DARKMODE"; then
-  sed -i "s|##DARKMODE0##|class=\"dark\"|g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##DARKMODE1##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##DARKMODE2##|background-color: black; color: white;|g" "$TMPDIR"/plalert-index.tmp
-else
-	sed -i "s|##DARKMODE0##||g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##DARKMODE1##|background-image: url(\'pa_background.jpg\'); background-repeat: no-repeat; background-attachment: fixed; background-size: cover;|g" "$TMPDIR"/plalert-index.tmp
-	sed -i "s|##DARKMODE2##|background-color: #f0f6f6; color: black;|g" "$TMPDIR"/plalert-index.tmp
-fi
-
-if (( $(wc -l <<< "$OUTSTRING") > 1 )); then
-	# shellcheck disable=SC2046
-	sed -i "s|##MEGALINK##|<li>Click <a href=\"https://$TRACKSERVICE/?icaoFilter=$(printf "%s," $(awk -F, 'BEGIN {ORS="\n"} !seen[$1]++ {print $1}' <<< "$OUTSTRING" | tail -$TRACKLIMIT))\">here</a> for a map with the current locations of most recent $TRACKLIMIT unique aircraft|g" "$TMPDIR"/plalert-index.tmp
-else
-	sed -i "s|##MEGALINK##||g" "$TMPDIR"/plalert-index.tmp
-fi
-
-#Finally, put the temp index into its place:
-mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
 if [[ -n "$BASETIME" ]]; then echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert"; fi
 "${s6wrap[@]}" echo "Plane-alert is done. Returning to Planefence"
