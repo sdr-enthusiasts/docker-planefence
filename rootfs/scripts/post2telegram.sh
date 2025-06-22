@@ -13,13 +13,31 @@ source /scripts/common
 source /usr/share/planefence/persist/planefence.config
 
 if (( ${#@} < 1 )); then
-  "${s6wrap[@]}" echo "Usage: $0 <text> [image1] [image2] ..."
+  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
 # Set the default values
 TELEGRAM_API="${TELEGRAM_API:-https://api.telegram.org/bot}"
 TELEGRAM_MAX_LENGTH="${TELEGRAM_MAX_LENGTH:-4096}"
+if [[ "${1,,}" == "pf" ]]; then
+  if [[ -z "${PF_TELEGRAM_CHAT_ID}" ]]; then
+    "${s6wrap[@]}" echo "Fatal: the PF_TELEGRAM_CHAT_ID environment variable must be set"
+    exit 1
+  fi
+  TELEGRAM_CHAT_ID="${PF_TELEGRAM_CHAT_ID}"
+elif [[ "${1,,}" == "pa" ]]; then
+  # shellcheck disable=SC2153
+  TELEGRAM_CHAT_ID="${PA_TELEGRAM_CHAT_ID}"
+  if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
+    "${s6wrap[@]}" echo "Fatal: the PA_TELEGRAM_CHAT_ID environment variable must be set"
+    exit 1
+  fi
+else
+  "${s6wrap[@]}" echo "Fatal: you must specify either 'PF' or 'PA' as the first argument to $0"
+  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  exit 1
+fi
 
 # Check if the required variables are set
 if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
@@ -35,13 +53,16 @@ if [[ "${TELEGRAM_CHAT_ID:0:4}" != "-100" ]]; then TELEGRAM_CHAT_ID="-100${TELEG
 
 # Extract info from the command line arguments
 args=("$@")
-TEXT="${args[0]}"
-IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
+TEXT="${args[1]}"
+IMAGES=("${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}") # up to 4 images
 
 if [[ -z "$TEXT" ]]; then
   "${s6wrap[@]}" echo "Fatal: a message text must be included in the request to $0"
+  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
+
+"${s6wrap[@]}" echo "DEBUG: Invoking: $0 $1 $TEXT ${IMAGES[*]}"
 
 # Clean up the text
 TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters

@@ -552,7 +552,7 @@ then
 			# shellcheck disable=SC2206
 			if [[ "$GOTSNAP" == "true" ]]; then telegram_images=("$snapfile" ${images[@]}); else telegram_images=(${images[@]}); fi
 			# shellcheck disable=SC2068
-			/scripts/post2telegram.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${telegram_images[@]::4} || true
+			/scripts/post2telegram.sh PA "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${telegram_images[@]::4} || true
 		fi
 
 		# Inject Mastodon integration here:

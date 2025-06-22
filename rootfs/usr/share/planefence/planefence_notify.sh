@@ -468,7 +468,7 @@ if [ -f "$CSVFILE" ]; then
 
 			# Insert Telegram notifications here:
 			if chk_enabled "$TELEGRAM_ENABLED"; then
-				/scripts/post2telegram.sh "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<<"${TWEET}")" "$(if $GOTSNAP; then echo "$snapfile"; fi)" "$(if $GOTIMG; then echo "$imgfile"; fi)" || true
+				/scripts/post2telegram.sh PF "#Planefence $(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<<"${TWEET}")" "$(if $GOTSNAP; then echo "$snapfile"; fi)" "$(if $GOTIMG; then echo "$imgfile"; fi)" || true
 				if [[ -f /tmp/telegram.link ]]; then
 					LINK="$(</tmp/telegram.link)"
 					rm -f /tmp/telegram.link

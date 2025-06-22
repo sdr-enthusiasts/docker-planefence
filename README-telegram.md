@@ -49,7 +49,8 @@ Edit your `planefence.config` file, and add or modify the following parameters:
 
 ```config
 TELEGRAM_BOT_TOKEN=""         # set this parameter to the HTTP API Token you got in Step 1
-TELEGRAM_CHAT_ID=""           # set this parameter to the CHAT_ID you got in Step 2
+PF_TELEGRAM_CHAT_ID=""        # Planefence Chat (channel) ID - set this parameter to the CHAT_ID you got in Step 2
+PA_TELEGRAM_CHAT_ID=""        # Plane-Alert Chat (channel) ID - set this parameter to the CHAT_ID you got in Step 2
 PF_TELEGRAM_ENABLED=false     # Set this to "on"/"enabled"/"1"/"yes"/"true" to start sending Planefence notifications
 PA_TELEGRAM_ENABLED=false     # Set this to "on"/"enabled"/"1"/"yes"/"true" to start sending Plane-Alert notifications
 ```
