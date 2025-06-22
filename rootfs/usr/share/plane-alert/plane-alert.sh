@@ -885,7 +885,7 @@ EOF
 else
 	"${s6wrap[@]}" echo "No new planes spotted, only updating LASTUPDATE time on plane-alert webpage"
 	# update the LASTUPDATE time on the plane-alert webpage
-	sed -i "s|<!-- STARTLASTUPDATE -->.*<!-- ENDLASTUPDATE-->|<!-- STARTLASTUPDATE -->$LASTUPDATE<!-- ENDLASTUPDATE-->|g" "$WEBDIR"/index.html
+	sed -i 's|<!-- STARTLASTUPDATE -->.*<!-- ENDLASTUPDATE-->|<!-- STARTLASTUPDATE -->'"$LASTUPDATE"'<!-- ENDLASTUPDATE-->|g' "$WEBDIR"/index.html
 fi
 if [[ -n "$BASETIME" ]]; then echo "10f. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: done building webpage, finished Plane-Alert"; fi
 "${s6wrap[@]}" echo "Plane-alert is done. Returning to Planefence"
