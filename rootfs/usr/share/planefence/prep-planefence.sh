@@ -322,6 +322,10 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	fi
 fi
 
+# Configure Telegram parameters:
+configure_planefence "TELEGRAM_ENABLED" "$PF_TELEGRAM_ENABLED"
+configure_planealert "TELEGRAM_ENABLED" "$PA_TELEGRAM_ENABLED"
+
 configure_planealert "NAME" "${PF_NAME:-My}"
 configure_planealert "ADSBLINK" "$PF_MAPURL"
 configure_planealert "RANGE" "${PF_PARANGE:-999999}"

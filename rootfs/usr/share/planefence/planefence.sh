@@ -492,6 +492,7 @@ WRITEHTMLTABLE () {
 				 records[$index:notif_service]="MQTT"
 				 records[$index:notif_link]=""
 			elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+			elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
 			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 			fi
 		fi
@@ -887,11 +888,12 @@ fi
 # see if we need to invoke PlaneTweet:
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ -n "$PLANETWEET" ]] \
-   ||  chk_enabled "${PF_DISCORD}" \
-   || [[ -n "$MASTODON_SERVER" ]] \
+if chk_enabled "$PLANETWEET" \
+   || chk_enabled "${PF_DISCORD}" \
+   || chk_enabled "$PF_MASTODON" \
    || [[ -n "$BLUESKY_HANDLE" ]] \
    || [[ -n "$RSS_SITELINK" ]] \
+	 || chk_enabled "$PF_TELEGRAM_ENABLED" \
    || [[ -n "$MQTT_URL" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"

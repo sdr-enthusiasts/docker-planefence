@@ -290,7 +290,7 @@ touch /tmp/pa-diff.csv
 #  compare the new csv file to the old one and only print the added entries
 comm -23 <(sort < "$OUTFILE") <(sort < /tmp/pa-old.csv ) >/tmp/pa-diff.csv
 
-[[ "$(wc -l < /tmp/pa-diff.csv)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && echo "[planefence/plane-alert][$(date)] Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
+[[ "$(wc -l < /tmp/pa-diff.csv)" -gt "0" ]] && [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Plane-Alert DIFF file has $(cat /tmp/pa-diff.csv | wc -l) lines and contains:" && cat /tmp/pa-diff.csv || true
 # -----------------------------------------------------------------------------------
 # Next, let's do some stuff with the newly acquired aircraft of interest
 # but only if there are actually newly acquired records
@@ -533,16 +533,26 @@ then
 			fi
 		fi
 
+
 		# Inject BlueSky integration here:
 		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
-			# get a list of images to upload
-			# shellcheck disable=SC2206
-			if [[ "$GOTSNAP" == "true" ]]; then images=("$snapfile" ${images[@]}); fi
-
 			# now send the BlueSky message:
-			echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# echo "DEBUG: posting to BlueSky: /scripts/post2bsky.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then bsky_images=("$snapfile" ${images[@]}); else bsky_images=(${images[@]}); fi
 			# shellcheck disable=SC2068
-			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${images[@]::4} || true
+			/scripts/post2bsky.sh "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${bsky_images[@]::4} || true
+		fi
+
+		# Inject Telegram integration here:
+
+		if chk_enabled "$TELEGRAM_ENABLED"; then
+			# now send the Telegram message:
+			# echo "DEBUG: posting to Telegram: /scripts/post2telegram.sh \"$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")\" ${images[*]::4}"
+			# shellcheck disable=SC2206
+			if [[ "$GOTSNAP" == "true" ]]; then telegram_images=("$snapfile" ${images[@]}); else telegram_images=(${images[@]}); fi
+			# shellcheck disable=SC2068
+			/scripts/post2telegram.sh PA "$(sed -e 's|\\/|/|g' -e 's|\\n|\n|g' -e 's|%0A|\n|g' <<< "${TWITTEXT}")" ${telegram_images[@]::4} || true
 		fi
 
 		# Inject Mastodon integration here:
