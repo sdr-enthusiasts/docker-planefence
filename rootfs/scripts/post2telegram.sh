@@ -62,7 +62,7 @@ if [[ -z "$TEXT" ]]; then
   exit 1
 fi
 
-"${s6wrap[@]}" echo "DEBUG: Invoking: $0 $1 $TEXT ${IMAGES[*]}"
+# "${s6wrap[@]}" echo "DEBUG: Invoking: $0 $1 $TEXT ${IMAGES[*]}"
 
 # Clean up the text
 TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters

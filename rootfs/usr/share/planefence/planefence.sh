@@ -888,11 +888,12 @@ fi
 # see if we need to invoke PlaneTweet:
 [[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
 
-if [[ -n "$PLANETWEET" ]] \
-   ||  chk_enabled "${PF_DISCORD}" \
-   || [[ -n "$MASTODON_SERVER" ]] \
+if chk_enabled "$PLANETWEET" \
+   || chk_enabled "${PF_DISCORD}" \
+   || chk_enabled "$PF_MASTODON" \
    || [[ -n "$BLUESKY_HANDLE" ]] \
    || [[ -n "$RSS_SITELINK" ]] \
+	 || chk_enabled "$PF_TELEGRAM_ENABLED" \
    || [[ -n "$MQTT_URL" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"

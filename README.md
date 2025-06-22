@@ -19,6 +19,7 @@
       - [Plane-Alert Query parameters](#plane-alert-query-parameters)
   - [Troubleshooting](#troubleshooting)
   - [Getting help](#getting-help)
+  - [License and Data Use/Privacy](#license-and-data-useprivacy)
 
 ## What is it?
 
@@ -26,7 +27,7 @@ This repository contains Planefence, which is an add-on to `ultrafeeder`, `reads
 
 Planefence will create a log of aircraft heard by your Feeder Station that are within a "fence", that is, less than a certain distance and lower than a certain
 altitude from your station. This log is displayed on a website and is also made available in daily CSV files.
-Furthermore, Planefence can send a notification for every plane in the fence to BlueSky, Mastodon, Discord, and/or MQTT. We used to support Twitter/X as well but this was deprecated when they started charging for API use. With some add-on software/hardware, you will be able to collect audio noise figures to see how loud the aircraft are that fly above your Feeder Station.
+Furthermore, Planefence can send a notification for every plane in the fence to BlueSky, Mastodon, Discord, Telegram, RSS, and/or MQTT. We used to support Twitter/X as well but this was deprecated when they started charging for API use. With some add-on software/hardware, you will be able to collect audio noise figures to see how loud the aircraft are that fly above your Feeder Station.
 
 Planefence is deployed as a Docker container and is pre-built for the following architectures:
 
@@ -128,6 +129,8 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 - Planefence deployment example: <https://planefence.com/planefence>
 - Plane-Alert deployment example: <https://planefence.com/plane-alert>
 - BlueSky notifications: <https://bsky.app/profile/aboveboston.bsky.social>
+- Telegram notifications: <https://t.me/+B_r-DgeNEQ4yMTUx>
+- RSS feed: <https://kx1t.com/planefence-dev/planefence.rss>
 
 ## API access to your data
 
