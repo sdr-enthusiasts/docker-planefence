@@ -138,8 +138,8 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 Planefence and Plane-Alert keep a limited amount of data available. By default, Planefence keeps 2 weeks of data around, while Plane-Alert isn't time limited. This data is accessible using a REST interface that makes use of HTTP GET. You can access this API from the directory where your Planefence or Plane-Alert web pages are deployed. For example:
 
-- If Planefence is available at <https://planefence.com/planefence>, then you can reach the Planefence API at <https://planefence.com/planefence/pf-query.php>
-- If Plane-Alert is available at <https://planefence.com/plane-alert>, then you can reach the Plane-Alert API at <https://planefence.com/plane-alert/pa-query.php>
+- If Planefence is available at <https://planefence.com/planefence>, then you can reach the Planefence API at <https://planefence.com/planefence/pf_query.php>
+- If Plane-Alert is available at <https://planefence.com/plane-alert>, then you can reach the Plane-Alert API at <https://planefence.com/plane-alert/pa_query.php>
 
 ### API parameters and usage examples
 
