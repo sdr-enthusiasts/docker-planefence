@@ -484,11 +484,19 @@ WRITEHTMLTABLE () {
 				}
 			fi
 
-			# get notification service name
-			if "${records[$index:notified]}"; then
-				records[$index:notif_service]="yes"
-			else
-				records[$index:notif_service]="no"
+		# get notification service name
+		if "${records[$index:notified]}"; then
+			records[$index:notif_service]="yes"
+		else
+			records[$index:notif_service]="no"
+		fi
+		if [[ -n "${records[$index:notif_link]}" ]]; then
+			if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
+				 records[$index:notif_service]="MQTT"
+				 records[$index:notif_link]=""
+			elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+			elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
+			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 			fi
 			if [[ -n "${records[$index:notif_link]}" ]]; then
 				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
