@@ -328,7 +328,7 @@ if [ -f "$CSVFILE" ]; then
 			if ! $GOTSNAP; then "${s6wrap[@]}" echo "Screenshot retrieval unsuccessful at $SCREENSHOTURL for ${RECORD[0]}"; fi
 
 			# Inject the Discord integration in here so it doesn't have to worry about state management
-			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ "x$PF_DISCORD_WEBHOOKS" != "x" ]] && [[ "x$DISCORD_FEEDER_NAME" != "x" ]]; then
+			if [[ "${PF_DISCORD,,}" == "on" || "${PF_DISCORD,,}" == "true" ]] && [[ -n "$PF_DISCORD_WEBHOOKS" ]] && [[ -n "$DISCORD_FEEDER_NAME" ]]; then
 				LOG "Planefence sending Discord notification"
 				timeout 120 python3 "$PLANEFENCEDIR"/send-discord-alert.py "$CSVLINE" "$AIRLINE"
 			fi
@@ -411,8 +411,12 @@ if [ -f "$CSVFILE" ]; then
 					msg_array[planespotters_link]="$(<"/usr/share/planefence/persist/planepix/cache/${msg_array[icao]}.link")"
 				fi
 
-				# convert $msg_array[@] into a JSON object:
-				MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+				# convert $msg_array[@] into a JSON object; if (PF_)MQTT_FIELDS is defined, then only use those fields:
+				MQTT_JSON="$(for i in "${!msg_array[@]}"; do 
+										 	if [[ -z "$MQTT_FIELDS" ]] || [[ $MQTT_FIELDS != *$i* ]]; then 
+												printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"
+											fi 
+										 done | jq -sc add)"
 
 				# prep the MQTT host, port, etc
 				unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
