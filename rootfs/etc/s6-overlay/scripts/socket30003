@@ -87,7 +87,9 @@ do
 			touch /run/socket30003.up
 			/usr/share/socket30003/socket30003.pl >/dev/null 2>&1
 			exitcode="$?"
-			if [[ ! -f /tmp/socket-cleanup ]]; then "${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with code $exitcode"; fi
+			if [[ ! -f /tmp/socket-cleanup ]]; then
+			"${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with code $exitcode, if this repeats please run this command to get more detailed output on the failure: docker exec -it planefence /usr/share/socket30003/socket30003.pl"
+			fi
 			rm -f /run/socket30003.up
 		else
 			"${s6wrap[@]}" echo "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
