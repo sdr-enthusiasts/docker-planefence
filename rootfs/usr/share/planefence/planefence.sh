@@ -365,121 +365,124 @@ WRITEHTMLTABLE () {
 	## shellcheck disable=SC2001
 	if [[ -n "$HEATMAPZOOM" ]]; then INPUTFILE=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "$INPUTFILE"); fi
 
-	while read -r line; do
-		# filling an Associative Array with the following structure: records[$index:key], where:
-		# $index is a counter starting at 0 for each of the times
-		# icao: ICAO hex ID
-		# callsign: flight number or tail number
-		# route: route (airport codes)
-		# notified: notification has been sent (true/false)
-		# firstseen: date/time first seen in secs since epoch
-		# lastseen: date/time last seen in secs since epoch
-		# altitude: lowest altitude observed
-		# distance: minimum distance observed
-		# map_link: link to ADSBX or other tar1090 style map
-		# fa_link: link to flightaware
-		# owner: owner or airline name
-		# notif_link: link to notification
-		# notif_service: "BlueSky", "Mastodon", or "yes"
-		# image_thumblink: link to image thumbnail
-		# image_weblink: link to image page at planespotters.net
-		# sound_peak: peak sound level (if NoiseCapt is configured)
-		# sound_1min: 1 minute sound level (if NoiseCapt is configured)
-		# sound_5min: 5 minute sound level (if NoiseCapt is configured)
-		# sound_10min: 10 minute sound level (if NoiseCapt is configured)
-		# sound_1hour: 1 hour sound level (if NoiseCapt is configured)
-		# sound_loudness: loudness level (if NoiseCapt is configured)
-		# sound_color: background color corresponding to sound_loudness level
-		# noisegraph_file: path of noisegraph file  (if NoiseCapt is configured)
-		# noisegraph_link: link to noisegraph file  (if NoiseCapt is configured)
-		# spectro_file: path of spectrogram file  (if NoiseCapt is configured)
-		# spectro_link: link to spectrogram file  (if NoiseCapt is configured)
-		# mp3_file: path of mp3 file  (if NoiseCapt is configured)
-		# mp3_link: link to mp3 file  (if NoiseCapt is configured)
-		#
-		# additionally, the following are local variables:
-		# maxindex: highest index number (useful for looping)
-		# HASNOISE: true if noise data is present in the array
-		# HASNOTIFS: true if notifications have been sent
-		# HASROUTE: true if a route is available
+	# check if INPUTFILE is updated since last run. If it is, then process it. If it isn't, then simply read the associated array from the cache
+	if [[ ! -f /tmp/planefence-input.cache ]] || [[ ! -f /tmp/planefence-array.cache ]] || [[ -n "$(diff -q "$1" /tmp/planefence-input.cache)" ]]; then
+		"${s6wrap[@]}" echo "Processing $1 (cache miss)"
+		while read -r line; do
+			# filling an Associative Array with the following structure: records[$index:key], where:
+			# $index is a counter starting at 0 for each of the times
+			# icao: ICAO hex ID
+			# callsign: flight number or tail number
+			# route: route (airport codes)
+			# notified: notification has been sent (true/false)
+			# firstseen: date/time first seen in secs since epoch
+			# lastseen: date/time last seen in secs since epoch
+			# altitude: lowest altitude observed
+			# distance: minimum distance observed
+			# map_link: link to ADSBX or other tar1090 style map
+			# fa_link: link to flightaware
+			# owner: owner or airline name
+			# notif_link: link to notification
+			# notif_service: "BlueSky", "Mastodon", or "yes"
+			# image_thumblink: link to image thumbnail
+			# image_weblink: link to image page at planespotters.net
+			# sound_peak: peak sound level (if NoiseCapt is configured)
+			# sound_1min: 1 minute sound level (if NoiseCapt is configured)
+			# sound_5min: 5 minute sound level (if NoiseCapt is configured)
+			# sound_10min: 10 minute sound level (if NoiseCapt is configured)
+			# sound_1hour: 1 hour sound level (if NoiseCapt is configured)
+			# sound_loudness: loudness level (if NoiseCapt is configured)
+			# sound_color: background color corresponding to sound_loudness level
+			# noisegraph_file: path of noisegraph file  (if NoiseCapt is configured)
+			# noisegraph_link: link to noisegraph file  (if NoiseCapt is configured)
+			# spectro_file: path of spectrogram file  (if NoiseCapt is configured)
+			# spectro_link: link to spectrogram file  (if NoiseCapt is configured)
+			# mp3_file: path of mp3 file  (if NoiseCapt is configured)
+			# mp3_link: link to mp3 file  (if NoiseCapt is configured)
+			#
+			# additionally, the following are local variables:
+			# maxindex: highest index number (useful for looping)
+			# HASNOISE: true if noise data is present in the array
+			# HASNOTIFS: true if notifications have been sent
+			# HASROUTE: true if a route is available
 
-		if [[ -z "$line" ]]; then continue; fi
-		readarray -d, -t data <<< "$line"
-		index="$((counter++))"	# we can't just use the ICAO because there can be multiple observations in a single day
-		records[$index:icao]="${data[0]^^}"
-		records[$index:callsign]="${data[1]//@/}"
-		if [[ "${data[1]:0:1}" == "@" ]]; then
-			records[$index:notified]=true
-			HASNOTIFS=true
-		else
-			records[$index:notified]=false
-		fi
-    
-		if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
-		if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
-
-		records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
-		records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-		records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
-		records[$index:distance]="${data[5]//$'\n'/}"
-		records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
-		records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${CALLSIGN}/redirect"
-		records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
-		records[$index:owner]="${records[$index:owner]:-unknown}"
-		records[$index:notif_link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
-		if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
-			 [[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
-			 [[ "${records[$index:icao]:0:1}" == "A" ]]
-		then
-			records[$index:faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
-		fi
-
-		# get an image links
-		records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
-		records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
-  
-		if [[ -n "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
-			# there is sound level information
-			HASNOISE=true
-			records[$index:sound_peak]="${data[7]//$'\n'/}"
-			records[$index:sound_1min]="${data[8]//$'\n'/}"
-			records[$index:sound_5min]="${data[9]//$'\n'/}"
-			records[$index:sound_10min]="${data[10]//$'\n'/}"
-			records[$index:sound_1hour]="${data[11]//$'\n'/}"
-			if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
-			records[$index:notif_link]="${data[12]//$'\n'/}"
-			{ # get a noise graph if one doesn't exist
-				# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-				records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
-				records[$index:noisegraph_link]="$(basename "${records[$index:noisegraph_file]}")"
-				# If no noisegraph exists, create one:
-				if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
-					CREATE_NOISEPLOT "${records[$index:callsign]}" "${records[$index:firstseen]}" "${records[$index:lastseen]}" "${records[$index:icao]}"
-					if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
-						unset "${records[$index:noisegraph_file]}" "${records[$index:noisegraph_link]}"
-					fi
-				fi
-			}
-			{ # get a spectrogram if one doesn't exist
-				records[$index:spectro_file]="$(CREATE_SPECTROGRAM "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-				if [[ -n "${records[$index:spectro_file]}" ]]; then
-					records[$index:spectro_link]="$(basename "${records[$index:spectro_file]}")"
-				fi
-			}
-			{ # get a MP3 if one doesn't exist
-			records[$index:mp3_file]="$(CREATE_MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-			if [[ -n "${records[$index:mp3_file]}" ]]; then
-				records[$index:mp3_link]="$(basename "${records[$index:mp3_file]}")"
+			if [[ -z "$line" ]]; then continue; fi
+			readarray -d, -t data <<< "$line"
+			index="$((counter++))"	# we can't just use the ICAO because there can be multiple observations in a single day
+			records[$index:icao]="${data[0]^^}"
+			records[$index:callsign]="${data[1]//@/}"
+			if [[ "${data[1]:0:1}" == "@" ]]; then
+				records[$index:notified]=true
+				HASNOTIFS=true
+			else
+				records[$index:notified]=false
 			fi
-			}
-			{ # determine loudness background color
-				if [[ -n "${records[$index:sound_loudness]}" ]]; then 
-					records[$index:sound_color]="$RED"
-					if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
-					if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
+			
+			if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
+			if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
+
+			records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
+			records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
+			records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
+			records[$index:distance]="${data[5]//$'\n'/}"
+			records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
+			records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
+			records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
+			records[$index:owner]="${records[$index:owner]:-unknown}"
+			records[$index:notif_link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
+			if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
+				[[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
+				[[ "${records[$index:icao]:0:1}" == "A" ]]
+			then
+				records[$index:faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
+			fi
+
+			# get an image links
+			records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
+			records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
+		
+			if [[ -n "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
+				# there is sound level information
+				HASNOISE=true
+				records[$index:sound_peak]="${data[7]//$'\n'/}"
+				records[$index:sound_1min]="${data[8]//$'\n'/}"
+				records[$index:sound_5min]="${data[9]//$'\n'/}"
+				records[$index:sound_10min]="${data[10]//$'\n'/}"
+				records[$index:sound_1hour]="${data[11]//$'\n'/}"
+				if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
+				records[$index:notif_link]="${data[12]//$'\n'/}"
+				{ # get a noise graph if one doesn't exist
+					# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
+					records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
+					records[$index:noisegraph_link]="$(basename "${records[$index:noisegraph_file]}")"
+					# If no noisegraph exists, create one:
+					if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
+						CREATE_NOISEPLOT "${records[$index:callsign]}" "${records[$index:firstseen]}" "${records[$index:lastseen]}" "${records[$index:icao]}"
+						if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
+							unset "${records[$index:noisegraph_file]}" "${records[$index:noisegraph_link]}"
+						fi
+					fi
+				}
+				{ # get a spectrogram if one doesn't exist
+					records[$index:spectro_file]="$(CREATE_SPECTROGRAM "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
+					if [[ -n "${records[$index:spectro_file]}" ]]; then
+						records[$index:spectro_link]="$(basename "${records[$index:spectro_file]}")"
+					fi
+				}
+				{ # get a MP3 if one doesn't exist
+				records[$index:mp3_file]="$(CREATE_MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
+				if [[ -n "${records[$index:mp3_file]}" ]]; then
+					records[$index:mp3_link]="$(basename "${records[$index:mp3_file]}")"
 				fi
-			}
-		fi
+				}
+				{ # determine loudness background color
+					if [[ -n "${records[$index:sound_loudness]}" ]]; then 
+						records[$index:sound_color]="$RED"
+						if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
+						if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
+					fi
+				}
+			fi
 
 		# get notification service name
 		if "${records[$index:notified]}"; then
@@ -495,9 +498,29 @@ WRITEHTMLTABLE () {
 			elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
 			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 			fi
-		fi
-	done <<< "$INPUTFILE"
-	maxindex="$((--counter))"
+			if [[ -n "${records[$index:notif_link]}" ]]; then
+				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
+					records[$index:notif_service]="MQTT"
+					records[$index:notif_link]=""
+				elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+				elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
+				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+				fi
+			fi
+		done <<< "$INPUTFILE"
+		maxindex="$((--counter))"
+		# write the array to a cache file
+		declare -p records 2>/dev/null > "/tmp/planefence-array.cache" || true
+		{ echo "maxindex=$maxindex"
+			echo "HASNOISE=$HASNOISE"
+			echo "HASNOTIFS=$HASNOTIFS"
+			echo "HASROUTE=$HASROUTE"
+		} >> /tmp/planefence-array.cache
+	else
+		"${s6wrap[@]}" echo "Reading records from cache (cache hit)"
+		source /tmp/planefence-array.cache
+	fi
+	cp -f "$1" /tmp/planefence-input.cache
 
 	# Now write the HTML table header
 	# open file for writing as fd 3
