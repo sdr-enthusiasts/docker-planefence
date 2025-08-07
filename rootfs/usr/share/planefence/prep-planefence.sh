@@ -391,6 +391,7 @@ configure_planefence "MQTT_DATETIME_FORMAT" "$PF_MQTT_DATETIME_FORMAT"
 configure_planefence "MQTT_USERNAME" "$PF_MQTT_USERNAME"
 configure_planefence "MQTT_PASSWORD" "$PF_MQTT_PASSWORD"
 configure_planefence "MQTT_QOS" "$PF_MQTT_QOS"
+configure_planefence "MQTT_FIELDS" "$PF_MQTT_FIELDS"
 
 configure_planealert "MQTT_URL" "$PA_MQTT_URL"
 configure_planealert "MQTT_CLIENT_ID" "$PA_MQTT_CLIENT_ID"
@@ -399,6 +400,7 @@ configure_planealert "MQTT_DATETIME_FORMAT" "$PA_MQTT_DATETIME_FORMAT"
 configure_planealert "MQTT_USERNAME" "$PA_MQTT_USERNAME"
 configure_planealert "MQTT_PASSWORD" "$PA_MQTT_PASSWORD"
 configure_planealert "MQTT_QOS" "$PA_MQTT_QOS"
+configure_planealert "MQTT_FIELDS" "$PA_MQTT_FIELDS"
 #
 #--------------------------------------------------------------------------------
 # RSS related parameters:

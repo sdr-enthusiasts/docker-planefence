@@ -49,7 +49,7 @@ RUN \
     # mainly moving files to the correct location and creating symlinks):
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /scripts/post2telegram.sh && \
     ln -s /usr/share/socket30003/socket30003.cfg /usr/share/planefence/socket30003.cfg && \
-    ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
+    # ln -s /usr/share/planefence/config_tweeting.sh /root/config_tweeting.sh && \
     if curl --compressed --fail -sSL https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt > /tmp/airlinecodes.txt; then mv -f /tmp/airlinecodes.txt /usr/share/planefence/airlinecodes.txt; fi && \
     if curl --compressed --fail -sSL https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip > /tmp/Silhouettes.zip; then mv -f /tmp/Silhouettes.zip /usr/share/planefence/stage/Silhouettes.zip; fi && \
     #

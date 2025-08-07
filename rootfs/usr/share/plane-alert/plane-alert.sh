@@ -478,8 +478,12 @@ if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
 				fi
 			done
 
-			# convert $msg_array[@] into a JSON object:
-      MQTT_JSON="$(for i in "${!msg_array[@]}"; do printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"; done | jq -sc add)"
+			# convert $msg_array[@] into a JSON object; if (PF_)MQTT_FIELDS is defined, then only use those fields:
+			MQTT_JSON="$(for i in "${!msg_array[@]}"; do 
+										if [[ -z "$MQTT_FIELDS" ]] || [[ $MQTT_FIELDS == *$i* ]]; then 
+											printf '{"%s":"%s"}\n' "$i" "${msg_array[$i]}"
+										fi 
+										done | jq -sc add)"
 
 			# prep the MQTT host, port, etc
 			unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST

@@ -102,7 +102,7 @@ fi
 # and is configured via the $PF_NOISECAPT variable in the .env file.
 # Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
 # replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-if [[ "x$REMOTENOISE" != "x" ]]; then
+if [[ -n "$REMOTENOISE" ]]; then
 	if curl --fail -s "$REMOTENOISE/noisecapt-$FENCEDATE.log" > "/tmp/noisecapt-$FENCEDATE.log"; then
 		NOISECAPT=1
 	else
@@ -507,6 +507,7 @@ WRITEHTMLTABLE () {
 				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 				fi
 			fi
+		fi
 		done <<< "$INPUTFILE"
 		maxindex="$((--counter))"
 		# write the array to a cache file
