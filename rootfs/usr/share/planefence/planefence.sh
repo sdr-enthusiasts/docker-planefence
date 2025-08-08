@@ -643,7 +643,7 @@ EOF
 
 		# Print a delete button, if we have the SHOWDELETE variable set
 		if chk_enabled "$SHOWDELETE"; then
-			printf "   <td><a href=\"manange_ignore.php?mode=pf&action=add&term=%s&uuid=%s\" method=\"get\"> <button type=\"submit\">Delete</button></form></td>" "${records[$index:icao]}" "$uuid" >&3
+			printf "   <td><a href=\"manage_ignore.php?mode=pf&action=add&term=%s&uuid=%s\" method=\"get\"> <button type=\"submit\">Delete</button></form></td>" "${records[$index:icao]}" "$uuid" >&3
 		fi	
 		printf "</tr>\n" >&3
 
