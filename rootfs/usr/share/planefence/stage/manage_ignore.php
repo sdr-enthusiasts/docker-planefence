@@ -29,7 +29,7 @@
     die("You must specific a mode parameter, and it must be either 'pf' or 'pa'.");
   }
 
-  if ( ($add == "" && $delete == "") || $uuid == "") {
+  if ( $action == "" || $uuid == "") {
 	   echo "<html><body><H1>Planefence manage_ignore Interface</H1>";
 	   echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?add=term&uuid=UUID&mode=pf|pa</h3>";
 	   echo "This will add the specified term to the ignore list.<br />";
