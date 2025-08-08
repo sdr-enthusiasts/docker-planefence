@@ -67,6 +67,17 @@ else
 	exit 2
 fi
 
+# -----------------------------------------------------------------------------------
+# Ensure that there's an '/tmp/add_delete.uuid' file
+# -----------------------------------------------------------------------------------
+
+if [[ ! -f /tmp/add_delete.uuid ]]; then
+	# if the file doesn't exist, create it:
+	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
+fi
+
+uuid="$(</tmp/add_delete.uuid)"
+
 # first get DISTANCE unit:
 DISTUNIT="mi"
 #DISTCONV=1
@@ -560,6 +571,11 @@ EOF
 		# print a header for the Notified column
 		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
 	fi
+
+	if chk_enabled "$SHOWDELETE"; then
+		# print a header for the Delete column
+		printf "	<th style=\"width: auto; text-align: center\">Delete</th>\n" >&3
+	fi
 	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
 
 	# Now write the table
@@ -624,6 +640,11 @@ EOF
 					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}" >&3
 				fi
 		fi
+
+		# Print a delete button, if we have the SHOWDELETE variable set
+		if chk_enabled "$SHOWDELETE"; then
+			printf "   <td><form action=\"/action_page.php?mode=pf&action=add&term=%s&uuid=%s\" method=\"get\" <button type=\"submit\">Delete</button></form></td>" "${records[$index:icao]}" "$uuid" >&3
+		fi	
 		printf "</tr>\n" >&3
 
 	done
