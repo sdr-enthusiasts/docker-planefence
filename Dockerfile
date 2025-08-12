@@ -42,7 +42,7 @@ COPY rootfs/ /
 #
 RUN \
     --mount=type=bind,source=./,target=/app/ \
-    set -xe \
+    set -xe && \
     #
     #
     # Install the packages needed for Planefence:
