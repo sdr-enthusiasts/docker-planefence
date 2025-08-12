@@ -74,6 +74,7 @@ fi
 if [[ ! -f /tmp/add_delete.uuid ]]; then
 	# if the file doesn't exist, create it:
 	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
+	chmod a+rw /tmp/add_delete.uuid
 fi
 
 uuid="$(</tmp/add_delete.uuid)"
@@ -572,9 +573,9 @@ EOF
 		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
 	fi
 
-	if chk_enabled "$SHOWDELETE"; then
-		# print a header for the Delete column
-		printf "	<th style=\"width: auto; text-align: center\">Delete</th>\n" >&3
+	if chk_enabled "$SHOWIGNORE"; then
+		# print a header for the Ignore column
+		printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n" >&3
 	fi
 	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
 
@@ -641,9 +642,16 @@ EOF
 				fi
 		fi
 
-		# Print a delete button, if we have the SHOWDELETE variable set
-		if chk_enabled "$SHOWDELETE"; then
-			printf "   <td><a href=\"manage_ignore.php?mode=pf&action=add&term=%s&uuid=%s\" method=\"get\"> <button type=\"submit\">Delete</button></form></td>" "${records[$index:icao]}" "$uuid" >&3
+		# Print a delete button, if we have the SHOWIGNORE variable set
+		if chk_enabled "$SHOWIGNORE"; then
+			printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
+											<input type=\"hidden\" name=\"mode\" value=\"pf\">
+											<input type=\"hidden\" name=\"action\" value=\"add\">
+											<input type=\"hidden\" name=\"term\" value=\"%s\">
+											<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+											<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+											<button type=\"submit\">Ignore</button></form></td>" \
+				"${records[$index:icao]}" "$uuid" >&3
 		fi	
 		printf "</tr>\n" >&3
 
@@ -871,7 +879,10 @@ if [[ -f "$OUTFILETMP" ]] && [[ -f "$OUTFILECSV" ]]; then
 	done < "$OUTFILETMP"
 else
 	# there's potentially no OUTFILECSV. Move OUTFILETMP to OUTFILECSV if one exists
-	[[ -f "$OUTFILETMP" ]] && mv -f "$OUTFILETMP" "$OUTFILECSV"
+	if [[ -f "$OUTFILETMP" ]]; then
+		mv -f "$OUTFILETMP" "$OUTFILECSV"
+		chmod a+rw "$OUTFILECSV"
+	fi	
 fi
 rm -f "$OUTFILETMP"
 
@@ -1054,6 +1065,16 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 
     <!-- plugin to make JQuery table columns resizable by the user: -->
     <script src="scripts/colResizable-1.6.min.js"></script>
+
+		<!-- script to get the current URL -->
+		<script>
+			function setCurrentUrl() {
+				// Get the current URL
+				var currentUrl = window.location.href;
+				// Set the value of the hidden input field
+				document.getElementById('currentUrl').value = currentUrl;
+			}
+    </script>
 
     <title>ADS-B 1090 MHz Planefence</title>
 EOF

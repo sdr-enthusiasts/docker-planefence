@@ -46,8 +46,8 @@ if [[ ! -f /tmp/add_delete.uuid ]]; then
   exit 1
 fi
 
-if [[ -z "$uuid" || "$uuid" != "$(cat /tmp/add_delete.uuid)" ]]; then
-  echo "Error: UUID is absent or does not match. Aborting."
+if [[ -z "$uuid" || "$uuid" != "$(</tmp/add_delete.uuid)" ]]; then
+  echo "Error: UUID is absent or does not match. Reported=$uuid; expected=$(</tmp/add_delete.uuid). Aborting."
   exit 1
 fi
 
@@ -76,7 +76,7 @@ if [[ "$mode" == "pa" ]]; then
   fi
 
   if grep -q "^\s*PA_EXCLUSIONS=" /usr/share/planefence/persist/planefence.config; then
-    sed -i "s/^\s*PA_EXCLUSIONS=.*/PA_EXCLUSIONS=$PA_EXCLUSIONS/" /usr/share/planefence/persist/planefence.config
+    sudo sed -i "s/^\s*PA_EXCLUSIONS=.*/PA_EXCLUSIONS=$PA_EXCLUSIONS/" /usr/share/planefence/persist/planefence.config
   else
     echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" >> /usr/share/planefence/persist/planefence.config
   fi
@@ -84,9 +84,10 @@ if [[ "$mode" == "pa" ]]; then
 elif [[ "$mode" == "pf" ]]; then
 
   if [[ "$action" == "add" ]]; then
-    echo "$term" >> /usr/share/planefence/persist/planefence-ignore.txt 
+    echo "$term" >> /usr/share/planefence/persist/planefence-ignore.txt
+    sudo sed -i "/$term/d" "/usr/share/planefence/html/planefence-$(date --date="today" '+%y%m%d').csv"
   elif [[ "$action" == "delete" ]]; then
-    sed -i "/$term/d" /usr/share/planefence/persist/planefence-ignore.txt 
+    sudo sed -i "/$term/d" /usr/share/planefence/persist/planefence-ignore.txt
   fi
 
 fi

@@ -1,17 +1,20 @@
 <?php
+  $target = "";
   $action = "";
-  if(isset($_GET['add']) && ! isset($_GET['delete'])) {
-    $target = $_GET['add'];
-    $action = "add";
+  $uuid = "";
+  $mode = "";
+
+  if(isset($_GET['action'])) {
+    $action = $_GET['action'];
+  }
+  if ($action != "add" && $action != "delete") {
+      die("Invalid action specified, must be either 'add' or 'delete'.");
   }
 
-  if(isset($_GET['delete']) && ! isset($_GET['add'])) {
-    $target = $_GET['delete'];
-    $action = "delete";
-  }
-
-  if ($action = "") {
-    die("You must specify either an add or delete parameter, but not both.");
+  if(isset($_GET['term'])) {
+    $target = $_GET['term'];
+  } else {
+    die("You must specify a term parameter.");
   }
 
   if(isset($_GET['uuid'])) {
@@ -31,6 +34,12 @@
 
   system("/scripts/manage_ignore.sh " . escapeshellarg($mode) . " " . escapeshellarg($action) . " " . escapeshellarg($target) . " " . escapeshellarg($uuid), $return_value );
   ($return_value == 0) or die("#php error returned an error: $return_value");
-  header("Location:".$_SERVER[HTTP_REFERER]);
-  die;
+
+  if (isset($_GET['callback'])) {
+    $callback_url = $_GET['callback'];
+    header("Location:" . substr($callback_url, 0, strpos($callback_url, "?")) ?: $callback_url . "?token=" . urlencode(substr($uuid, 0, 8)));
+    die;
+  } else {
+    echo $action . " of " . $target . " for " . $mode . " was successful, but no callback URL was provided. Press the back button in your browser to return to the previous page.";
+  } 
 ?>

@@ -45,6 +45,9 @@ RUN \
     set -xe \
     #
     #
+    # Install the packages needed for Planefence:
+    apt-get update -q && \
+    apt-get install -q -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" -y --no-install-recommends  --no-install-suggests \
     # Install Planefence (it was copied in with /rootfs, so this is
     # mainly moving files to the correct location and creating symlinks):
     chmod a+x /usr/share/planefence/*.sh /usr/share/planefence/*.py /usr/share/planefence/*.pl /scripts/post2telegram.sh && \
