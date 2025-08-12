@@ -68,13 +68,13 @@ else
 fi
 
 # -----------------------------------------------------------------------------------
-# Ensure that there's an '/tmp/add_delete.uuid' file
+# Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
 # -----------------------------------------------------------------------------------
-
-if [[ ! -f /tmp/add_delete.uuid ]]; then
-	# if the file doesn't exist, create it:
+if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( $(date +%s) - $(</tmp/add_delete.uuid.used) > 300 )) ); then
+	# UUID file needs to be updated. This is done to prevent replay attacks.
+	# This is done if the UUID was used more than 300 seconds ago, or if the file doesn't exist.
 	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
-	chmod a+rw /tmp/add_delete.uuid
+	rm -f /tmp/add_delete.uuid.used
 fi
 
 uuid="$(</tmp/add_delete.uuid)"
@@ -411,6 +411,7 @@ WRITEHTMLTABLE () {
 			# spectro_link: link to spectrogram file  (if NoiseCapt is configured)
 			# mp3_file: path of mp3 file  (if NoiseCapt is configured)
 			# mp3_link: link to mp3 file  (if NoiseCapt is configured)
+			# ignored: yes if part of the /usr/share/planefence/persist/planefence-ignore.txt file, no otherwise
 			#
 			# additionally, the following are local variables:
 			# maxindex: highest index number (useful for looping)
@@ -496,19 +497,11 @@ WRITEHTMLTABLE () {
 				}
 			fi
 
-		# get notification service name
-		if "${records[$index:notified]}"; then
-			records[$index:notif_service]="yes"
-		else
-			records[$index:notif_service]="no"
-		fi
-		if [[ -n "${records[$index:notif_link]}" ]]; then
-			if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-				 records[$index:notif_service]="MQTT"
-				 records[$index:notif_link]=""
-			elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-			elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+			# get notification service name
+			if "${records[$index:notified]}"; then
+				records[$index:notif_service]="yes"
+			else
+				records[$index:notif_service]="no"
 			fi
 			if [[ -n "${records[$index:notif_link]}" ]]; then
 				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
@@ -518,8 +511,22 @@ WRITEHTMLTABLE () {
 				elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
 				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 				fi
+				if [[ -n "${records[$index:notif_link]}" ]]; then
+					if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
+						records[$index:notif_service]="MQTT"
+						records[$index:notif_link]=""
+					elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+					elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
+					elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+					fi
+				fi
 			fi
-		fi
+			# check if this record is ignored
+			if grep -q -i "${records[$index:icao]}" "/usr/share/planefence/persist/planefence-ignore.txt"; then
+				records[$index:ignored]="yes"
+			else
+				records[$index:ignored]="no"
+			fi
 		done <<< "$INPUTFILE"
 		maxindex="$((--counter))"
 		# write the array to a cache file
@@ -644,14 +651,25 @@ EOF
 
 		# Print a delete button, if we have the SHOWIGNORE variable set
 		if chk_enabled "$SHOWIGNORE"; then
-			printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
-											<input type=\"hidden\" name=\"mode\" value=\"pf\">
-											<input type=\"hidden\" name=\"action\" value=\"add\">
-											<input type=\"hidden\" name=\"term\" value=\"%s\">
-											<input type=\"hidden\" name=\"uuid\" value=\"%s\">
-											<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
-											<button type=\"submit\">Ignore</button></form></td>" \
-				"${records[$index:icao]}" "$uuid" >&3
+			if ! chk_enabled "${records[$index:ignored]}"; then 
+				printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
+												<input type=\"hidden\" name=\"mode\" value=\"pf\">
+												<input type=\"hidden\" name=\"action\" value=\"add\">
+												<input type=\"hidden\" name=\"term\" value=\"%s\">
+												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+												<button type=\"submit\">Ignore</button></form></td>" \
+					"${records[$index:icao]}" "$uuid" >&3
+			else
+				printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
+												<input type=\"hidden\" name=\"mode\" value=\"pf\">
+												<input type=\"hidden\" name=\"action\" value=\"delete\">
+												<input type=\"hidden\" name=\"term\" value=\"%s\">
+												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+												<button type=\"submit\">UnIgnore</button></form></td>" \
+					"${records[$index:icao]}" "$uuid" >&3
+			fi
 		fi	
 		printf "</tr>\n" >&3
 

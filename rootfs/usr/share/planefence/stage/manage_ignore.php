@@ -37,7 +37,14 @@
 
   if (isset($_GET['callback'])) {
     $callback_url = $_GET['callback'];
-    header("Location:" . substr($callback_url, 0, strpos($callback_url, "?")) ?: $callback_url . "?token=" . urlencode(substr($uuid, 0, 8)));
+    if (strpos($callback_url, "?") === false) {
+      $callback_url .= "?";
+    } else {
+      $callback_url .= "&";
+    }
+    $callback_url .= "token=" . urlencode(substr($uuid, 0, 8));
+    
+    header("Location:" . $callback_url);
     die;
   } else {
     echo $action . " of " . $target . " for " . $mode . " was successful, but no callback URL was provided. Press the back button in your browser to return to the previous page.";

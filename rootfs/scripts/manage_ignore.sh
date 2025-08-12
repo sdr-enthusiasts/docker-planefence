@@ -47,7 +47,11 @@ if [[ ! -f /tmp/add_delete.uuid ]]; then
 fi
 
 if [[ -z "$uuid" || "$uuid" != "$(</tmp/add_delete.uuid)" ]]; then
-  echo "Error: UUID is absent or does not match. Reported=$uuid; expected=$(</tmp/add_delete.uuid). Aborting."
+  echo "For security reasons, you can only add/delete entries from the Ignore list for 5 minutes before you have to reload the PF/PA page. Please press <BACK>, reload the page, and try again."
+  echo "(Token used was: $uuid; token expected is: $(</tmp/add_delete.uuid))"
+  if [[ -f /tmp/add_delete.uuid.used ]]; then
+    echo "Token expiration time was $(date --date="@$(( $(</tmp/add_delete.uuid.used) + 300 ))")"
+  fi
   exit 1
 fi
 
@@ -71,21 +75,21 @@ if [[ "$mode" == "pa" ]]; then
     else
       PA_EXCLUSIONS+=",$term"
     fi
-  else
+  elif [[ "$action" == "delete" ]]; then
     PA_EXCLUSIONS="$(sed -e 's/\b'"$term"'\b/,/g' -e 's/,,//g' <<< "$PA_EXCLUSIONS")"
   fi
 
   if grep -q "^\s*PA_EXCLUSIONS=" /usr/share/planefence/persist/planefence.config; then
     sudo sed -i "s/^\s*PA_EXCLUSIONS=.*/PA_EXCLUSIONS=$PA_EXCLUSIONS/" /usr/share/planefence/persist/planefence.config
   else
-    echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" >> /usr/share/planefence/persist/planefence.config
+    echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" | sudo tee -a /usr/share/planefence/persist/planefence.config >/dev/null
   fi
 
 elif [[ "$mode" == "pf" ]]; then
 
   if [[ "$action" == "add" ]]; then
     echo "$term" >> /usr/share/planefence/persist/planefence-ignore.txt
-    sudo sed -i "/$term/d" "/usr/share/planefence/html/planefence-$(date --date="today" '+%y%m%d').csv"
+    # sudo sed -i "/$term/d" "/usr/share/planefence/html/planefence-$(date --date="today" '+%y%m%d').csv"
   elif [[ "$action" == "delete" ]]; then
     sudo sed -i "/$term/d" /usr/share/planefence/persist/planefence-ignore.txt
   fi
@@ -93,4 +97,6 @@ elif [[ "$mode" == "pf" ]]; then
 fi
 
 # Update the UUID to prevent replay attacks
-cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
+if [[ ! -f /tmp/add_delete.uuid.used ]]; then
+  date +%s > /tmp/add_delete.uuid.used
+fi
