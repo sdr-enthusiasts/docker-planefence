@@ -183,7 +183,7 @@ GET_ROUTE () {
 		# Uses the adsb.lol API to retrieve the route
 
 		local route
-		
+
 		# first let's see if it's in the cache
 		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
 			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
@@ -235,7 +235,7 @@ GET_PS_PHOTO () {
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
 		return 0
 	fi
-	
+
 	if [[ "$returntype" == "image" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
 		#echo in cache
 		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
@@ -274,10 +274,10 @@ GET_PS_PHOTO () {
 }
 
 CREATE_NOISEPLOT () {
-	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
-  
+  # usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
+
   if [[ -z "$REMOTENOISE" ]]; then return; fi
-  
+
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
@@ -591,7 +591,7 @@ EOF
 	for (( index=0 ; index<=maxindex ; index++ )); do
 
 		printf "<tr>\n" >&3
-		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" >&3 # table index number
+		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$((index+1))" >&3 # table index number
 
 		if ${SHOWIMAGES} && [[ -n "${records[$index:image_thumblink]}" ]]; then
 			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}" >&3
