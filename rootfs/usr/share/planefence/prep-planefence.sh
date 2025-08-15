@@ -451,6 +451,7 @@ configure_planealert "TABLESIZE" "${PA_TABLESIZE:-50}"
 configure_planefence "SHOWIGNORE" "${PF_SHOWIGNORE:-false}"
 configure_planealert "SHOWIGNORE" "${PA_SHOWIGNORE:-false}"
 configure_planealert "EXCLUSIONS" "${PA_EXCLUSIONS}"
+touch /tmp/.force_pa_webpage_update	# this is used to force a Plane-Alert webpage update upon change of parameters
 #
 # ---------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
