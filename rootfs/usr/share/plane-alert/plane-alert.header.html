@@ -97,6 +97,14 @@
         });
     });
 </script>
+<script>
+	function prepareSubmit() {
+			// Set the current URL without query parameters
+			var cleanUrl = window.location.href.split('?')[0];
+			document.getElementById('currentUrl').value = cleanUrl;
+			return true;
+	}
+</script>
 <h1>Plane Alert</h1>
    <h2>This website shows a list of aircraft of interest that were heard by <a href="##ADSBLINK##" target="_blank">##NAME##</a>'s ADS-B station</h2>
    ##PA_MOTD##

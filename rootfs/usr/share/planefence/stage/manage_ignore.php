@@ -1,4 +1,20 @@
 <?php
+// At the top of manage_ignore.php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Detailed logging
+file_put_contents('/tmp/form_debug.log', 
+    date('Y-m-d H:i:s') . "\n" . 
+    'GET: ' . print_r($_GET, true) . "\n" . 
+    'SERVER: ' . print_r($_SERVER, true) . "\n\n", 
+    FILE_APPEND
+);
+
+// Print all received parameters
+print_r($_GET);
+
+
   $target = "";
   $action = "";
   $uuid = "";
@@ -37,6 +53,7 @@
 
   if (isset($_GET['callback'])) {
     $callback_url = $_GET['callback'];
+    $callback_url = preg_replace('/(&?])token=[a-zA-Z0-9]+[?]?/i', '$1', $callback_url); // remove any existing token parameter
     if (strpos($callback_url, "?") === false) {
       $callback_url .= "?";
     } else {

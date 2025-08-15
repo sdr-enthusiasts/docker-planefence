@@ -183,7 +183,7 @@ GET_ROUTE () {
 		# Uses the adsb.lol API to retrieve the route
 
 		local route
-
+		
 		# first let's see if it's in the cache
 		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
 			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
@@ -235,7 +235,7 @@ GET_PS_PHOTO () {
 	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
 		return 0
 	fi
-
+	
 	if [[ "$returntype" == "image" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
 		#echo in cache
 		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
@@ -274,10 +274,10 @@ GET_PS_PHOTO () {
 }
 
 CREATE_NOISEPLOT () {
-  # usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
-
+	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
+  
   if [[ -z "$REMOTENOISE" ]]; then return; fi
-
+  
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
@@ -411,7 +411,6 @@ WRITEHTMLTABLE () {
 			# spectro_link: link to spectrogram file  (if NoiseCapt is configured)
 			# mp3_file: path of mp3 file  (if NoiseCapt is configured)
 			# mp3_link: link to mp3 file  (if NoiseCapt is configured)
-			# ignored: yes if part of the /usr/share/planefence/persist/planefence-ignore.txt file, no otherwise
 			#
 			# additionally, the following are local variables:
 			# maxindex: highest index number (useful for looping)
@@ -521,12 +520,7 @@ WRITEHTMLTABLE () {
 					fi
 				fi
 			fi
-			# check if this record is ignored
-			if grep -q -i "${records[$index:icao]}" "/usr/share/planefence/persist/planefence-ignore.txt"; then
-				records[$index:ignored]="yes"
-			else
-				records[$index:ignored]="no"
-			fi
+
 		done <<< "$INPUTFILE"
 		maxindex="$((--counter))"
 		# write the array to a cache file
@@ -583,6 +577,7 @@ EOF
 	if chk_enabled "$SHOWIGNORE"; then
 		# print a header for the Ignore column
 		printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n" >&3
+		PFIGNORELIST="$(<"/usr/share/planefence/persist/planefence-ignore.txt")"
 	fi
 	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
 
@@ -591,7 +586,7 @@ EOF
 	for (( index=0 ; index<=maxindex ; index++ )); do
 
 		printf "<tr>\n" >&3
-		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$((index+1))" >&3 # table index number
+		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" >&3 # table index number
 
 		if ${SHOWIMAGES} && [[ -n "${records[$index:image_thumblink]}" ]]; then
 			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}" >&3
@@ -651,23 +646,24 @@ EOF
 
 		# Print a delete button, if we have the SHOWIGNORE variable set
 		if chk_enabled "$SHOWIGNORE"; then
-			if ! chk_enabled "${records[$index:ignored]}"; then 
-				printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
+			# If the record is in the ignore list, then print an "UnIgnore" button, otherwise print an "Ignore" button
+			if ! grep -q -i "${records[$index:icao]}" <<< "$PFIGNORELIST"; then
+				printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
 												<input type=\"hidden\" name=\"mode\" value=\"pf\">
 												<input type=\"hidden\" name=\"action\" value=\"add\">
 												<input type=\"hidden\" name=\"term\" value=\"%s\">
 												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
 												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
-												<button type=\"submit\">Ignore</button></form></td>" \
+												<button type=\"submit\" onclick=\"return prepareSubmit()\">Ignore</button></form></td>" \
 					"${records[$index:icao]}" "$uuid" >&3
 			else
-				printf "   <td><form action=\"manage_ignore.php\" method=\"get\" onsubmit=\"setCurrentUrl()\">
+				printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
 												<input type=\"hidden\" name=\"mode\" value=\"pf\">
 												<input type=\"hidden\" name=\"action\" value=\"delete\">
 												<input type=\"hidden\" name=\"term\" value=\"%s\">
 												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
 												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
-												<button type=\"submit\">UnIgnore</button></form></td>" \
+												<button type=\"submit\" onclick=\"return prepareSubmit()\">UnIgnore</button></form></td>" \
 					"${records[$index:icao]}" "$uuid" >&3
 			fi
 		fi	
@@ -922,6 +918,7 @@ $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 [[ "$BASETIME" != "" ]] && echo "6. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying dirty fixes, applying filters" || true
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
+# shellcheck disable=SC2153
 sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
 # now apply the filter
 # shellcheck disable=SC2126
@@ -1084,16 +1081,6 @@ cat <<EOF >>"$OUTFILEHTMTMP"
     <!-- plugin to make JQuery table columns resizable by the user: -->
     <script src="scripts/colResizable-1.6.min.js"></script>
 
-		<!-- script to get the current URL -->
-		<script>
-			function setCurrentUrl() {
-				// Get the current URL
-				var currentUrl = window.location.href;
-				// Set the value of the hidden input field
-				document.getElementById('currentUrl').value = currentUrl;
-			}
-    </script>
-
     <title>ADS-B 1090 MHz Planefence</title>
 EOF
 	
@@ -1154,7 +1141,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 }
 td, table.dataTable tbody td {
 	text-align: center;
-	vertical-align: middle;"
+	vertical-align: middle;
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
@@ -1180,6 +1167,14 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
 						postbackSave: true
         });
     });
+</script>
+<script>
+	function prepareSubmit() {
+			// Set the current URL without query parameters
+			var cleanUrl = window.location.href.split('?')[0];
+			document.getElementById('currentUrl').value = cleanUrl;
+			return true;
+	}
 </script>
 
 <h1>Planefence</h1>
@@ -1229,15 +1224,15 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)" "$LAT_VIS" "$LON_VIS"
-	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)"
-	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)"
-	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level"
+{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)\n" "$LAT_VIS" "$LON_VIS"
+	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)\n"
+	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)\n"
+	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL.\n" "$ALTCORR" "$ALTUNIT" || printf "<li>Minimum altitude is the altitude above sea level\n"
 
 	[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n"
 	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
   chk_enabled "$PLANEALERT" && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"%s\" target=\"_blank\">here</a>\n" "${PA_LINK:-plane-alert}"
-	printf "<li> Press the header of any of the columns to sort by that column\n"
+	printf "<li>Press the header of any of the columns to sort by that column\n"
 	printf "</ul>\n"
 } >> "$OUTFILEHTMTMP"
 

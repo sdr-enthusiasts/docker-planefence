@@ -447,8 +447,10 @@ if chk_enabled "$PA_DARKMODE"; then configure_planealert "DARKMODE" "true"; else
 configure_planefence "TABLESIZE" "${PF_TABLESIZE:-50}"
 configure_planealert "TABLESIZE" "${PA_TABLESIZE:-50}"
 #--------------------------------------------------------------------------------
-# Configure the Planefence Delete button:
+# Configure the Planefence/Plane-Alert Ignore button:
 configure_planefence "SHOWIGNORE" "${PF_SHOWIGNORE:-false}"
+configure_planealert "SHOWIGNORE" "${PA_SHOWIGNORE:-false}"
+configure_planealert "EXCLUSIONS" "${PA_EXCLUSIONS}"
 #
 # ---------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,
