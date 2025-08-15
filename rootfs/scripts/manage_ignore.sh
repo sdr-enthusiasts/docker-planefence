@@ -85,6 +85,7 @@ if [[ "$mode" == "pa" ]]; then
     echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" | sudo tee -a /usr/share/planefence/persist/planefence.config >/dev/null
   fi
   sudo /usr/share/plane-alert/get-pa-alertlist.sh # Update the Plane-Alert alert list
+  touch /tmp/.force_pa_webpage_update # Force a webpage update
 
 elif [[ "$mode" == "pf" ]]; then
 
