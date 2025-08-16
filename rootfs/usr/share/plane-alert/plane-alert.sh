@@ -831,10 +831,9 @@ EOF
 			done
 
 			if chk_enabled "$SHOWIGNORE"; then
-			echo "DEBUG: SHOWIGNORE is enabled"
 				# If the record is in the ignore list, then print an "UnIgnore" button, otherwise print an "Ignore" button
 				if ! printf '%s\n' "${pa_record[@]:0:4}" | grep -qiF -f - <(echo "$EXCLUSIONS"); then  
-					printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
+					printf "   <td><form id=\"ignoreForm\" action=\"../manage_ignore.php\" method=\"get\">
 													<input type=\"hidden\" name=\"mode\" value=\"pa\">
 													<input type=\"hidden\" name=\"action\" value=\"add\">
 													<input type=\"hidden\" name=\"term\" value=\"%s\">
@@ -843,7 +842,7 @@ EOF
 													<button type=\"submit\" onclick=\"return prepareSubmit()\">Ignore</button></form></td>" \
 						"${pa_record[0]}" "$uuid" >&3
 				else
-					printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
+					printf "   <td><form id=\"ignoreForm\" action=\"../manage_ignore.php\" method=\"get\">
 													<input type=\"hidden\" name=\"mode\" value=\"pa\">
 													<input type=\"hidden\" name=\"action\" value=\"delete\">
 													<input type=\"hidden\" name=\"term\" value=\"%s\">

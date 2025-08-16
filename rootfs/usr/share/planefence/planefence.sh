@@ -74,6 +74,7 @@ if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && ((
 	# UUID file needs to be updated. This is done to prevent replay attacks.
 	# This is done if the UUID was used more than 300 seconds ago, or if the file doesn't exist.
 	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
+	touch /tmp/.force_pa_webpage_update	# this is used to force a Plane-Alert webpage update upon change of parameters
 	rm -f /tmp/add_delete.uuid.used
 fi
 
