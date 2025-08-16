@@ -80,20 +80,20 @@ if [[ "$mode" == "pa" ]]; then
   fi
 
   if grep -q "^\s*PA_EXCLUSIONS=" /usr/share/planefence/persist/planefence.config; then
-    sudo sed -i "s/^\s*PA_EXCLUSIONS=.*/PA_EXCLUSIONS=$PA_EXCLUSIONS/" /usr/share/planefence/persist/planefence.config
+    sed -i "s/^\s*PA_EXCLUSIONS=.*/PA_EXCLUSIONS=$PA_EXCLUSIONS/" /usr/share/planefence/persist/planefence.config
   else
-    echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" | sudo tee -a /usr/share/planefence/persist/planefence.config >/dev/null
+    echo "PA_EXCLUSIONS=$PA_EXCLUSIONS" >> /usr/share/planefence/persist/planefence.config
   fi
-  sudo /usr/share/plane-alert/get-pa-alertlist.sh # Update the Plane-Alert alert list
+  /usr/share/plane-alert/get-pa-alertlist.sh # Update the Plane-Alert alert list
   touch /tmp/.force_pa_webpage_update # Force a webpage update
 
 elif [[ "$mode" == "pf" ]]; then
 
   if [[ "$action" == "add" ]]; then
     echo "$term" >> /usr/share/planefence/persist/planefence-ignore.txt
-    # sudo sed -i "/$term/d" "/usr/share/planefence/html/planefence-$(date --date="today" '+%y%m%d').csv"
+    # sed -i "/$term/d" "/usr/share/planefence/html/planefence-$(date --date="today" '+%y%m%d').csv"
   elif [[ "$action" == "delete" ]]; then
-    sudo sed -i "/$term/d" /usr/share/planefence/persist/planefence-ignore.txt
+    sed -i "/$term/d" /usr/share/planefence/persist/planefence-ignore.txt
   fi
 
 fi
