@@ -4,8 +4,8 @@
 source /scripts/common
 APPPATH="/usr/sbin/lighttpd"
 CONFIGPATH="/etc/lighttpd/lighttpd.conf"
-OWNER=www-data
-GROUP=www-data
+OWNER=root
+GROUP=root
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Lighttpd started as an s6 service"; fi
 
@@ -30,6 +30,12 @@ if [[ ! -d /var/cache/lighttpd/uploads ]]; then install -d -o $OWNER -g $GROUP -
 if [[ ! -d /var/log/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"; fi
 if [[ ! -d /var/log/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/log/lighttpd"; fi
 if [[ ! -d /var/run/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/var/run/lighttpd"; fi
+
+#
+# -----------------------------------------------------------------------------------
+# Comment out server.username and server.groupname in the lighttpd.conf file
+sed -i 's/^server\.username/# server\.username/g' /etc/lighttpd/lighttpd.conf
+sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 #
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:

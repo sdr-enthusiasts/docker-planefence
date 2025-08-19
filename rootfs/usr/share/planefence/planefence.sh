@@ -67,6 +67,19 @@ else
 	exit 2
 fi
 
+# -----------------------------------------------------------------------------------
+# Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
+# -----------------------------------------------------------------------------------
+if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( $(date +%s) - $(</tmp/add_delete.uuid.used) > 300 )) ); then
+	# UUID file needs to be updated. This is done to prevent replay attacks.
+	# This is done if the UUID was used more than 300 seconds ago, or if the file doesn't exist.
+	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
+	touch /tmp/.force_pa_webpage_update	# this is used to force a Plane-Alert webpage update upon change of parameters
+	rm -f /tmp/add_delete.uuid.used
+fi
+
+uuid="$(</tmp/add_delete.uuid)"
+
 # first get DISTANCE unit:
 DISTUNIT="mi"
 #DISTCONV=1
@@ -484,19 +497,11 @@ WRITEHTMLTABLE () {
 				}
 			fi
 
-		# get notification service name
-		if "${records[$index:notified]}"; then
-			records[$index:notif_service]="yes"
-		else
-			records[$index:notif_service]="no"
-		fi
-		if [[ -n "${records[$index:notif_link]}" ]]; then
-			if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-				 records[$index:notif_service]="MQTT"
-				 records[$index:notif_link]=""
-			elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-			elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-			elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+			# get notification service name
+			if "${records[$index:notified]}"; then
+				records[$index:notif_service]="yes"
+			else
+				records[$index:notif_service]="no"
 			fi
 			if [[ -n "${records[$index:notif_link]}" ]]; then
 				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
@@ -506,8 +511,17 @@ WRITEHTMLTABLE () {
 				elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
 				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
 				fi
+				if [[ -n "${records[$index:notif_link]}" ]]; then
+					if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
+						records[$index:notif_service]="MQTT"
+						records[$index:notif_link]=""
+					elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
+					elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
+					elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+					fi
+				fi
 			fi
-		fi
+
 		done <<< "$INPUTFILE"
 		maxindex="$((--counter))"
 		# write the array to a cache file
@@ -559,6 +573,12 @@ EOF
 	if "$HASNOTIFS"; then
 		# print a header for the Notified column
 		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
+	fi
+
+	if chk_enabled "$SHOWIGNORE"; then
+		# print a header for the Ignore column
+		printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n" >&3
+		PFIGNORELIST="$(<"/usr/share/planefence/persist/planefence-ignore.txt")"
 	fi
 	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
 
@@ -624,6 +644,30 @@ EOF
 					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}" >&3
 				fi
 		fi
+
+		# Print a delete button, if we have the SHOWIGNORE variable set
+		if chk_enabled "$SHOWIGNORE"; then
+			# If the record is in the ignore list, then print an "UnIgnore" button, otherwise print an "Ignore" button
+			if ! grep -q -i "${records[$index:icao]}" <<< "$PFIGNORELIST"; then
+				printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
+												<input type=\"hidden\" name=\"mode\" value=\"pf\">
+												<input type=\"hidden\" name=\"action\" value=\"add\">
+												<input type=\"hidden\" name=\"term\" value=\"%s\">
+												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+												<button type=\"submit\" onclick=\"return prepareSubmit()\">Ignore</button></form></td>" \
+					"${records[$index:icao]}" "$uuid" >&3
+			else
+				printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
+												<input type=\"hidden\" name=\"mode\" value=\"pf\">
+												<input type=\"hidden\" name=\"action\" value=\"delete\">
+												<input type=\"hidden\" name=\"term\" value=\"%s\">
+												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+												<button type=\"submit\" onclick=\"return prepareSubmit()\">UnIgnore</button></form></td>" \
+					"${records[$index:icao]}" "$uuid" >&3
+			fi
+		fi	
 		printf "</tr>\n" >&3
 
 	done
@@ -850,7 +894,10 @@ if [[ -f "$OUTFILETMP" ]] && [[ -f "$OUTFILECSV" ]]; then
 	done < "$OUTFILETMP"
 else
 	# there's potentially no OUTFILECSV. Move OUTFILETMP to OUTFILECSV if one exists
-	[[ -f "$OUTFILETMP" ]] && mv -f "$OUTFILETMP" "$OUTFILECSV"
+	if [[ -f "$OUTFILETMP" ]]; then
+		mv -f "$OUTFILETMP" "$OUTFILECSV"
+		chmod a+rw "$OUTFILECSV"
+	fi	
 fi
 rm -f "$OUTFILETMP"
 
@@ -872,6 +919,7 @@ $PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
 [[ "$BASETIME" != "" ]] && echo "6. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying dirty fixes, applying filters" || true
 
 # Ignore list -- first clean up the list to ensure there are no empty lines
+# shellcheck disable=SC2153
 sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
 # now apply the filter
 # shellcheck disable=SC2126
@@ -1094,7 +1142,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 }
 td, table.dataTable tbody td {
 	text-align: center;
-	vertical-align: middle;"
+	vertical-align: middle;
 }
 </style>
 $(if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]] && [[ -n "$MASTODON_NAME" ]]; then echo "<link href=\"https://$MASTODON_SERVER/@$MASTODON_NAME\" rel=\"me\">"; fi)
@@ -1120,6 +1168,14 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
 						postbackSave: true
         });
     });
+</script>
+<script>
+	function prepareSubmit() {
+			// Set the current URL without query parameters
+			var cleanUrl = window.location.href.split('?')[0];
+			document.getElementById('currentUrl').value = cleanUrl;
+			return true;
+	}
 </script>
 
 <h1>Planefence</h1>
@@ -1169,15 +1225,15 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)" "$LAT_VIS" "$LON_VIS"
-	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)"
-	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)"
-	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL." "$ALTCORR" "$ALTUNIT" >> "$OUTFILEHTMTMP" || printf "<li>Minimum altitude is the altitude above sea level"
+{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)\n" "$LAT_VIS" "$LON_VIS"
+	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)\n"
+	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)\n"
+	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL.\n" "$ALTCORR" "$ALTUNIT" || printf "<li>Minimum altitude is the altitude above sea level\n"
 
 	[[ "$PLANETWEET" != "" ]] && printf "<li>Click on the word &quot;yes&quot; in the <b>Tweeted</b> column to see the Tweet.\n<li>Note that tweets are issued after a slight delay\n"
 	(( $(find "$TMPDIR"/noisecapt-spectro*.png -daystart -maxdepth 1 -mmin -1440 -print 2>/dev/null | wc -l  ) > 0 )) && printf "<li>Click on the word &quot;Spectrogram&quot; to see the audio spectrogram of the noisiest period while the aircraft was in range\n"
   chk_enabled "$PLANEALERT" && printf "<li>See a list of aircraft matching the station's Alert List <a href=\"%s\" target=\"_blank\">here</a>\n" "${PA_LINK:-plane-alert}"
-	printf "<li> Press the header of any of the columns to sort by that column\n"
+	printf "<li>Press the header of any of the columns to sort by that column\n"
 	printf "</ul>\n"
 } >> "$OUTFILEHTMTMP"
 

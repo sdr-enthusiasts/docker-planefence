@@ -119,6 +119,8 @@ if [[ -n "$BASETIME" ]]; then echo "10a1. $(bc -l <<< "$(date +%s.%2N) - $BASETI
 
 "${s6wrap[@]}" echo "Checking traffic against the alert-list..."
 
+uuid="$(</tmp/add_delete.uuid)"
+
 # create an associative array / dictionary from the plane alert list
 declare -A ALERT_DICT
 while IFS="" read -r line; do
@@ -608,9 +610,10 @@ if [[ -n "$BASETIME" ]]; then echo "10e. $(bc -l <<< "$(date +%s.%2N) - $BASETIM
 rm -f "/usr/share/planefence/persist/planepix/cache/*-{2,3,4}.jpg"
 
 # Now everything is in place, let's update the website
-if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
+if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]] || [[ -f /tmp/.force_pa_webpage_update ]]; then
 	"${s6wrap[@]}" echo "Writing full plane-alert webpage because there are new planes spotted..."
 	# read all planespotters.net thumbnail links into an array for fast access
+	rm -f /tmp/.force_pa_webpage_update
 	unset THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
 	declare -A THUMBS_ARRAY LINKS_ARRAY FILES_ARRAY
 	while read -r filename; do
@@ -666,6 +669,11 @@ EOF
 		[[ "${header[i]^^}" == "#ICAO TYPE" ]] || [[ "${header[i]^^}" == '$ICAO TYPE' ]] || [[ "${header[i]^^}" == '$#ICAO TYPE' ]] || [[ "${header[i]^^}" == "ICAO TYPE" ]] && ICAO_INDEX=$i
 
 	done
+
+	if chk_enabled "$SHOWIGNORE"; then
+		# print a header for the Ignore column
+		printf "<th style=\"width: auto; text-align: center\">Ignore</th>\n" >&3
+	fi
 	echo "</tr></thead><tbody border=\"1\">" >&3
 
 	if [[ -n "$BASETIME" ]]; then echo "10e2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- plane-alert.sh: webpage - writing table content" && TABLESTARTTIME="$(date +%s.%2N)"; fi
@@ -821,6 +829,30 @@ EOF
 					printf '    <td>%s</td>  <!-- custom field %d -->\n' "${TAGLINE[i]}" "$i" >&3
 				fi
 			done
+
+			if chk_enabled "$SHOWIGNORE"; then
+				# If the record is in the ignore list, then print an "UnIgnore" button, otherwise print an "Ignore" button
+				if ! printf '%s\n' "${pa_record[@]:0:4}" | grep -qiF -f - <(echo "$EXCLUSIONS"); then  
+					printf "   <td><form id=\"ignoreForm\" action=\"../manage_ignore.php\" method=\"get\">
+													<input type=\"hidden\" name=\"mode\" value=\"pa\">
+													<input type=\"hidden\" name=\"action\" value=\"add\">
+													<input type=\"hidden\" name=\"term\" value=\"%s\">
+													<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+													<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+													<button type=\"submit\" onclick=\"return prepareSubmit()\">Ignore</button></form></td>" \
+						"${pa_record[0]}" "$uuid" >&3
+				else
+					printf "   <td><form id=\"ignoreForm\" action=\"../manage_ignore.php\" method=\"get\">
+													<input type=\"hidden\" name=\"mode\" value=\"pa\">
+													<input type=\"hidden\" name=\"action\" value=\"delete\">
+													<input type=\"hidden\" name=\"term\" value=\"%s\">
+													<input type=\"hidden\" name=\"uuid\" value=\"%s\">
+													<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
+													<button type=\"submit\" onclick=\"return prepareSubmit()\">UnIgnore</button></form></td>" \
+						"${pa_record[0]}" "$uuid" >&3
+				fi
+			fi
+
 			printf "%s\n" "</tr>" >&3
 			if [[ -n "$BASETIME" ]] && ! (( COUNTER%10 )); then echo "10e2d. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s / $(bc -l <<< "$(date +%s.%2N) - $TABLESTARTTIME")s / $(bc -l <<< "$(date +%s.%4N) - $ITEMSTARTTIME")s -- plane-alert.sh: wrote remaining columns for ${pa_record[0]} ($COUNTER)"; fi
 
