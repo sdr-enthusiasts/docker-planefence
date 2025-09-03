@@ -49,6 +49,7 @@ mkdir -p "$HTMLDIR"
 
 TODAY="$(date +%y%m%d)"
 YESTERDAY="$(date -d "yesterday" +%y%m%d)"
+NOWTIME="$(date +%s)"
 
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print0 | xargs -0 ls -t | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print0 | xargs -0 ls -t | head -n 1)"
@@ -203,6 +204,56 @@ GET_PS_PHOTO () {
 	fi
 }
 
+GET_NOISEDATA () {
+  # Get noise data from the remote server
+  # It returns the average values over the specified time range
+  # Usage: GET_NOISEDATA <firstseen_epoch> [<lastseen_epoch>]
+  if [[ -z "$REMOTENOISE" ]] || [[ -z "$1" ]]; then return; fi
+  local firstseen lastseen samplescount=0 ts level level_1min level_5min level_10min level_1hr loudness color avglevel avg1min avg5min avg10min avg1hr
+
+  firstseen="$1"
+  if [[ -z "$lastseen" ]] || (( lastseen - firstseen < 15 )); then lastseen="$(( firstseen + 15 ))"; fi
+
+  # check if we can get the noisecapt log:
+  if ! noiselog="$(curl -sSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" 2>/dev/null)"; then
+    return
+  fi
+
+  # Make sure we're looking at least at 15 seconds of data. This 
+  # NoiseCapt log file format:  timestamp,level,1min_avg,5min_avg,10min_avg",1hr_avg
+
+  
+  while IFS=, read -r ts level level_1min level_5min level_10min level_1hr; do
+    if (( ts >= firstseen )) && (( ts <= lastseen )); then
+      echo "$firstseen <= $ts <= $lastseen"
+      samplescount="$(( samplescount++ ))"
+      avglevel="$(( avglevel + level ))"
+      avg1min="$(( avg1min + level_1min ))"
+      avg5min="$(( avg5min + level_5min ))"
+      avg10min="$(( avg10min + level_10min ))"
+      avg1hr="$(( avg1hr + level_1hr ))"
+    elif (( ts > lastseen )); then
+      echo "exit loop: ts=$ts > last=$lastseen"
+      break
+    fi
+    echo "skip: ts=$ts < first=$firstseen"
+  done <<< "$noiselog"
+    if (( samplescount > 0 )); then
+      avglevel="$(( avglevel/samplescount ))"
+      avg1min="$(( avg1min/samplescount ))"
+      avg5min="$(( avg5min/samplescount ))"
+      avg10min="$(( avg10min/samplescount ))"
+      avg1hr="$(( avg1hr/samplescount ))"
+
+      loudness="$(( avglevel - avg1hr ))"
+      if (( loudness > YELLOWLIMIT )); then color="$RED"
+      elif (( loudness > GREENLIMIT )); then color="$YELLOW"
+      else color="$GREEN"; fi
+
+      echo "$avglevel $avg1min $avg5min $avg10min $avg1hr $loudness $color"
+    fi
+}
+
 CREATE_NOISEPLOT () {
 	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
   
@@ -211,7 +262,6 @@ CREATE_NOISEPLOT () {
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
-	local NOWTIME="$(date +%s)"
 	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
 	# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 	if (( ENDTIME - STARTTIME < 15 )); then ENDTIME=$(( STARTTIME + 15 )); fi
@@ -221,7 +271,10 @@ CREATE_NOISEPLOT () {
 			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && \
 			[[ "$(awk -v s="$STARTTIME" -v e="$ENDTIME" '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]
 	then
-		gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" "$PLANEFENCEDIR/noiseplot.gnuplot"
+		if gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" "$PLANEFENCEDIR/noiseplot.gnuplot"; then
+			# Plotting succeeded
+      echo "$NOISEGRAPHFILE"
+		fi
 	fi
 }
 
@@ -391,9 +444,10 @@ if (( ${#socketrecords[@]} > 0 )); then
       if [[ -n "$angle" ]]; then records["$idx":angle]="$angle"; fi
       if [[ -n "$gs" ]]; then records["$idx":groundspeed]="$gs"; fi
       if [[ -n "$track" ]]; then records["$idx":track]="$track"; fi
+      records["$idx":time_at_mindist]="$seentime"
     fi
     if [[ -z "${records["$idx":squawk]}" ]]; then
-      records["$idx":squawk]=""
+      records["$idx":squawk]="$squawk"
     fi
 
     # Placeholders for later enrichment
@@ -402,8 +456,6 @@ if (( ${#socketrecords[@]} > 0 )); then
     # records["$idx":notif_telegram]=""
     # records["$idx":notif_bluesky]=""
     # records["$idx":notif_mqtt]=""
-    # records["$idx":image_thumblink]=""
-    # records["$idx":image_weblink]=""
     # records["$idx":sound_peak]=""
     # records["$idx":sound_1min]=""
     # records["$idx":sound_5min]=""
@@ -419,22 +471,65 @@ if (( ${#socketrecords[@]} > 0 )); then
     # records["$idx":mp3_link]=""
   #debug_time 2.1 "parsing socket30003 line $idx/${records["$idx":icao]}/${records["$idx":callsign]}"
   done
+
   debug_time 2.1 "parsing socket30003 lines complete. Continuing to add callsigns, routes, and owners."
   # Now try to add callsigns and owners for those that don't already have them:
   for ((idx=0; idx<records[maxindex]; idx++)); do
+    # Add complete label if current time is outside COLLAPSEWITHIN window
+    if [[ -z "${records["$idx":complete]}" ]] && (( NOWTIME - ${records["$idx":lastseen]} > COLLAPSEWITHIN )); then
+      records["$idx":complete]="true"
+    fi
+
+    # Add a callsign if there isn't any
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
       records["$idx":fa_link]="https://flightaware.com/live/modes/$hex_ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
+
+    # get the owner's name
     if [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
       echo "DEBUG: owner resolved for $idx - ${records["$idx":callsign]}: ${records["$idx":owner]}"
     fi
+
+    # get route information
     if ! chk_disabled "$CHECKROUTE" && [[ -z ${records["$idx":route]} ]] && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":route]="$(GET_ROUTE "${records["$idx":callsign]}")"
     if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
     fi
+
+    # get images
+    if chk_enabled "$SHOWIMAGES" && [[ -z "${records["$idx":image_thumblink]}" ]] && [[ -n "${records["$idx":icao]}" ]]; then
+      records["$idx":image_thumb]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
+      records["$idx":image_link]="$(GET_PS_PHOTO "${records["$idx":icao]}" "link")"
+      records["$idx":image_file]="$(GET_PS_PHOTO "${records["$idx":icao]}" "image")"
+    fi
+
+    # Add noisecapt stuff
+    if chk_enabled "$REMOTENOISE" && \
+       chk_enabled "${records["$idx":complete]}" && \
+       [[ -z "${records["$idx":sound_peak]}" ]]; then
+       read -r records["$idx":sound_peak] records["$idx":sound_1min] records["$idx":sound_5min] records["$idx":sound_10min] records["$idx":sound_1hour] records["$idx":sound_loudness] records["$idx":sound_color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+    fi
+    if chk_enabled "$REMOTENOISE" && \
+       chk_enabled "${records["$idx":complete]}" && \
+       [[ -z "${records["$idx":noisegraph_file]}" ]] && \
+       [[ -n "${records["$idx":icao]}" ]]; then
+        records["$idx":noisegraph_file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":firstseen]}" "${records["$idx":lastseen]}" "${records["$idx":icao]}")"
+        if [[ -n "${records["$idx":noisegraph_file]}" ]]; then
+          records["$idx":noisegraph_link]="$REMOTENOISE/${records["$idx":noisegraph_file]}"
+        fi
+        records["$idx":spectro_file]="$(CREATE_SPECTROGRAM "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+        if [[ -n "${records["$idx":spectro_file]}" ]]; then
+          records["$idx":spectro_link]="$REMOTENOISE/${records["$idx":spectro_file}"
+        fi
+        records["$idx":mp3_file]="$(CREATE_MP3 "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+        if [[ -n "${records["$idx":mp3_file]}" ]]; then
+          records["$idx":mp3_link]="$REMOTENOISE/${records["$idx":mp3_file}"
+        fi
+    fi
+
   done
 
   debug_time 2 "parsing all socket30003 lines complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}"
