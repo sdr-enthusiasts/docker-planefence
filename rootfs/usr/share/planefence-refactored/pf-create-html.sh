@@ -46,6 +46,7 @@ debug_print() {
     execlaststeptime="$currenttime"
 }
 
+# Function to write the Planefence HTML table
 CREATEHTMLTABLE () {
 
 	# Write the HTML table header
@@ -182,48 +183,78 @@ CREATEHTMLTABLE () {
 }
 
 # Function to write the Planefence history file
-LOG "Defining WRITEHTMLHISTORY"
-WRITEHTMLHISTORY () {
+CREATEHTMLHISTORY () {
 	# -----------------------------------------
 	# Write history file from directory
 	# Usage: WRITEHTMLTABLE PLANEFENCEDIRECTORY OUTPUTFILE [standalone]
-	LOG "WRITEHTMLHISTORY $1 $2 $3"
-	if [[ "$3" == "standalone" ]]; then
-		printf "<html>\n<body>\n" >>"$2"
-	fi
 
-	cat <<EOF >>"$2"
-	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	echo "<section style=\"border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;\">
 	<article>
 	<details open>
-	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Historical Data</summary>
-	<p>Today: <a href="index.html" target="_top">html</a> - <a href="planefence-$FENCEDATE.csv" target="_top">csv</a>
-EOF
+	<summary style=\"font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;\">Historical Data</summary>
+	<p>Today: <a href=\"index.html\" target=\"_top\">html</a> - <a href=\"planefence-$TODAY.csv\" target=\"_top\">csv</a>
+	"
 
 	# loop through the existing files. Note - if you change the file format, make sure to yodate the arguments in the line
 	# right below. Right now, it lists all files that have the planefence-20*.html format (planefence-200504.html, etc.), and then
 	# picks the newest 7 (or whatever HISTTIME is set to), reverses the strings to capture the characters 6-11 from the right, which contain the date (200504)
 	# and reverses the results back so we get only a list of dates in the format yymmdd.
 	
-	if compgen -G "$1/planefence-??????.html" >/dev/null; then
-		# shellcheck disable=SC2012
-		for d in $(ls -1 "$1"/planefence-??????.html | tail --lines=$((HISTTIME+1)) | head --lines="$HISTTIME" | rev | cut -c6-11 | rev | sort -r)
-		do
-			{ printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
-			printf "<a href=\"%s\" target=\"_top\">html</a> - " "planefence-$(date -d "$d" +"%y%m%d").html"
-			printf "<a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv"
-			} >> "$2"
+	if compgen -G "$OUTFILEDIR/planefence-??????.html" >/dev/null; then
+		# s#hellcheck disable=SC2012
+		for d in $(find "$OUTFILEDIR" -name 'planefence-??????.html' -exec basename {} \; | awk -F'[-.]' '{print $2}' | sort -r); do
+			printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
+			printf "<a href=\"%s\" target=\"_top\">html</a>" "planefence-$(date -d "$d" +"%y%m%d").html"
+			if [[ -f "$OUTFILEDIR/planefence-$(date -d "$d" +"%y%m%d").csv" ]]; then
+				printf " - <a href=\"%s\" target=\"_top\">csv</a>" "planefence-$(date -d "$d" +"%y%m%d").csv"
+			fi
+			if [[ -f "$OUTFILEDIR/planefence-$(date -d "$d" +"%y%m%d").json" ]]; then
+				printf " - <a href=\"%s\" target=\"_top\">json</a>" "planefence-$(date -d "$d" +"%y%m%d").json"
+			fi
 		done
 	fi
-	{ printf "</p>\n"
-	  printf "<p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p>"
-	  printf "</details>\n</article>\n</section>"
-	} >> "$2"
+	printf "</p>\n"
+	printf "</details>\n</article>\n</section>"
+}
 
-	# and print the footer:
-	if [[ "$3" == "standalone" ]]; then
-		printf "</body>\n</html>\n" >>"$2"
+# Function to create the Heatmap
+CREATEHEATMAP () {
+
+	# Disable the heatmap in the template if $PLANEHEAT is not enabled
+	if ! chk_enabled "$PLANEHEAT"; then
+		template="$(sed -z 's/<!--PLANEHEAT##>.*<##PLANEHEAT-->//g' <<< "$template")"
+		return
+	else
+		template="$(sed 's/<!--PLANEHEAT##>//g; s/<##PLANEHEAT-->//g' <<< "$template")"
 	fi
+
+	# If OpenAIP is enabled, include it. If not, exclude it.
+	if chk_enabled "$OPENAIP_LAYER"; then
+		template="$(sed "s/<!--OPENAIP##>//g; s/<##OPENAIP-->//; "s/##OPENAIPKEY##/$OPENAIPKEY/g" <<< "$template")"
+	else
+		template="$(sed -z 's/<!--OPENAIP##>.*<##OPENAIP-->//g' <<< "$template")"
+	fi
+
+	# Replace the other template values:
+	template="$(sed "s/##LATFUDGED##/$LAT/g;
+									 s/##LONFUDGED##/$LON/g;
+									 s/##HEATMAPZOOM##/$HEATMAPZOOM/g;
+									 s/##HEATMAPWIDTH##/$HEATMAPWIDTH/g;
+									 s/##HEATMAPHEIGHT##/$HEATMAPHEIGHT/g;
+									 s/##DISTMTS##/$DISTMTS/g;
+									 " <<< "$template")"
+	# Create the heatmap data
+	{ printf -v "var addressPoints = [\n"
+		for i in "${!records[@]}"; do
+			if [[ "${i:0:7}" == "heatmap" ]]; then
+				printf "[ %s,%s ],\n" "${i:7}" "${records[$i]}"
+			fi
+		done
+		printf "];\n"
+	} > "$OUTFILEDIR/planeheatdata-$TODAY.js"
+
+  # Modify the template values to reflect the current values 
+
 }
 
 
@@ -269,38 +300,37 @@ RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
 
 # Load the template into a variable that we can manipulate:
 if ! template=$(<"$PLANEFENCEDIR/planefence.template.html"); then
-	echo "Failed to load template"
+	echo "Failed to load template" >&2
 	exit 1
 fi
 
 # Load the records
 if ! records=$(<"$RECORDSFILE"); then
-	echo "Failed to load records"
+	echo "Failed to load records" >&2
 	exit 1
 fi
 
 # Get DISTANCE unit:
 DISTUNIT="mi"
-#DISTCONV=1
+ALTUNIT="ft"
 if [[ -f "$SOCKETCONFIG" ]]; then
 	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
 		nauticalmile)
 		DISTUNIT="nm"
+    TO_METER=1852
 		;;
 		kilometer)
 		DISTUNIT="km"
+		TO_METER=1000
 		;;
 		mile)
 		DISTUNIT="mi"
+		TO_METER=1609
 		;;
 		meter)
 		DISTUNIT="m"
+		TO_METER=1
 	esac
-fi
-
-# get ALTITUDE unit:
-ALTUNIT="ft"
-if [[ -f "$SOCKETCONFIG" ]]; then
 	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
 		feet)
 		ALTUNIT="ft"
@@ -316,284 +346,13 @@ printf -v LATFUDGED "%.${FUDGELOC:-3}f" "$LAT"
 printf -v LONFUDGED "%.${FUDGELOC:-3}f" "$LON"
 
 if [[ -n "$ALTCORR" ]]; then ALTREF="AGL"; else ALTREF="MSL"; fi
+DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 
-
-# file used to store the line progress at the start of the prune interval
-PRUNESTARTFILE=/run/socket30003/.lastprunecount
-# for detecting change of day
-LASTFENCEFILE=/usr/share/planefence/persist/.internal/lastfencedate
-
-# Here we go for real:
-LOG "Initiating Planefence"
-LOG "FENCEDATE=$FENCEDATE"
-# First - if there's any command line argument, we need to do a full run discarding all cached items
-if [[ "$1" != "" ]]; then
-	rm "$LASTFENCEFILE"  2>/dev/null
-	rm "$PRUNESTARTFILE"  2>/dev/null
-	rm "$TMPLINES"  2>/dev/null
-	rm "$OUTFILEHTML"  2>/dev/null
-	rm "$OUTFILECSV"  2>/dev/null
-	rm "$OUTFILEBASE-$FENCEDATE"-table.html  2>/dev/null
-	rm "$OUTFILETMP"  2>/dev/null
-	rm "$TMPDIR"/dump1090-pf*  2>/dev/null
-	LOG "File cache reset- doing full run for $FENCEDATE"
-fi
-
-[[ "$BASETIME" != "" ]] && echo "1. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- start prune socket30003 data" || true
-
-# find out the number of lines previously read
-if [[ -f "$TMPLINES" ]]; then
-	read -r READLINES < "$TMPLINES"
-else
-	READLINES=0
-fi
-# shellcheck disable=SC2153
-if [[ -f "$TOTLINES" ]]; then
-	read -r TOTALLINES < "$TOTLINES"
-else
-	TOTALLINES=0
-fi
-if [[ -f "$LASTFENCEFILE" ]]; then
-	read -r LASTFENCEDATE < "$LASTFENCEFILE"
-else
-    # file is missing, assume we ran last yesterday
-	LASTFENCEDATE=$(date --date="yesterday" '+%y%m%d')
-fi
-
-# delete some of the existing TMP files, so we don't leave any garbage around
-# this is less relevant for today's file as it will be overwritten below, but this will
-# also delete previous days' files that may have left behind
-rm -f "$TMPLINES"
-rm -f "$OUTFILETMP"
-
-# before anything else, let's determine our current line count and write it back to the temp file
-# We do this using 'wc -l', and then strip off all character starting at the first space
-SOCKETFILE="$LOGFILEBASE$FENCEDATE.txt"
-[[ -f "$SOCKETFILE" ]] && CURRCOUNT=$(wc -l "$SOCKETFILE" |cut -d ' ' -f 1) || CURRCOUNT=0
-
-if [[ "$READLINES" -gt "$CURRCOUNT" ]]; then
-	# Houston, we have a problem. READLINES is an earlier snapshot of the number of records, which should always be GE CURRCOUNT.
-	# If it's not, this means most probably that the socket30003 logfile got reset, (again) probably because the container was restarted.
-	# In this case, we want to use all lines from the socket30003 logfile.
-	# There are some chances that we may process records we've already processed before, but this is improbably and we will take the risk.
-	READLINES=0
-fi
-
-PRUNEMINS=180 # 3h
-
-SOCKETFILEYESTERDAY="$LOGFILEBASE$(date -d yesterday +%y%m%d).txt"
-if [[ -f $SOCKETFILEYESTERDAY ]] && (( $(date -d "1970-01-01 $(date +%T) +0:00" +%s) > PRUNEMINS * 60 ))
-then
-    # If we're longer than PRUNEMINS into today, remove yesterday's file
-    rm -v -f "$SOCKETFILEYESTERDAY"
-fi
-
-# if the PRUNESTARTFILE file doesn't exist
-# note down that we started up, write down 0 for the next prune as nothing will be older than PRUNEMINS
-if [[ ! -f "$PRUNESTARTFILE" ]] || [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
-    echo 0 > $PRUNESTARTFILE
-# if PRUNESTARTFILE is older than PRUNEMINS, do the pruning
-elif [[ $(find $PRUNESTARTFILE -mmin +$PRUNEMINS | wc -l) == 1 ]]; then
-	read -r CUTLINES < "$PRUNESTARTFILE"
-    if (( $(wc -l < "$SOCKETFILE") < CUTLINES )); then
-        LOG "PRUNE ERROR: can't retain more lines than $SOCKETFILE has, retaining all lines, regular prune after next interval."
-        CUTLINES=0
-    fi
-    tmpfile=$(mktemp)
-    tail --lines=+$((CUTLINES + 1)) "$SOCKETFILE" > "$tmpfile"
-
-    # restart Socket30003 to ensure that things run smoothly:
-    touch /tmp/socket-cleanup   # this flags the socket30003 runfile not to complain about the exit and restart immediately
-    killall /usr/bin/perl
-    sleep .1 # give the script a moment to exit, then move the files
-
-    mv -f "$tmpfile" "$SOCKETFILE"
-    rm -f "$tmpfile"
-
-    # update line numbers
-    (( READLINES -= CUTLINES ))
-    (( CURRCOUNT -= CUTLINES ))
-
-    LOG "pruned $CUTLINES lines from $SOCKETFILE, current lines $CURRCOUNT"
-    # socket30003 will start up on its own with a small delay
-
-    # note the current position in the file, the next prune run will cut everything above that line
-    echo $READLINES > $PRUNESTARTFILE
-fi
-
-# Now write the $CURRCOUNT back to the TMP file for use next time Planefence is invoked:
-echo "$CURRCOUNT" > "$TMPLINES"
-
-if [[ "$LASTFENCEDATE" != "$FENCEDATE" ]]; then
-    TOTALLINES=0
-    READLINES=0
-fi
-
-# update TOTALLINES and write it back to the file
-TOTALLINES=$(( TOTALLINES + CURRCOUNT - READLINES ))
-echo "$TOTALLINES" > "$TOTLINES"
-
-LOG "Current run starts at line $READLINES of $CURRCOUNT, with $TOTALLINES lines for today"
-
-# Now create a temp file with the latest logs
-tail --lines=+"$READLINES" "$SOCKETFILE" > "$INFILETMP"
-
-[[ "$BASETIME" != "" ]] && echo "2. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- invoking planefence.py" || true
-
-# First, run planefence.py to create the CSV file:
-LOG "Invoking planefence.py..."
-$PLANEFENCEDIR/planefence.py --logfile="$INFILETMP" --outfile="$OUTFILETMP" --maxalt="$MAXALT" --altcorr="${ALTCORR:-0}" --dist="$DIST" --distunit="$DISTUNIT" --lat="$LAT" --lon="$LON" "$VERBOSE" "$CALCDIST" --trackservice="adsbexchange" | LOG
-LOG "Returned from planefence.py..."
-
-# Now we need to combine any double entries. This happens when a plane was in range during two consecutive Planefence runs
-# A real simple solution could have been to use the Linux 'uniq' command, but that won't allow us to easily combine them
-
-# Compare the last line of the previous CSV file with the first line of the new CSV file and combine them if needed
-# Only do this is there are lines in both the original and the TMP csv files
-
-[[ "$BASETIME" != "" ]] && echo "3. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- returned from planefence.py, start pruning duplicates" || true
-
-if [[ -f "$OUTFILETMP" ]] && [[ -f "$OUTFILECSV" ]]; then
-	while read -r newline
-	do
-		IFS="," read -ra newrec <<< "$newline"
-		if grep -q "^${newrec[0]}," "$OUTFILECSV"
-		then
-#debug echo -n "There is a matching ICAO... ${newrec[1]} "
-			# there's a ICAO match between the new record and the existing file
-			# grab the last occurrence of the old record
-			oldline=$(grep "^${newrec[0]}," "$OUTFILECSV" 2>/dev/null | tail -1)
-			IFS="," read -ra oldrec <<< "$oldline"
-			if (( $(date -d "${newrec[2]}" +%s) - $(date -d "${oldrec[3]}" +%s) > COLLAPSEWITHIN ))
-			then
-				# we're outside the collapse window. Write the string to $OUTFILECSV
-				echo "$newline" >> "$OUTFILECSV"
-#debug echo "outside COLLAPSE window: old end=${oldrec[3]} new start=${newrec[2]}"
-			else
-				# we are inside the collapse window and need to collapse the records.
-				# Insert newrec's end time into oldrec. Do this ONLY for the line where the ICAO and the start time matches:
-				# we also need to take the smallest altitude and distance
-				(( $(echo "${newrec[4]} < ${oldrec[4]}" | bc -l) )) && NEWALT=${newrec[4]} || NEWALT=${oldrec[4]}
-				(( $(echo "${newrec[5]} < ${oldrec[5]}" | bc -l) )) && NEWDIST=${newrec[5]} || NEWDIST=${oldrec[5]}
-				sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|" "$OUTFILECSV"
-				#           ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^ alt    ^   ^dist^    ^rest^
-				#               \1              \2              \3                \4          \5         \6        \7
-				#sed -i "s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\(.*\)|\1,\2,\3,${newrec[3]},\5|" "$OUTFILECSV"
-				#            ^  ICAO    ^     ^ flt/tail ^   ^ starttime  ^   ^ endtime ^  ^rest^
-#debug echo "COLLAPSE: inside collapse window: old end=${oldrec[3]} new end=${newrec[3]}"
-#debug echo "sed line:"
-#debug echo "sed -i \"s|\(${oldrec[0]}\),\([A-Z0-9@-]*\),\(${oldrec[2]}\),\([0-9 /:]*\),\([0-9]*\),\([0-9\.]*\),\(.*\)|\1,\2,\3,${newrec[3]},$NEWALT,$NEWDIST,\7|\" \"$OUTFILECSV\""
-			fi
-		else
-			# the ICAO fields did not match and we should write it to the database:
-#debug echo "${newrec[1]}: no matching ICAO / no collapsing considered"
-			echo "$newline" >> "$OUTFILECSV"
-		fi
-	done < "$OUTFILETMP"
-else
-	# there's potentially no OUTFILECSV. Move OUTFILETMP to OUTFILECSV if one exists
-	if [[ -f "$OUTFILETMP" ]]; then
-		mv -f "$OUTFILETMP" "$OUTFILECSV"
-		chmod a+rw "$OUTFILECSV"
-	fi	
-fi
-rm -f "$OUTFILETMP"
-
-[[ "$BASETIME" != "" ]] && echo "4. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done pruning duplicates, invoking noise2fence" || true
-
-# Now check if we need to add noise data to the csv file
-if [[ "$NOISECAPT" == "1" ]]; then
-	LOG "Invoking noise2fence!"
-	$PLANEFENCEDIR/noise2fence.sh
-else
-	LOG "Info: Noise2Fence not enabled"
-fi
-
-[[ "$BASETIME" != "" ]] && echo "5. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking noise2fence, applying dirty fixes" || true
-
-#Dirty fix -- sometimes the CSV file needs fixing
-$PLANEFENCEDIR/pf-fix.sh "$OUTFILECSV"
-
-[[ "$BASETIME" != "" ]] && echo "6. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying dirty fixes, applying filters" || true
-
-# Ignore list -- first clean up the list to ensure there are no empty lines
-# shellcheck disable=SC2153
-sed -i '/^$/d' "$IGNORELIST" 2>/dev/null
-# now apply the filter
-# shellcheck disable=SC2126
-LINESFILTERED=$(grep -i -f "$IGNORELIST" "$OUTFILECSV" 2>/dev/null | wc -l)
-if (( LINESFILTERED > 0 ))
-then
-	grep -v -i -f "$IGNORELIST" "$OUTFILECSV" > /tmp/pf-out.tmp
-	mv -f /tmp/pf-out.tmp "$OUTFILECSV"
-fi
-
-# rewrite LINESFILTERED to file
-if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
-	read -r i < "/run/planefence/filtered-$FENCEDATE"
-else
-	i=0
-fi
-echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
-
-# if IGNOREDUPES is ON then remove duplicates
-if [[ "$IGNOREDUPES" == "ON" ]]; then
-	LINESFILTERED=$(awk -F',' 'seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" 2>/dev/null | wc -l)
-	if (( i>0 ))
-	then
-		# awk prints only the first instance of lines where fields 1 and 2 are the same
-		awk -F',' '!seen[$1 gsub("/@/","", $2)]++' "$OUTFILECSV" > /tmp/pf-out.tmp
-		mv -f /tmp/pf-out.tmp "$OUTFILECSV"
-	fi
-	# rewrite LINESFILTERED to file
-	if [[ -f /run/planefence/filtered-$FENCEDATE ]]; then
-		read -r i < "/run/planefence/filtered-$FENCEDATE"
-	else
-		i=0
-	fi
-	echo $((LINESFILTERED + i)) > "/run/planefence/filtered-$FENCEDATE"
-
-fi
-
-# see if we need to invoke PlaneTweet:
-[[ "$BASETIME" != "" ]] && echo "7. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done applying filters, invoking PlaneTweet" || true
-
-if chk_enabled "$PLANETWEET" \
-   || chk_enabled "${PF_DISCORD}" \
-   || chk_enabled "$PF_MASTODON" \
-   || [[ -n "$BLUESKY_HANDLE" ]] \
-   || [[ -n "$RSS_SITELINK" ]] \
-	 || chk_enabled "$PF_TELEGRAM_ENABLED" \
-   || [[ -n "$MQTT_URL" ]]; then
-	LOG "Invoking planefence_notify.sh for notifications"
-	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
-else
- [[ "$1" != "" ]] && LOG "Info: planefence_notify.sh not called because we're doing a manual full run" || LOG "Info: PlaneTweet not enabled"
-fi
-
-# run planefence-rss.sh in the background:
-{ timeout 120 /usr/share/planefence/planefence-rss.sh; } &
-
-[[ "$BASETIME" != "" ]] && echo "8. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking planefence_notify.sh, invoking PlaneHeat" || true
-
-# And see if we need to run PLANEHEAT
-if chk_enabled "$PLANEHEAT" && [[ -f "${PLANEHEATSCRIPT}" ]] # && [[ -f "$OUTFILECSV" ]]  <-- commented out to create heatmap even if there's no data
-then
-	LOG "Invoking PlaneHeat!"
+# See if we need to run PLANEHEAT
+if chk_enabled "$PLANEHEAT" && [[ -f "${PLANEHEATSCRIPT}" ]];then
 	"${s6wrap[@]}" echo "Invoking PlaneHeat..."
 	$PLANEHEATSCRIPT
-	LOG "Returned from PlaneHeat"
-else
-	LOG "Skipped PlaneHeat"
 fi
-
-# Now let's link to the latest Spectrogram, if one was generated for today:
-[[ "$BASETIME" != "" ]] && echo "9. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done invoking invoking PlaneHeat, getting NoiseCapt stuff" || true
-
-if [[ "$NOISECAPT" == "1" ]]; then
-	[[ "$BASETIME" != "" ]] && echo "9a. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- getting latest Spectrogram" || true
-	# get the latest spectrogram from the remote server
-	curl --fail -s "$REMOTENOISE/noisecapt-spectro-latest.png" >"$OUTFILEDIR/noisecapt-spectro-latest.png"
 
 	# also create a noisegraph for the full day:
 	[[ "$BASETIME" != "" ]] && echo "9b. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- creating day-long Noise Graph" || true
@@ -914,7 +673,7 @@ EOF
 fi
 
 [[ "$BASETIME" != "" ]] && echo "14. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- starting to write the history line to the website" || true
-WRITEHTMLHISTORY "$OUTFILEDIR" "$OUTFILEHTMTMP"
+CREATEHTMLHISTORY "$OUTFILEDIR" "$OUTFILEHTMTMP"
 LOG "Done writing history"
 [[ "$BASETIME" != "" ]] && echo "15. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- done writing the history line to the website" || true
 

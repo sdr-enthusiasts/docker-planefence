@@ -62,22 +62,7 @@ JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
 
 LASTSOCKETRECFILE="/usr/share/planefence/persist/.planefence-state-lastrec"
 
-if [[ -f "$RECORDSFILE" ]]; then
-    source "$RECORDSFILE"
-else
-    declare -A records recidx
-    records[maxindex]=-1
-fi
 
-if [[ -f "$IGNORELIST" ]]; then
-    sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
-else
-    touch "$IGNORELIST"
-fi
-
-if [[ -n $REMOTENOISE ]]; then
-  noiselist="$(curl -fsSL "$REMOTENOISE" 2>/dev/null)"
-fi
 # ==========================
 # Functions
 # ==========================
@@ -365,7 +350,7 @@ CREATE_MP3 () {
 debug_print "Hello. Starting $0"
 
 # ==========================
-# Just for debugging purposes:
+# Prep-work:
 # ==========================
 
 if [[ "$1" == "reset" ]]; then
@@ -375,6 +360,26 @@ if [[ "$1" == "reset" ]]; then
   declare -A records 
   declare -A recidx
   records[maxindex]="-1"
+fi
+
+debug_print "Getting $RECORDSFILE"
+if [[ -f "$RECORDSFILE" ]]; then
+    source "$RECORDSFILE"
+else
+    declare -A records=() recidx=()
+    records[maxindex]=-1
+fi
+
+debug_print "Getting ignorelist"
+if [[ -f "$IGNORELIST" ]]; then
+    sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
+else
+    touch "$IGNORELIST"
+fi
+
+debug_print "Getting noiselist (this may take a while)"
+if [[ -n $REMOTENOISE ]]; then
+  noiselist="$(curl -fsSL "$REMOTENOISE" 2>/dev/null)"
 fi
 
 debug_print "Collecting new records"
@@ -416,6 +421,12 @@ if (( ${#socketrecords[@]} > 0 )); then
     ignore_this_dupe=false
     seentime="$(date -d "$date ${time%%.*}" +%s)"
 
+    # First add a tally for the location so we can later use it for the heatmap
+    if [[ -n "$lat" ]] && [[ -n "$lon" ]]; then
+      latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
+      records["heatmap:$latlonkey"]=$(( records["heatmap:$latlonkey"] + 1 ))
+    fi
+
     # Check if the ICAO is already in the records and we are within COLLAPSEWITHIN
     if (( records[maxindex] >= 0 )); then
       for ((i=0; i<=records[maxindex]; i++)); do
@@ -449,9 +460,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       # New record
       idx=$(( records[maxindex] + 1 ))
       records[maxindex]="$idx"
-      # echo "DEBUG: new record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime"))"
-    fi
-    #echo "DEBUG: processing index $idx..." 
+    fi 
 
     # Now we know the record index and we can start adding or updating values for it
     if [[ -z "${records["$idx":icao]}" ]]; then records["$idx":icao]="$hex_ident"; fi
