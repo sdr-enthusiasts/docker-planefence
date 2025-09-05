@@ -29,619 +29,125 @@
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
 
-# all errors will show a line number and the command used to produce the error
 source /scripts/common
+source /usr/share/planefence/planefence.conf
 
-# We need to define the directory where the config file is located:
-
-[[ "$BASETIME" != "" ]] && echo "0. $(bc -l <<< "$(date +%s.%2N) - $BASETIME")s -- started Planefence" || true
-
-PLANEFENCEDIR=/usr/share/planefence
-
-# Let's see if we must reload the parameters
-if [[ -f "/run/planefence/last-config-change" ]] && [[ -f "/usr/share/planefence/persist/planefence.config" ]]; then
-	# if... the date-last-changed of config file on the exposed volume ... is newer than the last time we read it ... then ... rerun the prep routine (which will update the last-config-change)
-	[[ "$(stat -c %Y /usr/share/planefence/persist/planefence.config)" -gt "$(</run/planefence/last-config-change)" ]] && /usr/share/planefence/prep-planefence.sh
-fi
-# FENCEDATE will be the date [yymmdd] that we want to process Planefence for.
-# The default value is 'today'.
-
-if [[ -n "$1" ]] && [[ "$1" != "reset" ]]; then # $1 contains the date for which we want to run Planefence
-FENCEDATE=$(date --date="$1" '+%y%m%d')
-else
-	FENCEDATE=$(date --date="today" '+%y%m%d')
-fi
-
-[[ "$TRACKSERVICE" != "flightaware" ]] && TRACKSERVICE="flightaware" || true
-
-# -----------------------------------------------------------------------------------
-# Compare the original config file with the one in use, and call
-#
-#
-# -----------------------------------------------------------------------------------
-# Read the parameters from the config file
-if [[ -f "$PLANEFENCEDIR/planefence.conf" ]]; then
-	source "$PLANEFENCEDIR/planefence.conf"
-else
-	echo $PLANEFENCEDIR/planefence.conf is missing. We need it to run Planefence!
-	exit 2
-fi
-
-# -----------------------------------------------------------------------------------
-# Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
-# -----------------------------------------------------------------------------------
-if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( $(date +%s) - $(</tmp/add_delete.uuid.used) > 300 )) ); then
-	# UUID file needs to be updated. This is done to prevent replay attacks.
-	# This is done if the UUID was used more than 300 seconds ago, or if the file doesn't exist.
-	cat /proc/sys/kernel/random/uuid > /tmp/add_delete.uuid
-	touch /tmp/.force_pa_webpage_update	# this is used to force a Plane-Alert webpage update upon change of parameters
-	rm -f /tmp/add_delete.uuid.used
-fi
-
-uuid="$(</tmp/add_delete.uuid)"
-
-# first get DISTANCE unit:
-DISTUNIT="mi"
-#DISTCONV=1
-if [[ -f "$SOCKETCONFIG" ]]; then
-	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
-		nauticalmile)
-		DISTUNIT="nm"
-		;;
-		kilometer)
-		DISTUNIT="km"
-		;;
-		mile)
-		DISTUNIT="mi"
-		;;
-		meter)
-		DISTUNIT="m"
-	esac
-fi
-
-# get ALTITUDE unit:
-ALTUNIT="ft"
-if [[ -f "$SOCKETCONFIG" ]]; then
-	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
-		feet)
-		ALTUNIT="ft"
-		;;
-		meter)
-		ALTUNIT="m"
-	esac
-fi
-
-# Figure out if NOISECAPT is active or not. REMOTENOISE contains the URL of the NoiseCapt container/server
-# and is configured via the $PF_NOISECAPT variable in the .env file.
-# Only if REMOTENOISE contains a URL and we can get the noise log file, we collect noise data
-# replace wget by curl to save memory space. Was: [[ "x$REMOTENOISE" != "x" ]] && [[ "$(wget -q -O /tmp/noisecapt-$FENCEDATE.log $REMOTENOISE/noisecapt-$FENCEDATE.log ; echo $?)" == "0" ]] && NOISECAPT=1 || NOISECAPT=0
-if [[ -n "$REMOTENOISE" ]]; then
-	if curl --fail -s "$REMOTENOISE/noisecapt-$FENCEDATE.log" > "/tmp/noisecapt-$FENCEDATE.log"; then
-		NOISECAPT=1
-	else
-		NOISECAPT=0
-	fi
-fi
-#
-#
-# Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
-if [[ "$FUDGELOC" != "" ]]; then
-	if [[ "$FUDGELOC" == "0" ]]; then
-		printf -v LON_VIS "%.0f" "$LON"
-		printf -v LAT_VIS "%.0f" "$LAT"
-	elif [[ "$FUDGELOC" == "1" ]]; then
-		printf -v LON_VIS "%.1f" "$LON"
-		printf -v LAT_VIS "%.1f" "$LAT"
-	elif [[ "$FUDGELOC" == "2" ]]; then
-		printf -v LON_VIS "%.2f" "$LON"
-		printf -v LAT_VIS "%.2f" "$LAT"
-	else
-		# If $FUDGELOC != "" but also != "2", then assume it is "3"
-		printf -v LON_VIS "%.3f" "$LON"
-		printf -v LAT_VIS "%.3f" "$LAT"
-	fi
-	# clean up the strings:
-else
-	# let's not print more than 5 digits
-	printf -v LON_VIS "%.5f" "$LON"
-	printf -v LAT_VIS "%.5f" "$LAT"
-fi
-# shellcheck disable=SC2001
-LON_VIS="$(sed 's/^00*\|00*$//g' <<< "$LON_VIS")"	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
-LON_VIS="${LON_VIS%.}"		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
-# shellcheck disable=SC2001
-LAT_VIS="$(sed 's/^00*\|00*$//g' <<< "$LAT_VIS")" 	# strip any trailing zeros - "41.10" -> "41.1", or "41.00" -> "41."
-LAT_VIS="${LAT_VIS%.}" 		# If the last character is a ".", strip it - "41.1" -> "41.1" but "41." -> "41"
-if (( ALTCORR != 0 )); then ALTREFERENCE="AGL"; else ALTREFERENCE="MSL"; fi
-#
-#
-# Functions
-#
-# Function to write to the log
-LOG ()
-{
-	# This reads a string from stdin and stores it in a variable called IN. This enables things like 'echo hello world > LOG'
-	while [[ -n "$1" ]] || read -r IN; do
-		if [[ -n "$1" ]]; then
-			IN="$1"
-		fi
-		if [[ "$VERBOSE" != "" ]]; then
-			if [[ "$LOGFILE" == "logger" ]]; then
-				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" | logger
-			else
-				printf "%s-%s[%s]v%s: %s\n" "$(date +"%Y%m%d-%H%M%S")" "$PROCESS_NAME" "$CURRENT_PID" "$VERSION" "$IN" >> "$LOGFILE"
-			fi
-		fi
-		if [[ -n "$1" ]]; then
-			break
-		fi
-	done
+# First define a bunch of functions:
+debug_print() {
+    local currenttime
+    if [[ -z "$execstarttime" ]]; then
+      execstarttime="$(date +%s.%3N)"
+      execlaststeptime="$execstarttime"
+    fi
+    currenttime="$(date +%s.%3N)"
+    if chk_enabled "$DEBUG"; then 
+      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+    fi
+    execlaststeptime="$currenttime"
 }
 
-GET_ROUTE () {
-		# function to get a route by callsign. Must have a callsign - ICAO won't work
-		# Usage: GET_ROUTE <callsign>
-		# Uses the adsb.lol API to retrieve the route
+CREATEHTMLTABLE () {
 
-		local route
-		
-		# first let's see if it's in the cache
-		if [[ -f /usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt ]]; then
-			route="$(awk -F, -v callsign="${1^^}" '$1 == callsign {print $2; exit}' "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt")"
-			if [[ -n "$route" ]]; then
-				if  [[ "$route" != "unknown" ]]; then echo "$route"; fi
-				return
-			fi
-		fi
+	# Write the HTML table header
+	echo "
+		<table border=\"1\" class=\"display planetable\" id=\"mytable\" style=\"width: auto; text-align: left; align: left\" align=\"left\">
+		<thead border=\"1\">
+		<tr>
+		<th style=\"width: auto; text-align: center\">No.</th>
+		$(if chk_enabled "${records[HASIMAGES]}"; then echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>"; fi)
+		<th style=\"width: auto; text-align: center\">Transponder ID</th>
+		<th style=\"width: auto; text-align: center\">Flight</th>
+		$(if chk_enabled "${records[HASROUTE]}"; then echo "<th style=\"width: auto; text-align: center\">Flight Route</th>"; fi)
+		<th style=\"width: auto; text-align: center\">Airline or Owner</th>
+		<th style=\"width: auto; text-align: center\">Time First Seen</th>
+		<th style=\"width: auto; text-align: center\">Time Last Seen</th>
+		<th style=\"width: auto; text-align: center\">Min. Altitude</th>
+		<th style=\"width: auto; text-align: center\">Min. Distance</th>"
 
-		if route="$(curl -sSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
-		                      -H 'accept: application/json' \
-													-H 'Content-Type: application/json' \
-													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
-								| jq -r '.[]._airport_codes_iata')" \
-				&& [[ -n "$route" ]] && [[ "$route" != "unknown" ]] && [[ "$route" != "null" ]]
-		then
-			echo "${1^^},$route" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
-			echo "$route"
-		elif [[ "${route,,}" == "unknown" ]] || [[ "${route,,}" == "null" ]]; then
-			echo "${1^^},unknown" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
-		fi
-}
-
-GET_PS_PHOTO () {
-	# Function to get a photo from PlaneSpotters.net
-	# Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-	# if [image|link|thumblink] is omitted, "link" is assumed
-	# image: the path to the thumbnail image on disk
-	# link: a link to the planespotters.net image page (not the image itself!)
-	# thumblink: a link to the thumbnail image at planespotters.net's CDN
-
-	local link
-	local json
-	local returntype
-	local thumb
-
-	returntype="${2:-link}"
-	returntype="${returntype,,}"
-
-#echo "returntype=$returntype"
-
-	# shellcheck disable=SC2076
-	if [[ ! " image link thumblink " =~ " $returntype " ]]; then
-		return 1
-	fi
-
-	if ! $SHOWIMAGES; then return 0; fi
-
-	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
-		return 0
-	fi
-	
-	if [[ "$returntype" == "image" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
-		#echo in cache
-		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		return 0
-	elif [[ "$returntype" == "link" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]]; then
-		#echo in cache
-		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		return 0
-	elif [[ "$returntype" == "thumblink" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
-		#echo in cache
-		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.thumb.link")"
-		return 0
-	fi
-
-	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
-	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
-					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
-          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
-				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
-		# If we have a link, let's download the photo
-		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
-		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		#echo newly obtained
-		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		elif returntype="link"; then echo "$link"
-		elif returntype="thumblink"; then echo "$thumb"
-		fi
-		return 0
-	else
-		# If we don't have a link, let's clear the cache and return an empty string
-		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
-		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-	fi
-}
-
-CREATE_NOISEPLOT () {
-	# usage: CREATE_NOISEPLOT <callsign> <starttime> <endtime> <icao>
-  
-  if [[ -z "$REMOTENOISE" ]]; then return; fi
-  
-  local STARTTIME="$2"
-	local ENDTIME="$3"
-	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
-	local NOWTIME="$(date +%s)"
-	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
-	# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
-	if (( ENDTIME - STARTTIME < 15 )); then ENDTIME=$(( STARTTIME + 15 )); fi
-	STARTTIME=$(( STARTTIME - 15))
-	# check if there are any noise samples
-	if (( (NOWTIME - ENDTIME) > (ENDTIME - STARTTIME) )) && \
-			[[ -f "/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log" ]] && \
-			[[ "$(awk -v s="$STARTTIME" -v e="$ENDTIME" '$1>=s && $1<=e' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log | wc -l)" -gt "0" ]]
-	then
-		gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/usr/share/planefence/persist/.internal/noisecapt-$FENCEDATE.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" $PLANEFENCEDIR/noiseplot.gnuplot
-	fi
-}
-
-CREATE_SPECTROGRAM () {
-	# usage: CREATE_SPECTROGRAM <starttime> <endtime>
-	# returns the file name of the spectrogram it got
-
-  if [[ -z "$REMOTENOISE" ]]; then return; fi
-  
-	local STARTTIME="$1"
-	local ENDTIME="$2"
-	local sf spectrotime
-	if (( ENDTIME - STARTTIME < 30 )); then ENDTIME=$(( STARTTIME + 30 )); fi
-
-	# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
-	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
-	spectrotime="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)"
-	sf="noisecapt-spectro-$(date -d "@${spectrotime}" +"%y%m%d-%H%M%S").png"
-
-	if [[ ! -s "$OUTFILEDIR/$sf" ]]; then
-		# we don't have $sf locally, or if it's an empty file, we get it:
-		curl -sSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf"
-	fi
-	# shellcheck disable=SC2012
-	if [[ ! -s "$OUTFILEDIR/$sf" ]] || (( $(ls -s1 "$OUTFILEDIR/$sf" | awk '{print $1}') < 10 )); then
-		# we don't have $sf (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
-		rm -f "$OUTFILEDIR/$sf"
-	else
-		echo "$sf"
-	fi
-}
-
-CREATE_MP3 () {
-	# usage: CREATE_MP3 <starttime> <endtime>
-	# returns the file name of the MP3 file it got
-
-  if [[ -z "$REMOTENOISE" ]]; then return; fi
-
-	local STARTTIME="$1"
-	local ENDTIME="$2"
-	local mp3time mp3f
-	(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
-
-	# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
-	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
-	mp3time="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /usr/share/planefence/persist/.internal/noisecapt-"$FENCEDATE".log)"
-	mp3f="noisecapt-recording-$(date -d "@${mp3time}" +"%y%m%d-%H%M%S").mp3"
-
-	if [[ ! -s "$OUTFILEDIR/$mp3f" ]]; then
-		# we don't have $sf locally, or if it's an empty file, we get it:
-		curl -sSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f"
-	fi 
-	# shellcheck disable=SC2012
-	if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 4 )); then
-		# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
-		rm -f "$OUTFILEDIR/$mp3f"
-	else
-		echo "$mp3f"
-	fi
-}
-
-LOG "-----------------------------------------------------"
-# Function to write an HTML table from a CSV file
-LOG "Defining WRITEHTMLTABLE"
-WRITEHTMLTABLE () {
-	# -----------------------------------------
-	# Next create an HTML table from the CSV file
-	# Usage: WRITEHTMLTABLE INPUTFILE OUTPUTFILE
-	LOG "WRITEHTMLTABLE $1 $2"
-
-	# if the CSV file doesn't exist, then simply return
-	if [[ ! -f "$1" ]]; then return 0; fi
-
-	# read the records from the CSV file into an assoc array called 'records'
-	declare -A records
-	local counter=0
-	local HASNOISE=false
-	local HASNOTIFS=false
-	local HASROUTE=false
-	local INPUTFILE="$(<"$1")"
-
-	# Replace the map zoom by whatever $HEATMAPZOOM contains
-	## shellcheck disable=SC2001
-	if [[ -n "$HEATMAPZOOM" ]]; then INPUTFILE=$(sed 's|\(^.*&zoom=\)[0-9]*\(.*\)|\1'"$HEATMAPZOOM"'\2|' <<< "$INPUTFILE"); fi
-
-	# check if INPUTFILE is updated since last run. If it is, then process it. If it isn't, then simply read the associated array from the cache
-	if [[ ! -f /tmp/planefence-input.cache ]] || [[ ! -f /tmp/planefence-array.cache ]] || [[ -n "$(diff -q "$1" /tmp/planefence-input.cache)" ]]; then
-		"${s6wrap[@]}" echo "Processing $1 (cache miss)"
-		while read -r line; do
-			# filling an Associative Array with the following structure: records[$index:key], where:
-			# $index is a counter starting at 0 for each of the times
-			# icao: ICAO hex ID
-			# callsign: flight number or tail number
-			# route: route (airport codes)
-			# notified: notification has been sent (true/false)
-			# firstseen: date/time first seen in secs since epoch
-			# lastseen: date/time last seen in secs since epoch
-			# altitude: lowest altitude observed
-			# distance: minimum distance observed
-			# map_link: link to ADSBX or other tar1090 style map
-			# fa_link: link to flightaware
-			# owner: owner or airline name
-			# notif_link: link to notification
-			# notif_service: "BlueSky", "Mastodon", or "yes"
-			# image_thumblink: link to image thumbnail
-			# image_weblink: link to image page at planespotters.net
-			# sound_peak: peak sound level (if NoiseCapt is configured)
-			# sound_1min: 1 minute sound level (if NoiseCapt is configured)
-			# sound_5min: 5 minute sound level (if NoiseCapt is configured)
-			# sound_10min: 10 minute sound level (if NoiseCapt is configured)
-			# sound_1hour: 1 hour sound level (if NoiseCapt is configured)
-			# sound_loudness: loudness level (if NoiseCapt is configured)
-			# sound_color: background color corresponding to sound_loudness level
-			# noisegraph_file: path of noisegraph file  (if NoiseCapt is configured)
-			# noisegraph_link: link to noisegraph file  (if NoiseCapt is configured)
-			# spectro_file: path of spectrogram file  (if NoiseCapt is configured)
-			# spectro_link: link to spectrogram file  (if NoiseCapt is configured)
-			# mp3_file: path of mp3 file  (if NoiseCapt is configured)
-			# mp3_link: link to mp3 file  (if NoiseCapt is configured)
-			#
-			# additionally, the following are local variables:
-			# maxindex: highest index number (useful for looping)
-			# HASNOISE: true if noise data is present in the array
-			# HASNOTIFS: true if notifications have been sent
-			# HASROUTE: true if a route is available
-
-			if [[ -z "$line" ]]; then continue; fi
-			readarray -d, -t data <<< "$line"
-			index="$((counter++))"	# we can't just use the ICAO because there can be multiple observations in a single day
-			records[$index:icao]="${data[0]^^}"
-			records[$index:callsign]="${data[1]//@/}"
-			if [[ "${data[1]:0:1}" == "@" ]]; then
-				records[$index:notified]=true
-				HASNOTIFS=true
-			else
-				records[$index:notified]=false
-			fi
-			
-			if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
-			if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
-
-			records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
-			records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-			records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
-			records[$index:distance]="${data[5]//$'\n'/}"
-			records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
-			records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
-			records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
-			records[$index:owner]="${records[$index:owner]:-unknown}"
-			records[$index:notif_link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
-			if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
-				[[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
-				[[ "${records[$index:icao]:0:1}" == "A" ]]
-			then
-				records[$index:faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
-			fi
-
-			# get an image links
-			records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
-			records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
-		
-			if [[ -n "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
-				# there is sound level information
-				HASNOISE=true
-				records[$index:sound_peak]="${data[7]//$'\n'/}"
-				records[$index:sound_1min]="${data[8]//$'\n'/}"
-				records[$index:sound_5min]="${data[9]//$'\n'/}"
-				records[$index:sound_10min]="${data[10]//$'\n'/}"
-				records[$index:sound_1hour]="${data[11]//$'\n'/}"
-				if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
-				records[$index:notif_link]="${data[12]//$'\n'/}"
-				{ # get a noise graph if one doesn't exist
-					# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-					records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
-					records[$index:noisegraph_link]="$(basename "${records[$index:noisegraph_file]}")"
-					# If no noisegraph exists, create one:
-					if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
-						CREATE_NOISEPLOT "${records[$index:callsign]}" "${records[$index:firstseen]}" "${records[$index:lastseen]}" "${records[$index:icao]}"
-						if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
-							unset "${records[$index:noisegraph_file]}" "${records[$index:noisegraph_link]}"
-						fi
-					fi
-				}
-				{ # get a spectrogram if one doesn't exist
-					records[$index:spectro_file]="$(CREATE_SPECTROGRAM "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-					if [[ -n "${records[$index:spectro_file]}" ]]; then
-						records[$index:spectro_link]="$(basename "${records[$index:spectro_file]}")"
-					fi
-				}
-				{ # get a MP3 if one doesn't exist
-				records[$index:mp3_file]="$(CREATE_MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-				if [[ -n "${records[$index:mp3_file]}" ]]; then
-					records[$index:mp3_link]="$(basename "${records[$index:mp3_file]}")"
-				fi
-				}
-				{ # determine loudness background color
-					if [[ -n "${records[$index:sound_loudness]}" ]]; then 
-						records[$index:sound_color]="$RED"
-						if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
-						if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
-					fi
-				}
-			fi
-
-			# get notification service name
-			if "${records[$index:notified]}"; then
-				records[$index:notif_service]="yes"
-			else
-				records[$index:notif_service]="no"
-			fi
-			if [[ -n "${records[$index:notif_link]}" ]]; then
-				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-					records[$index:notif_service]="MQTT"
-					records[$index:notif_link]=""
-				elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-				elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
-				fi
-				if [[ -n "${records[$index:notif_link]}" ]]; then
-					if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-						records[$index:notif_service]="MQTT"
-						records[$index:notif_link]=""
-					elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-					elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-					elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
-					fi
-				fi
-			fi
-
-		done <<< "$INPUTFILE"
-		maxindex="$((--counter))"
-		# write the array to a cache file
-		declare -p records 2>/dev/null > "/tmp/planefence-array.cache" || true
-		{ echo "maxindex=$maxindex"
-			echo "HASNOISE=$HASNOISE"
-			echo "HASNOTIFS=$HASNOTIFS"
-			echo "HASROUTE=$HASROUTE"
-		} >> /tmp/planefence-array.cache
-	else
-		"${s6wrap[@]}" echo "Reading records from cache (cache hit)"
-		source /tmp/planefence-array.cache
-	fi
-	cp -f "$1" /tmp/planefence-input.cache
-
-	# Now write the HTML table header
-	# open file for writing as fd 3
-	exec 3>>"$2"
-
-	cat >&3 <<EOF
-	<table border="1" class="display planetable" id="mytable" style="width: auto; text-align: left; align: left" align="left">
-	<thead border="1">
-	<tr>
-	<th style="width: auto; text-align: center">No.</th>
-	$(${SHOWIMAGES} && echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>" || true)
-	<th style="width: auto; text-align: center">Transponder ID</th>
-	<th style="width: auto; text-align: center">Flight</th>
-	$(${HASROUTE} && echo "<th style=\"width: auto; text-align: center\">Flight Route</th>" || true)
-	<th style="width: auto; text-align: center">Airline or Owner</th>"
-	<th style="width: auto; text-align: center">Time First Seen</th>
-	<th style="width: auto; text-align: center">Time Last Seen</th>
-	<th style="width: auto; text-align: center">Min. Altitude</th>
-	<th style="width: auto; text-align: center">Min. Distance</th>
-EOF
-
-	if "$HASNOISE"; then
+	if chk_enabled "${records[HASNOISE]}"; then
 		# print the headers for the standard noise columns
-		cat >&3 <<EOF
-	<th style="width: auto; text-align: center">Loudness</th>
-	<th style="width: auto; text-align: center">Peak RMS sound</th>
-	<th style="width: auto; text-align: center">1 min avg</th>
-	<th style="width: auto; text-align: center">5 min avg</th>
-	<th style="width: auto; text-align: center">10 min avg</th>
-	<th style="width: auto; text-align: center">1 hr avg</th>
-	<th style="width: auto; text-align: center">Spectrogram</th>
-EOF
+		echo "
+		<th style=\"width: auto; text-align: center\">Loudness</th>
+		<th style=\"width: auto; text-align: center\">Peak RMS sound</th>
+		<th style=\"width: auto; text-align: center\">1 min avg</th>
+		<th style=\"width: auto; text-align: center\">5 min avg</th>
+		<th style=\"width: auto; text-align: center\">10 min avg</th>
+		<th style=\"width: auto; text-align: center\">1 hr avg</th>
+		<th style=\"width: auto; text-align: center\">Spectrogram</th>"
 	fi
 
-	if "$HASNOTIFS"; then
+	if chk_enabled "${records[HASNOTIFS]}"; then
 		# print a header for the Notified column
-		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n" >&3
+		printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n"
 	fi
 
 	if chk_enabled "$SHOWIGNORE"; then
 		# print a header for the Ignore column
-		printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n" >&3
+		printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n"
 		PFIGNORELIST="$(<"/usr/share/planefence/persist/planefence-ignore.txt")"
 	fi
-	printf "	</tr></thead>\n<tbody border=\"1\">\n" >&3
+	printf "	</tr></thead>\n<tbody border=\"1\">\n"
 
 	# Now write the table
 
 	for (( index=0 ; index<=maxindex ; index++ )); do
 
-		printf "<tr>\n" >&3
-		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" >&3 # table index number
+		printf "<tr>\n"
+		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" # table index number
 
-		if ${SHOWIMAGES} && [[ -n "${records[$index:image_thumblink]}" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}" >&3
-		elif ${SHOWIMAGES}; then
-			printf "   <td></td><!-- images enabled but no image file available for this entry -->\n" >&3
+		if chk_enabled "${SHOWIMAGES}" && [[ -n "${records[$index:image_thumblink]}" ]]; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}"
+		elif chk_enabled "${SHOWIMAGES}"; then
+			printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"
 		fi
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map_link]}" "${records[$index:icao]}" >&3 # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map_link]}" "${records[$index:icao]}" # ICAO
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa_link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa_link]}" "${records[$index:callsign]}" # Flight number/tail with FlightAware link
 
-		if ${HASROUTE}; then 
-			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
+		if chk_enabled "${records[HASROUTE]}"; then
+			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" # route
 		fi
 
 		if [[ -n "${records[$index:faa_link]}" ]]; then
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}" >&3
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}"
 		else
-			printf "   <td>%s</td><!-- owner -->\n" "${records[$index:owner]}" >&3
+			printf "   <td>%s</td><!-- owner -->\n" "${records[$index:owner]}"
 		fi
 
-		printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records[$index:firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time first seen
+		printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records[$index:firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" # time first seen
 
-		printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records[$index:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
+		printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records[$index:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" # time last seen
 
-		printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records[$index:altitude]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
-		printf "   <td>%s %s</td><!-- min distance -->\n" "${records[$index:distance]}" "$DISTUNIT" >&3 # min distance
+		printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records[$index:altitude]}" "$ALTUNIT" "$ALTREFERENCE" # min altitude
+		printf "   <td>%s %s</td><!-- min distance -->\n" "${records[$index:distance]}" "$DISTUNIT" # min distance
 
 		# Print the noise values if we have determined that there is data
 		if "$HASNOISE"; then
 			# First the loudness field, which needs a color and a link to a noise graph:
 			if [[ -n "${records[$index:noisegraph_link]}" ]]; then
-				printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records[$index:sound_color]}" "${records[$index:noisegraph_link]}" "${records[$index:sound_loudness]}" >&3
+				printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records[$index:sound_color]}" "${records[$index:noisegraph_link]}" "${records[$index:sound_loudness]}"
 			else
-				printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records[$index:sound_color]}" "${records[$index:sound_loudness]}" >&3
+				printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records[$index:sound_color]}" "${records[$index:sound_loudness]}"
 			fi
 			if [[ -n "${records[$index:mp3_link]}" ]]; then 
-				printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records[$index:mp3_link]}" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
+				printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records[$index:mp3_link]}" "${records[$index:sound_peak]}" # print actual value with "dBFS" unit
 			else
-				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
+				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records[$index:sound_peak]}" # print actual value with "dBFS" unit
 			fi
-			printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records[$index:sound_1min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records[$index:sound_5min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records[$index:sound_10min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records[$index:sound_1hour]}" >&3
-			printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records[$index:spectro_link]}" >&3 # print spectrogram
+			printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records[$index:sound_1min]}"
+			printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records[$index:sound_5min]}"
+			printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records[$index:sound_10min]}"
+			printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records[$index:sound_1hour]}"
+			printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records[$index:spectro_link]}" # print spectrogram
 		fi
 
 		# Print a notification, if there are any:
 		if "$HASNOTIFS"; then
 				if [[ -n "${records[$index:notif_link]}" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif_link]}" "${records[$index:notif_service]}" >&3
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif_link]}" "${records[$index:notif_service]}"
 				else
-					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}" >&3
+					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}"
 				fi
 		fi
 
@@ -656,7 +162,7 @@ EOF
 												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
 												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
 												<button type=\"submit\" onclick=\"return prepareSubmit()\">Ignore</button></form></td>" \
-					"${records[$index:icao]}" "$uuid" >&3
+					"${records[$index:icao]}" "$uuid"
 			else
 				printf "   <td><form id=\"ignoreForm\" action=\"manage_ignore.php\" method=\"get\">
 												<input type=\"hidden\" name=\"mode\" value=\"pf\">
@@ -665,14 +171,14 @@ EOF
 												<input type=\"hidden\" name=\"uuid\" value=\"%s\">
 												<input type=\"hidden\" id=\"currentUrl\" name=\"callback\">
 												<button type=\"submit\" onclick=\"return prepareSubmit()\">UnIgnore</button></form></td>" \
-					"${records[$index:icao]}" "$uuid" >&3
+					"${records[$index:icao]}" "$uuid"
 			fi
 		fi	
-		printf "</tr>\n" >&3
+		printf "</tr>\n"
 
 	done
-	printf "</tbody>\n</table>\n" >&3
-	exec 3>&-
+	printf "</tbody>\n</table>\n"
+
 }
 
 # Function to write the Planefence history file
@@ -719,6 +225,98 @@ EOF
 		printf "</body>\n</html>\n" >>"$2"
 	fi
 }
+
+
+TODAY="$(date +%y%m%d)"
+YESTERDAY="$(date -d "yesterday" +%y%m%d)"
+NOWTIME="$(date +%s)"
+RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
+
+# The following template values must be filled in:
+# ##ALTCORR##
+# <!--ALTCORR##>
+# <##ALTCORR-->
+# ##ALTREF##
+# ##ALTUNIT##
+# <!--BSKY##>
+# <##BSKY-->
+# ##BSKYHANDLE##
+# ##BSKYLINK##
+# ##BUILD##
+# ##DIST##
+# ##DISTUNIT##
+# ##HISTTABLE##
+# ##LASTUPDATE##
+# ##LATFUDGED##
+# ##LONFUDGED##
+# ##MAPZOOM##
+# ##MAXALT##
+# ##MY##
+# ##MYURL##
+# <!--NOISEDATA##>
+# <##NOISEDATA-->
+# <!--PA##>
+# <##PA-->
+# ##PALINK##
+# <!--PLANEHEAT##>
+# <##PLANEHEAT-->
+# ##PLANETABLE##
+# <!--RSS##>
+# <##RSS-->
+# ##SOCKETLINES##
+# ##TRACKURL##
+# ##VERSION##
+
+# Load the template into a variable that we can manipulate:
+if ! template=$(<"$PLANEFENCEDIR/planefence.template.html"); then
+	echo "Failed to load template"
+	exit 1
+fi
+
+# Load the records
+if ! records=$(<"$RECORDSFILE"); then
+	echo "Failed to load records"
+	exit 1
+fi
+
+# Get DISTANCE unit:
+DISTUNIT="mi"
+#DISTCONV=1
+if [[ -f "$SOCKETCONFIG" ]]; then
+	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
+		nauticalmile)
+		DISTUNIT="nm"
+		;;
+		kilometer)
+		DISTUNIT="km"
+		;;
+		mile)
+		DISTUNIT="mi"
+		;;
+		meter)
+		DISTUNIT="m"
+	esac
+fi
+
+# get ALTITUDE unit:
+ALTUNIT="ft"
+if [[ -f "$SOCKETCONFIG" ]]; then
+	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
+		feet)
+		ALTUNIT="ft"
+		;;
+		meter)
+		ALTUNIT="m"
+	esac
+fi
+
+#
+# Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
+printf -v LATFUDGED "%.${FUDGELOC:-3}f" "$LAT"
+printf -v LONFUDGED "%.${FUDGELOC:-3}f" "$LON"
+
+if [[ -n "$ALTCORR" ]]; then ALTREF="AGL"; else ALTREF="MSL"; fi
+
 
 # file used to store the line progress at the start of the prune interval
 PRUNESTARTFILE=/run/socket30003/.lastprunecount
@@ -1187,7 +785,7 @@ ${PF_MOTD}
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
   <li>Last update: $(date +"%b %d, %Y %R:%S %Z")
-  <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LAT_VIS&mlon=$LON_VIS#map=14/$LAT_VIS/$LON_VIS&layers=H" target=_blank>${LAT_VIS}&deg;N, ${LON_VIS}&deg;E</a>: $DIST $DISTUNIT
+  <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=$LATFUDGED&mlon=$LONFUDGED#map=14/$LATFUDGED/$LONFUDGED&layers=H" target=_blank>${LATFUDGED}&deg;N, ${LONFUDGED}&deg;E</a>: $DIST $DISTUNIT
   <li>Only aircraft below $(printf "%'.0d" "$MAXALT" | sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta') $ALTUNIT are reported
   <li>Data extracted from $(printf "%'.0d" $TOTALLINES | sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta') <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
 EOF
@@ -1225,7 +823,7 @@ cat <<EOF >>"$OUTFILEHTMTMP"
 <ul>
 EOF
 
-{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)\n" "$LAT_VIS" "$LON_VIS"
+{	printf "<li>Click on the Transponder ID to see the full flight information/history (from <a href=\"https://$TRACKSERVICE/?lat=%s&lon=%s&zoom=11.0\" target=\"_blank\">$TRACKSERVICE</a>)\n" "$LATFUDGED" "$LONFUDGED"
 	printf "<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com\" target=\"_blank\">FlightAware</a>)\n"
 	printf "<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)\n"
 	(( ALTCORR > 0 )) && printf "<li>Minimum altitude is the altitude above local ground level, which is %s %s MSL.\n" "$ALTCORR" "$ALTUNIT" || printf "<li>Minimum altitude is the altitude above sea level\n"

@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC1090,SC1091,SC2034,SC2155
+#shellcheck disable=SC1090,SC1091,SC2034,SC2154,SC2155
 ###shellcheck disable=SC2001,SC2015,SC1091,SC2129,SC2154,SC2155
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
@@ -31,10 +31,10 @@
 # Only change the variables below if you know what you are doing.
 set -eo pipefail
 
-## DEBUG temp stuff to satisfy set -u which is included for debugging:
-FENCEDATE=""
+## DEBUG stuff:
 execstarttime="$(date +%s.%3N)"
 execlaststeptime="$execstarttime"
+DEBUG=true
 
 ##
 source /scripts/common
@@ -82,10 +82,16 @@ fi
 # Functions
 # ==========================
 
-debug_time() {
+debug_print() {
     local currenttime
+    if [[ -z "$execstarttime" ]]; then
+      execstarttime="$(date +%s.%3N)"
+      execlaststeptime="$execstarttime"
+    fi
     currenttime="$(date +%s.%3N)"
-    echo "DEBUG: Step $1 ($2) took $(bc -l <<< "$currenttime - $execlaststeptime") seconds. Total elapsed time: $(bc -l <<< "$currenttime - $execstarttime") seconds" >&2
+    if chk_enabled "$DEBUG"; then 
+      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+    fi
     execlaststeptime="$currenttime"
 }
 
@@ -95,21 +101,18 @@ ICAO2TAIL() {
 
 	# See if we have it somewhere in the socket30003 file:
   tail="$(awk -F "," -v icao="$icao" '($1 == icao && $12 != "") {print $12;exit;}' "$RECORDSFILE" 2>/dev/null)"
-  if [[ -n "$tail" ]]; then debug_time "ICAO2TAIL" "icao=$icao tail=$tail from socket30003 file"; fi
 	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
 
   # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
 	if [[ -f /run/planefence/icao2plane.txt ]]; then
 		tail="$(grep -i -w "$icao" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
 	fi
-  if [[ -n "$tail" ]]; then debug_time "ICAO2TAIL" "icao=$icao tail=$tail from mictronics database"; fi
 	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
 
 	# If the ICAO starts with "A" and there is no flight or tail number, let's algorithmically determine the tail number
 	if [[ "${icao:0:1}" == "A" ]]; then
 		tail="$(/usr/share/planefence/icao2tail.py "$icao")"
 	fi
-  if [[ -n "$tail" ]]; then debug_time "ICAO2TAIL" "icao=$icao tail=$tail from N-number calc"; fi
 	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
 }
 
@@ -194,7 +197,6 @@ GET_PS_PHOTO () {
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		#echo newly obtained
 		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		elif returntype="link"; then echo "$link"
 		elif returntype="thumblink"; then echo "$thumb"
@@ -218,10 +220,12 @@ GET_NOISEDATA () {
   if [[ -z "$lastseen" ]] || (( lastseen - firstseen < 15 )); then lastseen="$(( firstseen + 15 ))"; fi
 
   # check if we can get the noisecapt log:
-  if [[ -z "$noiselog" ]] && ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
-    return
+  if [[ -z "$noiselog" ]]; then
+    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+      return
+    fi
+    noiselog="$(</tmp/noisecapt.log)"
   fi
-  noiselog="$(</tmp/noisecapt.log)"
 
   while IFS=, read -r ts level level_1min level_5min level_10min level_1hr; do
     if (( ts >= firstseen )) && (( ts <= lastseen )); then
@@ -261,10 +265,12 @@ CREATE_NOISEPLOT () {
 	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
 	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
   # check if we can get the noisecapt log:
-  if [[ -z "$noiselog" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+  if [[ -z "$noiselog" ]]; then
+    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+      return
+    fi
     noiselog="$(</tmp/noisecapt.log)"
   fi
-  if [[ -z "$noiselog" ]]; then return; fi
   
 	# if the timeframe is less than 30 seconds, extend the ENDTIME to 30 seconds
 	if (( ENDTIME - STARTTIME < 15 )); then ENDTIME=$(( STARTTIME + 15 )); fi
@@ -292,21 +298,30 @@ CREATE_SPECTROGRAM () {
 	local sf spectrotime
 	if (( ENDTIME - STARTTIME < 30 )); then ENDTIME=$(( STARTTIME + 30 )); fi
 
-	# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
+  # check if we can get the noisecapt log:
+  if [[ -z "$noiselog" ]]; then
+    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+      return
+    fi
+    noiselog="$(</tmp/noisecapt.log)"
+  fi
+  
+	# get the measurement from /tmp/noisecapt.log that contains the peak value
 	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
 	spectrotime="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt.log)"
+  if [[ "$spectrotime" == "0" ]]; then return; fi
 	sf="noisecapt-spectro-${spectrotime}.png"
 
 	if [[ ! -s "$OUTFILEDIR/$sf" ]]; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
-		if ( [[ $noiselist =~ "$sf" ]] && ! curl -fsSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf" 2>/dev/null ) || (( $(ls -s1 "$OUTFILEDIR/$sf" | awk '{print $1}') < 10 )); then
+		if ( [[ $noiselist =~ "$sf" ]] && ! curl -fsSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf" 2>/dev/null ) || (( $(if [[ -f "$sf" ]]; then find "$(dirname "$sf")" -name "$(basename "$sf")" -exec stat -c "%s" {} \;; else echo "0"; fi) < 10 )); then
       rm -f "$OUTFILEDIR/$sf"
       return
     fi
 	fi
   
-  echo "$sf"
+  echo "$OUTFILEDIR/$sf"
 }
 
 CREATE_MP3 () {
@@ -319,6 +334,14 @@ CREATE_MP3 () {
 	local ENDTIME="$2"
 	local mp3time mp3f
 	(( ENDTIME - STARTTIME < 30 )) && ENDTIME=$(( STARTTIME + 30 ))
+
+  # check if we can get the noisecapt log:
+  if [[ -z "$noiselog" ]]; then
+    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+      return
+    fi
+    noiselog="$(</tmp/noisecapt.log)"
+  fi
 
 	# get the measurement from noisecapt-"$FENCEDATE".log that contains the peak value
 	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
@@ -335,23 +358,26 @@ CREATE_MP3 () {
 		# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
 		rm -f "$OUTFILEDIR/$mp3f"
 	else
-		echo "$mp3f"
+		echo "$OUTFILEDIR/$mp3f"
 	fi
 }
+
+debug_print "Hello. Starting $0"
 
 # ==========================
 # Just for debugging purposes:
 # ==========================
 
 if [[ "$1" == "reset" ]]; then
+  debug_print "Resetting records"
   rm -f "$LASTSOCKETRECFILE" "$RECORDSFILE" "$CSVOUT" "$JSONOUT"
   unset records recidx
   declare -A records 
   declare -A recidx
   records[maxindex]="-1"
-  echo "DEBUG: reset records"
 fi
 
+debug_print "Collecting new records"
 # ==========================
 # Collect new lines
 # ==========================
@@ -376,7 +402,7 @@ readarray -t socketrecords <<< "$(
       | grep -v -i -f "$IGNORELIST" 2>/dev/null \
       | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt { print }'
   )"
-debug_time 1 "Getting socket records complete. Got ${#socketrecords[@]} records that are within $DIST distance and $MAXALT altitude"
+debug_print "Got ${#socketrecords[@]} records that are within $DIST distance and $MAXALT altitude. Initial processing..."
 
 # ==========================
 # Process lines
@@ -398,7 +424,7 @@ if (( ${#socketrecords[@]} > 0 )); then
           if (( ${records["$i":lastseen]} - seentime <= COLLAPSEWITHIN && ${records["$i":lastseen]} - seentime >= 0 )); then
             # We found an existing record and we are within COLLAPSEWITHIN seconds
             idx=$i
-            echo "DEBUG: update record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
+            #echo "DEBUG: update record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
             break
           fi
           # If we're make it here, then there is an existing record outside the COLLAPSEWITHIN window
@@ -408,10 +434,10 @@ if (( ${#socketrecords[@]} > 0 )); then
             # We found an existing record outside the COLLAPSEWITHIN window and duplicates are ignored
             # We can't directly break this loop and continue the next loop, so we'll set a flag
             ignore_this_dupe=true
-            echo "DEBUG: dupe ignored record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
+            #echo "DEBUG: dupe ignored record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
             break
           fi
-          echo "DEBUG: dupe potential record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
+          #echo "DEBUG: dupe potential record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
         fi
       done
     fi
@@ -423,7 +449,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       # New record
       idx=$(( records[maxindex] + 1 ))
       records[maxindex]="$idx"
-      echo "DEBUG: new record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime"))"
+      # echo "DEBUG: new record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime"))"
     fi
     #echo "DEBUG: processing index $idx..." 
 
@@ -448,6 +474,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       if [[ -n "$gs" ]]; then records["$idx":groundspeed]="$gs"; fi
       if [[ -n "$track" ]]; then records["$idx":track]="$track"; fi
       records["$idx":time_at_mindist]="$seentime"
+      if [[ -n "$squawk" ]]; then records["$idx":squawk]="$squawk"; fi
     fi
     if [[ -z "${records["$idx":squawk]}" ]]; then
       records["$idx":squawk]="$squawk"
@@ -465,88 +492,101 @@ if (( ${#socketrecords[@]} > 0 )); then
     # records["$idx":spectro_link]=""
     # records["$idx":mp3_file]=""
     # records["$idx":mp3_link]=""
-  #debug_time 2.1 "parsing socket30003 line $idx/${records["$idx":icao]}/${records["$idx":callsign]}"
   done
 
-  debug_time 2.1 "parsing socket30003 lines complete. Continuing to add callsigns, routes, and owners."
+  debug_print "Initial processing complete. Continuing to add callsigns, routes, and owners."
+
+  # try to pre-seed the noisecapt log:
+  if curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
+    noiselog="$(</tmp/noisecapt.log)"
+  fi  
+  
   # Now try to add callsigns and owners for those that don't already have them:
   for ((idx=0; idx<records[maxindex]; idx++)); do
+
     # Add complete label if current time is outside COLLAPSEWITHIN window
     if [[ -z "${records["$idx":complete]}" ]] && (( NOWTIME - ${records["$idx":lastseen]} > COLLAPSEWITHIN )); then
       records["$idx":complete]="true"
     fi
-echo -n "DEBUG: $idx getting "
+
     # Add a callsign if there isn't any
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
       records["$idx":fa_link]="https://flightaware.com/live/modes/$hex_ident/ident/${callsign//[[:space:]]/}/redirect/"
-      echo -n "Callsign=${records["$idx":callsign]}... "
     fi
 
     # get the owner's name
-    if [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
+    if ! chk_enabled "${records["$idx":owner_checked]}" && [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
-      echo -n "Owner=${records["$idx":owner]}... "
+      records["$idx":owner_checked]=true
     fi
 
     # get route information
-    if ! chk_disabled "$CHECKROUTE" && [[ -z ${records["$idx":route]} ]] && [[ -n "${records["$idx":callsign]}" ]]; then
-      records["$idx":route]="$(GET_ROUTE "${records["$idx":callsign]}")"
-    if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
-    echo -n "Route=${records["$idx":route]}... "
+    if ! chk_disabled "$CHECKROUTE" && \
+       ! chk_enabled "${records["$idx":route_checked]}" && \
+       [[ -z ${records["$idx":route]} ]] && \
+       [[ -n "${records["$idx":callsign]}" ]]; then
+          records["$idx":route]="$(GET_ROUTE "${records["$idx":callsign]}")"
+          if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
+          records["$idx":route_checked]=true
     fi
 
     # get images
-    if chk_enabled "$SHOWIMAGES" && [[ -z "${records["$idx":image_thumblink]}" ]] && [[ -n "${records["$idx":icao]}" ]]; then
-      records["$idx":image_thumb]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
-      records["$idx":image_link]="$(GET_PS_PHOTO "${records["$idx":icao]}" "link")"
-      records["$idx":image_file]="$(GET_PS_PHOTO "${records["$idx":icao]}" "image")"
-      echo -n "Image=${records["$idx":image_thumb]}... "
+    if chk_enabled "$SHOWIMAGES" && \
+       ! chk_enabled "${records["$idx":image_checked]}" && \
+       [[ -z "${records["$idx":image_thumblink]}" ]] && \
+       [[ -n "${records["$idx":icao]}" ]]; then
+          records["$idx":image_thumblink]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
+          records["$idx":image_link]="$(GET_PS_PHOTO "${records["$idx":icao]}" "link")"
+          records["$idx":image_file]="$(GET_PS_PHOTO "${records["$idx":icao]}" "image")"
+          records["$idx":image_checked]=true
+          records[HASIMAGES]=true
     fi
 
     # Add noisecapt stuff
     # pre-seed the log
 
     if [[ -n "$REMOTENOISE" ]] && \
+       ! chk_enabled "${records["$idx":noisedata_checked]}" && \
        chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":sound_peak]}" ]]; then
-      # try to pre-seed the noisecapt log:
-      if [[ -z "$noiselog" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
-        noiselog="$(</tmp/noisecapt.log)"
-      fi      
-      read -r records["$idx":sound_peak] records["$idx":sound_1min] records["$idx":sound_5min] records["$idx":sound_10min] records["$idx":sound_1hour] records["$idx":sound_loudness] records["$idx":sound_color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
-      echo -n "Noise=${records["$idx":sound_peak]}... "
+          read -r records["$idx":sound_peak] records["$idx":sound_1min] records["$idx":sound_5min] records["$idx":sound_10min] records["$idx":sound_1hour] records["$idx":sound_loudness] records["$idx":sound_color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          records["$idx":noisedata_checked]=true
+          records[HASNOISE]=true
     fi
     if [[ -n "$REMOTENOISE" ]] && \
+       ! chk_enabled "${records["$idx":noisegraph_checked]}" && \
        chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":noisegraph_file]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
-        records["$idx":noisegraph_file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":firstseen]}" "${records["$idx":lastseen]}" "${records["$idx":icao]}")"
-        echo -n "NoiseGraph=${records["$idx":noisegraph_file]}... "
-        if [[ -n "${records["$idx":noisegraph_file]}" ]]; then
-          records["$idx":noisegraph_link]="$(basename "${records["$idx":noisegraph_file]}")"
-        fi
-        records["$idx":spectro_file]="$(CREATE_SPECTROGRAM "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
-        if [[ -n "${records["$idx":spectro_file]}" ]]; then
-          records["$idx":spectro_link]="$(basename "${records["$idx":spectro_file]}")"
-        fi
-        echo -n "Spectrolink=${records["$idx":spectro_link]}... "
-        records["$idx":mp3_file]="$(CREATE_MP3 "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
-        if [[ -n "${records["$idx":mp3_file]}" ]]; then
-          records["$idx":mp3_link]="$(basename "${records["$idx":mp3_file]}")"
-          echo -n "MP3Link=${records["$idx":mp3_link]}... "
-        fi
+          records["$idx":noisegraph_file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":firstseen]}" "${records["$idx":lastseen]}" "${records["$idx":icao]}")"
+          if [[ -n "${records["$idx":noisegraph_file]}" ]]; then
+            records["$idx":noisegraph_link]="$(basename "${records["$idx":noisegraph_file]}")"
+          fi
+          records["$idx":spectro_file]="$(CREATE_SPECTROGRAM "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          if [[ -n "${records["$idx":spectro_file]}" ]]; then
+            records["$idx":spectro_link]="$(basename "${records["$idx":spectro_file]}")"
+          fi
+          records["$idx":mp3_file]="$(CREATE_MP3 "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          if [[ -n "${records["$idx":mp3_file]}" ]]; then
+            records["$idx":mp3_link]="$(basename "${records["$idx":mp3_file]}")"
+          fi
+          records["$idx":noisegraph_checked]=true
     fi
-  echo
+
   done
 
-  debug_time 2 "parsing all socket30003 lines complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}"
+  if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
+  if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
+  if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
+  if ! chk_enabled "${records[HASNOTIFS]}"; then records[HASNOTIFS]=false; fi
+
+  debug_print "Processing complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}. Now writing results to disk..."
 
   # ==========================
   # Save state
   # ==========================
-  debug_time 3 "saving state. LASTSOCKETRECFILE: $LASTSOCKETRECFILE, RECORDS_FILE: $RECORDSFILE"
   echo "${socketrecords[0]}" > "$LASTSOCKETRECFILE"
   declare -p records recidx > "$RECORDSFILE"
 
@@ -593,3 +633,5 @@ echo -n "DEBUG: $idx getting "
   } > "$JSONOUT"
 
 fi
+
+debug_print "Done."

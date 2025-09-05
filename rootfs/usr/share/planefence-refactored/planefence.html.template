@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+<html>
+<!--
+# You are taking an interest in this code! Great!
+# I'm not a professional programmer, and your suggestions and contributions
+# are always welcome. Join me at the GitHub link shown below, or via email
+# at kx1t (at) kx1t (dot) com.
+#
+# Copyright 2020-2025 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/sdr-enthusiasts/docker-planefence/
+#
+# The package contains contributions from several other packages, that may be licensed
+# under different terms. Attributions and our thanks can be found at
+# https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md
+#
+# Summary of License Terms
+# This program is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see https://www.gnu.org/licenses/.
+-->
+<head>
+	<link rel="icon" href="favicon.ico">
+	<meta charset="UTF-8">
+    <!-- scripts and stylesheets related to the datatables functionality: -->
+    <!-- please note that these scripts and plugins are licensed by their authors and IP owners
+         For license terms and copyright ownership, see each linked file -->
+    <!-- JQuery itself: -->
+    <script src="scripts/jquery-3.7.1.min.js"></script>
+
+    <!-- DataTables CSS and plugins: -->
+    <link href="scripts/dataTables.dataTables.min.css" rel="stylesheet">
+    <link href="scripts/buttons.dataTables.min.css" rel="stylesheet">
+    <script src="scripts/jszip.min.js"></script>
+    <script src="scripts/pdfmake.min.js"></script>
+    <script src="scripts/vfs_fonts.js"></script>
+    <script src="scripts/dataTables.min.js"></script>
+    <script src="scripts/dataTables.buttons.min.js"></script>
+    <script src="scripts/buttons.html5.min.js"></script>
+    <script src="scripts/buttons.print.min.js"></script>
+
+    <!-- plugin to make JQuery table columns resizable by the user: -->
+    <script src="scripts/colResizable-1.6.min.js"></script>
+
+    <title>ADS-B 1090 MHz Planefence</title>
+	<link rel="stylesheet" href="scripts/leaflet.css" />
+	<script src="scripts/leaflet.js"></script>
+<style>
+body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
+	   background-color: black;
+		 color: white;
+     }
+a { color: #0077ff; }
+h1 {text-align: center}
+h2 {text-align: center}
+.planetable { border: 1; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+.history { border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; }
+.footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
+/* Sticky table header */
+table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td {
+	   background-color: black;
+		 color: white;
+     position: sticky;
+     z-index: 100;
+		 top: 0 !important;
+		 padding: 2 !important;
+		 margin-top: 1 !important;
+		 margin-bottom: 1 !important;
+}
+td, table.dataTable tbody td {
+	text-align: center;
+	vertical-align: middle;
+}
+</style>
+
+</head>
+
+<body class="dark">
+<script type="text/javascript">
+    $(document).ready(function() { 
+        $("#mytable").dataTable( {
+            order: [[0, 'desc']],
+            pageLength: 100,
+            lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
+            layout: { top2Start: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] },
+                      top1Start: { search: { placeholder: 'Type search here' } }, 
+                      topEnd: '',
+                    }
+        });
+		    $("#mytable").colResizable({
+            liveDrag: true, 
+            gripInnerHtml: "<div class='grip'></div>", 
+            draggingClass: "dragging", 
+            resizeMode: 'flex',
+						postbackSave: true
+        });
+    });
+</script>
+<script>
+	function prepareSubmit() {
+			// Set the current URL without query parameters
+			var cleanUrl = window.location.href.split('?')[0];
+			document.getElementById('currentUrl').value = cleanUrl;
+			return true;
+	}
+</script>
+
+<h1>Planefence</h1>
+<h2>Show aircraft in range of <a href="##MYURL##" target="_top">##MY##</a> ADS-B station for a specific day</h2>
+
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details open>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
+<ul>
+  <li>Last update: ##LASTUPDATE###
+  <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=##LATFUDGED##&mlon=##LONFUDGED###map=##MAPZOOM##/##LATFUDGED##/##LONFUDGED##&layers=H" target=_blank>##LATFUDGED##&deg;N, ##LONFUDGED##&deg;E</a>: ##DIST## ##DISTUNIT##
+  <li>Only aircraft below ##MAXALT## ##ALTUNIT## are reported
+  <li>Data extracted from ##SOCKETLINES## <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
+  <li>Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station
+<!--BSKY##><li>Planefence notifications are sent to <a href="##BSKYLINK##" target="_blank">##BSKYHANDLE##</a> at BlueSky<##BSKY-->
+<!--RSS##><li>A RSS feed of the aircraft detected with Planefence is available at <a href="planefence.rss">planefence.rss</a><##RSS-->
+<!--PA##><li> Additionally, click <a href="##PALINK##" target="_blank">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station<##PA-->
+</ul>
+</details>
+</article>
+</section>
+
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Click on the triangle next to the header to show/collapse the section </summary>
+</details>
+</article>
+</section>
+
+<section style="border: none; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details open>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Flights In Range Table</summary>
+<ul>
+<li>Click on the Transponder ID to see the full flight information/history (from <a href="https://##TRACKURL##/?lat=##LATFUDGED##&lon=##LONFUDGED##&zoom=11.0" target="_blank">##TRACKURL##</a>)
+<li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com" target="_blank">FlightAware</a>)
+<li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)
+<!--ALTCORR##><li>Minimum altitude is the altitude above local ground level, which is ##ALTCORR## ##ALTUNIT## ##ALTREF##.<##ALTCORR-->
+<li>Press the header of any of the columns to sort by that column
+</ul>
+##PLANETABLE##
+</details>
+</article>
+</section>
+<!--NOISEDATA##>
+	<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+	<article>
+	<details>
+	<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Notes on sound level data</summary>
+	<ul>
+	<li>This data is for informational purposes only and is of indicative value only. It was collected using a non-calibrated device under uncontrolled circumstances.
+	<li>The data unit is &quot;dBFS&quot; (Decibels-Full Scale). 0 dBFS is the loudest sound the device can capture. Lower values, like -99 dBFS, mean very low noise. Higher values, like -10 dBFS, are very loud.
+	<li>The system measures the <a href="https://en.wikipedia.org/wiki/Root_mean_square" target="_blank">RMS</a> of the sound level for contiguous periods of 5 seconds.
+	<li>'Loudness' is the difference (in dB) between the Peak RMS Sound and the 1 hour average. It provides an indication of how much louder than normal it was when the aircraft flew over.
+	<li>Loudness values of greater than 16 dB are in red. Values greater than 9 dB are in yellow.
+	<li>'Peak RMS Sound' is the highest measured 5-seconds RMS value during the time the aircraft was in the coverage area.
+	<li>The subsequent values are 1, 5, 10, and 60 minutes averages of these 5 second RMS measurements for the period leading up to the moment the aircraft left the coverage area.
+	<li>One last, but important note: The reported sound levels are general outdoor ambient noise in a suburban environment. The system doesn't just capture airplane noise, but also trucks on a nearby highway, lawnmowers, children playing, people working on their projects, air conditioner noise, etc.
+	<ul>
+	</details>
+	</article>
+	</section>
+<##NOISEDATA-->
+<!--PLANEHEAT##>
+<hr/>
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details open>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Heatmap</summary>
+<ul>
+<li>This heatmap reflects passing frequency and does not indicate perceived noise levels
+<li>The heatmap is limited to the coverage area of Planefence, for any aircraft listed in the table above
+
+</ul>
+
+<div id="map" style="width: 75vw; height: 60vh"></div>
+
+<script src="scripts/HeatLayer.js"></script>
+<script src="scripts/leaflet-heat.js"></script>
+<script src="scripts/planeheatdata-250904.js"></script>
+<script>
+	var map = L.map('map').setView([parseFloat("42.471"), parseFloat("-71.289")], parseInt("11"));
+	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+	    attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+	    }).addTo(map);
+
+    addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
+    var heat = L.heatLayer(addressPoints, {
+        minOpacity: 1,
+        radius: 7,
+        maxZoom: 14,
+        blur: 11,
+        attribution: "<a href=https://github.com/sdr-enthusiasts/docker-planefence target=_blank>docker-planefence</a>"
+        }).addTo(map);
+    var circle = L.circle([ parseFloat("42.471"), parseFloat("-71.289")], {
+        color: 'blue',
+        fillColor: '#f03',
+        fillOpacity: 0.1,
+        radius: 5556
+    	}).addTo(map);
+
+    var openaip_cached_basemap = new L.TileLayer("https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=", {
+        attribution: "<a href=http://www.openaip.net>OpenAIP.net</a>"
+    }).addTo(map);
+
+
+</script>
+
+</details>
+</article>
+</section>
+<##PLANEHEAT-->
+<!--NOISEDATA##>
+<hr/>
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details open>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Latest Spectrogram</summary>
+<ul>
+<li>Latest as of the time of generation of this page
+<li>For spectrograms related to overflying aircraft, see table above
+</ul>
+<a href="noisecapt-spectro-latest.png" target="_blank"><img src="noisecapt-spectro-latest.png"></a>
+<a href="noiseplot-latest.jpg" target="_blank"><img src="noiseplot-latest.jpg"></a>
+</details>
+</section>
+<##NOISEDATA-->
+<hr/>
+<section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
+<article>
+<details open>
+<summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Historical Data</summary>
+<p>##HISTTABLE##</p>
+<p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p></details>
+</article>
+</section><div class="footer">
+<hr/>Planefence ##VERSION## is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's Planefence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
+ Build: ##BUILD##
+<br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">here</a> for attributions to our contributors and open source packages used.
+<br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
+<a href="https://discord.gg/VDT25xNZzV"><img src="https://img.shields.io/discord/734090820684349521" alt="discord"></a>
+</div>
+</body>
+</html>
