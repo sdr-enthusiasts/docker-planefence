@@ -33,7 +33,8 @@ source /usr/share/planefence/planefence.conf
 HTMLDIR=/tmp
 PLANEFENCEDIR=/
 OUTFILEDIR=/tmp
-set -x
+set -eo pipefail
+DEBUG=true
 
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS
@@ -57,6 +58,7 @@ debug_print() {
 CREATEHTMLTABLE () {
 
 	# Write the HTML table header
+	# shellcheck disable=SC2034
 	table="$(
 		echo "
 			<table border=\"1\" class=\"display planetable\" id=\"mytable\" style=\"width: auto; text-align: left; align: left\" align=\"left\">
@@ -98,7 +100,7 @@ CREATEHTMLTABLE () {
 
 		# Now write the table
 
-		for (( idx=0 ; idx<=maxindex ; idx++ )); do
+		for (( idx=0; idx<=maxindex; idx++ )); do
 
 			printf "<tr>\n"
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
@@ -130,7 +132,7 @@ CREATEHTMLTABLE () {
 			printf "   <td>%s %s</td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" # min distance
 
 			# Print the noise values if we have determined that there is data
-			if "$HASNOISE"; then
+			if chk_enabled "${records[HASNOISE]}"; then
 				# First the loudness field, which needs a color and a link to a noise graph:
 				if [[ -n "${records["$idx":noisegraph_link]}" ]]; then
 					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound_color]}" "${records["$idx":noisegraph_link]}" "${records["$idx":sound_loudness]}"
@@ -150,7 +152,7 @@ CREATEHTMLTABLE () {
 			fi
 
 			# Print a notification, if there are any:
-			if "$HASNOTIFS"; then
+			if chk_enabled "${records[HASNOTIFS]}"; then
 					if [[ -n "${records["$idx":notif_link]}" ]]; then
 						printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records["$idx":notif_link]}" "${records["$idx":notif_service]}"
 					else
@@ -188,7 +190,14 @@ CREATEHTMLTABLE () {
 	)"
 
 	# Insert the table into the template
-	template="$(sed -e "s~##PLANETABLE##~$table~" <<< "$template")"
+template="$(sed -n -e '/##PLANETABLE##/{
+r /dev/fd/3
+b
+}
+p' 3<<'REPL' <<<"$template"
+$table
+REPL
+)"
 
 	# And replace the table size variable
 	template="$(sed -e "s/##TABLESIZE##/${TABLESIZE:-50}/g" <<< "$template")"
@@ -226,8 +235,19 @@ CREATEHTMLHISTORY () {
 		printf "\n</p>\n"
 		printf "</details>\n</article>\n</section>"
 	)"
+
+	template=$(sed -n -e '/##HISTTABLE##/{
+	r /dev/fd/3
+	b
+	}
+	p' 3<<'REPL' <<<"$template"
+$htmlhistory
+REPL
+	)
+
 	debug_print "HTML history generated: $htmlhistory"
-	template="$(sed -e "s~##HISTTABLE##~$htmlhistory~g" <<< "$template")"
+
+	#template="$(sed -e "s~##HISTTABLE##~$htmlhistory~g" <<< "$template")"
 }
 
 # Function to create the Heatmap
@@ -266,6 +286,45 @@ CREATEHEATMAP () {
 	} > "$OUTFILEDIR/planeheatdata-$TODAY.js"
 
   # That's all for the heatmap
+
+}
+
+CREATENOTIFICATIONS () {
+
+	if ! chk_enabled "${records[HASNOTIFS]}"; then
+		template="$(sed -e 's/<##NOTIFICATIONS##>//g' <<< "$template")"
+		return
+	fi
+	# shellcheck disable=SC2034
+	notifhtml="$(
+	printf "<li>Notifications are sent to the following services:</li>\n"
+	if chk_enabled "$PF_DISCORD"; then
+		printf "<ul><li>Discord</li></ul>\n"
+	fi
+	if [[ -n "$MASTODON_SERVER" ]]; then
+		printf "<ul><li>Mastodon (<a href=\"%s\" target=\"_blank\">%s</a>)</li></ul>\n" "$MASTODON_SERVER/@$MASTODON_NAME" "@$MASTODON_NAME"
+	fi
+	if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+		printf "<ul><li>BlueSky (<a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a>)</li></ul>\n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"
+	fi
+	if chk_enabled "$PF_TELEGRAM_ENABLED"; then
+		printf "<ul><li>Telegram</li></ul>\n"
+	fi
+	if [[ -n "$MQTT_URL" ]]; then
+		printf "<ul><li>MQTT broker at %s</li></ul>\n" "$MQTT_URL"
+	fi
+	if [[ -n "$RSS_SITELINK" ]]; then
+		printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
+	fi
+	)"
+	template="$(sed -n -e '/<##NOTIFICATIONS##>/{
+	r /dev/fd/3
+	b
+	}
+	p' 3<<'REPL' <<<"$template"
+	$notifhtml
+REPL
+	)"
 
 }
 
@@ -319,11 +378,13 @@ if ! template=$(<"$PLANEFENCEDIR/planefence.html.template"); then
 fi
 
 # Load the records
-if ! records=$(<"$RECORDSFILE"); then
+if [[ -f "$RECORDSFILE" ]]; then
+	# shellcheck disable=SC1090
+	source "$RECORDSFILE"
+else
 	echo "Failed to load records" >&2
 	exit 1
 fi
-
 
 # Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
 if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( NOWTIME - $(</tmp/add_delete.uuid.used) > 300 )) ); then
@@ -382,6 +443,7 @@ DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 CREATEHTMLTABLE
 CREATEHTMLHISTORY
 CREATEHEATMAP
+CREATENOTIFICATIONS
 
 # Now replace the other template values:
 
@@ -393,12 +455,24 @@ else
 	template="$(sed "s/##AUTOREFRESH##//g" <<< "$template")"
 fi
 
-## LAT and LON fudged values. They are probably already done in the heatmap function, but just in case:
-template="$(sed "s/##LATFUDGED##/$LATFUDGED/g;
-								 s/##LONFUDGED##/$LONFUDGED/g;" <<< "$template")"
+# a bunch of simple replacements:
+template=$(sed -e "s|##MY##|$MY|g;
+									 s|##MYURL##|$MYURL|g;
+									 s|##MAPZOOM##|$MAPZOOM|g;
+									 s|##MAXALT##|$MAXALT|g;
+									 s|##VERSION##|$BUILD|g;
+								 	 s|##BUILD##|$BUILD|g;
+									 s|##SOCKETLINES##|$SOCKETLINES|g;
+									 s|##DIST##|$DIST|g;
+									 s|##DISTUNIT##|$DISTUNIT|g;
+									 s|##ALTUNIT##|$ALTUNIT|g;
+									 s|##ALTREF##|$ALTREFERENCE|g;
+									 s|##RSS##|$RSSURL|g;
+									 s|##LASTUPDATE##|$(date -d "@$NOWTIME")|g;
+									 s|##LATFUDGED##|$LATFUDGED|g;
+									 s|##LONFUDGED##|$LONFUDGED|g;
+								   s|##TRACKURL##|$TRACKURL|g;" <<< "$template")
 
-# ##TRACKURL##
-template="$(sed "s/##TRACKURL##/$TRACKURL/g" <<< "$template")"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
@@ -410,6 +484,17 @@ if [[ -n "$ALTCORR" ]]; then
 else
 	template="$(sed -z 's/<!--ALTCORR##>.*<##ALTCORR-->//g' <<< "$template")"
 fi
+
+# BSky correction
+if chk_enabled "$BSKY"; then
+	template="$(sed "s/<!--BSKY##>//g;
+									 s/<##BSKY-->//; 
+									 s/##BSKYHANDLE##/$BSKYHANDLE/g;
+									 s/##BSKYLINK##/$BSKYLINK/g;" <<< "$template")"
+else
+	template="$(sed -z 's/<!--BSKY##>.*<##BSKY-->//g' <<< "$template")"
+fi
+
 
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "$PLANEALERT"; then

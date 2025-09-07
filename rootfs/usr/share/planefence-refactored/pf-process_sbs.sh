@@ -365,9 +365,8 @@ debug_print "Hello. Starting $0"
 if [[ "$1" == "reset" ]]; then
   debug_print "Resetting records"
   rm -f "$LASTSOCKETRECFILE" "$RECORDSFILE" "$CSVOUT" "$JSONOUT"
-  unset records recidx
+  unset records
   declare -A records 
-  declare -A recidx
   records[maxindex]="-1"
 fi
 
@@ -375,7 +374,7 @@ debug_print "Getting $RECORDSFILE"
 if [[ -f "$RECORDSFILE" ]]; then
     source "$RECORDSFILE"
 else
-    declare -A records=() recidx=()
+    declare -A records=()
     records[maxindex]=-1
 fi
 
@@ -592,7 +591,15 @@ if (( ${#socketrecords[@]} > 0 )); then
   if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
   if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
-  if ! chk_enabled "${records[HASNOTIFS]}"; then records[HASNOTIFS]=false; fi
+  if [[ -z "${records[HASNOTIFS]}" ]] || \
+     ( ! chk_enabled "${PF_DISCORD}" && \
+       [[ -z "$MASTODON_SERVER" ]] && \
+       [[ -z "$BLUESKY_HANDLE" ]] && \
+       [[ -z "$RSS_SITELINK" ]] && \
+       ! chk_enabled "$PF_TELEGRAM_ENABLED" && \
+       [[ -z "$MQTT_URL" ]] ); then
+          records[HASNOTIFS]=false
+  fi
 
   debug_print "Processing complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}. Now writing results to disk..."
 
@@ -600,7 +607,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   # Save state
   # ==========================
   echo "${socketrecords[0]}" > "$LASTSOCKETRECFILE"
-  declare -p records recidx > "$RECORDSFILE"
+  declare -p records > "$RECORDSFILE"
   debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
 
   # ==========================
