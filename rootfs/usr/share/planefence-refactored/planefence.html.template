@@ -30,6 +30,7 @@
 -->
 <head>
 	<link rel="icon" href="favicon.ico">
+    <##AUTOREFRESH##>
 	<meta charset="UTF-8">
     <!-- scripts and stylesheets related to the datatables functionality: -->
     <!-- please note that these scripts and plugins are licensed by their authors and IP owners
@@ -89,7 +90,7 @@ td, table.dataTable tbody td {
     $(document).ready(function() { 
         $("#mytable").dataTable( {
             order: [[0, 'desc']],
-            pageLength: 100,
+            pageLength: ##TABLESIZE##,
             lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
             layout: { top2Start: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] },
                       top1Start: { search: { placeholder: 'Type search here' } }, 
@@ -101,7 +102,7 @@ td, table.dataTable tbody td {
             gripInnerHtml: "<div class='grip'></div>", 
             draggingClass: "dragging", 
             resizeMode: 'flex',
-						postbackSave: true
+			postbackSave: true
         });
     });
 </script>

@@ -62,6 +62,15 @@ JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
 
 LASTSOCKETRECFILE="/usr/share/planefence/persist/.planefence-state-lastrec"
 
+if [[ -z "$TRACKSERVICE" ]] || [[ "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
+  TRACKURL="globe.adsbexchange.com"
+elif [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then
+  TRACKURL="flightaware"
+elif [[ -n "$TRACKSERVICE" ]]; then
+  TRACKURL="base_domain=$(sed -E 's|^(https?://)?([^/]+).*|\2|' <<< "$TRACKSERVICE")"
+else
+  TRACKURL="globe.adsbexchange.com"
+fi
 
 # ==========================
 # Functions
@@ -251,7 +260,7 @@ CREATE_NOISEPLOT () {
 	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
-    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
       return
     fi
     noiselog="$(</tmp/noisecapt.log)"
@@ -370,19 +379,19 @@ else
     records[maxindex]=-1
 fi
 
-debug_print "Getting ignorelist"
+debug_print "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
     sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
 else
     touch "$IGNORELIST"
 fi
 
-debug_print "Getting noiselist (this may take a while)"
+debug_print "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
-  noiselist="$(curl -fsSL "$REMOTENOISE" 2>/dev/null)"
+  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
-debug_print "Collecting new records"
+debug_print "Got noiselist. Collecting new records"
 # ==========================
 # Collect new lines
 # ==========================
@@ -435,7 +444,6 @@ if (( ${#socketrecords[@]} > 0 )); then
           if (( ${records["$i":lastseen]} - seentime <= COLLAPSEWITHIN && ${records["$i":lastseen]} - seentime >= 0 )); then
             # We found an existing record and we are within COLLAPSEWITHIN seconds
             idx=$i
-            #echo "DEBUG: update record $idx: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
             break
           fi
           # If we're make it here, then there is an existing record outside the COLLAPSEWITHIN window
@@ -445,10 +453,8 @@ if (( ${#socketrecords[@]} > 0 )); then
             # We found an existing record outside the COLLAPSEWITHIN window and duplicates are ignored
             # We can't directly break this loop and continue the next loop, so we'll set a flag
             ignore_this_dupe=true
-            #echo "DEBUG: dupe ignored record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
             break
           fi
-          #echo "DEBUG: dupe potential record $i: [$hex_ident] Seentime=$seentime ($(date -d @"$seentime")), lastseen=${records["$i":lastseen]} diff $(( ${records["$i":lastseen]}-seentime )), firstseen=${records["$i":firstseen]} diff $(( ${records["$i":firstseen]}-seentime ))"
         fi
       done
     fi
@@ -468,9 +474,12 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -n "$callsign" ]]; then
         records["$idx":callsign]="$callsign"  
         records["$idx":fa_link]="https://flightaware.com/live/modes/$hex_ident/ident/$callsign/redirect"
+      if [[ -z "${records["$idx":faa_link]}" ]] && grep -qE 'N([1-9][0-9]{0,4}|[1-9][0-9]{0,3}[A-Z]|[1-9][0-9]{0,2}[A-Z]{2})$' <<< "$callsign"; then
+          records["$idx":faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$callsign"
+      fi
     fi
 
-    if [[ -z "${records["$idx":map_link]}" ]]; then records["$idx":map_link]="https://globe.adsbexchange.com/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
+    if [[ -z "${records["$idx":map_link]}" ]]; then records["$idx":map_link]="https://$TRACKURL/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
     records["$idx":firstseen]="$seentime"
     if [[ -z "${records["$idx":lastseen]}" ]]; then records["$idx":lastseen]="$seentime"; fi
     newdist="$(awk "BEGIN { if ($distance < ${records["$idx":distance]:-999999}) print $distance }")"
@@ -489,18 +498,6 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":squawk]="$squawk"
     fi
 
-    # Placeholders for later enrichment
-    # records["$idx":notif_discord]=""
-    # records["$idx":notif_mastodon]=""
-    # records["$idx":notif_telegram]=""
-    # records["$idx":notif_bluesky]=""
-    # records["$idx":notif_mqtt]=""
-    # records["$idx":noisegraph_file]=""
-    # records["$idx":noisegraph_link]=""
-    # records["$idx":spectro_file]=""
-    # records["$idx":spectro_link]=""
-    # records["$idx":mp3_file]=""
-    # records["$idx":mp3_link]=""
   done
 
   debug_print "Initial processing complete. Continuing to add callsigns, routes, and owners."
@@ -554,12 +551,18 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
 
     # Add noisecapt stuff
-    # pre-seed the log
-
     if [[ -n "$REMOTENOISE" ]] && \
        ! chk_enabled "${records["$idx":noisedata_checked]}" && \
        chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":sound_peak]}" ]]; then
+          # Make sure we have the noiselist
+          if [[ -z "$noiselist" ]]; then
+            debug_print "Waiting for noiselist to finish downloading..."
+            wait $!
+            noiselist="$(</tmp/.allnoise)"
+            rm -f /tmp/.allnoise
+            debug_print "Noiselist download complete. $(wc -l <<< "$noiselist") lines."
+          fi
           read -r records["$idx":sound_peak] records["$idx":sound_1min] records["$idx":sound_5min] records["$idx":sound_10min] records["$idx":sound_1hour] records["$idx":sound_loudness] records["$idx":sound_color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
           records["$idx":noisedata_checked]=true
           records[HASNOISE]=true
@@ -598,48 +601,52 @@ if (( ${#socketrecords[@]} > 0 )); then
   # ==========================
   echo "${socketrecords[0]}" > "$LASTSOCKETRECFILE"
   declare -p records recidx > "$RECORDSFILE"
+  debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
 
   # ==========================
   # Emit CSV snapshot
   # ==========================
 
   # shellcheck disable=SC2207
-  keys=($(printf '%s\n' "${!records[@]}" | awk -F'[:\\]]' '!seen[$2]++ {print $2}' | sort -u))
+  keys=($(printf '%s\n' "${!records[@]}" | grep -v "heatmap" | awk -F'[:\\]]' '!seen[$2]++ {print $2}' | sort -u))
   printf -v csvindex "%s," "${keys[@]}"; csvindex="${csvindex:0:-1}"
 
   {
-      echo "index,$csvindex"
-      for ((idx=0; idx<records[maxindex]; idx++)); do
-          csv="$idx,"
-          for key in "${keys[@]}"; do
-              csv+="${records["$idx":$key]},"
-          done
-          echo "${csv:0:-1}"
-      done
+    echo "index,$csvindex"
+    for ((idx=0; idx<records[maxindex]; idx++)); do
+        csv="$idx,"
+        for key in "${keys[@]}"; do
+            csv+="${records["$idx":$key]},"
+        done
+        echo "${csv:0:-1}"
+    done
   } > "$CSVOUT"
+
+  debug_print "Wrote $CSVOUT"
 
   # ==========================
   # Emit JSON snapshot
   # ==========================
   {
-      echo "["
-      sep=""
-      for ((idx=0; idx<records[maxindex]; idx++)); do
-          printf '%s{\n' "$sep"
-          sep=","
-          keysep=""
-          for key in "${keys[@]}"; do
-              val=${records["$idx":$key]}
-              # Escape quotes and backslashes for JSON safety
-              val=${val//\\/\\\\}
-              val=${val//\"/\\\"}
-              printf '%s "%s":"%s"' "$keysep" "$key" "$val"
-              keysep=","
-          done
-          echo -e "\n}"
-      done
-      echo "]"
+    echo "["
+    sep=""
+    for ((idx=0; idx<records[maxindex]; idx++)); do
+        printf '%s{\n' "$sep"
+        sep=","
+        keysep=""
+        for key in "${keys[@]}"; do
+            val=${records["$idx":$key]}
+            # Escape quotes and backslashes for JSON safety
+            val=${val//\\/\\\\}
+            val=${val//\"/\\\"}
+            printf '%s "%s":"%s"' "$keysep" "$key" "$val"
+            keysep=","
+        done
+        echo -e "\n}"
+    done
+    echo "]"
   } > "$JSONOUT"
+  debug_print "Wrote $JSONOUT"
 
 fi
 
