@@ -54,6 +54,38 @@ debug_print() {
     execlaststeptime="$currenttime"
 }
 
+template_replace() {
+	# Replace instance of $1 with $2 in the template variable
+	# Do this in a safe way that doesn't break on characters in the replacement string
+
+	if template=$(awk -v pat="$1" -v rep="$2" '
+  BEGIN { found=0; plen=length(pat) }
+  {
+    line = $0
+    out = ""
+    pos = 1
+    while (1) {
+      i = index(substr(line, pos), pat)
+      if (i == 0) { out = out substr(line, pos); break }
+      # i is relative to substr(line,pos)
+      i += pos - 1
+      out = out substr(line, pos, i-pos) rep
+      pos = i + plen
+      found = 1
+    }
+    # print the rebuilt line (rep may contain newlines; print as-is)
+    printf "%s\n", out
+  }
+  END { exit(!found) }
+	' <<< "$template");
+	then
+		return
+	else
+		debug_print "Did not find $1 in template"
+	fi
+
+}
+
 # Function to write the Planefence HTML table
 CREATEHTMLTABLE () {
 
@@ -100,7 +132,7 @@ CREATEHTMLTABLE () {
 
 		# Now write the table
 
-		for (( idx=0; idx<=maxindex; idx++ )); do
+		for (( idx=0; idx <= records[maxindex]; idx++ )); do
 
 			printf "<tr>\n"
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
@@ -189,18 +221,13 @@ CREATEHTMLTABLE () {
 		printf "</tbody>\n</table>\n"
 	)"
 
-	# Insert the table into the template
-template="$(sed -n -e '/##PLANETABLE##/{
-r /dev/fd/3
-b
-}
-p' 3<<'REPL' <<<"$template"
-$table
-REPL
-)"
+debug_print "HTML table generated:\n"
+echo "$table" >&2
 
-	# And replace the table size variable
-	template="$(sed -e "s/##TABLESIZE##/${TABLESIZE:-50}/g" <<< "$template")"
+template_replace "##PLANETABLE##" "$table"
+template_replace "##TABLESIZE##" "${TABLESIZE:-50}"
+
+
 }
 
 # Function to write the Planefence history file
@@ -235,19 +262,7 @@ CREATEHTMLHISTORY () {
 		printf "\n</p>\n"
 		printf "</details>\n</article>\n</section>"
 	)"
-
-	template=$(sed -n -e '/##HISTTABLE##/{
-	r /dev/fd/3
-	b
-	}
-	p' 3<<'REPL' <<<"$template"
-$htmlhistory
-REPL
-	)
-
-	debug_print "HTML history generated: $htmlhistory"
-
-	#template="$(sed -e "s~##HISTTABLE##~$htmlhistory~g" <<< "$template")"
+		template_replace "##HISTTABLE##" "$htmlhistory"
 }
 
 # Function to create the Heatmap
@@ -268,13 +283,14 @@ CREATEHEATMAP () {
 	fi
 
 	# Replace the other template values:
-	template="$(sed -e "s/##LATFUDGED##/$LAT/g;
-									 s/##LONFUDGED##/$LON/g;
-									 s/##HEATMAPZOOM##/$HEATMAPZOOM/g;
-									 s/##HEATMAPWIDTH##/$HEATMAPWIDTH/g;
-									 s/##HEATMAPHEIGHT##/$HEATMAPHEIGHT/g;
-									 s/##DISTMTS##/$DISTMTS/g;
-									 " <<< "$template")"
+	# Determine the zoom level for the heatmap
+	template_replace "##LATFUDGED##" "$LATFUDGED"
+	template_replace "##LONFUDGED##" "$LONFUDGED"
+	template_replace "##HEATMAPZOOM##" "$HEATMAPZOOM"
+	template_replace "##HEATMAPWIDTH##" "$HEATMAPWIDTH"
+	template_replace "##HEATMAPHEIGHT##" "$HEATMAPHEIGHT"
+	template_replace "##DISTMTS##" "$DISTMTS"
+
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
 		for i in "${!records[@]}"; do
@@ -292,7 +308,7 @@ CREATEHEATMAP () {
 CREATENOTIFICATIONS () {
 
 	if ! chk_enabled "${records[HASNOTIFS]}"; then
-		template="$(sed -e 's/<##NOTIFICATIONS##>//g' <<< "$template")"
+		template_replace "##NOTIFICATIONS##" ""
 		return
 	fi
 	# shellcheck disable=SC2034
@@ -317,51 +333,9 @@ CREATENOTIFICATIONS () {
 		printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
 	fi
 	)"
-	template="$(sed -n -e '/<##NOTIFICATIONS##>/{
-	r /dev/fd/3
-	b
-	}
-	p' 3<<'REPL' <<<"$template"
-	$notifhtml
-REPL
-	)"
+	template_replace "##NOTIFICATIONS##" "$notifhtml"
 
 }
-
-# The following template values must be filled in:
-# ##ALTCORR##
-# <!--ALTCORR##>
-# <##ALTCORR-->
-# ##ALTREF##
-# ##ALTUNIT##
-# <!--BSKY##>
-# <##BSKY-->
-# ##BSKYHANDLE##
-# ##BSKYLINK##
-# ##BUILD##
-# ##DIST##
-# ##DISTUNIT##
-# ##HISTTABLE##
-# ##LASTUPDATE##
-# ##LATFUDGED##
-# ##LONFUDGED##
-# ##MAPZOOM##
-# ##MAXALT##
-# ##MY##
-# ##MYURL##
-# <!--NOISEDATA##>
-# <##NOISEDATA-->
-# <!--PA##>
-# <##PA-->
-# ##PALINK##
-# <!--PLANEHEAT##>
-# <##PLANEHEAT-->
-# ##PLANETABLE##
-# <!--RSS##>
-# <##RSS-->
-# ##SOCKETLINES##
-# ##TRACKURL##
-# ##VERSION##
 
 # -----------------------------------------------------------------------------------
 #      PREP WORK
@@ -450,57 +424,64 @@ CREATENOTIFICATIONS
 # ##AUTOREFRESH##
 if chk_enabled "${AUTOREFRESH}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
-	template="$(sed -e "s~##AUTOREFRESH##~<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">~g" <<< "$template")"
+	template_replace "##AUTOREFRESH##" "<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">"
 else
-	template="$(sed "s/##AUTOREFRESH##//g" <<< "$template")"
+	template_replace "##AUTOREFRESH##" ""
 fi
 
 # a bunch of simple replacements:
-template=$(sed -e "s|##MY##|$MY|g;
-									 s|##MYURL##|$MYURL|g;
-									 s|##MAPZOOM##|$MAPZOOM|g;
-									 s|##MAXALT##|$MAXALT|g;
-									 s|##VERSION##|$BUILD|g;
-								 	 s|##BUILD##|$BUILD|g;
-									 s|##SOCKETLINES##|$SOCKETLINES|g;
-									 s|##DIST##|$DIST|g;
-									 s|##DISTUNIT##|$DISTUNIT|g;
-									 s|##ALTUNIT##|$ALTUNIT|g;
-									 s|##ALTREF##|$ALTREFERENCE|g;
-									 s|##RSS##|$RSSURL|g;
-									 s|##LASTUPDATE##|$(date -d "@$NOWTIME")|g;
-									 s|##LATFUDGED##|$LATFUDGED|g;
-									 s|##LONFUDGED##|$LONFUDGED|g;
-								   s|##TRACKURL##|$TRACKURL|g;" <<< "$template")
-
+template_replace "##MY##" "$MY"
+template_replace "##MYURL##" "$MYURL"
+template_replace "##MAPZOOM##" "$MAPZOOM"
+template_replace "##MAXALT##" "$MAXALT"
+template_replace "##VERSION##" "$VERSION"
+template_replace "##BUILD##" "$(</.VERSION)"
+template_replace "##SOCKETLINES##" "$SOCKETLINES"
+template_replace "##DIST##" "$DIST"
+template_replace "##DISTUNIT##" "$DISTUNIT"
+template_replace "##ALTUNIT##" "$ALTUNIT"
+template_replace "##ALTREF##" "$ALTREF"
+template_replace "##RSS##" "$RSSURL"
+template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")"
+template_replace "##TRACKURL##" "$TRACKURL"
+template_replace "##LATFUDGED##" "$LATFUDGED"
+template_replace "##LONFUDGED##" "$LONFUDGED"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
-	template="$(sed "s/<!--ALTCORR##>//g;
-									 s/<##ALTCORR-->//; 
-									 s/##ALTCORR##/$ALTCORR/g;
-									 s/##ALTUNIT##/$ALTUNIT/g;
-									 s/##ALTREF##/$ALTREF/g;" <<< "$template")"
+	template_replace "##ALTCORR##" "$ALTCORR"
+	template_replace "##ALTUNIT##" "$ALTUNIT"
+	template_replace "##ALTREF##" "$ALTREF"
+	template_replace "<!--ALTCORR##>" ""
+	template_replace "<##ALTCORR-->" ""
 else
 	template="$(sed -z 's/<!--ALTCORR##>.*<##ALTCORR-->//g' <<< "$template")"
 fi
 
 # BSky correction
 if chk_enabled "$BSKY"; then
-	template="$(sed "s/<!--BSKY##>//g;
-									 s/<##BSKY-->//; 
-									 s/##BSKYHANDLE##/$BSKYHANDLE/g;
-									 s/##BSKYLINK##/$BSKYLINK/g;" <<< "$template")"
+	template_replace "##BSKYHANDLE##" "$BSKYHANDLE"
+	template_replace "##BSKYLINK##" "$BSKYLINK"
+	template_replace "<!--BSKY##>" ""
+	template_replace "<##BSKY-->" ""
 else
 	template="$(sed -z 's/<!--BSKY##>.*<##BSKY-->//g' <<< "$template")"
 fi
 
+# Noise data section
+# Set PlaneAlert link if PA is enabled
+if chk_enabled "${records[HASNOISE]}"; then
+	template_replace "<!--NOISEDATA##>" ""
+	template_replace "<##NOISEDATA-->" ""
+else
+	template="$(sed -z 's/<!--NOISEDATA##>.*<##NOISEDATA-->//g' <<< "$template")"
+fi
 
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "$PLANEALERT"; then
-	template="$(sed "s|<!--PA##>||g;
-									 s|<##PA-->||g;
-									 s|##PALINK##|$PALINK|g;" <<< "$template")"
+	template_replace "##PALINK##" "$PALINK"
+	template_replace "<!--PA##>" ""
+	template_replace "<##PA-->" ""
 else
 	template="$(sed -z 's/<!--PA##>.*<##PA-->//g' <<< "$template")"
 fi

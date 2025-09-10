@@ -402,13 +402,17 @@ readarray -t socketrecords <<< "$(
         # Check if last run was yesterday
         if [[ "$(date -d "$lastdate" +%y%m%d)" == "$YESTERDAY" ]]; then
             # Grab remainder of yesterday + all of today
-            { grep -A999999 -F "$LASTPROCESSEDLINE" "$YESTERDAYFILE" 2>/dev/null || true; \
-              cat "$TODAYFILE"; }
+            { debug_print "Last processed line was from yesterday ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of yesterday's file and all of today's file"
+              grep -A9999999 -F "$LASTPROCESSEDLINE" "$YESTERDAYFILE" 2>/dev/null || true
+              cat "$TODAYFILE"
+            }
         else            # Just grab remainder of today
-            grep -A999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
+          debug_print "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
+          grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
         fi
     else
         # First run: all of today’s file
+        debug_print "No last processed line found, so grabbing all of today's file"
         cat "$TODAYFILE"
     fi; } \
       | tac \
@@ -499,7 +503,7 @@ if (( ${#socketrecords[@]} > 0 )); then
 
   done
 
-  debug_print "Initial processing complete. Continuing to add callsigns, routes, and owners."
+  debug_print "Initial processing complete. Got a total of ${records[maxindex]} records. Continuing to add callsigns, routes, and owners."
 
   # try to pre-seed the noisecapt log:
   if curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then

@@ -130,17 +130,8 @@ td, table.dataTable tbody td {
   <li>Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station
   <! Notification links here -->
   <##NOTIFICATIONS##>
-  <##BSKY##>
-  <##DISCORD##>
-  <##TELEGRAM##>
-  <##MASTODON##>
-  <##RSS##>
-  <##NOTIFICATIONS-->
-  <!--BSKY##><li>Planefence notifications are sent to <a href="##BSKYLINK##" target="_blank">##BSKYHANDLE##</a> at BlueSky<##BSKY-->
-  <!--
-  <!--RSS##><li>A RSS feed of the aircraft detected with Planefence is available at <a href="planefence.rss">planefence.rss</a><##RSS-->
-
-<!--PA##><li> Additionally, click <a href="##PALINK##" target="_blank">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station<##PA-->
+  
+<!--PA##><li>Click <a href="##PALINK##" target="_blank">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station<##PA-->
 </ul>
 </details>
 </article>
@@ -261,7 +252,7 @@ td, table.dataTable tbody td {
 <p>Additional dates may be available by browsing to planefence-yymmdd.html in this directory.</p></details>
 </article>
 </section><div class="footer">
-<hr/>Planefence ##VERSION## is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's Planefence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
+<hr/>Planefence version ##VERSION## is part of <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank">KX1T's Planefence Open Source Project</a>, available on GitHub. Support is available on the #Planefence channel of the SDR Enthusiasts Discord Server. Click the Chat icon below to join.
  Build: ##BUILD##
 <br/>&copy; Copyright 2020-2025 by Ram&oacute;n F. Kolb, kx1t. Please see <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">here</a> for attributions to our contributors and open source packages used.
 <br/><a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/sdr-enthusiasts/docker-planefence/deploy.yml"></a>
