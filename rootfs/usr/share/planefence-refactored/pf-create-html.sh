@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
-#shellcheck disable=SC2001,SC2015,SC1091,SC2129,SC2154,SC2155
+# shellcheck shell=bash
+# shellcheck disable=SC1091,SC2154,SC2155
 #
 # #-----------------------------------------------------------------------------------
 # PF-CREATE-HTML.SH
@@ -58,32 +58,42 @@ template_replace() {
 	# Replace instance of $1 with $2 in the template variable
 	# Do this in a safe way that doesn't break on characters in the replacement string
 
-	if template=$(awk -v pat="$1" -v rep="$2" '
-  BEGIN { found=0; plen=length(pat) }
-  {
-    line = $0
-    out = ""
-    pos = 1
-    while (1) {
-      i = index(substr(line, pos), pat)
-      if (i == 0) { out = out substr(line, pos); break }
-      # i is relative to substr(line,pos)
-      i += pos - 1
-      out = out substr(line, pos, i-pos) rep
-      pos = i + plen
-      found = 1
-    }
-    # print the rebuilt line (rep may contain newlines; print as-is)
-    printf "%s\n", out
-  }
-  END { exit(!found) }
-	' <<< "$template");
-	then
+	if ! grep -q "$1" <(printf '%s\n' "$template"); then
+		debug_print "Can't replace - \"$1\" not found in template"
 		return
-	else
-		debug_print "Did not find $1 in template"
 	fi
 
+  while firstpart="$(awk -v pat="$1" '
+		{
+			i = index($0, pat)
+			if (i) {
+				if (i>1) print substr($0,1,i-1)
+				found=1
+				exit
+			}
+			print
+		}
+		END { exit(!found) }' <(printf '%s\n' "$template"))"; do
+		lastpart="$(awk -v pat="$1" '
+			BEGIN { found=0; plen=length(pat) }
+			{
+				if (!found) {
+					i = index($0, pat)
+					if (i) {
+						# print rest of this line after the matched pattern (if any)
+						post = substr($0, i + plen)
+						if (length(post)) print post
+						found = 1
+						next
+					}
+				} else {
+					print
+				}
+			}
+			END { exit(!found) }' <(printf '%s\n' "$template"))"
+
+	  template="${firstpart}${2}${lastpart}"
+	done
 }
 
 # Function to write the Planefence HTML table
@@ -221,12 +231,8 @@ CREATEHTMLTABLE () {
 		printf "</tbody>\n</table>\n"
 	)"
 
-debug_print "HTML table generated:\n"
-echo "$table" >&2
-
-template_replace "##PLANETABLE##" "$table"
-template_replace "##TABLESIZE##" "${TABLESIZE:-50}"
-
+	template_replace "##PLANETABLE##" "$table"
+	template_replace "##TABLESIZE##" "${TABLESIZE:-50}"
 
 }
 
@@ -272,20 +278,21 @@ CREATEHEATMAP () {
 		template="$(sed -z 's/<!--PLANEHEAT##>.*<##PLANEHEAT-->//g' <<< "$template")"
 		return
 	else
-		template="$(sed -e 's/<!--PLANEHEAT##>//g; s/<##PLANEHEAT-->//g' <<< "$template")"
+		template_replace "<!--PLANEHEAT##>" ""
+		template_replace "<##PLANEHEAT-->" ""
 	fi
 
 	# If OpenAIP is enabled, include it. If not, exclude it.
 	if chk_enabled "$OPENAIP_LAYER"; then
-		template="$(sed -e "s/<!--OPENAIP##>//g; s/<##OPENAIP-->//; s/##OPENAIPKEY##/$OPENAIPKEY/g" <<< "$template")"
+		template_replace "<!--OPENAIP##>" ""
+		template_replace "<##OPENAIP-->" ""
+		template_replace "##OPENAIPKEY##" "$OPENAIPKEY"
 	else
 		template="$(sed -z 's/<!--OPENAIP##>.*<##OPENAIP-->//g' <<< "$template")"
 	fi
 
 	# Replace the other template values:
 	# Determine the zoom level for the heatmap
-	template_replace "##LATFUDGED##" "$LATFUDGED"
-	template_replace "##LONFUDGED##" "$LONFUDGED"
 	template_replace "##HEATMAPZOOM##" "$HEATMAPZOOM"
 	template_replace "##HEATMAPWIDTH##" "$HEATMAPWIDTH"
 	template_replace "##HEATMAPHEIGHT##" "$HEATMAPHEIGHT"
@@ -312,26 +319,26 @@ CREATENOTIFICATIONS () {
 		return
 	fi
 	# shellcheck disable=SC2034
-	notifhtml="$(
-	printf "<li>Notifications are sent to the following services:</li>\n"
-	if chk_enabled "$PF_DISCORD"; then
-		printf "<ul><li>Discord</li></ul>\n"
-	fi
-	if [[ -n "$MASTODON_SERVER" ]]; then
-		printf "<ul><li>Mastodon (<a href=\"%s\" target=\"_blank\">%s</a>)</li></ul>\n" "$MASTODON_SERVER/@$MASTODON_NAME" "@$MASTODON_NAME"
-	fi
-	if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
-		printf "<ul><li>BlueSky (<a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a>)</li></ul>\n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"
-	fi
-	if chk_enabled "$PF_TELEGRAM_ENABLED"; then
-		printf "<ul><li>Telegram</li></ul>\n"
-	fi
-	if [[ -n "$MQTT_URL" ]]; then
-		printf "<ul><li>MQTT broker at %s</li></ul>\n" "$MQTT_URL"
-	fi
-	if [[ -n "$RSS_SITELINK" ]]; then
-		printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
-	fi
+	local notifhtml="$(
+		printf "<li>Notifications are sent to the following services:</li>\n"
+		if chk_enabled "$PF_DISCORD"; then
+			printf "<ul><li>Discord</li></ul>\n"
+		fi
+		if [[ -n "$MASTODON_SERVER" ]]; then
+			printf "<ul><li>Mastodon (<a href=\"%s\" target=\"_blank\">%s</a>)</li></ul>\n" "$MASTODON_SERVER/@$MASTODON_NAME" "@$MASTODON_NAME"
+		fi
+		if [[ -n "$BLUESKY_HANDLE" ]] && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then
+			printf "<ul><li>BlueSky (<a href=\"https://bsky.app/profile/%s\" target=\"_blank\">@%s</a>)</li></ul>\n" "$BLUESKY_HANDLE" "$BLUESKY_HANDLE"
+		fi
+		if chk_enabled "$PF_TELEGRAM_ENABLED"; then
+			printf "<ul><li>Telegram</li></ul>\n"
+		fi
+		if [[ -n "$MQTT_URL" ]]; then
+			printf "<ul><li>MQTT broker at %s</li></ul>\n" "$MQTT_URL"
+		fi
+		if [[ -n "$RSS_SITELINK" ]]; then
+			printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
+		fi
 	)"
 	template_replace "##NOTIFICATIONS##" "$notifhtml"
 
@@ -441,7 +448,6 @@ template_replace "##DIST##" "$DIST"
 template_replace "##DISTUNIT##" "$DISTUNIT"
 template_replace "##ALTUNIT##" "$ALTUNIT"
 template_replace "##ALTREF##" "$ALTREF"
-template_replace "##RSS##" "$RSSURL"
 template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")"
 template_replace "##TRACKURL##" "$TRACKURL"
 template_replace "##LATFUDGED##" "$LATFUDGED"
