@@ -67,7 +67,7 @@ if [[ -z "$TRACKSERVICE" ]] || [[ "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
 elif [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then
   TRACKURL="flightaware"
 elif [[ -n "$TRACKSERVICE" ]]; then
-  TRACKURL="base_domain=$(sed -E 's|^(https?://)?([^/]+).*|\2|' <<< "$TRACKSERVICE")"
+  TRACKURL="$(sed -E 's|^(https?://)?([^/]+).*|\2|' <<< "$TRACKSERVICE")"
 else
   TRACKURL="globe.adsbexchange.com"
 fi
