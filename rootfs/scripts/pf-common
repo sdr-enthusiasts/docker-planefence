@@ -1,0 +1,87 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001
+# -----------------------------------------------------------------------------------
+# Copyright 2025 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/docker-planefence/
+#
+# This package may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+#
+# Common functions for Planefence / Plane-Alert
+
+source /scripts/common
+
+debug_print() {
+    local currenttime
+    if [[ -z "$execstarttime" ]]; then
+      execstarttime="$(date +%s.%3N)"
+      execlaststeptime="$execstarttime"
+    fi
+    currenttime="$(date +%s.%3N)"
+    if chk_enabled "$DEBUG"; then 
+      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+    fi
+    execlaststeptime="$currenttime"
+}
+
+# shellcheck disable=SC2120
+LOCK_RECORDS() {
+    if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    while :; do
+      starttime="$(date +%s)"
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
+    done
+  fi
+  touch "/tmp/.records.lock"
+}
+
+UNLOCK_RECORDS() {
+  rm -f "/tmp/.records.lock"
+}
+
+READ_RECORDS() {
+  local TODAY="${TODAY:-$(date %y%m%d)}"
+  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
+
+  if [[ ! -f "$RECORDSFILE" ]]; then 
+    debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - exiting!"
+    exit 1
+  fi
+
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    while :; do
+      starttime="$(date +%s)"
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
+    done
+  fi
+
+  # shellcheck disable=SC1090
+  source "$RECORDSFILE"
+  # shellcheck disable=SC2034
+  declare -gA records # needs to be done to ensure that the records array is available outside the function
+}
+
+WRITE_RECORDS() {
+
+  local TODAY="${TODAY:-$(date %y%m%d)}"
+  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
+
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+  if [[ -f "/tmp/.records.lock" ]]; then
+    while :; do
+      starttime="$(date +%s)"
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
+    done
+  fi
+
+  LOCK_RECORDS
+  declare -p records > "$RECORDSFILE"
+  UNLOCK_RECORDS
+}
