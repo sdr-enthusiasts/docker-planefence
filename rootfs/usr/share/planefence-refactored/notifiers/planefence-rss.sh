@@ -41,32 +41,11 @@ if [[ -n "$SITE_LINK" ]] && [[ "${SITE_LINK: -1}" != "/" ]]; then SITE_LINK="${S
 
 # define the RECORDSFILE with the records assoc array
 RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
-source /scripts/common
-
-
+source /scripts/pf-common
 
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS
 # -----------------------------------------------------------------------------------
-
-
-debug_print() {
-    local currenttime
-    if [[ -z "$execstarttime" ]]; then
-      execstarttime="$(date +%s.%3N)"
-      execlaststeptime="$execstarttime"
-    fi
-    currenttime="$(date +%s.%3N)"
-    if chk_enabled "$DEBUG"; then 
-      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
-    fi
-    execlaststeptime="$currenttime"
-}
-
-# Function to encode special characters for XML
-xml_encode() {
-    echo "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g'
-}
 
 # Function to generate RSS feed for a specific CSV file
 generate_rss() {

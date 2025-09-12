@@ -1,5 +1,4 @@
-#!/command/with-contenv bash
-#shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001
+# shellcheck shell=bash disable=SC1091,SC2034,SC2154
 # -----------------------------------------------------------------------------------
 # Copyright 2025 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -10,8 +9,13 @@
 # -----------------------------------------------------------------------------------
 #
 # Common functions for Planefence / Plane-Alert
+# To be sourced in at the beginning of other bash scripts - not a stand-alone file
 
 source /scripts/common
+
+MAXWAITTIME=300   # max time we'll wait for the records lock to expire
+
+declare -gA records
 
 debug_print() {
     local currenttime
@@ -29,12 +33,14 @@ debug_print() {
 # shellcheck disable=SC2120
 LOCK_RECORDS() {
     if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
-  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    debug_print "Waiting for records.lock to become unlocked..."
+    # wait until the lock is gone, or 120 seconds (whichever is shorter)
     while :; do
       starttime="$(date +%s)"
       sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
+    debug_print "Records.lock unlocked. Continuing..."
   fi
   touch "/tmp/.records.lock"
 }
@@ -48,23 +54,26 @@ READ_RECORDS() {
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
-    debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - exiting!"
-    exit 1
+    debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
+    declare -gA records=()
+    records[maxindex]=-1
+    return
   fi
 
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    debug_print "Waiting for records.lock to become unlocked..."
     while :; do
       starttime="$(date +%s)"
       sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
+    debug_print "Records.lock unlocked. Continuing..."
   fi
 
   # shellcheck disable=SC1090
   source "$RECORDSFILE"
-  # shellcheck disable=SC2034
-  declare -gA records # needs to be done to ensure that the records array is available outside the function
+
 }
 
 WRITE_RECORDS() {
@@ -72,16 +81,37 @@ WRITE_RECORDS() {
   local TODAY="${TODAY:-$(date %y%m%d)}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
-  # wait until the lock is gone, or 120 seconds (whichever is shorter)
-  if [[ -f "/tmp/.records.lock" ]]; then
-    while :; do
-      starttime="$(date +%s)"
-      sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > 120 )); then break; fi
-    done
-  fi
-
-  LOCK_RECORDS
+  LOCK_RECORDS ignore-lock
   declare -p records > "$RECORDSFILE"
+  sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
   UNLOCK_RECORDS
 }
+
+DISTUNIT="mi"
+ALTUNIT="ft"
+if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
+	case "$(grep "^distanceunit=" "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" |sed "s/distanceunit=//g")" in
+		nauticalmile)
+		DISTUNIT="nm"
+    TO_METER=1852
+		;;
+		kilometer)
+		DISTUNIT="km"
+		TO_METER=1000
+		;;
+		mile)
+		DISTUNIT="mi"
+		TO_METER=1609
+		;;
+		meter)
+		DISTUNIT="m"
+		TO_METER=1
+	esac
+	case "$(grep "^altitudeunit=" "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" |sed "s/altitudeunit=//g")" in
+		feet)
+		ALTUNIT="ft"
+		;;
+		meter)
+		ALTUNIT="m"
+	esac
+fi

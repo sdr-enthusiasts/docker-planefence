@@ -37,7 +37,7 @@ execlaststeptime="$execstarttime"
 DEBUG=true
 
 ##
-source /scripts/common
+source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 # ==========================
@@ -75,19 +75,6 @@ fi
 # ==========================
 # Functions
 # ==========================
-
-debug_print() {
-    local currenttime
-    if [[ -z "$execstarttime" ]]; then
-      execstarttime="$(date +%s.%3N)"
-      execlaststeptime="$execstarttime"
-    fi
-    currenttime="$(date +%s.%3N)"
-    if chk_enabled "$DEBUG"; then 
-      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
-    fi
-    execlaststeptime="$currenttime"
-}
 
 ICAO2TAIL() {
   local icao="$1"
@@ -364,19 +351,14 @@ debug_print "Hello. Starting $0"
 
 if [[ "$1" == "reset" ]]; then
   debug_print "Resetting records"
-  rm -f "$LASTSOCKETRECFILE" "$RECORDSFILE" "$CSVOUT" "$JSONOUT"
+  rm -f "$LASTSOCKETRECFILE" "$RECORDSFILE" "$CSVOUT" "$JSONOUT" "/tmp/.records.lock"
   unset records
   declare -A records 
   records[maxindex]="-1"
 fi
 
 debug_print "Getting $RECORDSFILE"
-if [[ -f "$RECORDSFILE" ]]; then
-    source "$RECORDSFILE"
-else
-    declare -A records=()
-    records[maxindex]=-1
-fi
+READ_RECORDS
 
 debug_print "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -611,7 +593,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   # Save state
   # ==========================
   echo "${socketrecords[0]}" > "$LASTSOCKETRECFILE"
-  declare -p records > "$RECORDSFILE"
+  WRITE_RECORDS ignore-lock
   debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
 
   # ==========================

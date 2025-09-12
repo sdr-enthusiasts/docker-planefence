@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
-# shellcheck disable=SC1091,SC2154,SC2155
+# shellcheck disable=SC1091,SC2034,SC2154,SC2155
 #
 # #-----------------------------------------------------------------------------------
 # PF-CREATE-HTML.SH
@@ -41,18 +41,6 @@ DEBUG=true
 # -----------------------------------------------------------------------------------
 
 # First define a bunch of functions:
-debug_print() {
-    local currenttime
-    if [[ -z "$execstarttime" ]]; then
-      execstarttime="$(date +%s.%3N)"
-      execlaststeptime="$execstarttime"
-    fi
-    currenttime="$(date +%s.%3N)"
-    if chk_enabled "$DEBUG"; then 
-      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
-    fi
-    execlaststeptime="$currenttime"
-}
 
 template_replace() {
 	# Replace instance of $1 with $2 in the template variable
@@ -376,37 +364,6 @@ if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && ((
 	rm -f /tmp/add_delete.uuid.used
 fi
 uuid="$(</tmp/add_delete.uuid)"
-
-
-# Get DISTANCE unit:
-DISTUNIT="mi"
-ALTUNIT="ft"
-if [[ -f "$SOCKETCONFIG" ]]; then
-	case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
-		nauticalmile)
-		DISTUNIT="nm"
-    TO_METER=1852
-		;;
-		kilometer)
-		DISTUNIT="km"
-		TO_METER=1000
-		;;
-		mile)
-		DISTUNIT="mi"
-		TO_METER=1609
-		;;
-		meter)
-		DISTUNIT="m"
-		TO_METER=1
-	esac
-	case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
-		feet)
-		ALTUNIT="ft"
-		;;
-		meter)
-		ALTUNIT="m"
-	esac
-fi
 
 #
 # Determine the user visible longitude and latitude based on the "fudge" factor we need to add:
