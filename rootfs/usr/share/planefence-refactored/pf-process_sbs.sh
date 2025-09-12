@@ -609,7 +609,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     for ((idx=0; idx<records[maxindex]; idx++)); do
         csv="$idx,"
         for key in "${keys[@]}"; do
-            csv+="${records["$idx":$key]},"
+            csv+="$(csv_encode "${records["$idx":$key]}"),"
         done
         echo "${csv:0:-1}"
     done
@@ -628,10 +628,7 @@ if (( ${#socketrecords[@]} > 0 )); then
         sep=","
         keysep=""
         for key in "${keys[@]}"; do
-            val=${records["$idx":$key]}
-            # Escape quotes and backslashes for JSON safety
-            val=${val//\\/\\\\}
-            val=${val//\"/\\\"}
+            val="$(encode_json "${records["$idx":$key]}")"
             printf '%s "%s":"%s"' "$keysep" "$key" "$val"
             keysep=","
         done

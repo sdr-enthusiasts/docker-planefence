@@ -50,7 +50,7 @@ UNLOCK_RECORDS() {
 }
 
 READ_RECORDS() {
-  local TODAY="${TODAY:-$(date %y%m%d)}"
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
@@ -78,7 +78,7 @@ READ_RECORDS() {
 
 WRITE_RECORDS() {
 
-  local TODAY="${TODAY:-$(date %y%m%d)}"
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   LOCK_RECORDS ignore-lock
@@ -86,6 +86,46 @@ WRITE_RECORDS() {
   sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
   UNLOCK_RECORDS
 }
+
+# Function to encode special characters for XML
+xml_encode() {
+    echo "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g'
+}
+
+json_encode() {
+  local s=${1-}
+  case "$s" in
+    (*[\"\\$'\n'$'\r'$'\t'$'\b'$'\f']*) ;; 
+    (*) printf '%s' "$s"; return ;;
+  esac
+
+  # escape backslash and quote with sed, then map controls with tr
+  printf '%s' "$s" | sed -u -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+    | tr '\b\f\n\r\t' '\\b\\f\\n\\r\\t'
+}
+
+csv_encode() {
+  local s
+  s=$1
+
+  # Quick safe-return for empty string
+  if [ -z "${s+set}" ] || [ "$s" = "" ]; then
+    printf '%s' "$s"
+    return
+  fi
+
+  # Needs quoting if contains comma, double-quote, newline, CR, or leading/trailing space
+  case "$s" in
+    *[,$'\n'$'\r'"\""]* ) ;;
+    [[:space:]]*|*'[[:space:]]' ) ;;  # fall through to quoting
+    * ) printf '%s' "$s"; return ;;
+  esac
+
+  # Double internal quotes per RFC 4180
+  s=${s//\"/\"\"}
+  printf '"%s"' "$s"
+}
+
 
 DISTUNIT="mi"
 ALTUNIT="ft"

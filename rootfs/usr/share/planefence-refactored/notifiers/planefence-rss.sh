@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
-#shellcheck disable=SC1091,SC2154
+#shellcheck disable=SC1091,SC2154,SC2034
 # planefence-rss.sh
 # A script to generate RSS feeds from Planefence CSV files
 #
