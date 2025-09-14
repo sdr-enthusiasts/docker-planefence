@@ -119,8 +119,8 @@ fi
 for ((idx=0; idx<records[maxindex]; idx++)); do
 
   # Skip if the record is not complete or if a notification was already sent
-  if ! chk_enabled "${records["$idx":complete]}" || chk_enabled "${records["$idx":mqtt:complete]}"; then continue; fi
-  if generate_mqtt $idx; then records["$idx":mqtt:complete]=true; fi
+  if ! chk_enabled "${records["$idx":complete]}" || chk_enabled "${records["$idx":mqtt:notified]}"; then continue; fi
+  if generate_mqtt $idx; then records["$idx":mqtt:notified]=true; fi
 done
 
 ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"

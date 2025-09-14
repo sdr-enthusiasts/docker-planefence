@@ -1,0 +1,222 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2015,SC2164,SC1090,SC2154,SC1091
+#---------------------------------------------------------------------------------------------
+# Copyright (C) 2022-2025, Ramon F. Kolb (kx1t)
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+#---------------------------------------------------------------------------------------------
+# This script sends a Discord notification
+
+source /scripts/pf-common
+
+READ_RECORDS
+
+for (( idx=0; idx<=records[maxindex]; i++ )); do
+
+  # Don't notify if the record is not complete or if notification has been sent already
+  if ! chk_enabled "${records["$idx":complete]}" || chk_enabled "${records["$idx":discord:notified]}"; then continue; fi
+
+  #shellcheck disable=SC2001
+  if [[ "${*:2}" =~ .*distance=.* ]]; then
+    notify_distance="$(sed 's|^.*distance=\([0-9.]*\).*$|\1|g' <<< "${*:2}")"
+  else
+    unset notify_distance
+  fi
+
+  #shellcheck disable=SC2001
+  if [[ "${*:2}" =~ .*timing=.* ]]; then
+    notify_timing="$(sed 's|^.*timing=\([0-9.]*\).*$|\1|g' <<< "${*:2}")"
+  else
+    unset notify_timing
+  fi
+
+  #shellcheck disable=SC2001
+  if [[ "${*:2}" =~ .*tropoalert=.* ]]; then
+    notify_tropo=true
+    notif_json="${notif_json//##TITLE##/TropoAlert}"
+  else
+    unset notify_tropo
+    notif_json="${notif_json//##TITLE##/VesselAlert}"
+  fi
+
+  if [[ -z "${DISCORD_WEBHOOKS}" ]]; then
+    "${s6wrap[@]}" echo "[ERROR] DISCORD_WEBHOOKS not defined. Cannot send a Discord notification"
+    exit 1
+  fi
+
+  if [[ -z "${DISCORD_NAME}" ]]; then
+    "${s6wrap[@]}" echo "[ERROR] DISCORD_NAME not defined. Cannot send a Discord notification"
+    exit 1
+  fi
+
+  readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
+
+  # First do some clean up
+  if [[ -n "${VESSELS[$1:shipname]}" ]]; then
+    VESSELS[$1:shipname]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:shipname]}")"
+  fi
+  if [[ -n "${VESSELS[$1:destination]}" ]]; then
+    VESSELS[$1:destination]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-\<\>]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:destination]}")"
+  fi
+
+  # If a screenshot exists, then make sure we'll include it:
+  if [[ -f "${IMAGECACHE}/screenshots/$1.jpg" ]]; then
+    SCREENSHOTCURL="-F file1=@${IMAGECACHE}/screenshots/$1.jpg"
+    notif_json="${notif_json//##SCREENSHOTFILE##/$1.jpg}"
+    notif_json="${notif_json//##SCRSHT--/}"
+    notif_json="${notif_json//--SCRSHT##/}"
+    "${s6wrap[@]}" echo "[INFO] Discord notification for $1 (${VESSELS[$1:shipname]}) - screenshot found"
+  else
+    SCREENSHOTCURL=""
+    notif_json="${notif_json//##SCRSHT--*---SCRSHT##/}"
+    "${s6wrap[@]}" echo "[INFO] Discord notification for $1 (${VESSELS[$1:shipname]}) - no screenshot found"
+  fi
+
+  # Add a Map URL if configured:
+  [[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" == "http" ]] && NOTIFICATION_MAPURL="${NOTIFICATION_MAPURL}?mmsi=${VESSELS[$1:mmsi]}"
+  [[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" != "http" ]] && NOTIFICATION_MAPURL="${AIS_URL}?mmsi=${VESSELS[$1:mmsi]}"
+  if [[ -n "${NOTIFICATION_MAPURL}" ]]; then
+    notif_json="${notif_json//##STNMAP##/${NOTIFICATION_MAPURL}}"
+    notif_json="${notif_json//##SM--/}"
+    notif_json="${notif_json//--SM##/}"
+  else
+    notif_json="${notif_json//##SM--*--SM##/}"
+  fi
+
+  # Now replace a bunch of parameters in the template:
+  notif_json="${notif_json//##USER##/${DISCORD_NAME}}"
+
+  {
+    description=""
+    if [[ -n "${notify_tropo}" ]]; then
+      description+="TropoAlert - Long Distance Atmospheric Propagation: $(bc -l <<< "scale=1; ${VESSELS[$1:distance]} / 1") nm "
+    else
+      [[ -z "${VESSELS[$1:notification:last]}" ]] && description+="${NOTIF_TERM[NEW2]} " || description+="${NOTIF_TERM[AGAIN]} "
+      [[ -n "${VESSELS[$1:shipname]}" ]] && description+="${NOTIF_TERM[SHIP]} ${VESSELS[$1:shipname]//_/ } " || description+="${NOTIF_TERM[SHIP]} $1 "
+      [[ -n "${notify_distance}" ]] && description+="${NOTIF_TERM[ISMOVING]} " || description+="${NOTIF_TERM[ISSEENON]} "
+    fi
+    description+="$(date +"%R %Z")"
+    notif_json="${notif_json//##DESCRIPTION##/${description}}"
+  }
+
+  [[ -n "${DISCORD_AVATAR_URL}" ]] && notif_json="${notif_json//##AVATAR##/${DISCORD_AVATAR_URL}}" || notif_json="${notif_json//\"avatar_url\": \"##AVATAR##\",/}"
+
+  notif_json="${notif_json//##MMSI##/$1}"
+
+  notif_json="${notif_json//##VESSELNAME##/${VESSELS[$1:shipname]//_/ }}"
+
+  notif_json="${notif_json//##CALLSIGN##/${VESSELS[$1:callsign]}}"
+
+  {
+    type="${SHIPTYPE[${VESSELS[$1:shiptype]}]}"
+    notif_json="${notif_json//##TYPE##/${type//#/}}"
+  }
+
+  {
+    if chk_enabled "$USE_FRIENDLY_DESTINATION" && [[ -n "${VESSELS[$1:destination:friendly]}" ]]; then
+      notif_json="${notif_json//##DESTINATION##/${VESSELS[$1:destination:friendly]//_/ }}"
+    else
+      notif_json="${notif_json//##DESTINATION##/${VESSELS[$1:destination]//_/ }}"
+    fi
+  }
+
+  {
+    flag="${COUNTRY[${VESSELS[$1:country]}]}"
+    notif_json="${notif_json//##FLAG##/${flag}}"
+  }
+
+  notif_json="${notif_json//##COUNT##/${VESSELS[$1:count]}}"
+
+  {
+    printf -v signal -- "%.1f" "${VESSELS[$1:level]}"
+    notif_json="${notif_json//##SIGNAL##/${signal}}"
+  }
+
+  {
+    status="${SHIPSTATUS[${VESSELS[$1:status]}]}"
+    status="${status#*#}";
+    status="${status//_/ }";
+    # [[ -z "${VESSELS[$1:notification:last]}" ]] && status+=" #New"
+    # [[ "${notify_timing}" == "true" ]] && [[ -n "${VESSELS[$1:notification:last]}" ]] && status+=" #SeenBefore"
+    # [[ -n "${notify_distance}" ]] && status+=" #OnTheMove"
+    notif_json="${notif_json//##STATUS##/${status}}"
+  }
+
+  {
+    if [[ -n "${notify_distance}" ]] && [[ -n "${VESSELS[$1:speed]}" ]]; then
+      printf -v speed -- "%.1f kts -  ${NOTIF_TERM[DIST_SINCE_LAST]}" "${VESSELS[$1:speed]:-0}" "${notify_distance}"
+    else
+      printf -v speed -- "%.1f kts" "${VESSELS[$1:speed]:-0}"
+    fi
+    [[ -z "${VESSELS[$1:speed]}" ]] && speed=""
+    notif_json="${notif_json//##SPEED##/${speed}}"
+  }
+
+  [[ "${VESSELS[$1:heading]}" != "null" ]] && notif_json="${notif_json//##HEADING##/${VESSELS[$1:heading]} deg}" || notif_json="${notif_json//##HEADING##/--}"
+
+  {
+    timestamp="$(date -d @$(( $(date +%s) - ${VESSELS[$1:last_signal]} )) +"%Y-%m-%dT%H:%M:%S%z")"
+    notif_json="${notif_json//##TIMESTAMP##/${timestamp}}"
+  }
+
+  if [[ -n "${VESSELS[$1:lat]}" ]] && [[ -n "${VESSELS[$1:lon]}" ]] && [[ -n "$LAT" ]] && [[ -n "$LON" ]]; then
+    distance="$(bc -l <<< "scale=1; $(distance "${VESSELS[$1:lat]}" "${VESSELS[$1:lon]}" "$LAT" "$LON") / 1")"
+    notif_json="${notif_json//##DISTANCE##/${distance}}"
+    notif_json="${notif_json//##HASDIST--/}"
+    notif_json="${notif_json//--HASDIST##/}"
+  else
+    notif_json="${notif_json//##HASDIST--*--HASDIST##/}"
+  fi
+
+  # replace " " and "" by "--" to appease Discord's weird restriction on empty and almost empty strings
+  notif_json="${notif_json//\" \"/\"--\"}"
+  notif_json="${notif_json//\"\"/\"--\"}"
+
+  # make the JSON object into a single line:
+  notif_json_org="$notif_json"
+  if ! notif_json="$(jq -c . <<< "${notif_json}")"; then 
+    "${s6wrap[@]}" echo "[ERROR] JSON error for $1 (${VESSELS[$1:shipname]}). JSON is invalid: <!-->${notif_json_org}<-->"
+  fi
+
+  # Now send the Discord notification:
+  #shellcheck disable=SC2086
+  for url in "${webhooks[@]}"; do
+    url="${url//$'\n'/}"    # remove any stray newlines from the URL
+    response="$(curl -sSL ${SCREENSHOTCURL} -F "payload_json=${notif_json}" ${url} 2>&1)"
+
+    # check if there was an error
+    result="$(jq '.id' <<< "${response}" 2>/dev/null | xargs)"
+    if [[ "${result}" != "null" ]]; then
+      "${s6wrap[@]}" echo -n "[INFO] Discord post for $1 (${VESSELS[$1:shipname]}) generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
+      [[ -z "${VESSELS[$1:notification:last]}" ]] && echo -n " #NEW "
+      #shellcheck disable=SC2154
+      [[ -n "${notify_timing}" ]] && [[ -n "${VESSELS[$1:notification:last]}" ]] && echo -n " #OLD "
+      [[ -n "${notify_distance}" ]] && echo -n " #ONTHEMOVE"
+      echo ""
+    else
+      "${s6wrap[@]}" echo "[ERROR] Discord post error for $1 (${VESSELS[$1:shipname]}). Discord returned this error: ${response}"
+      notification_error="true"
+    fi
+  done
+
+  if [[ "$notification_error" != "true" ]]; then
+    # Update the Assoc Array with the latest values:
+    VESSELS[$1:notification:lat]="${VESSELS[$1:lat]}"
+    VESSELS[$1:notification:lon]="${VESSELS[$1:lon]}"
+    VESSELS[$1:notification:last]="$(date +%s)"
+    VESSELS[$1:notification:discord]="true"
+
+    source /usr/share/vesselalert/save_databases
+  fi
+
+done

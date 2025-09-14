@@ -190,6 +190,38 @@ GET_PS_PHOTO () {
 	fi
 }
 
+GET_SCREENSHOT () {
+	# Function to get a screenshot
+	# Usage: GET_PS_PHOTO index 
+  # returns file path to screenshot if successful, or empty if no screenshot was captured
+  
+  local idx="$1"
+  local screenfile="/usr/share/planefence/persist/planepix/cache/screenshot-${records["$idx":icao]}.jpg"
+
+  if [[ -z "$idx" ]] || ! chk_enabled "${records["$idx":complete]}"; then return; fi
+
+  # check screenshot already exists and if we can use the cached screenshot - creation time must be later than FIRSTSEEN but earlier than LASTSEEN+COLLAPSEWITHIN
+  if [[ -f "$screenfile" ]]; then
+    screentime="$(stat -c %W -- "$screenfile")"
+    if (( screentime >= ${records["$idx":firstseen]} )) || (( screentime <= ${records["$idx":firstseen]} + COLLAPSEWITHIN )); then
+      echo "$screenfile"
+      records["$idx":screenshot_checked]=true
+      return
+    fi
+  fi
+  # get new screenshot
+  if curl -s -L --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
+    echo "$screenfile"
+    records["$idx":screenshot_checked]=true
+    return
+  fi
+
+  # remove any leftovers and return nothing
+  rm -f "$screenfile"
+  records["$idx":screenshot_checked]=true
+  return
+}
+
 GET_NOISEDATA () {
   # Get noise data from the remote server
   # It returns the average values over the specified time range
