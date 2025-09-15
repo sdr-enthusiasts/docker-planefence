@@ -404,35 +404,41 @@ if [[ -n $REMOTENOISE ]]; then
   curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
-debug_print "Got noiselist. Collecting new records"
+debug_print "Collecting new records"
 # ==========================
 # Collect new lines
 # ==========================
-readarray -t socketrecords <<< "$(
-    { if [[ -f $LASTSOCKETRECFILE ]]; then
-        read -r LASTPROCESSEDLINE < "$LASTSOCKETRECFILE"
-        lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
+if [[ -f "$LASTSOCKETRECFILE" ]]; then
+  read -r LASTPROCESSEDLINE < "$LASTSOCKETRECFILE"
+  lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
+fi
 
-        # Check if last run was yesterday
-        if [[ "$(date -d "$lastdate" +%y%m%d)" == "$YESTERDAY" ]]; then
-            # Grab remainder of yesterday + all of today
-            { debug_print "Last processed line was from yesterday ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of yesterday's file and all of today's file"
-              grep -A9999999 -F "$LASTPROCESSEDLINE" "$YESTERDAYFILE" 2>/dev/null || true
-              cat "$TODAYFILE"
-            }
-        else            # Just grab remainder of today
-          debug_print "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
-          grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
-        fi
+nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)"
+records[totallines]="$(( records[totallines] + nowlines ))"
+
+readarray -t socketrecords <<< "$(
+    { if [[ -n "$LASTPROCESSEDLINE" ]]; then
+      # Check if last run was yesterday
+      if [[ "$(date -d "$lastdate" +%y%m%d)" == "$YESTERDAY" ]]; then
+          # Grab remainder of yesterday + all of today
+          { debug_print "Last processed line was from yesterday ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of yesterday's file and all of today's file"
+            grep -A9999999 -F "$LASTPROCESSEDLINE" "$YESTERDAYFILE" 2>/dev/null || true
+            cat "$TODAYFILE"
+          }
+      else            # Just grab remainder of today
+        debug_print "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
+        grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
+      fi
     else
-        # First run: all of today’s file
-        debug_print "No last processed line found, so grabbing all of today's file"
+      # First run: all of today’s file
+      debug_print "No last processed line found, so grabbing all of today's file"
         cat "$TODAYFILE"
     fi; } \
       | tac \
       | grep -v -i -f "$IGNORELIST" 2>/dev/null \
       | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt { print }'
   )"
+
 debug_print "Got ${#socketrecords[@]} records that are within $DIST distance and $MAXALT altitude. Initial processing..."
 
 # ==========================
@@ -604,6 +610,12 @@ if (( ${#socketrecords[@]} > 0 )); then
           records["$idx":noisegraph_checked]=true
     fi
 
+    # get Nominating location
+    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":nominatim_checked]}"; then
+      records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
+      records["$idx":nominatim_checked]=true
+    fi
+
   done
 
   if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
@@ -633,7 +645,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   # ==========================
 
   # shellcheck disable=SC2207
-  keys=($(printf '%s\n' "${!records[@]}" | grep -v "heatmap" | awk -F'[:\\]]' '!seen[$2]++ {print $2}' | sort -u))
+  keys=($(printf '%s\n' "${!records[@]}" | awk -F'[:\\]]' '!seen[$2]++ && !/heatmap/ {print $2}' | sort -u))
   printf -v csvindex "%s," "${keys[@]}"; csvindex="${csvindex:0:-1}"
 
   {
@@ -645,9 +657,7 @@ if (( ${#socketrecords[@]} > 0 )); then
         done
         echo "${csv:0:-1}"
     done
-  } > "$CSVOUT"
-
-  debug_print "Wrote $CSVOUT"
+  } > "$CSVOUT" &
 
   # ==========================
   # Emit JSON snapshot
@@ -660,15 +670,17 @@ if (( ${#socketrecords[@]} > 0 )); then
         sep=","
         keysep=""
         for key in "${keys[@]}"; do
-            val="$(encode_json "${records["$idx":$key]}")"
+            val="$(json_encode "${records["$idx":$key]}")"
             printf '%s "%s":"%s"' "$keysep" "$key" "$val"
             keysep=","
         done
         echo -e "\n}"
     done
     echo "]"
-  } > "$JSONOUT"
-  debug_print "Wrote $JSONOUT"
+  } > "$JSONOUT" &
+
+  wait $!
+  debug_print "Wrote $CSVOUT and $JSONOUT"
 
 fi
 

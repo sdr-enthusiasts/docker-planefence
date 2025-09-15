@@ -210,7 +210,7 @@ td, table.dataTable tbody td {
         blur: 11,
         attribution: "<a href=https://github.com/sdr-enthusiasts/docker-planefence target=_blank>docker-planefence</a>"
         }).addTo(map);
-    var circle = L.circle([ parseFloat("##LATFUDGED##"), parseFloat("##LONFUDGED")], {
+    var circle = L.circle([ parseFloat("##LATFUDGED##"), parseFloat("##LONFUDGED##")], {
         color: 'blue',
         fillColor: '#f03',
         fillOpacity: 0.1,

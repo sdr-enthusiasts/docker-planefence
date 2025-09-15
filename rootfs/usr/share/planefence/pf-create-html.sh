@@ -24,7 +24,7 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
-source /scripts/common
+source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 # -----------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ CREATEHTMLTABLE () {
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
 
 			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image_thumblink]}" ]]; then
-				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image_weblink]}" "${records["$idx":image_thumblink]}"
+				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image_link]}" "${records["$idx":image_thumblink]}"
 			elif chk_enabled "${SHOWIMAGES}"; then
 				printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"
 			fi
@@ -372,6 +372,7 @@ printf -v LONFUDGED "%.${FUDGELOC:-3}f" "$LON"
 
 # Get the altitude reference:
 if [[ -n "$ALTCORR" ]]; then ALTREF="AGL"; else ALTREF="MSL"; fi
+debug_print "DIST is $DIST $DISTUNIT; Conv to meters is $TO_METER"
 DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 
 # -----------------------------------------------------------------------------------
@@ -409,6 +410,7 @@ template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")"
 template_replace "##TRACKURL##" "$TRACKURL"
 template_replace "##LATFUDGED##" "$LATFUDGED"
 template_replace "##LONFUDGED##" "$LONFUDGED"
+template_replace "##TODAY##" "$TODAY"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then

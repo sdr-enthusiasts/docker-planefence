@@ -109,7 +109,7 @@ csv_encode() {
   s=$1
 
   # Quick safe-return for empty string
-  if [ -z "${s+set}" ] || [ "$s" = "" ]; then
+  if [[ -z "${s+set}" ]] || [[ "$s" = "" ]]; then
     printf '%s' "$s"
     return
   fi
@@ -129,6 +129,7 @@ csv_encode() {
 
 DISTUNIT="mi"
 ALTUNIT="ft"
+TO_METER=1609
 if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 	case "$(grep "^distanceunit=" "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" |sed "s/distanceunit=//g")" in
 		nauticalmile)
