@@ -142,67 +142,62 @@ GET_ROUTE () {
 }
 
 GET_PS_PHOTO () {
-	# Function to get a photo from PlaneSpotters.net
-	# Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-	# if [image|link|thumblink] is omitted, "link" is assumed
-	# image: the path to the thumbnail image on disk
-	# link: a link to the planespotters.net image page (not the image itself!)
-	# thumblink: a link to the thumbnail image at planespotters.net's CDN
+  # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
+  local icao="$1" returntype json link thumb CACHETIME
+  returntype="${2:-link}"; returntype="${returntype,,}"
 
-	local link
-	local json
-	local returntype
-	local thumb
+  # validate
+  case "$returntype" in
+    image) ;;
+    link) ;;
+    thumblink) ;;
+    *) return 1;;
+  esac
 
-	returntype="${2:-link}"
-	returntype="${returntype,,}"
+  $SHOWIMAGES || return 0
 
-	# shellcheck disable=SC2076
-	if [[ ! " image link thumblink " =~ " $returntype " ]]; then
-		return 1
-	fi
+  CACHETIME=$((3 * 24 * 3600))  # 3 days in seconds
 
-	if ! $SHOWIMAGES; then return 0; fi
+  local dir="/usr/share/planefence/persist/planepix/cache"
+  local jpg="$dir/$icao.jpg"
+  local lnk="$dir/$icao.link"
+  local tlnk="$dir/$icao.thumb.link"
+  local na="$dir/$icao.notavailable"
 
-	if [[ -f "/usr/share/planefence/persist/planepix/cache/$1.notavailable" ]]; then
-		return 0
-	fi
-	
-	if [[ "$returntype" == "image" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.jpg" ]]; then
-		#echo in cache
-		echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		return 0
-	elif [[ "$returntype" == "link" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.link" ]]; then
-		#echo in cache
-		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.link")"
-		return 0
-	elif [[ "$returntype" == "thumblink" ]] && [[ -f "/usr/share/planefence/persist/planepix/cache/$1.thumb.link" ]]; then
-		#echo in cache
-		echo "$(<"/usr/share/planefence/persist/planepix/cache/$1.thumb.link")"
-		return 0
-	fi
+  [[ -f "$na" ]] && return 0
 
-	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
-	if json="$(curl -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
-					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
-          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
-				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
-		# If we have a link, let's download the photo
-		curl -fsSL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
-		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
-		if returntype="image"; then echo "/usr/share/planefence/persist/planepix/cache/$1.jpg"
-		elif returntype="link"; then echo "$link"
-		elif returntype="thumblink"; then echo "$thumb"
-		fi
-		return 0
-	else
-		# If we don't have a link, let's clear the cache and return an empty string
-		rm -f "/usr/share/planefence/persist/planepix/cache/$1.*"
-		touch "/usr/share/planefence/persist/planepix/cache/$1.notavailable"
-	fi
+  # cache hits
+  case "$returntype" in
+    image)     if [[ -f "$jpg"  ]] && (( $(date +%s) - $(stat -c %Y -- "$jpg") < CACHETIME )); then printf '%s\n' "$jpg";  return 0; fi ;;
+    link)      if [[ -f "$lnk"  ]] && (( $(date +%s) - $(stat -c %Y -- "$lnk") < CACHETIME )); then cat "$lnk"; return 0; fi ;;
+    thumblink) if [[ -f "$tlnk" ]] && (( $(date +%s) - $(stat -c %Y -- "$tlnk") < CACHETIME )); then cat "$tlnk"; return 0; fi ;;
+  esac
+
+  # fetch
+  if json="$(curl -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+     link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
+     thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
+     [[ -n $link && -n $thumb ]]; then
+
+    curl -fsSL --fail "$thumb" > "$jpg" || :
+    printf '%s\n' "$link"  >"$lnk"
+    printf '%s\n' "$thumb" >"$tlnk"
+
+    case "$returntype" in
+      image)     printf '%s\n' "$jpg"  ;;
+      link)      printf '%s\n' "$link" ;;
+      thumblink) printf '%s\n' "$thumb";;
+    esac
+  else
+    rm -f "$dir/$icao".* 2>/dev/null || :
+    touch "$na"
+  fi
+
+  # do a quick cache cleanup
+  find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
 }
+
+
 
 GET_SCREENSHOT () {
 	# Function to get a screenshot

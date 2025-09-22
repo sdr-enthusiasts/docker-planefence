@@ -97,6 +97,8 @@ CREATEHTMLTABLE () {
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
 
 			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image:thumblink]}" ]]; then
+				# shellcheck disable=SC2030
+				#if [[ "${records["$idx":image:thumblink]}:0:4" == "/usr" ]]; then records["$idx":image:thumblink]="$(<"${records["$idx":image:thumblink]}")"; fi
 				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image:link]}" "${records["$idx":image:thumblink]}"
 			elif chk_enabled "${SHOWIMAGES}"; then
 				printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"

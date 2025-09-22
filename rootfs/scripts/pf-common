@@ -56,7 +56,9 @@ READ_RECORDS() {
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
     debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
-    declare -gA records=() last_idx_for_icao=() lastseen_for_icao=()
+    declare -gA records=()
+    declare -gA last_idx_for_icao=()
+    declare -gA lastseen_for_icao=()
     records[maxindex]=-1
     return
   fi
@@ -83,8 +85,10 @@ WRITE_RECORDS() {
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   LOCK_RECORDS ignore-lock
-  declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
-  declare -p records last_idx_for_icao lastseen_for_icao > "$RECORDSFILE"
+  #declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
+  { declare -p records
+    declare -p last_idx_for_icao
+    declare -p lastseen_for_icao; } > "$RECORDSFILE"
   sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
   debug_print "Records written by $0"
   UNLOCK_RECORDS
