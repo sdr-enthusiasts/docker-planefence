@@ -431,93 +431,93 @@ WRITEHTMLTABLE () {
 				records[$index:notified]=false
 			fi
 			
-			if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET_ROUTE "${records[$index:callsign]}")"; fi
+			if ! chk_disabled "$CHECKROUTE"; then records[$index:route]="$(GET:ROUTE "${records[$index:callsign]}")"; fi
 			if [[ -n "${records[$index:route]}" ]]; then HASROUTE=true; fi
 
 			records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 			records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
 			records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
 			records[$index:distance]="${data[5]//$'\n'/}"
-			records[$index:map_link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
-			records[$index:fa_link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
+			records[$index:map:link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
+			records[$index:fa:link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
 			records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
 			records[$index:owner]="${records[$index:owner]:-unknown}"
-			records[$index:notif_link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
+			records[$index:notif:link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
 			if [[ ${records[$index:callsign]} =~ ^N[0-9][0-9a-zA-Z]+$ ]] && \
 				[[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
 				[[ "${records[$index:icao]:0:1}" == "A" ]]
 			then
-				records[$index:faa_link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
+				records[$index:faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
 			fi
 
 			# get an image links
-			records[$index:image_thumblink]="$(GET_PS_PHOTO "${records[$index:icao]}" thumblink)"
-			records[$index:image_weblink]="$(GET_PS_PHOTO "${records[$index:icao]}" link)"
+			records[$index:image:thumblink]="$(GET_PS:PHOTO "${records[$index:icao]}" thumblink)"
+			records[$index:image:weblink]="$(GET_PS:PHOTO "${records[$index:icao]}" link)"
 		
 			if [[ -n "$REMOTENOISE" ]] && [[ -z "${data[7]//[0-9.$'\n'-]/}" ]]; then
 				# there is sound level information
 				HASNOISE=true
-				records[$index:sound_peak]="${data[7]//$'\n'/}"
-				records[$index:sound_1min]="${data[8]//$'\n'/}"
-				records[$index:sound_5min]="${data[9]//$'\n'/}"
-				records[$index:sound_10min]="${data[10]//$'\n'/}"
-				records[$index:sound_1hour]="${data[11]//$'\n'/}"
-				if [[ -n "${records[$index:sound_peak]}" ]]; then records[$index:sound_loudness]="$(( data[7] - data[11] ))"; fi
-				records[$index:notif_link]="${data[12]//$'\n'/}"
+				records[$index:sound:peak]="${data[7]//$'\n'/}"
+				records[$index:sound:1min]="${data[8]//$'\n'/}"
+				records[$index:sound:5min]="${data[9]//$'\n'/}"
+				records[$index:sound:10min]="${data[10]//$'\n'/}"
+				records[$index:sound:1hour]="${data[11]//$'\n'/}"
+				if [[ -n "${records[$index:sound:peak]}" ]]; then records[$index:sound:loudness]="$(( data[7] - data[11] ))"; fi
+				records[$index:notif:link]="${data[12]//$'\n'/}"
 				{ # get a noise graph if one doesn't exist
 					# $NOISEGRAPHFILE is the full file path, NOISEGRAPHLINK is the subset with the filename only
-					records[$index:noisegraph_file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
-					records[$index:noisegraph_link]="$(basename "${records[$index:noisegraph_file]}")"
+					records[$index:noisegraph:file]="$OUTFILEDIR"/"noisegraph-$(date -d "@${records[$index:firstseen]}" +"%y%m%d-%H%M%S")-${records[$index:icao]}.png"
+					records[$index:noisegraph:link]="$(basename "${records[$index:noisegraph:file]}")"
 					# If no noisegraph exists, create one:
-					if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
+					if [[ ! -f "${records[$index:noisegraph:file]}" ]]; then
 						CREATE_NOISEPLOT "${records[$index:callsign]}" "${records[$index:firstseen]}" "${records[$index:lastseen]}" "${records[$index:icao]}"
-						if [[ ! -f "${records[$index:noisegraph_file]}" ]]; then
-							unset "${records[$index:noisegraph_file]}" "${records[$index:noisegraph_link]}"
+						if [[ ! -f "${records[$index:noisegraph:file]}" ]]; then
+							unset "${records[$index:noisegraph:file]}" "${records[$index:noisegraph:link]}"
 						fi
 					fi
 				}
 				{ # get a spectrogram if one doesn't exist
-					records[$index:spectro_file]="$(CREATE_SPECTROGRAM "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-					if [[ -n "${records[$index:spectro_file]}" ]]; then
-						records[$index:spectro_link]="$(basename "${records[$index:spectro_file]}")"
+					records[$index:spectro:file]="$(CREATE:SPECTROGRAM "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
+					if [[ -n "${records[$index:spectro:file]}" ]]; then
+						records[$index:spectro:link]="$(basename "${records[$index:spectro:file]}")"
 					fi
 				}
 				{ # get a MP3 if one doesn't exist
-				records[$index:mp3_file]="$(CREATE_MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
-				if [[ -n "${records[$index:mp3_file]}" ]]; then
-					records[$index:mp3_link]="$(basename "${records[$index:mp3_file]}")"
+				records[$index:mp3:file]="$(CREATE:MP3 "${records[$index:firstseen]}" "${records[$index:lastseen]}")"
+				if [[ -n "${records[$index:mp3:file]}" ]]; then
+					records[$index:mp3:link]="$(basename "${records[$index:mp3:file]}")"
 				fi
 				}
 				{ # determine loudness background color
-					if [[ -n "${records[$index:sound_loudness]}" ]]; then 
-						records[$index:sound_color]="$RED"
-						if (( ${records[$index:sound_loudness]} <= YELLOWLIMIT )); then records[$index:sound_color]="$YELLOW"; fi
-						if (( ${records[$index:sound_loudness]} <= GREENLIMIT )); then records[$index:sound_color]="$GREEN"; fi
+					if [[ -n "${records[$index:sound:loudness]}" ]]; then 
+						records[$index:sound:color]="$RED"
+						if (( ${records[$index:sound:loudness]} <= YELLOWLIMIT )); then records[$index:sound:color]="$YELLOW"; fi
+						if (( ${records[$index:sound:loudness]} <= GREENLIMIT )); then records[$index:sound:color]="$GREEN"; fi
 					fi
 				}
 			fi
 
 			# get notification service name
 			if "${records[$index:notified]}"; then
-				records[$index:notif_service]="yes"
+				records[$index:notif:service]="yes"
 			else
-				records[$index:notif_service]="no"
+				records[$index:notif:service]="no"
 			fi
-			if [[ -n "${records[$index:notif_link]}" ]]; then
-				if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-					records[$index:notif_service]="MQTT"
-					records[$index:notif_link]=""
-				elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-				elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+			if [[ -n "${records[$index:notif:link]}" ]]; then
+				if [[ "${records[$index:notif:link]}" == "mqtt" ]]; then
+					records[$index:notif:service]="MQTT"
+					records[$index:notif:link]=""
+				elif [[ "${records[$index:notif:link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif:service]="BlueSky"
+				elif [[ "${records[$index:notif:link]:0:13}" == "https://t.me/" ]]; then records[$index:notif:service]="Telegram"
+				elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif:link]}"; then records[$index:notif:service]="Mastodon"
 				fi
-				if [[ -n "${records[$index:notif_link]}" ]]; then
-					if [[ "${records[$index:notif_link]}" == "mqtt" ]]; then
-						records[$index:notif_service]="MQTT"
-						records[$index:notif_link]=""
-					elif [[ "${records[$index:notif_link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif_service]="BlueSky"
-					elif [[ "${records[$index:notif_link]:0:13}" == "https://t.me/" ]]; then records[$index:notif_service]="Telegram"
-					elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif_link]}"; then records[$index:notif_service]="Mastodon"
+				if [[ -n "${records[$index:notif:link]}" ]]; then
+					if [[ "${records[$index:notif:link]}" == "mqtt" ]]; then
+						records[$index:notif:service]="MQTT"
+						records[$index:notif:link]=""
+					elif [[ "${records[$index:notif:link]:0:17}" == "https://bsky.app/" ]]; then records[$index:notif:service]="BlueSky"
+					elif [[ "${records[$index:notif:link]:0:13}" == "https://t.me/" ]]; then records[$index:notif:service]="Telegram"
+					elif grep -qo "$MASTODON_SERVER" <<< "${records[$index:notif:link]}"; then records[$index:notif:service]="Mastodon"
 					fi
 				fi
 			fi
@@ -589,22 +589,22 @@ EOF
 		printf "<tr>\n" >&3
 		printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$index" >&3 # table index number
 
-		if ${SHOWIMAGES} && [[ -n "${records[$index:image_thumblink]}" ]]; then
-			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image_weblink]}" "${records[$index:image_thumblink]}" >&3
+		if ${SHOWIMAGES} && [[ -n "${records[$index:image:thumblink]}" ]]; then
+			printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records[$index:image:weblink]}" "${records[$index:image:thumblink]}" >&3
 		elif ${SHOWIMAGES}; then
 			printf "   <td></td><!-- images enabled but no image file available for this entry -->\n" >&3
 		fi
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map_link]}" "${records[$index:icao]}" >&3 # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map:link]}" "${records[$index:icao]}" >&3 # ICAO
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa_link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa:link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
 
 		if ${HASROUTE}; then 
 			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
 		fi
 
-		if [[ -n "${records[$index:faa_link]}" ]]; then
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa_link]}" "${records[$index:owner]}" >&3
+		if [[ -n "${records[$index:faa:link]}" ]]; then
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa:link]}" "${records[$index:owner]}" >&3
 		else
 			printf "   <td>%s</td><!-- owner -->\n" "${records[$index:owner]}" >&3
 		fi
@@ -619,29 +619,29 @@ EOF
 		# Print the noise values if we have determined that there is data
 		if "$HASNOISE"; then
 			# First the loudness field, which needs a color and a link to a noise graph:
-			if [[ -n "${records[$index:noisegraph_link]}" ]]; then
-				printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records[$index:sound_color]}" "${records[$index:noisegraph_link]}" "${records[$index:sound_loudness]}" >&3
+			if [[ -n "${records[$index:noisegraph:link]}" ]]; then
+				printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records[$index:sound_color]}" "${records[$index:noisegraph:link]}" "${records[$index:sound:loudness]}" >&3
 			else
-				printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records[$index:sound_color]}" "${records[$index:sound_loudness]}" >&3
+				printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records[$index:sound:color]}" "${records[$index:sound:loudness]}" >&3
 			fi
-			if [[ -n "${records[$index:mp3_link]}" ]]; then 
-				printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records[$index:mp3_link]}" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
+			if [[ -n "${records[$index:mp3:link]}" ]]; then 
+				printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records[$index:mp3:link]}" "${records[$index:sound:peak]}" >&3 # print actual value with "dBFS" unit
 			else
-				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records[$index:sound_peak]}" >&3 # print actual value with "dBFS" unit
+				printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records[$index:sound:peak]}" >&3 # print actual value with "dBFS" unit
 			fi
-			printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records[$index:sound_1min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records[$index:sound_5min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records[$index:sound_10min]}" >&3
-			printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records[$index:sound_1hour]}" >&3
-			printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records[$index:spectro_link]}" >&3 # print spectrogram
+			printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records[$index:sound:1min]}" >&3
+			printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records[$index:sound:5min]}" >&3
+			printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records[$index:sound:10min]}" >&3
+			printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records[$index:sound:1hour]}" >&3
+			printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records[$index:spectro:link]}" >&3 # print spectrogram
 		fi
 
 		# Print a notification, if there are any:
 		if "$HASNOTIFS"; then
-				if [[ -n "${records[$index:notif_link]}" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif_link]}" "${records[$index:notif_service]}" >&3
+				if [[ -n "${records[$index:notif:link]}" ]]; then
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records[$index:notif:link]}" "${records[$index:notif:service]}" >&3
 				else
-					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif_service]}" >&3
+					printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records[$index:notif:service]}" >&3
 				fi
 		fi
 

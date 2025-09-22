@@ -40,7 +40,6 @@ SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
 if [[ -n "$SITE_LINK" ]] && [[ "${SITE_LINK: -1}" != "/" ]]; then SITE_LINK="${SITE_LINK}/"; fi
 
 # define the RECORDSFILE with the records assoc array
-RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
 source /scripts/pf-common
 
 # -----------------------------------------------------------------------------------
@@ -49,14 +48,13 @@ source /scripts/pf-common
 
 # Function to generate RSS feed for a specific CSV file
 generate_rss() {
-    local rec_file="$1"
-    local rss_file="$OUTFILEDIR/planefence-$TODAY.rss"
-    
-    # Create RSS header
-    cat > "$rss_file" <<EOF
-<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-<channel>
+  local rss_file="$OUTFILEDIR/planefence-$TODAY.rss"
+  READ_RECORDS
+  # Create RSS header
+  cat > "$rss_file" <<EOF
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
     <title>$(xml_encode "$SITE_TITLE - $TODAY")</title>
     <description>$(xml_encode "$SITE_DESC")</description>
     <link>$(xml_encode "${SITE_LINK:-.}")</link>
@@ -69,60 +67,30 @@ generate_rss() {
     <atom:link href="$(xml_encode "${SITE_LINK}${rss_file##*/}")" rel="self" type="application/rss+xml" />
 EOF
 
-    # Process the records file in reverse order (newest first)
-    if [[ -f "$rec_file" ]]; then
-        # shellcheck disable=SC1090
-        source "$rec_file"  # read the records array from file
-
-        # Get DISTANCE unit:
-        DISTUNIT="mi"
-        ALTUNIT="ft"
-        if [[ -f "$SOCKETCONFIG" ]]; then
-            case "$(grep "^distanceunit=" "$SOCKETCONFIG" |sed "s/distanceunit=//g")" in
-                nauticalmile)
-                DISTUNIT="nm"
-                ;;
-                kilometer)
-                DISTUNIT="km"
-                ;;
-                mile)
-                DISTUNIT="mi"
-                ;;
-                meter)
-                DISTUNIT="m"
-            esac
-            case "$(grep "^altitudeunit=" "$SOCKETCONFIG" |sed "s/altitudeunit=//g")" in
-                feet)
-                ALTUNIT="ft"
-                ;;
-                meter)
-                ALTUNIT="m"
-            esac
-        fi
 
         # Now loop through the detected aircraft:
-        for ((idx=0; idx <= records[maxindex]; idx++)); do
+for ((idx=0; idx <= records[maxindex]; idx++)); do
 
-            if [[ -z "${records["$idx":icao]}" ]]; then continue; fi
-            
-            # Create title and description
-            TITLE="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} detected"
-            DESC="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} was detected within ${records["$idx":distance]} ${DISTUNIT} of the receiver"
-            DESC="${DESC} at altitude ${records["$idx":altitude]} ${ALTUNIT} from $(date -d "@${records["$idx":firstseen]}") to $(date -d "@${records["$idx":lastseen]}")"
-            
-            # Add noise data if available
-            if [[ -n "${records["$idx":sound_peak]}" ]]; then
-                DESC="${DESC}, with peak noise level of ${records["$idx":sound_peak]} dBFS"
-            fi
-            
-            # Create item link - use the tracking URL if available
-            ITEM_LINK="${records["$idx":map_link]:-$SITE_LINK}"
-            
-            # Calculate pub date from LASTSEEN 
-            PUBDATE=$(date -R -d "@${records["$idx":lastseen]}")
-            
-            # Write RSS item
-            cat >> "$rss_file" <<EOF
+  if [[ -z "${records["$idx":icao]}" ]]; then continue; fi
+  
+  # Create title and description
+  TITLE="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} detected"
+  DESC="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} was detected within ${records["$idx":distance]} ${DISTUNIT} of the receiver"
+  DESC="${DESC} at altitude ${records["$idx":altitude]} ${ALTUNIT} from $(date -d "@${records["$idx":firstseen]}") to $(date -d "@${records["$idx":lastseen]}")"
+  
+  # Add noise data if available
+  if [[ -n "${records["$idx":sound:peak]}" ]]; then
+      DESC="${DESC}, with peak noise level of ${records["$idx":sound:peak]} dBFS"
+  fi
+  
+  # Create item link - use the tracking URL if available
+  ITEM_LINK="${records["$idx":map:link]:-$SITE_LINK}"
+  
+  # Calculate pub date from LASTSEEN 
+  PUBDATE=$(date -R -d "@${records["$idx":lastseen]}")
+  
+  # Write RSS item
+  cat >> "$rss_file" <<EOF
     <item>
         <title>$(xml_encode "$TITLE")</title>
         <description>$(xml_encode "$DESC")</description>
@@ -131,28 +99,23 @@ EOF
         <pubDate>$PUBDATE</pubDate>
     </item>
 EOF
-        done
-    fi
+  done
 
-    # Close the RSS feed
-    cat >> "$rss_file" <<EOF
+  # Close the RSS feed
+  cat >> "$rss_file" <<EOF
 </channel>
 </rss>
 EOF
 
-    # Set proper permissions
-    chmod u=rw,go=r "$rss_file"
-    debug_print "RSS feed generated at $rss_file"
+  # Set proper permissions
+  chmod u=rw,go=r "$rss_file"
+  debug_print "RSS feed generated at $rss_file"
 }
 
 
 debug_print "Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
-if [[ -f "$RECORDSFILE" ]]; then
-    generate_rss "$RECORDSFILE"
-    
-    # Create/update the symlink
-    ln -sf "planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
-    # "${s6wrap[@]}" echo "Updated symlink planefence.rss to point to today's feed"
+if generate_rss; then
+  ln -sf "planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
 fi

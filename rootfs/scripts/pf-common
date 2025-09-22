@@ -126,6 +126,54 @@ csv_encode() {
   printf '"%s"' "$s"
 }
 
+template_replace() {
+	# Replace instance of $1 with $2 in $3 which is the template variable
+	# Do this in a safe way that doesn't break on characters in the replacement string
+
+  local template="$3"
+  if [[ -z "$template" ]]; then
+    debug_print "Usage: template_replace search_string replace_string template_string"
+    return 1
+  fi
+
+	if ! grep -q "$1" <(printf '%s\n' "$template"); then
+		debug_print "Can't replace - \"$1\" not found in template"
+		return
+	fi
+
+  while firstpart="$(awk -v pat="$1" '
+		{
+			i = index($0, pat)
+			if (i) {
+				if (i>1) print substr($0,1,i-1)
+				found=1
+				exit
+			}
+			print
+		}
+		END { exit(!found) }' <(printf '%s\n' "$template"))"; do
+		lastpart="$(awk -v pat="$1" '
+			BEGIN { found=0; plen=length(pat) }
+			{
+				if (!found) {
+					i = index($0, pat)
+					if (i) {
+						# print rest of this line after the matched pattern (if any)
+						post = substr($0, i + plen)
+						if (length(post)) print post
+						found = 1
+						next
+					}
+				} else {
+					print
+				}
+			}
+			END { exit(!found) }' <(printf '%s\n' "$template"))"
+
+	  echo "${firstpart}${2}${lastpart}"
+	done
+}
+
 
 DISTUNIT="mi"
 ALTUNIT="ft"

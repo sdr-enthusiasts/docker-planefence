@@ -337,7 +337,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # Check if the ICAO is already in the records and we are within COLLAPSEWITHIN
     if (( records[maxindex] >= 0 )); then
       for ((i=0; i<=records[maxindex]; i++)); do
-        if [[ "${records[$i:icao]}" == "$hex_ident" ]]; then
+        if [[ "${records[$i:icao]}" == "$hex:ident" ]]; then
           # we found an existing record for this plane
           if (( ${records["$i":lastseen]} - seentime <= COLLAPSEWITHIN )); then
             # We found an existing record and we are within COLLAPSEWITHIN seconds
@@ -376,10 +376,10 @@ if (( ${#socketrecords[@]} > 0 )); then
     callsign="${callsign//[[:space:]]/}"  # remove spaces from callsign
     if [[ -n "$callsign" ]]; then
         records["$idx":callsign]="$callsign"  
-        records["$idx":fa_link]="https://flightaware.com/live/modes/$hex_ident/ident/$callsign/redirect"
+        records["$idx":fa:link]="https://flightaware.com/live/modes/$hex_ident/ident/$callsign/redirect"
     fi
 
-    if [[ -z "${records["$idx":map_link]}" ]]; then records["$idx":map_link]="https://globe.adsbexchange.com/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
+    if [[ -z "${records["$idx":map:link]}" ]]; then records["$idx":map:link]="https://globe.adsbexchange.com/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
     records["$idx":firstseen]="$seentime"
     if [[ -z "${records["$idx":lastseen]}" ]]; then records["$idx":lastseen]="$seentime"; fi
     newdist="$(awk "BEGIN { if ($distance < ${records["$idx":distance]:-999999}) print $distance }")"
@@ -397,26 +397,26 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
 
     # Placeholders for later enrichment
-    # records["$idx":notif_discord]=""
-    # records["$idx":notif_mastodon]=""
-    # records["$idx":notif_telegram]=""
-    # records["$idx":notif_bluesky]=""
-    # records["$idx":notif_mqtt]=""
-    # records["$idx":image_thumblink]=""
-    # records["$idx":image_weblink]=""
-    # records["$idx":sound_peak]=""
-    # records["$idx":sound_1min]=""
-    # records["$idx":sound_5min]=""
-    # records["$idx":sound_10min]=""
-    # records["$idx":sound_1hour]=""
-    # records["$idx":sound_loudness]=""
-    # records["$idx":sound_color]=""
-    # records["$idx":noisegraph_file]=""
-    # records["$idx":noisegraph_link]=""
-    # records["$idx":spectro_file]=""
-    # records["$idx":spectro_link]=""
-    # records["$idx":mp3_file]=""
-    # records["$idx":mp3_link]=""
+    # records["$idx":notif:discord]=""
+    # records["$idx":notif:mastodon]=""
+    # records["$idx":notif:telegram]=""
+    # records["$idx":notif:bluesky]=""
+    # records["$idx":notif:mqtt]=""
+    # records["$idx":image:thumblink]=""
+    # records["$idx":image:weblink]=""
+    # records["$idx":sound:peak]=""
+    # records["$idx":sound:1min]=""
+    # records["$idx":sound:5min]=""
+    # records["$idx":sound:10min]=""
+    # records["$idx":sound:1hour]=""
+    # records["$idx":sound:loudness]=""
+    # records["$idx":sound:color]=""
+    # records["$idx":noisegraph:file]=""
+    # records["$idx":noisegraph:link]=""
+    # records["$idx":spectro:file]=""
+    # records["$idx":spectro:link]=""
+    # records["$idx":mp3:file]=""
+    # records["$idx":mp3:link]=""
   #debug_time 2.1 "parsing socket30003 line $idx/${records["$idx":icao]}/${records["$idx":callsign]}"
   done
   debug_time 2.1 "parsing socket30003 lines complete. Continuing to add callsigns, routes, and owners."
@@ -425,14 +425,14 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
-      records["$idx":fa_link]="https://flightaware.com/live/modes/$hex_ident/ident/${callsign//[[:space:]]/}/redirect/"
+      records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
     if [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
       echo "DEBUG: owner resolved for $idx - ${records["$idx":callsign]}: ${records["$idx":owner]}"
     fi
     if ! chk_disabled "$CHECKROUTE" && [[ -z ${records["$idx":route]} ]] && [[ -n "${records["$idx":callsign]}" ]]; then
-      records["$idx":route]="$(GET_ROUTE "${records["$idx":callsign]}")"
+      records["$idx":route]="$(GET:ROUTE "${records["$idx":callsign]}")"
     if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
     fi
   done

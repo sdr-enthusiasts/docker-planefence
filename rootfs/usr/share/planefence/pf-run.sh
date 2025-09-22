@@ -45,8 +45,8 @@ pf-process_sbs.sh		# read and process SBS data
 pf-create-html.sh		# create PF HTML page
 
 # Run notifiers scripts in the background
-scripts=( notifiers/send*.sh )
 if compgen -G "notifiers/send*.sh" > /dev/null; then
+	scripts=( notifiers/send*.sh )
   for script in "${scripts[@]}"; do
     if [ -f "$script" ]; then
       bash "$script" || true &

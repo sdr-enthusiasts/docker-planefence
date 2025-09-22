@@ -42,48 +42,6 @@ DEBUG=true
 
 # First define a bunch of functions:
 
-template_replace() {
-	# Replace instance of $1 with $2 in the template variable
-	# Do this in a safe way that doesn't break on characters in the replacement string
-
-	if ! grep -q "$1" <(printf '%s\n' "$template"); then
-		debug_print "Can't replace - \"$1\" not found in template"
-		return
-	fi
-
-  while firstpart="$(awk -v pat="$1" '
-		{
-			i = index($0, pat)
-			if (i) {
-				if (i>1) print substr($0,1,i-1)
-				found=1
-				exit
-			}
-			print
-		}
-		END { exit(!found) }' <(printf '%s\n' "$template"))"; do
-		lastpart="$(awk -v pat="$1" '
-			BEGIN { found=0; plen=length(pat) }
-			{
-				if (!found) {
-					i = index($0, pat)
-					if (i) {
-						# print rest of this line after the matched pattern (if any)
-						post = substr($0, i + plen)
-						if (length(post)) print post
-						found = 1
-						next
-					}
-				} else {
-					print
-				}
-			}
-			END { exit(!found) }' <(printf '%s\n' "$template"))"
-
-	  template="${firstpart}${2}${lastpart}"
-	done
-}
-
 # Function to write the Planefence HTML table
 CREATEHTMLTABLE () {
 
@@ -135,21 +93,21 @@ CREATEHTMLTABLE () {
 			printf "<tr>\n"
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
 
-			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image_thumblink]}" ]]; then
-				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image_link]}" "${records["$idx":image_thumblink]}"
+			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image:thumblink]}" ]]; then
+				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image:link]}" "${records["$idx":image:thumblink]}"
 			elif chk_enabled "${SHOWIMAGES}"; then
 				printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"
 			fi
 
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map_link]}" "${records["$idx":icao]}" # ICAO
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa_link]}" "${records["$idx":callsign]}" # Flight number/tail with FlightAware link
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}" # ICAO
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}" # Flight number/tail with FlightAware link
 
 			if chk_enabled "${records[HASROUTE]}"; then
 				printf "   <td>%s</td><!-- route -->\n" "${records["$idx":route]}" # route
 			fi
 
-			if [[ -n "${records["$idx":faa_link]}" ]]; then
-				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records["$idx":faa_link]}" "${records["$idx":owner]}"
+			if [[ -n "${records["$idx":faa:link]}" ]]; then
+				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":owner]}"
 			else
 				printf "   <td>%s</td><!-- owner -->\n" "${records["$idx":owner]}"
 			fi
@@ -164,30 +122,39 @@ CREATEHTMLTABLE () {
 			# Print the noise values if we have determined that there is data
 			if chk_enabled "${records[HASNOISE]}"; then
 				# First the loudness field, which needs a color and a link to a noise graph:
-				if [[ -n "${records["$idx":noisegraph_link]}" ]]; then
-					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound_color]}" "${records["$idx":noisegraph_link]}" "${records["$idx":sound_loudness]}"
+				if [[ -n "${records["$idx":noisegraph:link]}" ]]; then
+					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound:color]}" "${records["$idx":noisegraph:link]}" "${records["$idx":sound:loudness]}"
 				else
-					printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound_color]}" "${records["$idx":sound_loudness]}"
+					printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}"
 				fi
-				if [[ -n "${records["$idx":mp3_link]}" ]]; then 
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3_link]}" "${records["$idx":sound_peak]}" # print actual value with "dBFS" unit
+				if [[ -n "${records["$idx":mp3:link]}" ]]; then 
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3:link]}" "${records["$idx":sound:peak]}" # print actual value with "dBFS" unit
 				else
-					printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records["$idx":sound_peak]}" # print actual value with "dBFS" unit
+					printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records["$idx":sound:peak]}" # print actual value with "dBFS" unit
 				fi
-				printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records["$idx":sound_1min]}"
-				printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records["$idx":sound_5min]}"
-				printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records["$idx":sound_10min]}"
-				printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records["$idx":sound_1hour]}"
-				printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records["$idx":spectro_link]}" # print spectrogram
+				printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records["$idx":sound:1min]}"
+				printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records["$idx":sound:5min]}"
+				printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records["$idx":sound:10min]}"
+				printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records["$idx":sound:1hour]}"
+				printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" # print spectrogram
 			fi
 
-			# Print a notification, if there are any:
+			# Print notifications, if there are any:
 			if chk_enabled "${records[HASNOTIFS]}"; then
-					if [[ -n "${records["$idx":notif_link]}" ]]; then
-						printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- notification link and service -->\n" "${records["$idx":notif_link]}" "${records["$idx":notif_service]}"
-					else
-						printf "   <td>%s</td><!-- notified yes or no -->\n"  "${records["$idx":notif_service]}"
+				notifstr=""
+				# read array of available notification services into notifs array
+				readarray -t notifs <<< "$(printf "%s\n" "${!records[@]}" | awk -F: -v idx="$idx" '{if ($1==idx && $3=="notified") {print $2}}'| sort -u)"
+				for notif in "${notifs[@]}"; do
+					if [[ "${records["$idx":"$notif":notified]}" == "true" ]]; then
+						# if set to true, notification was successfully done but there's no link
+						notifstr+="$(printf "%s - "  "$notif")"
+					elif [[ "${records["$idx":"$notif":notified]}" != "false" ]]; then
+						# if not set to true or false and not empty, then it's a link to the notification
+						notifstr+="$(printf "<a href=\"%s\" target=\"_blank\">%s</a> - " "${records["$idx":"$notif":notified]}" "$notif")"
 					fi
+				done
+				if (( ${#notifstr} > 3 )); then notifstr="${notifstr:0:-3}"; fi	# get rid of trailing " - "
+				printf "<td>%s</td>\n" "$notifstr"
 			fi
 
 			# Print a delete button, if we have the SHOWIGNORE variable set
@@ -219,8 +186,8 @@ CREATEHTMLTABLE () {
 		printf "</tbody>\n</table>\n"
 	)"
 
-	template_replace "##PLANETABLE##" "$table"
-	template_replace "##TABLESIZE##" "${TABLESIZE:-50}"
+	template="$(template_replace "##PLANETABLE##" "$table" "$template")"
+	template="$(template_replace "##TABLESIZE##" "${TABLESIZE:-50}" "$template")"
 
 }
 
@@ -256,7 +223,7 @@ CREATEHTMLHISTORY () {
 		printf "\n</p>\n"
 		printf "</details>\n</article>\n</section>"
 	)"
-		template_replace "##HISTTABLE##" "$htmlhistory"
+		template="$(template_replace "##HISTTABLE##" "$htmlhistory" "$template")"
 }
 
 # Function to create the Heatmap
@@ -266,25 +233,25 @@ CREATEHEATMAP () {
 		template="$(sed -z 's/<!--PLANEHEAT##>.*<##PLANEHEAT-->//g' <<< "$template")"
 		return
 	else
-		template_replace "<!--PLANEHEAT##>" ""
-		template_replace "<##PLANEHEAT-->" ""
+		template="$(template_replace "<!--PLANEHEAT##>" "" "$template")"
+		template="$(template_replace "<##PLANEHEAT-->" "" "$template")"
 	fi
 
 	# If OpenAIP is enabled, include it. If not, exclude it.
 	if chk_enabled "$OPENAIP_LAYER"; then
-		template_replace "<!--OPENAIP##>" ""
-		template_replace "<##OPENAIP-->" ""
-		template_replace "##OPENAIPKEY##" "$OPENAIPKEY"
+		template="$(template_replace "<!--OPENAIP##>" "" "$template")"
+		template="$(template_replace "<##OPENAIP-->" "" "$template")"
+		template="$(template_replace "##OPENAIPKEY##" "$OPENAIPKEY" "$template")"
 	else
 		template="$(sed -z 's/<!--OPENAIP##>.*<##OPENAIP-->//g' <<< "$template")"
 	fi
 
 	# Replace the other template values:
 	# Determine the zoom level for the heatmap
-	template_replace "##HEATMAPZOOM##" "$HEATMAPZOOM"
-	template_replace "##HEATMAPWIDTH##" "$HEATMAPWIDTH"
-	template_replace "##HEATMAPHEIGHT##" "$HEATMAPHEIGHT"
-	template_replace "##DISTMTS##" "$DISTMTS"
+	template="$(template_replace "##HEATMAPZOOM##" "$HEATMAPZOOM" "$template")"
+	template="$(template_replace "##HEATMAPWIDTH##" "$HEATMAPWIDTH" "$template")"
+	template="$(template_replace "##HEATMAPHEIGHT##" "$HEATMAPHEIGHT" "$template")"
+	template="$(template_replace "##DISTMTS##" "$DISTMTS" "$template")"
 
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
@@ -303,7 +270,7 @@ CREATEHEATMAP () {
 CREATENOTIFICATIONS () {
 
 	if ! chk_enabled "${records[HASNOTIFS]}"; then
-		template_replace "##NOTIFICATIONS##" ""
+		template="$(template_replace "##NOTIFICATIONS##" "" "$template")"
 		return
 	fi
 	# shellcheck disable=SC2034
@@ -328,7 +295,7 @@ CREATENOTIFICATIONS () {
 			printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
 		fi
 	)"
-	template_replace "##NOTIFICATIONS##" "$notifhtml"
+	template="$(template_replace "##NOTIFICATIONS##" "$notifhtml" "$template")"
 
 }
 
@@ -389,46 +356,46 @@ CREATENOTIFICATIONS
 # ##AUTOREFRESH##
 if chk_enabled "${AUTOREFRESH}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
-	template_replace "##AUTOREFRESH##" "<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">"
+	template="$(template_replace "##AUTOREFRESH##" "<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">" "$template")"
 else
-	template_replace "##AUTOREFRESH##" ""
+	template="$(template_replace "##AUTOREFRESH##" "" "$template")"
 fi
 
 # a bunch of simple replacements:
-template_replace "##MY##" "$MY"
-template_replace "##MYURL##" "$MYURL"
-template_replace "##MAPZOOM##" "$MAPZOOM"
-template_replace "##MAXALT##" "$MAXALT"
-template_replace "##VERSION##" "$VERSION"
-template_replace "##BUILD##" "$(</.VERSION)"
-template_replace "##SOCKETLINES##" "$SOCKETLINES"
-template_replace "##DIST##" "$DIST"
-template_replace "##DISTUNIT##" "$DISTUNIT"
-template_replace "##ALTUNIT##" "$ALTUNIT"
-template_replace "##ALTREF##" "$ALTREF"
-template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")"
-template_replace "##TRACKURL##" "$TRACKURL"
-template_replace "##LATFUDGED##" "$LATFUDGED"
-template_replace "##LONFUDGED##" "$LONFUDGED"
-template_replace "##TODAY##" "$TODAY"
+template="$(template_replace "##MY##" "$MY" "$template")"
+template="$(template_replace "##MYURL##" "$MYURL" "$template")"
+template="$(template_replace "##MAPZOOM##" "$MAPZOOM" "$template")"
+template="$(template_replace "##MAXALT##" "$MAXALT" "$template")"
+template="$(template_replace "##VERSION##" "$VERSION" "$template")"
+template="$(template_replace "##BUILD##" "$(</.VERSION)" "$template")"
+template="$(template_replace "##SOCKETLINES##" "$SOCKETLINES" "$template")"
+template="$(template_replace "##DIST##" "$DIST" "$template")"
+template="$(template_replace "##DISTUNIT##" "$DISTUNIT" "$template")"
+template="$(template_replace "##ALTUNIT##" "$ALTUNIT" "$template")"
+template="$(template_replace "##ALTREF##" "$ALTREF" "$template")"
+template="$(template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")" "$template")"
+template="$(template_replace "##TRACKURL##" "$TRACKURL" "$template")"
+template="$(template_replace "##LATFUDGED##" "$LATFUDGED" "$template")"
+template="$(template_replace "##LONFUDGED##" "$LONFUDGED" "$template")"
+template="$(template_replace "##TODAY##" "$TODAY" "$template")"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
-	template_replace "##ALTCORR##" "$ALTCORR"
-	template_replace "##ALTUNIT##" "$ALTUNIT"
-	template_replace "##ALTREF##" "$ALTREF"
-	template_replace "<!--ALTCORR##>" ""
-	template_replace "<##ALTCORR-->" ""
+	template="$(template_replace "##ALTCORR##" "$ALTCORR" "$template")"
+	template="$(template_replace "##ALTUNIT##" "$ALTUNIT" "$template")"
+	template="$(template_replace "##ALTREF##" "$ALTREF" "$template")"
+	template="$(template_replace "<!--ALTCORR##>" "" "$template")"
+	template="$(template_replace "<##ALTCORR-->" "" "$template")"
 else
 	template="$(sed -z 's/<!--ALTCORR##>.*<##ALTCORR-->//g' <<< "$template")"
 fi
 
 # BSky correction
 if chk_enabled "$BSKY"; then
-	template_replace "##BSKYHANDLE##" "$BSKYHANDLE"
-	template_replace "##BSKYLINK##" "$BSKYLINK"
-	template_replace "<!--BSKY##>" ""
-	template_replace "<##BSKY-->" ""
+	template="$(template_replace "##BSKYHANDLE##" "$BSKYHANDLE" "$template")"
+	template="$(template_replace "##BSKYLINK##" "$BSKYLINK" "$template")"
+	template="$(template_replace "<!--BSKY##>" "" "$template")"
+	template="$(template_replace "<##BSKY-->" "" "$template")"
 else
 	template="$(sed -z 's/<!--BSKY##>.*<##BSKY-->//g' <<< "$template")"
 fi
@@ -436,17 +403,17 @@ fi
 # Noise data section
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "${records[HASNOISE]}"; then
-	template_replace "<!--NOISEDATA##>" ""
-	template_replace "<##NOISEDATA-->" ""
+	template="$(template_replace "<!--NOISEDATA##>" "" "$template")"
+	template="$(template_replace "<##NOISEDATA-->" "" "$template")"
 else
 	template="$(sed -z 's/<!--NOISEDATA##>.*<##NOISEDATA-->//g' <<< "$template")"
 fi
 
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "$PLANEALERT"; then
-	template_replace "##PALINK##" "$PALINK"
-	template_replace "<!--PA##>" ""
-	template_replace "<##PA-->" ""
+	template="$(template_replace "##PALINK##" "$PALINK" "$template")"
+	template="$(template_replace "<!--PA##>" "" "$template")"
+	template="$(template_replace "<##PA-->" "" "$template")"
 else
 	template="$(sed -z 's/<!--PA##>.*<##PA-->//g' <<< "$template")"
 fi
