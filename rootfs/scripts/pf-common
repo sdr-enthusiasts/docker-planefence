@@ -40,13 +40,14 @@ LOCK_RECORDS() {
       sleep "0.${RANDOM: -3}s"
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
-    debug_print "Records.lock unlocked. Continuing..."
   fi
   touch "/tmp/.records.lock"
+  debug_print "Records locked by $0"
 }
 
 UNLOCK_RECORDS() {
   rm -f "/tmp/.records.lock"
+  debug_print "Records unlocked by $0"
 }
 
 READ_RECORDS() {
@@ -55,7 +56,7 @@ READ_RECORDS() {
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
     debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
-    declare -gA records=()
+    declare -gA records=() last_idx_for_icao=() lastseen_for_icao=()
     records[maxindex]=-1
     return
   fi
@@ -63,14 +64,14 @@ READ_RECORDS() {
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
     debug_print "Waiting for records.lock to become unlocked..."
+    starttime="$(date +%s)"
     while :; do
-      starttime="$(date +%s)"
       sleep "0.${RANDOM: -3}s"
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
     debug_print "Records.lock unlocked. Continuing..."
   fi
-
+  debug_print "Records read by $0"
   # shellcheck disable=SC1090
   source "$RECORDSFILE"
 
@@ -82,8 +83,10 @@ WRITE_RECORDS() {
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   LOCK_RECORDS ignore-lock
-  declare -p records > "$RECORDSFILE"
+  declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
+  declare -p records last_idx_for_icao lastseen_for_icao > "$RECORDSFILE"
   sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
+  debug_print "Records written by $0"
   UNLOCK_RECORDS
 }
 
@@ -127,52 +130,58 @@ csv_encode() {
 }
 
 template_replace() {
-	# Replace instance of $1 with $2 in $3 which is the template variable
-	# Do this in a safe way that doesn't break on characters in the replacement string
-
-  local template="$3"
-  if [[ -z "$template" ]]; then
+  local pat="$1" repl="$2" template="$3"
+  if [[ -z $template ]]; then
     debug_print "Usage: template_replace search_string replace_string template_string"
     return 1
   fi
 
-	if ! grep -q "$1" <(printf '%s\n' "$template"); then
-		debug_print "Can't replace - \"$1\" not found in template"
-		return
-	fi
+  if ! grep -q -- "$pat" <<<"$template"; then
+    debug_print "Can't replace - \"$pat\" not found in template"
+    printf '%s' "$template"
+    return 0
+  fi
 
-  while firstpart="$(awk -v pat="$1" '
-		{
-			i = index($0, pat)
-			if (i) {
-				if (i>1) print substr($0,1,i-1)
-				found=1
-				exit
-			}
-			print
-		}
-		END { exit(!found) }' <(printf '%s\n' "$template"))"; do
-		lastpart="$(awk -v pat="$1" '
-			BEGIN { found=0; plen=length(pat) }
-			{
-				if (!found) {
-					i = index($0, pat)
-					if (i) {
-						# print rest of this line after the matched pattern (if any)
-						post = substr($0, i + plen)
-						if (length(post)) print post
-						found = 1
-						next
-					}
-				} else {
-					print
-				}
-			}
-			END { exit(!found) }' <(printf '%s\n' "$template"))"
+  # Normalize pat to a single line (awk index() doesn’t match across newlines)
+  pat_oneline=$(printf %s "$pat")
 
-	  echo "${firstpart}${2}${lastpart}"
-	done
+  while grep -q -- "$pat" <<<"$template"; do
+    local firstpart lastpart
+    firstpart="$(
+      awk -v p="$pat_oneline" '
+        {
+          i = index($0, p)
+          if (i) {
+            print substr($0, 1, i - 1)
+            exit
+          }
+          print
+        }
+      ' <<<"$template"
+    )"
+    lastpart="$(
+      awk -v p="$pat_oneline" '
+        {
+          i = index($0, p)
+          if (i) {
+            print substr($0, i + length(p))
+            seen = 1
+            next
+          }
+          if (seen) {
+            print
+          }
+        }
+      ' <<<"$template"
+    )"
+    template="${firstpart}${repl}${lastpart}"
+  done
+
+  printf '%s' "$template"
 }
+
+
+
 
 
 DISTUNIT="mi"

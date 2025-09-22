@@ -36,23 +36,23 @@ execstarttime="$(date +%s.%3N)"
 execlaststeptime="$execstarttime"
 DEBUG=true
 
-##
+## initialization:
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 # ==========================
 # Config and initialization
 # ==========================
-HTMLDIR="/tmp"
-#HTMLDIR="${OUTFILEDIR:-/usr/share/planefence/html}"
+#HTMLDIR="/tmp"
+HTMLDIR="${OUTFILEDIR:-/usr/share/planefence/html}"
 mkdir -p "$HTMLDIR"
 
 TODAY="$(date +%y%m%d)"
 YESTERDAY="$(date -d "yesterday" +%y%m%d)"
 NOWTIME="$(date +%s)"
 
-TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print0 | xargs -0 ls -t | head -n 1)"
-YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print0 | xargs -0 ls -t | head -n 1)"
+TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
+YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
 RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
 YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}"
@@ -429,7 +429,6 @@ if [[ -n $REMOTENOISE ]]; then
   curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
-debug_print "Collecting new records"
 # ==========================
 # Collect new lines
 # ==========================
@@ -438,8 +437,11 @@ if [[ -f "$LASTSOCKETRECFILE" ]]; then
   lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
 fi
 
+debug_print "Collecting new records. Last processed date is $lastdate"
+
+
 if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
-  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)"
+  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then 
   records[totallines]="$(cat "$TODAYFILE" | wc -l)"
@@ -473,8 +475,8 @@ readarray -t socketrecords <<< "$(
       | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt { print }'
   )"
 
-debug_print "Of a total of ${records[totallines]} lines, got ${#socketrecords[@]} records that are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude. Initial processing..."
-
+debug_print "Of a total of $nowlines lines, got ${#socketrecords[@]} records that are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude. Initial processing..."
+debug_print "Note: COLLAPSEWITHIN=$COLLAPSEWITHIN"
 # ==========================
 # Process lines
 # ==========================
@@ -508,7 +510,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   ls="${lastseen_for_icao[$icao]}"
   if [[ -n $ls ]]; then
     dt=$(( ls - seentime ))
-    if (( dt >= 0 && dt <= COLLAPSEWITHIN )); then
+    if (( ${dt//-/} <= COLLAPSEWITHIN )); then
       idx="${last_idx_for_icao[$icao]}"
     else
       # mark old record complete; optionally skip duplicate if configured
