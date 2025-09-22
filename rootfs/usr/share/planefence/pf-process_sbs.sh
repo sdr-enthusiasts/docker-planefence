@@ -197,8 +197,6 @@ GET_PS_PHOTO () {
   find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
 }
 
-
-
 GET_SCREENSHOT () {
 	# Function to get a screenshot
 	# Usage: GET_PS_PHOTO index 
@@ -704,7 +702,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
 
     lc=$(( lc + 1 ))
-    if ! (( lc % 10 )); then
+    if ! (( lc % 30 )); then
       debug_print "Continued processing of index $lc/${records[maxindex]} completed"
       debug_print "Metrics: Call: $calltiming; Name: $nametiming; Route: $routetiming; Img: $imgtiming; Noise: $noisetiming; Nominatim: $nomtiming"
     fi
@@ -714,15 +712,6 @@ if (( ${#socketrecords[@]} > 0 )); then
   if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
   if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
-  if [[ -z "${records[HASNOTIFS]}" ]] || \
-     ( ! chk_enabled "${PF_DISCORD}" && \
-       [[ -z "$MASTODON_SERVER" ]] && \
-       [[ -z "$BLUESKY_HANDLE" ]] && \
-       [[ -z "$RSS_SITELINK" ]] && \
-       ! chk_enabled "$PF_TELEGRAM_ENABLED" && \
-       [[ -z "$MQTT_URL" ]] ); then
-          records[HASNOTIFS]=false
-  fi
 
   debug_print "Processing complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}. Now writing results to disk..."
 

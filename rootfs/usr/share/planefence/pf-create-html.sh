@@ -91,7 +91,7 @@ CREATEHTMLTABLE () {
 		# Now write the table
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
-			debug_print "Writing table element $idx/${records[maxindex]}..."
+			# debug_print "Writing table element $idx/${records[maxindex]}..."
 
 			printf "<tr>\n"
 			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
