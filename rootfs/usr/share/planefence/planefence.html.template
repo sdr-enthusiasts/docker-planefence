@@ -195,7 +195,7 @@ td, table.dataTable tbody td {
 
 <script src="scripts/HeatLayer.js"></script>
 <script src="scripts/leaflet-heat.js"></script>
-<script src="scripts/planeheatdata-##TODAY##.js"></script>
+<script src="planeheatdata-##TODAY##.js"></script>
 <script>
 	var map = L.map('map').setView([parseFloat("##LATFUDGED##"), parseFloat("##LONFUDGED##")], parseInt("##HEATMAPZOOM##"));
 	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {

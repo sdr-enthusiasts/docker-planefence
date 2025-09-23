@@ -605,25 +605,25 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":complete]="true"
     fi
 
-    callstart=$(date +%s.%3N)
+    # callstart=$(date +%s.%3N)
     # Add a callsign if there isn't any
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
       records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
-    calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
+    # calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
 
     # get the owner's name
-    namestart=$(date +%s.%3N)
-    if ! chk_enabled "${records["$idx":owner:checked]}" && [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
+    # namestart=$(date +%s.%3N)
+    if ! chk_enabled "${records["$idx":owner:checked]}" && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
       records["$idx":owner:checked]=true
     fi
-    nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
+    # nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
 
     # get route information
-    routestart=$(date +%s.%3N)
+    # routestart=$(date +%s.%3N)
     if ! chk_disabled "$CHECKROUTE" && \
        ! chk_enabled "${records["$idx":route:checked]}" && \
        [[ -z ${records["$idx":route]} ]] && \
@@ -632,10 +632,10 @@ if (( ${#socketrecords[@]} > 0 )); then
           if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
           records["$idx":route:checked]=true
     fi
-    routetiming=$(bc -l <<< "${routetiming:-0} + $(date +%s.%3N) - $routestart")
+    # routetiming=$(bc -l <<< "${routetiming:-0} + $(date +%s.%3N) - $routestart")
 
     # get images
-    imgstart=$(date +%s.%3N)
+    # imgstart=$(date +%s.%3N)
     if chk_enabled "$SHOWIMAGES" && \
        ! chk_enabled "${records["$idx":image:checked]}" && \
        [[ -z "${records["$idx":image:thumblink]}" ]] && \
@@ -646,10 +646,10 @@ if (( ${#socketrecords[@]} > 0 )); then
           records["$idx":image:checked]=true
           records[HASIMAGES]=true
     fi
-    imgtiming=$(bc -l <<< "${imgtiming:-0} + $(date +%s.%3N) - $imgstart")
+    # imgtiming=$(bc -l <<< "${imgtiming:-0} + $(date +%s.%3N) - $imgstart")
 
     # Add noisecapt stuff
-    noisestart=$(date +%s.%3N)
+    # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
        ! chk_enabled "${records["$idx":noisedata:checked]}" && \
        chk_enabled "${records["$idx":complete]}" && \
@@ -660,7 +660,7 @@ if (( ${#socketrecords[@]} > 0 )); then
             wait $!
             noiselist="$(</tmp/.allnoise)"
             rm -f /tmp/.allnoise
-            noisestart=$(date +%s.%3N)
+            # noisestart=$(date +%s.%3N)
             debug_print "Noiselist download complete. $(wc -l <<< "$noiselist") lines."
           fi
           read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
@@ -686,26 +686,26 @@ if (( ${#socketrecords[@]} > 0 )); then
           fi
           records["$idx":noisegraph:checked]=true
     fi
-    noisetiming=$(bc -l <<< "${noisetiming:-0} + $(date +%s.%3N) - $noisestart")
+    # noisetiming=$(bc -l <<< "${noisetiming:-0} + $(date +%s.%3N) - $noisestart")
 
 
     # get Nominating location
-    nomstart=$(date +%s.%3N)
+    # nomstart=$(date +%s.%3N)
     if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":nominatim:checked]}"; then
       records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
       records["$idx":nominatim:checked]=true
     fi
-    nomtiming=$(bc -l <<< "${nomtiming:-0} + $(date +%s.%3N) - $nomstart")
+    # nomtiming=$(bc -l <<< "${nomtiming:-0} + $(date +%s.%3N) - $nomstart")
 
     # save distance and altitude units
     if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
 
-    lc=$(( lc + 1 ))
-    if ! (( lc % 30 )); then
-      debug_print "Continued processing of index $lc/${records[maxindex]} completed"
-      debug_print "Metrics: Call: $calltiming; Name: $nametiming; Route: $routetiming; Img: $imgtiming; Noise: $noisetiming; Nominatim: $nomtiming"
-    fi
+    # lc=$(( lc + 1 ))
+    # if ! (( lc % 30 )); then
+    #   debug_print "Continued processing of index $lc/${records[maxindex]} completed"
+    #   debug_print "Metrics: Call: $calltiming; Name: $nametiming; Route: $routetiming; Img: $imgtiming; Noise: $noisetiming; Nominatim: $nomtiming"
+    # fi
 
   done
 
@@ -713,7 +713,8 @@ if (( ${#socketrecords[@]} > 0 )); then
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
   if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
 
-  debug_print "Processing complete. Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}. Now writing results to disk..."
+  debug_print "Processing complete. Now writing results to disk..."
+  # Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}."
 
   # ==========================
   # Save state

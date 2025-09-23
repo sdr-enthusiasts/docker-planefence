@@ -141,7 +141,7 @@ template_replace() {
   fi
 
   if ! grep -q -- "$pat" <<<"$template"; then
-    debug_print "Can't replace - \"$pat\" not found in template"
+    # debug_print "Can't replace - \"$pat\" not found in template"
     printf '%s' "$template"
     return 0
   fi
