@@ -46,7 +46,6 @@ CREATEHTMLTABLE () {
 	# Write the HTML table header
 	# shellcheck disable=SC2034
 	table="$(
-		debug_print "Writing table headers..."
 		echo "
 			<table border=\"1\" class=\"display planetable\" id=\"mytable\" style=\"width: auto; text-align: left; align: left\" align=\"left\">
 			<thead border=\"1\">
@@ -64,7 +63,6 @@ CREATEHTMLTABLE () {
 			<th style=\"width: auto; text-align: center\">Min. Distance</th>"
 
 		if chk_enabled "${records[HASNOISE]}"; then
-			debug_print "Writing noise headers..."
 			# print the headers for the standard noise columns
 			echo "
 			<th style=\"width: auto; text-align: center\">Loudness</th>
@@ -77,13 +75,11 @@ CREATEHTMLTABLE () {
 		fi
 
 		if chk_enabled "${records[HASNOTIFS]}"; then
-		debug_print "Writing notified headers..."
 			# print a header for the Notified column
 			printf "	<th style=\"width: auto; text-align: center\">Notified</th>\n"
 		fi
 
 		if chk_enabled "$SHOWIGNORE"; then
-			debug_print "Writing ignore column header..."
 			# print a header for the Ignore column
 			printf "	<th style=\"width: auto; text-align: center\">Ignore</th>\n"
 		fi
@@ -92,7 +88,6 @@ CREATEHTMLTABLE () {
 		# Now write the table
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
-			# debug_print "Writing table element $idx/${records[maxindex]}..."
 			printf "<tr>\n"
 
 			# table index number:
@@ -205,9 +200,7 @@ CREATEHTMLTABLE () {
 		done
 		printf "</tbody>\n</table>\n"
 	)"
-	debug_print "Updating template with table values"
 	template="$(template_replace "##PLANETABLE##" "$table" "$template")"
-	debug_print "Updating template with tablesize"
 	template="$(template_replace "##TABLESIZE##" "${TABLESIZE:-50}" "$template")"
 
 }
@@ -327,6 +320,7 @@ CREATENOTIFICATIONS () {
 TODAY="$(date +%y%m%d)"
 NOWTIME="$(date +%s)"
 RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
+debug_print "Hello."
 
 # Load the template into a variable that we can manipulate:
 if ! template=$(<"$PLANEFENCEDIR/planefence.html.template"); then
@@ -360,23 +354,18 @@ printf -v LONFUDGED "%.${FUDGELOC:-3}f" "$LON"
 
 # Get the altitude reference:
 if [[ -n "$ALTCORR" ]]; then ALTREF="AGL"; else ALTREF="MSL"; fi
-#debug_print "DIST is $DIST $DISTUNIT; Conv to meters is $TO_METER"
+# "DIST is $DIST $DISTUNIT; Conv to meters is $TO_METER"
 DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 
 # -----------------------------------------------------------------------------------
 #      MODIFY THE TEMPLATE
 # -----------------------------------------------------------------------------------
-debug_print "Creating HTML table..."
 CREATEHTMLTABLE
-debug_print "Creating HTML history..."
 CREATEHTMLHISTORY
-debug_print "Creating HTML heatmap..."
 CREATEHEATMAP
-debug_print "Creating HTML notifications..."
 CREATENOTIFICATIONS
 
 # Now replace the other template values:
-debug_print "Replacing other template values..."
 
 # ##AUTOREFRESH##
 if chk_enabled "${AUTOREFRESH}"; then

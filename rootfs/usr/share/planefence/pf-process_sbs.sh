@@ -484,124 +484,122 @@ readarray -t socketrecords <<< "$(
   )"
 
 debug_print "Of a total of $nowlines lines, got ${#socketrecords[@]} records that are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude. Initial processing..."
-debug_print "Note: COLLAPSEWITHIN=$COLLAPSEWITHIN"
+
 # ==========================
 # Process lines
 # ==========================
 if (( ${#socketrecords[@]} > 0 )); then
   linecount=0
-  for line in "${socketrecords[@]}"; do
-  lc=$(( lc + 1 ))
-  if ! (( lc % 500 )); then
-    debug_print "Initial processing of $lc lines completed"
-  fi
+    for line in "${socketrecords[@]}"; do
 
-  [[ -z $line ]] && continue
-  IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
-  [[ $icao == "hex_ident" ]] && continue
+    [[ -z $line ]] && continue
+    IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
+    [[ $icao == "hex_ident" ]] && continue
 
-  # Parse timestamp fast (assumes most lines are for today)
-  t=${time%%.*}
-  if [[ $date == "$today_ymd" && ${#t} -ge 8 ]]; then
-    seentime=$(( midnight_epoch + 3600*10#${t:0:2} + 60*10#${t:3:2} + 10#${t:6:2} ))
-  else
-    seentime=$(date -d "$date $t" +%s)
-  fi
-
-  # Heatmap tally 
-  latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
-  records["heatmap:$latlonkey"]=$(( ${records["heatmap:$latlonkey"]:-0} + 1 ))
-
-  # Collapse window lookup (O(1))
-  idx=""
-  ignore_this_dupe=false
-  ls="${lastseen_for_icao[$icao]}"
-  if [[ -n $ls ]]; then
-    dt=$(( ls - seentime ))
-    if (( ${dt//-/} <= COLLAPSEWITHIN )); then
-      idx="${last_idx_for_icao[$icao]}"
+    # Parse timestamp fast (assumes most lines are for today)
+    t=${time%%.*}
+    if [[ $date == "$today_ymd" && ${#t} -ge 8 ]]; then
+      seentime=$(( midnight_epoch + 3600*10#${t:0:2} + 60*10#${t:3:2} + 10#${t:6:2} ))
     else
-      # mark old record complete; optionally skip duplicate if configured
-      old_idx="${last_idx_for_icao[$icao]}"
-      if [[ -n $old_idx ]]; then
-        records["$old_idx":complete]=true
-      fi
-      if chk_enabled "$IGNOREDUPES"; then
-        ignore_this_dupe=true
+      seentime=$(date -d "$date $t" +%s)
+    fi
+
+    # Heatmap tally 
+    latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
+    records["heatmap:$latlonkey"]=$(( ${records["heatmap:$latlonkey"]:-0} + 1 ))
+
+    # Collapse window lookup (O(1))
+    idx=""
+    ignore_this_dupe=false
+    ls="${lastseen_for_icao[$icao]}"
+    if [[ -n $ls ]]; then
+      dt=$(( ls - seentime ))
+      if (( ${dt//-/} <= COLLAPSEWITHIN )); then
+        idx="${last_idx_for_icao[$icao]}"
+      else
+        # mark old record complete; optionally skip duplicate if configured
+        old_idx="${last_idx_for_icao[$icao]}"
+        if [[ -n $old_idx ]]; then
+          records["$old_idx":complete]=true
+        fi
+        if chk_enabled "$IGNOREDUPES"; then
+          ignore_this_dupe=true
+        fi
       fi
     fi
-  fi
-  $ignore_this_dupe && continue
+    $ignore_this_dupe && continue
 
-  # Create new idx if needed
-  if [[ -z $idx ]]; then
-    idx=$(( records[maxindex] + 1 ))
-    records[maxindex]="$idx"
-  fi
+    # Create new idx if needed
+    if [[ -z $idx ]]; then
+      idx=$(( records[maxindex] + 1 ))
+      records[maxindex]="$idx"
+    fi
 
-  # Update fast ICAO index maps
-  last_idx_for_icao[$icao]=$idx
-  lastseen_for_icao[$icao]=$seentime
+    # Update fast ICAO index maps
+    last_idx_for_icao[$icao]=$idx
+    lastseen_for_icao[$icao]=$seentime
 
-  # Initialize once-per-record fields
-  if [[ -z ${records["$idx":icao]} ]]; then
-    records["$idx":icao]="$icao"
-    # map link at first touch
-    if [[ -n $lat && -n $lon ]]; then
-      records["$idx":map:link]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
+    # Initialize once-per-record fields
+    if [[ -z ${records["$idx":icao]} ]]; then
+      records["$idx":icao]="$icao"
+      # map link at first touch
+      if [[ -n $lat && -n $lon ]]; then
+        records["$idx":map:link]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
+      else
+        records["$idx":map:link]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
+      fi
+    fi
+
+    # get tail
+    if [[ -n "${records["$idx":tail]}" ]]; then
+      records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
+    fi
+
+    # Callsign handling
+    callsign="${callsign//[[:space:]]/}"
+    if [[ -n $callsign ]]; then
+      records["$idx":callsign]="$callsign"
+      records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
+      if [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z ${records["$idx":faa:link]} ]]; then
+        records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
+      fi
+    fi
+
+    # First/last seen
+    if (( seentime < ${records["$idx":firstseen]:-9999999999} )); then records["$idx":firstseen]="$seentime"; fi
+    if (( seentime > ${records["$idx":lastseen]:-0} )); then records["$idx":lastseen]="$seentime"; fi
+
+    # Min-distance update (float-safe without awk by string compare fallback)
+    curdist=${records["$idx":distance]}
+    do_update=false
+    if [[ -z $curdist ]]; then
+      do_update=true
     else
-      records["$idx":map:link]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
+      # numeric compare using bc-less trick: compare as floats via printf %f then string compare is unsafe; instead use scaled ints
+      # scale to 2 decimals
+      d1=${distance#-}; d2=${curdist#-}
+      d1i=${d1%.*}; d1f=${d1#*.}; d1f=${d1f%%[!0-9]*}; d1f=${d1f:0:2}; d1f=${d1f:-0}
+      d2i=${d2%.*}; d2f=${d2#*.}; d2f=${d2f%%[!0-9]*}; d2f=${d2f:0:2}; d2f=${d2f:-0}
+      s1=$(( 10#$d1i*100 + 10#$d1f ))
+      s2=$(( 10#$d2i*100 + 10#$d2f ))
+      if (( s1 < s2 )); then do_update=true; fi
     fi
-  fi
-
-  # Callsign handling
-  callsign="${callsign//[[:space:]]/}"
-  if [[ -n $callsign ]]; then
-    records["$idx":callsign]="$callsign"
-    records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
-    records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
-    if [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z ${records["$idx":faa:link]} ]]; then
-      records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
+    if $do_update; then
+      records["$idx":distance]="$distance"
+      [[ -n $lat ]] && records["$idx":lat]="$lat"
+      [[ -n $lon ]] && records["$idx":lon]="$lon"
+      [[ -n $altitude ]] && records["$idx":altitude]="$altitude"
+      [[ -n $angle ]] && records["$idx":angle]="$angle"
+      [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
+      [[ -n $track ]] && records["$idx":track]="$track"
+      records["$idx":time:at:mindist]="$seentime"
+      [[ -n $squawk ]] && records["$idx":squawk]="$squawk"
+    else
+      # ensure squawk gets set once if still empty
+      if [[ -n $squawk && -z ${records["$idx":squawk]} ]]; then
+        records["$idx":squawk]="$squawk"
+      fi
     fi
-  fi
-
-  # First/last seen
-  if (( seentime < ${records["$idx":firstseen]:-9999999999} )); then records["$idx":firstseen]="$seentime"; fi
-  if (( seentime > ${records["$idx":lastseen]:-0} )); then records["$idx":lastseen]="$seentime"; fi
-
-  # Min-distance update (float-safe without awk by string compare fallback)
-  curdist=${records["$idx":distance]}
-  do_update=false
-  if [[ -z $curdist ]]; then
-    do_update=true
-  else
-    # numeric compare using bc-less trick: compare as floats via printf %f then string compare is unsafe; instead use scaled ints
-    # scale to 2 decimals
-    d1=${distance#-}; d2=${curdist#-}
-    d1i=${d1%.*}; d1f=${d1#*.}; d1f=${d1f%%[!0-9]*}; d1f=${d1f:0:2}; d1f=${d1f:-0}
-    d2i=${d2%.*}; d2f=${d2#*.}; d2f=${d2f%%[!0-9]*}; d2f=${d2f:0:2}; d2f=${d2f:-0}
-    s1=$(( 10#$d1i*100 + 10#$d1f ))
-    s2=$(( 10#$d2i*100 + 10#$d2f ))
-    if (( s1 < s2 )); then do_update=true; fi
-  fi
-  if $do_update; then
-    records["$idx":distance]="$distance"
-    [[ -n $lat ]] && records["$idx":lat]="$lat"
-    [[ -n $lon ]] && records["$idx":lon]="$lon"
-    [[ -n $altitude ]] && records["$idx":altitude]="$altitude"
-    [[ -n $angle ]] && records["$idx":angle]="$angle"
-    [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
-    [[ -n $track ]] && records["$idx":track]="$track"
-    records["$idx":time:at:mindist]="$seentime"
-    [[ -n $squawk ]] && records["$idx":squawk]="$squawk"
-  else
-    # ensure squawk gets set once if still empty
-    if [[ -n $squawk && -z ${records["$idx":squawk]} ]]; then
-      records["$idx":squawk]="$squawk"
-    fi
-  fi
-
-
   done
 
   debug_print "Initial processing complete. Got a total of ${records[maxindex]} records. Continuing to add callsigns, routes, and owners."
@@ -677,12 +675,10 @@ if (( ${#socketrecords[@]} > 0 )); then
        [[ -z "${records["$idx":sound:peak]}" ]]; then
           # Make sure we have the noiselist
           if [[ -z "$noiselist" ]]; then
-            debug_print "Waiting for noiselist to finish downloading..."
             wait $!
             noiselist="$(</tmp/.allnoise)"
             rm -f /tmp/.allnoise
             # noisestart=$(date +%s.%3N)
-            debug_print "Noiselist download complete. $(wc -l <<< "$noiselist") lines."
           fi
           read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
           records["$idx":noisedata:checked]=true
@@ -721,12 +717,6 @@ if (( ${#socketrecords[@]} > 0 )); then
     # save distance and altitude units
     if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
-
-    # lc=$(( lc + 1 ))
-    # if ! (( lc % 30 )); then
-    #   debug_print "Continued processing of index $lc/${records[maxindex]} completed"
-    #   debug_print "Metrics: Call: $calltiming; Name: $nametiming; Route: $routetiming; Img: $imgtiming; Noise: $noisetiming; Nominatim: $nomtiming"
-    # fi
 
   done
 
@@ -787,5 +777,4 @@ if (( ${#socketrecords[@]} > 0 )); then
   debug_print "Wrote $CSVOUT and $JSONOUT"
 
 fi
-
 debug_print "Done."
