@@ -123,7 +123,7 @@ td, table.dataTable tbody td {
 <details open>
 <summary style="font-weight: 900; font: 14px/1.4 'Helvetica Neue', Arial, sans-serif;">Executive Summary</summary>
 <ul>
-  <li>Last update: ##LASTUPDATE###
+  <li>Last update: ##LASTUPDATE##
   <li>Maximum distance from <a href="https://www.openstreetmap.org/?mlat=##LATFUDGED##&mlon=##LONFUDGED###map=##MAPZOOM##/##LATFUDGED##/##LONFUDGED##&layers=H" target=_blank>##LATFUDGED##&deg;N, ##LONFUDGED##&deg;E</a>: ##DIST## ##DISTUNIT##
   <li>Only aircraft below ##MAXALT## ##ALTUNIT## are reported
   <li>Data extracted from ##SOCKETLINES## <a href="https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_%E2%80%93_broadcast" target="_blank">ADS-B messages</a> received since midnight today
