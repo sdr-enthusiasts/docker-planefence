@@ -126,7 +126,7 @@ CREATEHTMLTABLE () {
 			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
 
 			# time last seen
-			printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
+			printf "   <td style=\"text-align: center\">%s%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" "$(if ! chk_enabled "${records["$idx":complete]}"; then echo "<br>(still processing)"; fi)"
 
 			# min altitude
 			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE"
