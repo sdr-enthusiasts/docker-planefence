@@ -138,20 +138,24 @@ CREATEHTMLTABLE () {
 			if chk_enabled "${records[HASNOISE]}"; then
 				# First the loudness field, which needs a color and a link to a noise graph:
 				if [[ -n "${records["$idx":noisegraph:link]}" ]]; then
-					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s dB</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound:color]}" "${records["$idx":noisegraph:link]}" "${records["$idx":sound:loudness]}"
+					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s %s</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound:color]}" "${records["$idx":noisegraph:link]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
 				else
-					printf "   <td style=\"background-color: %s\">%s dB</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}"
+					printf "   <td style=\"background-color: %s\">%s %s</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
 				fi
 				if [[ -n "${records["$idx":mp3:link]}" ]]; then 
-					printf "   <td><a href=\"%s\" target=\"_blank\">%s dBFS</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3:link]}" "${records["$idx":sound:peak]}" # print actual value with "dBFS" unit
+					printf "   <td><a href=\"%s\" target=\"_blank\">%s %s</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3:link]}" "${records["$idx":sound:peak]}" "$([[ -n "${records["$idx":sound:peak]}" ]] && echo "dBFS")" # print actual value with "dBFS" unit
 				else
-					printf "   <td>%s dBFS</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records["$idx":sound:peak]}" # print actual value with "dBFS" unit
+					printf "   <td>%s %s</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records["$idx":sound:peak]}" "$([[ -n "${records["$idx":sound:peak]}" ]] && echo "dBFS")" # print actual value with "dBFS" unit
 				fi
-				printf "   <td>%s dBFS</td><!-- 1 minute avg audio levels -->\n" "${records["$idx":sound:1min]}"
-				printf "   <td>%s dBFS</td><!-- 5 minute avg audio levels -->\n" "${records["$idx":sound:5min]}"
-				printf "   <td>%s dBFS</td><!-- 10 minute avg audio levels -->\n" "${records["$idx":sound:10min]}"
-				printf "   <td>%s dBFS</td><!-- 1 hour avg audio levels -->\n" "${records["$idx":sound:1hour]}"
-				printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" # print spectrogram
+				printf "   <td>%s %s</td><!-- 1 minute avg audio levels -->\n" "${records["$idx":sound:1min]}" "$([[ -n "${records["$idx":sound:1min]}" ]] && echo "dBFS")"
+				printf "   <td>%s %s</td><!-- 5 minute avg audio levels -->\n" "${records["$idx":sound:5min]}" "$([[ -n "${records["$idx":sound:5min]}" ]] && echo "dBFS")"
+				printf "   <td>%s %s</td><!-- 10 minute avg audio levels -->\n" "${records["$idx":sound:10min]}" "$([[ -n "${records["$idx":sound:10min]}" ]] && echo "dBFS")"
+				printf "   <td>%s %s</td><!-- 1 hour avg audio levels -->\n" "${records["$idx":sound:1hour]}" "$([[ -n "${records["$idx":sound:1hour]}" ]] && echo "dBFS")"
+				if [[ -n "${records["$idx":spectro:link]}" ]]; then
+					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" # print spectrogram
+				else
+					printf "   <td></td>"
+				fi
 			fi
 
 			# Print notifications, if there are any:
