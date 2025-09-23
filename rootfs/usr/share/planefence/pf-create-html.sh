@@ -54,6 +54,7 @@ CREATEHTMLTABLE () {
 			<th style=\"width: auto; text-align: center\">No.</th>
 			$(if chk_enabled "${records[HASIMAGES]}"; then echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>"; fi)
 			<th style=\"width: auto; text-align: center\">Transponder ID</th>
+			<th style=\"width: auto; text-align: center\">Tail</th>
 			<th style=\"width: auto; text-align: center\">Flight</th>
 			$(if chk_enabled "${records[HASROUTE]}"; then echo "<th style=\"width: auto; text-align: center\">Flight Route</th>"; fi)
 			<th style=\"width: auto; text-align: center\">Airline or Owner</th>
@@ -92,37 +93,51 @@ CREATEHTMLTABLE () {
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
 			# debug_print "Writing table element $idx/${records[maxindex]}..."
-
 			printf "<tr>\n"
-			printf "   <td style=\"text-align: center\">%s</td><!-- row 1: index -->\n" "$idx" # table index number
 
+			# table index number:
+			printf "   <td style=\"text-align: center\">%s</td>\n" "$idx"
+
+			# image:
 			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image:thumblink]}" ]]; then
 				# shellcheck disable=SC2030
-				#if [[ "${records["$idx":image:thumblink]}:0:4" == "/usr" ]]; then records["$idx":image:thumblink]="$(<"${records["$idx":image:thumblink]}")"; fi
 				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image:link]}" "${records["$idx":image:thumblink]}"
 			elif chk_enabled "${SHOWIMAGES}"; then
 				printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"
 			fi
 
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}" # ICAO
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}" # Flight number/tail with FlightAware link
+			# ICAO
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}"
 
+			# Tail
+			printf "   <td>%s</td><!-- Tail -->\n" "${records["$idx":tail]}"
+
+			# Flight number
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}"
+
+			# Route
 			if chk_enabled "${records[HASROUTE]}"; then
-				printf "   <td>%s</td><!-- route -->\n" "${records["$idx":route]}" # route
+				printf "   <td>%s</td><!-- route -->\n" "${records["$idx":route]}"
 			fi
 
+			# Owner
 			if [[ -n "${records["$idx":faa:link]}" ]]; then
 				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":owner]}"
 			else
 				printf "   <td>%s</td><!-- owner -->\n" "${records["$idx":owner]}"
 			fi
 
-			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" # time first seen
+			# time first seen
+			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
 
-			printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" # time last seen
+			# time last seen
+			printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
 
-			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE" # min altitude
-			printf "   <td>%s %s</td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" # min distance
+			# min altitude
+			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE"
+
+			# min distance
+			printf "   <td>%s %s</td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT"
 
 			# Print the noise values if we have determined that there is data
 			if chk_enabled "${records[HASNOISE]}"; then
@@ -263,7 +278,7 @@ CREATEHEATMAP () {
 	{ printf "var addressPoints = [\n"
 		for i in "${!records[@]}"; do
 			if [[ "${i:0:7}" == "heatmap" ]]; then
-				printf "[ %s,%s ],\n" "${i:7}" "${records[$i]}"
+				printf "[ %s,%s ],\n" "${i#*:}" "${records[$i]}"
 			fi
 		done
 		printf "];\n"

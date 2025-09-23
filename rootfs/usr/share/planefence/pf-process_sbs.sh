@@ -90,25 +90,40 @@ fi
 # Functions
 # ==========================
 
-ICAO2TAIL() {
+GET_TAIL() {
+  # Usage: GET_TAIL "$icao"
+  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
+  local icao=${1^^}
+	if [[ -f /run/planefence/icao2plane.txt ]]; then
+		tail="$(grep -m1 -i -F "$icao" /run/planefence/icao2plane.txt 2>/dev/null | awk -F, '{print $2}')"
+	fi
+	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
+
+  # If there is a OpenSkyDB file, check that one:
+  if [[ -f /run/OpenSkyDB.csv ]]; then
+    tail="$(grep -m1 -i -F "$icao" /run/OpenSkyDB.csv | awk -F, '{print $27}')"
+    tail="${tail//[\"\']/}"
+  fi
+  if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
+
+	# If the ICAO starts with "A"  (but is not in  the range of AExxxx ADExxx ADFxxx - those are US military without N number) and there is no flight or tail number, let's algorithmically determine the tail number
+	if [[ "$icao" =~ ^A && ! "$icao" =~ ^AE && ! "$icao" =~ ^ADE && ! "$icao" =~ ^ADF ]]; then
+		tail="$(/usr/share/planefence/icao2tail.py "$icao")"
+	fi
+	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
+}
+
+GET_CALLSIGN() {
   local icao="$1"
   local tail=""
 
 	# See if we have it somewhere in the socket30003 file:
-  tail="$(awk -F "," -v icao="$icao" '($1 == icao && $12 != "") {print $12;exit;}' "$RECORDSFILE" 2>/dev/null)"
-	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
+  tail="$(tac "$RECORDSFILE" | awk -F "," -v icao="$icao" '($1 == icao && $12 != "") {print $12;exit;}' 2>/dev/null)"
+	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
 
-  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
-	if [[ -f /run/planefence/icao2plane.txt ]]; then
-		tail="$(grep -i -w "$icao" /run/planefence/icao2plane.txt 2>/dev/null | head -1 | awk -F "," '{print $2}')"
-	fi
-	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
-
-	# If the ICAO starts with "A" and there is no flight or tail number, let's algorithmically determine the tail number
-	if [[ "${icao:0:1}" == "A" ]]; then
-		tail="$(/usr/share/planefence/icao2tail.py "$icao")"
-	fi
-	if [[ -n "$tail" ]]; then echo "${tail// /}"; exit; fi
+  # If it's not there, then use GET_TAIL to replace the callsign with the tail number
+  GET_TAIL "$icao"
+  return
 }
 
 GET_ROUTE () {
@@ -544,8 +559,9 @@ if (( ${#socketrecords[@]} > 0 )); then
   if [[ -n $callsign ]]; then
     records["$idx":callsign]="$callsign"
     records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
-    if [[ -z ${records["$idx":faa:link]} && $callsign =~ $faa_re ]]; then
-      records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$callsign"
+    records["$idx":tail]="$(icao2tail.py "${records["$idx":icao]}")"
+    if [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z ${records["$idx":faa:link]} ]]; then
+      records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
     fi
   fi
 
@@ -605,10 +621,15 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":complete]="true"
     fi
 
+    # add a tail if there isn't any
+    if [[ -z "${records["$idx":tail]}" ]]; then
+      records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
+    fi
+
     # callstart=$(date +%s.%3N)
     # Add a callsign if there isn't any
-    if [[ -z "${records["$idx":callsign]}" ]]; then
-      callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
+    if chk_enabled "${records["$idx":complete]}" && [[ -z "${records["$idx":callsign]}" ]]; then
+      callsign="$(GET_CALLSIGN "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
       records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
