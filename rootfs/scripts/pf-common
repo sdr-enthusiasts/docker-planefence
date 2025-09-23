@@ -135,58 +135,9 @@ csv_encode() {
 
 template_replace() {
   local pat="$1" repl="$2" template="$3"
-  if [[ -z $template ]]; then
-    debug_print "Usage: template_replace search_string replace_string template_string"
-    return 1
-  fi
-
-  if ! grep -q -- "$pat" <<<"$template"; then
-    # debug_print "Can't replace - \"$pat\" not found in template"
-    printf '%s' "$template"
-    return 0
-  fi
-
-  # Normalize pat to a single line (awk index() doesn’t match across newlines)
-  pat_oneline=$(printf %s "$pat")
-
-  while grep -q -- "$pat" <<<"$template"; do
-    local firstpart lastpart
-    firstpart="$(
-      awk -v p="$pat_oneline" '
-        {
-          i = index($0, p)
-          if (i) {
-            print substr($0, 1, i - 1)
-            exit
-          }
-          print
-        }
-      ' <<<"$template"
-    )"
-    lastpart="$(
-      awk -v p="$pat_oneline" '
-        {
-          i = index($0, p)
-          if (i) {
-            print substr($0, i + length(p))
-            seen = 1
-            next
-          }
-          if (seen) {
-            print
-          }
-        }
-      ' <<<"$template"
-    )"
-    template="${firstpart}${repl}${lastpart}"
-  done
-
-  printf '%s' "$template"
+  [[ -z $template ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
+  printf '%s' "${template//"$pat"/$repl}"
 }
-
-
-
-
 
 DISTUNIT="mi"
 ALTUNIT="ft"

@@ -559,7 +559,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   if [[ -n $callsign ]]; then
     records["$idx":callsign]="$callsign"
     records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
-    records["$idx":tail]="$(icao2tail.py "${records["$idx":icao]}")"
+    records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
     if [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z ${records["$idx":faa:link]} ]]; then
       records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
     fi
