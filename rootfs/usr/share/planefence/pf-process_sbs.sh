@@ -133,18 +133,20 @@ GET_ROUTE_BULK () {
 
   local apiUrl=https://adsb.im/api/0/routeset
   declare -A routesarray=()
-  declare indexarray=()
-  local idx call route plausible
+  declare -a indexarray=()
+  local idx line call route plausible
 
   # first comb through records[] to get the callsigns we need to look up the route for
   for (( idx=0; idx<=records[maxindex]; idx++ )); do
-    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":route:checked]}" && [[ -z "${records["$idx":route]}" ]]; then
+    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":route:checked]}"; then
       routesarray["$idx":callsign]="${records["$idx":callsign]:-${records["$idx":tail]}}"
       routesarray["$idx":lat]="${records["$idx":lat]}"
       routesarray["$idx":lon]="${records["$idx":lon]}"
       indexarray+=("$idx")
     fi
   done
+
+  # debug_print "route: lookup for indices ${indexarray[*]} / ${routesarray[*]}"
 
   # If there's anything to be looked up, then create a JSON object and submit it to the API. The call returns a comma separated object with call,route,plausibility(boolean)
   if (( ${#indexarray[@]} > 0 )); then
@@ -156,7 +158,9 @@ GET_ROUTE_BULK () {
     json="${json:0:-1}" # strip the final comma
     json+=" ] }" # terminate the JSON object
 
-    while IFS=, read -r call route plausible; do
+    while read -r line; do
+      IFS=, read -r call route plausible <<< "$line"
+
       # get the routes, process them line by line.
       # Example results: RPA5731,BOS-PIT-BOS,true\nRPA5631,IND-BOS,true\nN409FZ,unknown,null\n
 
@@ -169,11 +173,11 @@ GET_ROUTE_BULK () {
             if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
           fi
         records["$idx":route:checked]=true
-        debug_print "Got route for $idx: $call,${records["$idx":route]}"
+        # debug_print "Got route for $idx: $call,${records["$idx":route]}"
         fi
       done
 
-    done <<< "$(curl -sSL -X 'POST' 'https://adsb.im/api/0/routeset' -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json")"
+    done <<< "$(curl -sSL -X 'POST' 'https://adsb.im/api/0/routeset' -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
   fi
 }
 
