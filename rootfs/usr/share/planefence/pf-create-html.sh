@@ -105,7 +105,11 @@ CREATEHTMLTABLE () {
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}"
 
 			# Tail
-			printf "   <td>%s</td><!-- Tail -->\n" "${records["$idx":tail]}"
+			if [[ "${records["$idx":tail]:0:1}" == "N" ]]; then 
+				printf "   <td>%s</td><!-- Tail -->\n" "${records["$idx":tail]}"
+			else
+				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":tail]}"
+			fi
 
 			# Flight number
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}"
@@ -116,11 +120,7 @@ CREATEHTMLTABLE () {
 			fi
 
 			# Owner
-			if [[ -n "${records["$idx":faa:link]}" ]]; then
-				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":owner]}"
-			else
-				printf "   <td>%s</td><!-- owner -->\n" "${records["$idx":owner]}"
-			fi
+			printf "   <td>%s</td><!-- owner -->\n" "${records["$idx":owner]}"
 
 			# time first seen
 			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
