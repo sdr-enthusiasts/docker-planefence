@@ -163,7 +163,7 @@ GET_ROUTE_BULK () {
       for idx in "${indexarray[@]}"; do
         if [[ "${routesarray["$idx":callsign]}" == "$call" ]]; then
           if [[ -z "$route" ]] || [[ "$route" == "unknown" ]] || [[ "$route" == "null" ]]; then
-            records["$idx":route]=""
+            records["$idx":route]="n/a"
           else
             records["$idx":route]="$route"
             if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
