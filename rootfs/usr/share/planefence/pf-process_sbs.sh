@@ -126,7 +126,57 @@ GET_CALLSIGN() {
   return
 }
 
-GET_ROUTE () {
+GET_ROUTE_BULK () {
+  # function to get a route by callsign. Must have a callsign - ICAO won't work
+  # Usage: GET_ROUTE <callsign>
+  # Uses the adsb.im API to retrieve the route
+
+  local apiUrl=https://adsb.im/api/0/routeset
+  declare -A routesarray=()
+  declare indexarray=()
+  local idx call route plausible
+
+  # first comb through records[] to get the callsigns we need to look up the route for
+  for (( idx=0; idx<=records[maxindex]; idx++ )); do
+    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":route:checked]}" && [[ -z "${records["$idx":route]}" ]]; then
+      routesarray["$idx":callsign]="${records["$idx":callsign]:-${records["$idx":tail]}}"
+      routesarray["$idx":lat]="${records["$idx":lat]}"
+      routesarray["$idx":lon]="${records["$idx":lon]}"
+      indexarray+=("$idx")
+    fi
+  done
+
+  # If there's anything to be looked up, then create a JSON object and submit it to the API. The call returns a comma separated object
+  # call,
+  if (( ${#indexarray[@]} > 0 )); then
+    json='{ "planes": [ '
+    for idx in "${indexarray[@]}"; do
+      json+="{ \"callsign\":\"${routesarray["$idx":callsign]}\", \"lat\": ${routesarray["$idx":lat]}, \"lng\": ${routesarray["$idx":lon]} },"
+    done
+    json="${json:0:-1}" # strip the final comma
+    json+=" ] }" # terminate the JSON object
+
+    while IFS=, read -r call route plausible; do
+      # get the routes, process them line by line.
+      # Example results: RPA5731,BOS-PIT-BOS,true\nRPA5631,IND-BOS,true\nN409FZ,unknown,null\n
+
+      for idx in "${indexarray[@]}"; do
+        if [[ "${routesarray["$idx":callsign]}" == "$call" ]]; then
+          if [[ -z "$route" ]] || [[ "$route" == "unknown" ]] || [[ "$route" == "null" ]]; then
+            records["$idx":route]=""
+          else
+            records["$idx":route]="$route"
+            if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
+          fi
+        records["$idx":route:checked]=true
+        fi
+      done
+
+    done <<< "$(curl -sSL -X 'POST' 'https://adsb.im/api/0/routeset' -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json")"
+  fi
+}
+
+GET_ROUTE_INDIVIDUAL () {
 		# function to get a route by callsign. Must have a callsign - ICAO won't work
 		# Usage: GET_ROUTE <callsign>
 		# Uses the adsb.lol API to retrieve the route
@@ -642,18 +692,6 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
     # nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
 
-    # get route information
-    # routestart=$(date +%s.%3N)
-    if ! chk_disabled "$CHECKROUTE" && \
-       ! chk_enabled "${records["$idx":route:checked]}" && \
-       [[ -z ${records["$idx":route]} ]] && \
-       [[ -n "${records["$idx":callsign]}" ]]; then
-          records["$idx":route]="$(GET_ROUTE "${records["$idx":callsign]}")"
-          if [[ -n "${records["$idx":route]}" ]]; then records[HASROUTE]=true; fi
-          records["$idx":route:checked]=true
-    fi
-    # routetiming=$(bc -l <<< "${routetiming:-0} + $(date +%s.%3N) - $routestart")
-
     # get images
     # imgstart=$(date +%s.%3N)
     if chk_enabled "$SHOWIMAGES" && \
@@ -720,6 +758,11 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
 
   done
+
+  # get route information in bulk (single API call)
+  # routestart=$(date +%s.%3N)
+  if ! chk_disabled "$CHECKROUTE"; then GET_ROUTE_BULK; fi
+  # routetiming=$(bc -l <<< "${routetiming:-0} + $(date +%s.%3N) - $routestart")
 
   if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
