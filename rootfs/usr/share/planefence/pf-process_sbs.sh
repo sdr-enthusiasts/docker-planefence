@@ -169,6 +169,7 @@ GET_ROUTE_BULK () {
             if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
           fi
         records["$idx":route:checked]=true
+        debug_print "Got route for $idx: $call,${records["$idx":route]}"
         fi
       done
 
