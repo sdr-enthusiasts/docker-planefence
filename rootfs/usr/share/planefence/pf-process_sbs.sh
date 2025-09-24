@@ -146,9 +146,9 @@ GET_ROUTE_BULK () {
     fi
   done
 
-  # If there's anything to be looked up, then create a JSON object and submit it to the API. The call returns a comma separated object
-  # call,
+  # If there's anything to be looked up, then create a JSON object and submit it to the API. The call returns a comma separated object with call,route,plausibility(boolean)
   if (( ${#indexarray[@]} > 0 )); then
+    records[HASROUTE]=true
     json='{ "planes": [ '
     for idx in "${indexarray[@]}"; do
       json+="{ \"callsign\":\"${routesarray["$idx":callsign]}\", \"lat\": ${routesarray["$idx":lat]}, \"lng\": ${routesarray["$idx":lon]} },"
