@@ -192,7 +192,6 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<<"$PF_SOCK30003HOST")
 	sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
-	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
 else
 	sleep 10s
@@ -215,15 +214,6 @@ a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf
 [[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
 #
-# -----------------------------------------------------------------------------------
-#
-# same for planeheat.sh
-#
-sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planeheat.sh
-sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planeheat.sh
-[[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planeheat.sh
-[[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planeheat.sh
-# -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
 #
 # enable or disable tweeting:
