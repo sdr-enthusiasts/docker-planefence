@@ -10,7 +10,7 @@
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/
-##
+#
 # Summary of License Terms
 # This program is free software: you can redistribute it and/or modify it under the terms of
 # the GNU General Public License as published by the Free Software Foundation, either version 3
@@ -204,8 +204,11 @@ CREATEHTMLTABLE () {
 		done
 		printf "</tbody>\n</table>\n"
 	)"
-	template="$(template_replace "##PLANETABLE##" "$table" "$template")"
-	template="$(template_replace "##TABLESIZE##" "${TABLESIZE:-50}" "$template")"
+	echo "$table" > /tmp/table
+	echo "$template" > /tmp/before
+	template="$(template_replace "||PLANETABLE||" "$table" "$template")"
+	echo "$template" > /tmp/after
+	template="$(template_replace "||TABLESIZE||" "${TABLESIZE:-50}" "$template")"
 
 }
 
@@ -241,35 +244,35 @@ CREATEHTMLHISTORY () {
 		printf "\n</p>\n"
 		printf "</details>\n</article>\n</section>"
 	)"
-		template="$(template_replace "##HISTTABLE##" "$htmlhistory" "$template")"
+		template="$(template_replace "||HISTTABLE||" "$htmlhistory" "$template")"
 }
 
 # Function to create the Heatmap
 CREATEHEATMAP () {
 	# Disable the heatmap in the template if $PLANEHEAT is not enabled
 	if ! chk_enabled "$PLANEHEAT"; then
-		template="$(sed -z 's/<!--PLANEHEAT##>.*<##PLANEHEAT-->//g' <<< "$template")"
+		template="$(sed -z 's/<!--PLANEHEAT||>.*<||PLANEHEAT-->//g' <<< "$template")"
 		return
 	else
-		template="$(template_replace "<!--PLANEHEAT##>" "" "$template")"
-		template="$(template_replace "<##PLANEHEAT-->" "" "$template")"
+		template="$(template_replace "<!--PLANEHEAT||>" "" "$template")"
+		template="$(template_replace "<||PLANEHEAT-->" "" "$template")"
 	fi
 
 	# If OpenAIP is enabled, include it. If not, exclude it.
 	if chk_enabled "$OPENAIP_LAYER"; then
-		template="$(template_replace "<!--OPENAIP##>" "" "$template")"
-		template="$(template_replace "<##OPENAIP-->" "" "$template")"
-		template="$(template_replace "##OPENAIPKEY##" "$OPENAIPKEY" "$template")"
+		template="$(template_replace "<!--OPENAIP||>" "" "$template")"
+		template="$(template_replace "<||OPENAIP-->" "" "$template")"
+		template="$(template_replace "||OPENAIPKEY||" "$OPENAIPKEY" "$template")"
 	else
-		template="$(sed -z 's/<!--OPENAIP##>.*<##OPENAIP-->//g' <<< "$template")"
+		template="$(sed -z 's/<!--OPENAIP||>.*<||OPENAIP-->//g' <<< "$template")"
 	fi
 
 	# Replace the other template values:
 	# Determine the zoom level for the heatmap
-	template="$(template_replace "##HEATMAPZOOM##" "$HEATMAPZOOM" "$template")"
-	template="$(template_replace "##HEATMAPWIDTH##" "$HEATMAPWIDTH" "$template")"
-	template="$(template_replace "##HEATMAPHEIGHT##" "$HEATMAPHEIGHT" "$template")"
-	template="$(template_replace "##DISTMTS##" "$DISTMTS" "$template")"
+	template="$(template_replace "||HEATMAPZOOM||" "$HEATMAPZOOM" "$template")"
+	template="$(template_replace "||HEATMAPWIDTH||" "$HEATMAPWIDTH" "$template")"
+	template="$(template_replace "||HEATMAPHEIGHT||" "$HEATMAPHEIGHT" "$template")"
+	template="$(template_replace "||DISTMTS||" "$DISTMTS" "$template")"
 
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
@@ -288,7 +291,7 @@ CREATEHEATMAP () {
 CREATENOTIFICATIONS () {
 
 	if ! chk_enabled "${records[HASNOTIFS]}"; then
-		template="$(template_replace "##NOTIFICATIONS##" "" "$template")"
+		template="$(template_replace "||NOTIFICATIONS||" "" "$template")"
 		return
 	fi
 	# shellcheck disable=SC2034
@@ -313,7 +316,7 @@ CREATENOTIFICATIONS () {
 			printf "<ul><li>RSS feed at <a href=\"%s\" target=\"_blank\">%s</a></li></ul>\n" "$RSS_SITELINK" "$RSS_SITELINK"
 		fi
 	)"
-	template="$(template_replace "##NOTIFICATIONS##" "$notifhtml" "$template")"
+	template="$(template_replace "||NOTIFICATIONS||" "$notifhtml" "$template")"
 
 }
 
@@ -371,69 +374,69 @@ CREATENOTIFICATIONS
 
 # Now replace the other template values:
 
-# ##AUTOREFRESH##
+# ||AUTOREFRESH||
 if chk_enabled "${AUTOREFRESH}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
-	template="$(template_replace "##AUTOREFRESH##" "<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">" "$template")"
+	template="$(template_replace "||AUTOREFRESH||" "<meta http-equiv=\"refresh\" content=\"${REFRESH_INT:-300}\">" "$template")"
 else
-	template="$(template_replace "##AUTOREFRESH##" "" "$template")"
+	template="$(template_replace "||AUTOREFRESH||" "" "$template")"
 fi
 
 # a bunch of simple replacements:
-template="$(template_replace "##MY##" "$MY" "$template")"
-template="$(template_replace "##MYURL##" "$MYURL" "$template")"
-template="$(template_replace "##MAPZOOM##" "$MAPZOOM" "$template")"
-template="$(template_replace "##MAXALT##" "$MAXALT" "$template")"
-template="$(template_replace "##VERSION##" "$VERSION" "$template")"
-template="$(template_replace "##BUILD##" "$(</.VERSION)" "$template")"
-template="$(template_replace "##SOCKETLINES##" "$SOCKETLINES" "$template")"
-template="$(template_replace "##DIST##" "$DIST" "$template")"
-template="$(template_replace "##DISTUNIT##" "$DISTUNIT" "$template")"
-template="$(template_replace "##ALTUNIT##" "$ALTUNIT" "$template")"
-template="$(template_replace "##ALTREF##" "$ALTREF" "$template")"
-template="$(template_replace "##LASTUPDATE##" "$(date -d "@$NOWTIME")" "$template")"
-template="$(template_replace "##TRACKURL##" "$TRACKURL" "$template")"
-template="$(template_replace "##LATFUDGED##" "$LATFUDGED" "$template")"
-template="$(template_replace "##LONFUDGED##" "$LONFUDGED" "$template")"
-template="$(template_replace "##TODAY##" "$TODAY" "$template")"
+template="$(template_replace "||MY||" "$MY" "$template")"
+template="$(template_replace "||MYURL||" "$MYURL" "$template")"
+template="$(template_replace "||MAPZOOM||" "$MAPZOOM" "$template")"
+template="$(template_replace "||MAXALT||" "$MAXALT" "$template")"
+template="$(template_replace "||VERSION||" "$VERSION" "$template")"
+template="$(template_replace "||BUILD||" "$(</.VERSION)" "$template")"
+template="$(template_replace "||SOCKETLINES||" "$SOCKETLINES" "$template")"
+template="$(template_replace "||DIST||" "$DIST" "$template")"
+template="$(template_replace "||DISTUNIT||" "$DISTUNIT" "$template")"
+template="$(template_replace "||ALTUNIT||" "$ALTUNIT" "$template")"
+template="$(template_replace "||ALTREF||" "$ALTREF" "$template")"
+template="$(template_replace "||LASTUPDATE||" "$(date -d "@$NOWTIME")" "$template")"
+template="$(template_replace "||TRACKURL||" "$TRACKURL" "$template")"
+template="$(template_replace "||LATFUDGED||" "$LATFUDGED" "$template")"
+template="$(template_replace "||LONFUDGED||" "$LONFUDGED" "$template")"
+template="$(template_replace "||TODAY||" "$TODAY" "$template")"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
-	template="$(template_replace "##ALTCORR##" "$ALTCORR" "$template")"
-	template="$(template_replace "##ALTUNIT##" "$ALTUNIT" "$template")"
-	template="$(template_replace "##ALTREF##" "$ALTREF" "$template")"
-	template="$(template_replace "<!--ALTCORR##>" "" "$template")"
-	template="$(template_replace "<##ALTCORR-->" "" "$template")"
+	template="$(template_replace "||ALTCORR||" "$ALTCORR" "$template")"
+	template="$(template_replace "||ALTUNIT||" "$ALTUNIT" "$template")"
+	template="$(template_replace "||ALTREF||" "$ALTREF" "$template")"
+	template="$(template_replace "<!--ALTCORR||>" "" "$template")"
+	template="$(template_replace "<||ALTCORR-->" "" "$template")"
 else
-	template="$(sed -z 's/<!--ALTCORR##>.*<##ALTCORR-->//g' <<< "$template")"
+	template="$(sed -z 's/<!--ALTCORR||>.*<||ALTCORR-->//g' <<< "$template")"
 fi
 
 # BSky correction
 if chk_enabled "$BSKY"; then
-	template="$(template_replace "##BSKYHANDLE##" "$BSKYHANDLE" "$template")"
-	template="$(template_replace "##BSKYLINK##" "$BSKYLINK" "$template")"
-	template="$(template_replace "<!--BSKY##>" "" "$template")"
-	template="$(template_replace "<##BSKY-->" "" "$template")"
+	template="$(template_replace "||BSKYHANDLE||" "$BSKYHANDLE" "$template")"
+	template="$(template_replace "||BSKYLINK||" "$BSKYLINK" "$template")"
+	template="$(template_replace "<!--BSKY||>" "" "$template")"
+	template="$(template_replace "<||BSKY-->" "" "$template")"
 else
-	template="$(sed -z 's/<!--BSKY##>.*<##BSKY-->//g' <<< "$template")"
+	template="$(sed -z 's/<!--BSKY||>.*<||BSKY-->//g' <<< "$template")"
 fi
 
 # Noise data section
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "${records[HASNOISE]}"; then
-	template="$(template_replace "<!--NOISEDATA##>" "" "$template")"
-	template="$(template_replace "<##NOISEDATA-->" "" "$template")"
+	template="$(template_replace "<!--NOISEDATA||>" "" "$template")"
+	template="$(template_replace "<||NOISEDATA-->" "" "$template")"
 else
-	template="$(sed -z 's/<!--NOISEDATA##>.*<##NOISEDATA-->//g' <<< "$template")"
+	template="$(sed -z 's/<!--NOISEDATA||>.*<||NOISEDATA-->//g' <<< "$template")"
 fi
 
 # Set PlaneAlert link if PA is enabled
 if chk_enabled "$PLANEALERT"; then
-	template="$(template_replace "##PALINK##" "$PALINK" "$template")"
-	template="$(template_replace "<!--PA##>" "" "$template")"
-	template="$(template_replace "<##PA-->" "" "$template")"
+	template="$(template_replace "||PALINK||" "$PALINK" "$template")"
+	template="$(template_replace "<!--PA||>" "" "$template")"
+	template="$(template_replace "<||PA-->" "" "$template")"
 else
-	template="$(sed -z 's/<!--PA##>.*<##PA-->//g' <<< "$template")"
+	template="$(sed -z 's/<!--PA||>.*<||PA-->//g' <<< "$template")"
 fi
 
 

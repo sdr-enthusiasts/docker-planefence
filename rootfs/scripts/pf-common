@@ -133,36 +133,44 @@ csv_encode() {
   printf '"%s"' "$s"
 }
 
-# template_replace() {
-#   local pat="$1" repl="$2" template="$3"
-#   [[ -z $template ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
-#   printf '%s' "${template//"$pat"/$repl}"
-# }
-
 template_replace() {
-  # Usage: template_replace search_string replace_string template_string
-  local pat="$1" repl="$2" template="$3"
-  [[ -z ${template+x} ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
-
-  # Escape glob metacharacters in pattern so match is literal.
-  # Your pattern chars are [A-Za-z0-9-!#_]*, so only '-' and '!' can be globby in some contexts,
-  # but we escape the full set defensively.
-  local esc_pat=$pat
-  esc_pat=${esc_pat//\\/\\\\}   # backslash first
-  esc_pat=${esc_pat//\*/\\*}
-  esc_pat=${esc_pat//\?/\\?}
-  esc_pat=${esc_pat//\[/\\[}
-
-  # Disable globbing; prevent word-splitting; keep repl literal (incl. & and $).
-  local oldopts=$-
-  set -f
-  local IFS=
-  # shellcheck disable=SC2295
-  template=${template//"$esc_pat"/$repl}
-  [[ $oldopts == *f* ]] || set +f
-
+  local token="$1" repl="$2" template="$3" 
+  [[ -z $template ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
+  if [[ $template != *"$token"* ]]; then
+    printf '%s' "$template"
+    return 0
+  fi
+ 
+  while [[ $template == *"$token"* ]]; do
+    printf -v template "%s%s%s" "${template%%"$token"*}" "$repl" "${template#*"$token"}"
+  done
   printf '%s' "$template"
 }
+
+# template_replace() {
+#   # Usage: template_replace search_string replace_string template_string
+#   local pat="$1" repl="$2" template="$3"
+#   [[ -z ${template+x} ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
+
+#   # Escape glob metacharacters in pattern so match is literal.
+#   # Your pattern chars are [A-Za-z0-9-!#_]*, so only '-' and '!' can be globby in some contexts,
+#   # but we escape the full set defensively.
+#   local esc_pat=$pat
+#   esc_pat=${esc_pat//\\/\\\\}   # backslash first
+#   esc_pat=${esc_pat//\*/\\*}
+#   esc_pat=${esc_pat//\?/\\?}
+#   esc_pat=${esc_pat//\[/\\[}
+
+#   # Disable globbing; prevent word-splitting; keep repl literal (incl. & and $).
+#   local oldopts=$-
+#   set -f
+#   local IFS=
+#   # shellcheck disable=SC2295
+#   template=${template//"$esc_pat"/$repl}
+#   [[ $oldopts == *f* ]] || set +f
+
+#   printf '%s' "$template"
+# }
 
 DISTUNIT="mi"
 ALTUNIT="ft"
