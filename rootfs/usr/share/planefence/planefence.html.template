@@ -154,6 +154,8 @@ td, table.dataTable tbody td {
 <li>Click on the Flight Number to see the full flight information/history (from <a href=http://www.flightaware.com" target="_blank">FlightAware</a>)
 <li>Click on the Owner Information to see the FAA record for this plane (private, US registered planes only)
 <!--ALTCORR||><li>Minimum altitude is the altitude above local ground level, which is ||ALTCORR|| ||ALTUNIT|| ||ALTREF||.<||ALTCORR-->
+<li>The angle shown with the minimum distance is the direction in the sky the plane was when it was at its closest distance to the receiver
+<li>The Track column shows the direction the aircraft is actually moving in
 <li>Press the header of any of the columns to sort by that column
 </ul>
 ||PLANETABLE||

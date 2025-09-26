@@ -60,7 +60,8 @@ CREATEHTMLTABLE () {
 			<th style=\"width: auto; text-align: center\">Time First Seen</th>
 			<th style=\"width: auto; text-align: center\">Time Last Seen</th>
 			<th style=\"width: auto; text-align: center\">Min. Altitude</th>
-			<th style=\"width: auto; text-align: center\">Min. Distance</th>"
+			<th style=\"width: auto; text-align: center\">Min. Distance</th>
+			<th style=\"width: auto; text-align: center\">Track</th>"
 
 		if chk_enabled "${records[HASNOISE]}"; then
 			# print the headers for the standard noise columns
@@ -105,7 +106,7 @@ CREATEHTMLTABLE () {
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}"
 
 			# Tail
-			if [[ "${records["$idx":tail]:0:1}" == "N" ]]; then 
+			if [[ -z "${records["$idx":faa:link]}" ]]; then
 				printf "   <td>%s</td><!-- Tail -->\n" "${records["$idx":tail]}"
 			else
 				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":tail]}"
@@ -132,7 +133,10 @@ CREATEHTMLTABLE () {
 			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE"
 
 			# min distance
-			printf "   <td>%s %s</td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT"
+			printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( ${records["$idx":angle]%%.*} / 10 * 10 )).gif"  # round angle to nearest 10 degrees for arrow
+
+			# track
+			printf "   <td>%s<img src=\"%s\"></td><!-- track -->\n" "${records["$idx":track]}&deg;" "arrow$(( ${records["$idx":track]%%.*} / 10 * 10 )).gif"
 
 			# Print the noise values if we have determined that there is data
 			if chk_enabled "${records[HASNOISE]}"; then

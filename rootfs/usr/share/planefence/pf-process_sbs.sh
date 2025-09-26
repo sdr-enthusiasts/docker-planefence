@@ -1,7 +1,6 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
 #shellcheck disable=SC1090,SC1091,SC2034,SC2154,SC2155
-###shellcheck disable=SC2001,SC2015,SC1091,SC2129,SC2154,SC2155
 #
 # PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
 #
@@ -92,25 +91,37 @@ fi
 
 GET_TAIL() {
   # Usage: GET_TAIL "$icao"
-  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
   local icao=${1^^}
+
+  # see if it's in our own cache first
+  if [[  -f "/usr/share/planefence/persist/.internal/icao2tail.cache" ]]; then
+    tail="$(awk -F, -v icao="$icao" '$1 == icao {print $2; exit}' "/usr/share/planefence/persist/.internal/icao2tail.cache")"
+    if [[ -n "$tail" ]]; then
+      echo "${tail// /}"
+      return
+    fi
+  fi
+
+  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:  
 	if [[ -f /run/planefence/icao2plane.txt ]]; then
 		tail="$(grep -m1 -i -F "$icao" /run/planefence/icao2plane.txt 2>/dev/null | awk -F, '{print $2}')"
 	fi
-	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
 
   # If there is a OpenSkyDB file, check that one:
-  if [[ -f /run/OpenSkyDB.csv ]]; then
+  if [[ -z "$tail" ]] && [[ -f /run/OpenSkyDB.csv ]]; then
     tail="$(grep -m1 -i -F "$icao" /run/OpenSkyDB.csv | awk -F, '{print $27}')"
-    tail="${tail//[\"\']/}"
+    tail="${tail//[ \"\']/}"
   fi
-  if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
 
 	# If the ICAO starts with "A"  (but is not in  the range of AExxxx ADExxx ADFxxx - those are US military without N number) and there is no flight or tail number, let's algorithmically determine the tail number
-	if [[ "$icao" =~ ^A && ! "$icao" =~ ^AE && ! "$icao" =~ ^ADE && ! "$icao" =~ ^ADF ]]; then
+	if [[ -z "$tail" ]] &&  [[ "$icao" =~ ^A && ! "$icao" =~ ^AE && ! "$icao" =~ ^ADE && ! "$icao" =~ ^ADF ]]; then
 		tail="$(/usr/share/planefence/icao2tail.py "$icao")"
 	fi
-	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
+	if [[ -n "$tail" ]]; then 
+    echo "$icao,${tail// /}" >> "/usr/share/planefence/persist/.internal/icao2tail.cache"
+    echo "${tail// /}"
+    return
+  fi
 }
 
 GET_CALLSIGN() {
@@ -783,46 +794,110 @@ if (( ${#socketrecords[@]} > 0 )); then
   WRITE_RECORDS ignore-lock
   debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
 
-  # ==========================
-  # Emit CSV snapshot
-  # ==========================
+  # # ==========================
+  # # Emit CSV snapshot
+  # # ==========================
 
-  # shellcheck disable=SC2207
-  keys=($(printf '%s\n' "${!records[@]}" | awk -F'[:\\]]' '!seen[$2]++ && !/heatmap/ {print $2}' | sort -u))
-  printf -v csvindex "%s," "${keys[@]}"; csvindex="${csvindex:0:-1}"
+  # # shellcheck disable=SC2207
+  # keys=($(printf '%s\n' "${!records[@]}" | awk -F'[:\\]]' '!seen[$2]++ && !/heatmap/ {print $2}' | sort -u))
+  # printf -v csvindex "%s," "${keys[@]}"; csvindex="${csvindex:0:-1}"
 
+  # {
+  #   echo "index,$csvindex"
+  #   for ((idx=0; idx<records[maxindex]; idx++)); do
+  #       csv="$idx,"
+  #       for key in "${keys[@]}"; do
+  #           csv+="$(csv_encode "${records["$idx":$key]}"),"
+  #       done
+  #       echo "${csv:0:-1}"
+  #   done
+  # } > "$CSVOUT" &
+
+  # # ==========================
+  # # Emit JSON snapshot
+  # # ==========================
+  # {
+  #   echo "["
+  #   sep=""
+  #   for ((idx=0; idx<records[maxindex]; idx++)); do
+  #       printf '%s{\n' "$sep"
+  #       sep=","
+  #       keysep=""
+  #       for key in "${keys[@]}"; do
+  #           val="$(json_encode "${records["$idx":$key]}")"
+  #           printf '%s "%s":"%s"' "$keysep" "$key" "$val"
+  #           keysep=","
+  #       done
+  #       echo -e "\n}"
+  #   done
+  #   echo "]"
+  # } > "$JSONOUT" &
+
+  # wait $!
+
+  declare -A seen=()
+  keys=()
+  for k in "${!records[@]}"; do
+    # match "<idx>:<key]" or "<idx>:<key>" variants. Extract part after first colon.
+    # Fast split using parameter expansion.
+    case $k in
+      (*:*)
+        key=${k#*:}
+        ;;
+      (*)
+        continue
+        ;;
+    esac
+    [[ $key == *heatmap* ]] && continue
+    if [[ -z ${seen[$key]+x} ]]; then
+      seen[$key]=1
+      keys+=("$key")
+    fi
+  done
+  debug_print "Wrote indices"
+
+  # Write CSV
   {
-    echo "index,$csvindex"
-    for ((idx=0; idx<records[maxindex]; idx++)); do
-        csv="$idx,"
-        for key in "${keys[@]}"; do
-            csv+="$(csv_encode "${records["$idx":$key]}"),"
-        done
-        echo "${csv:0:-1}"
+    printf 'index'
+    for key in "${keys[@]}"; do
+      printf ',%s' "$key"
     done
-  } > "$CSVOUT" &
+    printf '\n'
 
-  # ==========================
-  # Emit JSON snapshot
-  # ==========================
+    max=${records[maxindex]}
+    for ((idx=0; idx<max; idx++)); do
+      printf '%s' "$idx"
+      for key in "${keys[@]}"; do
+        val=${records["$idx":"$key"]}
+        enc=$(csv_encode "$val")
+        printf ',%s' "$enc"
+      done
+      printf '\n'
+      debug_print "Wrote record $idx of $max to $CSVOUT" 
+    done
+  } >"$CSVOUT"
+
+  # Write JSON (compact, newline-separated objects, no echo -e)
   {
-    echo "["
-    sep=""
-    for ((idx=0; idx<records[maxindex]; idx++)); do
-        printf '%s{\n' "$sep"
-        sep=","
-        keysep=""
-        for key in "${keys[@]}"; do
-            val="$(json_encode "${records["$idx":$key]}")"
-            printf '%s "%s":"%s"' "$keysep" "$key" "$val"
-            keysep=","
-        done
-        echo -e "\n}"
+    printf '[\n'
+    max=${records[maxindex]}
+    for ((idx=0; idx<max; idx++)); do
+      ((idx>0)) && printf ',\n'
+      printf '{'
+      for ((j=0; j<${#keys[@]}; j++)); do
+        key=${keys[j]}
+        val=${records["$idx":"$key"]}
+        enc=$(json_encode "$val")
+        printf '%s"%s":"%s"' "$([[ $j -gt 0 ]] && printf ',')" "$key" "$enc"
+      done
+      printf '}'
+      debug_print "Wrote record $idx of $max to $JSONOUT" 
     done
-    echo "]"
-  } > "$JSONOUT" &
+    printf '\n]\n'
+  } >"$JSONOUT"
 
-  wait $!
+  wait
+
   debug_print "Wrote $CSVOUT and $JSONOUT"
 
 fi

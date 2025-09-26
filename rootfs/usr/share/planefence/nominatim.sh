@@ -2,6 +2,8 @@
 # Fast Nominatim reverse with cache and rounding; errors -> stderr
 set -euo pipefail
 
+NOMI_CACHE_DIR=/usr/share/planefence/persist/.nominatim-cache
+
 lat=""; lon=""; raw=false
 for arg in "$@"; do
   case "${arg,,}" in
@@ -14,6 +16,7 @@ if [[ -z $lat || -z $lon ]]; then
   printf 'Missing argument. Usage: %s --lat=xx.xxxx --lon=yy.yyyy\n' "${0##*/}" >&2
   exit 1
 fi
+
 
 ROUND=3
 CACHE_DIR=${NOMI_CACHE_DIR:-/tmp/nominatim-cache}
