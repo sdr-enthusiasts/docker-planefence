@@ -572,7 +572,7 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     # Heatmap tally 
     latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
-    records["heatmap:$latlonkey"]=$(( ${records["heatmap:$latlonkey"]:-0} + 1 ))
+    heatmap["$latlonkey"]=$(( ${heatmap["$latlonkey"]:-0} + 1 ))
 
     # Collapse window lookup (O(1))
     idx=""

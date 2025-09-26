@@ -280,10 +280,8 @@ CREATEHEATMAP () {
 
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
-		for i in "${!records[@]}"; do
-			if [[ "${i:0:7}" == "heatmap" ]]; then
-				printf "[ %s,%s ],\n" "${i#*:}" "${records[$i]}"
-			fi
+		for i in "${!heatmap[@]}"; do
+				printf "[ %s,%s ],\n" "$i" "${heatmap["$i"]}"
 		done
 		printf "];\n"
 	} > "$OUTFILEDIR/planeheatdata-$TODAY.js"
