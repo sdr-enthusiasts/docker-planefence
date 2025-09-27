@@ -70,6 +70,7 @@ yesterday_epoch=$(date -d yesterday +%s)
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
+declare -A heatmap            # lat,lon -> count
 # optional tiny LRU window reset threshold to avoid stale growth
 RESET_AFTER=50000  # tune if needed
 processed=0

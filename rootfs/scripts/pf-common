@@ -136,18 +136,28 @@ csv_encode() {
 }
 
 template_replace() {
-  local token="$1" repl="$2" template="$3" 
-  [[ -z $template ]] && { printf 'Usage: template_replace search_string replace_string template_string\n' >&2; return 1; }
-  if [[ $template != *"$token"* ]]; then
+  local token=$1 repl=$2 template=$3 prefix
+  [[ -z ${token+x} || -z ${repl+x} || -z ${template+x} ]] && { p
+rintf 'Usage: template_replace token replacement template\n' >&2
+; return 1; }
+  [[ $token == "" ]] && { printf '%s' "$template"; return 0; }
+  [[ $template != *"$token"* ]] && { printf '%s' "$template"; re
+turn 0; }
+
+  local tmp
+  tmp=$(mktemp) || { printf 'mktemp failed\n' >&2; return 1; }
+  {
+    while [[ $template == *"$token"* ]]; do
+      prefix=${template%%"$token"*}
+      printf '%s%s' "$prefix" "$repl"
+      template=${template#*"$token"}
+    done
     printf '%s' "$template"
-    return 0
-  fi
- 
-  while [[ $template == *"$token"* ]]; do
-    printf -v template "%s%s%s" "${template%%"$token"*}" "$repl" "${template#*"$token"}"
-  done
-  printf '%s' "$template"
+  } >"$tmp"
+  cat "$tmp"
+  rm -f -- "$tmp"
 }
+
 
 # template_replace() {
 #   # Usage: template_replace search_string replace_string template_string

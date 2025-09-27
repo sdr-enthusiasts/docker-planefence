@@ -89,6 +89,7 @@ CREATEHTMLTABLE () {
 		# Now write the table
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
+			debug_print "Processing record $idx (ICAO ${records["$idx":icao]}) for HTML table"
 			printf "<tr>\n"
 
 			# table index number:
@@ -133,10 +134,20 @@ CREATEHTMLTABLE () {
 			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE"
 
 			# min distance
-			printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( ${records["$idx":angle]%%.*} / 10 * 10 )).gif"  # round angle to nearest 10 degrees for arrow
+			if [[ -n "${records["$idx":angle]}" ]]; then
+				# no angle available, so no arrow
+				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
+			else
+				# angle available, so print arrow too
+				printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0.gif"  # round angle to nearest 10 degrees for arrow
+			fi
 
 			# track
-			printf "   <td>%s<img src=\"%s\"></td><!-- track -->\n" "${records["$idx":track]}&deg;" "arrow$(( ${records["$idx":track]%%.*} / 10 * 10 )).gif"
+			if [[ -n "${records["$idx":track]}" ]]; then 
+				printf "   <td>%s<img src=\"%s\"></td><!-- track -->\n" "${records["$idx":track]}&deg;" "arrow$(( ${records["$idx":track]%%.*} / 10 ))0.gif"
+			else
+				printf "   <td></td><!-- no track available -->\n"
+			fi
 
 			# Print the noise values if we have determined that there is data
 			if chk_enabled "${records[HASNOISE]}"; then
@@ -235,6 +246,7 @@ CREATEHTMLHISTORY () {
 		if compgen -G "$OUTFILEDIR/planefence-??????.html" >/dev/null; then
 			# s#hellcheck disable=SC2012
 			for d in $(find "$OUTFILEDIR" -name 'planefence-??????.html' -exec basename {} \; | awk -F'[-.]' '{print $2}' | sort -r); do
+				if [[ "$d" == "$TODAY" ]]; then continue; fi  # skip today, we already printed it
 				printf " | %s" "$(date -d "$d" +%d-%b-%Y): "
 				printf "<a href=\"%s\" target=\"_top\">html</a>" "planefence-$(date -d "$d" +"%y%m%d").html"
 				if [[ -f "$OUTFILEDIR/planefence-$(date -d "$d" +"%y%m%d").csv" ]]; then
@@ -369,13 +381,9 @@ DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 # -----------------------------------------------------------------------------------
 #      MODIFY THE TEMPLATE
 # -----------------------------------------------------------------------------------
-CREATEHTMLTABLE
-CREATEHTMLHISTORY
-CREATEHEATMAP
-CREATENOTIFICATIONS
 
-# Now replace the other template values:
-
+# replace the template values:
+debug_print "Setting AutoRefresh, if enabled"
 # ||AUTOREFRESH||
 if chk_enabled "${AUTOREFRESH}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
@@ -384,6 +392,7 @@ else
 	template="$(template_replace "||AUTOREFRESH||" "" "$template")"
 fi
 
+debug_print "Setting other template values"
 # a bunch of simple replacements:
 template="$(template_replace "||MY||" "$MY" "$template")"
 template="$(template_replace "||MYURL||" "$MYURL" "$template")"
@@ -404,6 +413,7 @@ template="$(template_replace "||TODAY||" "$TODAY" "$template")"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
+	debug_print "Setting altitude correction values"
 	template="$(template_replace "||ALTCORR||" "$ALTCORR" "$template")"
 	template="$(template_replace "||ALTUNIT||" "$ALTUNIT" "$template")"
 	template="$(template_replace "||ALTREF||" "$ALTREF" "$template")"
@@ -425,6 +435,7 @@ fi
 
 # Noise data section
 # Set PlaneAlert link if PA is enabled
+debug_print "Setting noise data section, if applicable"
 if chk_enabled "${records[HASNOISE]}"; then
 	template="$(template_replace "<!--NOISEDATA||>" "" "$template")"
 	template="$(template_replace "<||NOISEDATA-->" "" "$template")"
@@ -433,6 +444,7 @@ else
 fi
 
 # Set PlaneAlert link if PA is enabled
+debug_print "Setting PlaneAlert link, if applicable"
 if chk_enabled "$PLANEALERT"; then
 	template="$(template_replace "||PALINK||" "$PALINK" "$template")"
 	template="$(template_replace "<!--PA||>" "" "$template")"
@@ -441,11 +453,22 @@ else
 	template="$(sed -z 's/<!--PA||>.*<||PA-->//g' <<< "$template")"
 fi
 
+debug_print "Adding history links"
+CREATEHTMLHISTORY
+debug_print "Adding heatmap (if enabled)"
+CREATEHEATMAP
+debug_print "Adding notifications"
+CREATENOTIFICATIONS
+# CREATEHTMLTABLE  must be the last substitution; anything being this will be very slow
+# due to the large increase of size of the template
+debug_print "Adding HTML table"
+CREATEHTMLTABLE
+
 
 # ---------------------------------------------------------------------------
 #      FINALIZE AND WRITE THE FILES
 # ---------------------------------------------------------------------------
-
+debug_print "Writing HTML file"
 echo "$template" > "$OUTFILEDIR/planefence-$TODAY.html"
 ln -sf "$OUTFILEDIR/planefence-$TODAY.html" "$OUTFILEDIR/index.html"
 
