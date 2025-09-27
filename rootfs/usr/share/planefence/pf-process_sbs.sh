@@ -876,7 +876,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       printf '\n'
       debug_print "Wrote record $idx of $max to $CSVOUT" 
     done
-  } >"$CSVOUT"
+  } >"$CSVOUT" &
 
   # Write JSON (compact, newline-separated objects, no echo -e)
   {
@@ -895,7 +895,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       debug_print "Wrote record $idx of $max to $JSONOUT" 
     done
     printf '\n]\n'
-  } >"$JSONOUT"
+  } >"$JSONOUT" &
 
   wait
 
