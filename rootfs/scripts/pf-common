@@ -137,12 +137,9 @@ csv_encode() {
 
 template_replace() {
   local token=$1 repl=$2 template=$3 prefix
-  [[ -z ${token+x} || -z ${repl+x} || -z ${template+x} ]] && { p
-rintf 'Usage: template_replace token replacement template\n' >&2
-; return 1; }
+  [[ -z ${token+x} || -z ${repl+x} || -z ${template+x} ]] && { printf 'Usage: template_replace token replacement template\n' >&2; return 1; }
   [[ $token == "" ]] && { printf '%s' "$template"; return 0; }
-  [[ $template != *"$token"* ]] && { printf '%s' "$template"; re
-turn 0; }
+  [[ $template != *"$token"* ]] && { printf '%s' "$template"; return 0; }
 
   local tmp
   tmp=$(mktemp) || { printf 'mktemp failed\n' >&2; return 1; }
