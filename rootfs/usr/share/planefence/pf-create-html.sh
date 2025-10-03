@@ -89,7 +89,7 @@ CREATEHTMLTABLE () {
 		# Now write the table
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
-			debug_print "Processing record $idx (ICAO ${records["$idx":icao]}) for HTML table"
+			# debug_print "Processing record $idx (ICAO ${records["$idx":icao]}) for HTML table"
 			printf "<tr>\n"
 
 			# table index number:
@@ -143,7 +143,7 @@ CREATEHTMLTABLE () {
 			fi
 
 			# track
-			if [[ -n "${records["$idx":track]}" ]]; then 
+			if [[ -n "${records["$idx":track]}" ]]; then
 				printf "   <td>%s<img src=\"%s\"></td><!-- track -->\n" "${records["$idx":track]}&deg;" "arrow$(( ${records["$idx":track]%%.*} / 10 ))0.gif"
 			else
 				printf "   <td></td><!-- no track available -->\n"
@@ -157,7 +157,7 @@ CREATEHTMLTABLE () {
 				else
 					printf "   <td style=\"background-color: %s\">%s %s</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
 				fi
-				if [[ -n "${records["$idx":mp3:link]}" ]]; then 
+				if [[ -n "${records["$idx":mp3:link]}" ]]; then
 					printf "   <td><a href=\"%s\" target=\"_blank\">%s %s</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3:link]}" "${records["$idx":sound:peak]}" "$([[ -n "${records["$idx":sound:peak]}" ]] && echo "dBFS")" # print actual value with "dBFS" unit
 				else
 					printf "   <td>%s %s</td><!-- peak RMS value (no MP3 recording available) -->\n" "${records["$idx":sound:peak]}" "$([[ -n "${records["$idx":sound:peak]}" ]] && echo "dBFS")" # print actual value with "dBFS" unit
@@ -213,18 +213,14 @@ CREATEHTMLTABLE () {
 													<button type=\"submit\" onclick=\"return prepareSubmit()\">UnIgnore</button></form></td>" \
 						"${records["$idx":icao]}" "$uuid"
 				fi
-			fi	
+			fi
 			printf "</tr>\n"
 
 		done
 		printf "</tbody>\n</table>\n"
 	)"
-	echo "$table" > /tmp/table
-	echo "$template" > /tmp/before
-	template="$(template_replace "||PLANETABLE||" "$table" "$template")"
-	echo "$template" > /tmp/after
 	template="$(template_replace "||TABLESIZE||" "${TABLESIZE:-50}" "$template")"
-
+	template="$(template_replace "||PLANETABLE||" "$table" "$template")"
 }
 
 # Function to write the Planefence history file
@@ -242,7 +238,7 @@ CREATEHTMLHISTORY () {
 		# right below. Right now, it lists all files that have the planefence-20*.html format (planefence-200504.html, etc.), and then
 		# picks the newest 7 (or whatever HISTTIME is set to), reverses the strings to capture the characters 6-11 from the right, which contain the date (200504)
 		# and reverses the results back so we get only a list of dates in the format yymmdd.
-		
+
 		if compgen -G "$OUTFILEDIR/planefence-??????.html" >/dev/null; then
 			# s#hellcheck disable=SC2012
 			for d in $(find "$OUTFILEDIR" -name 'planefence-??????.html' -exec basename {} \; | awk -F'[-.]' '{print $2}' | sort -r); do

@@ -790,19 +790,20 @@ if (( ${#socketrecords[@]} > 0 )); then
   if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
 
   debug_print "Processing complete. Now writing results to disk..."
-  # Last record processed: ${records[${records[maxindex]}:icao]}/${records[${records[maxindex]}:callsign]}. Maxindex=${records[maxindex]}."
 
   # ==========================
   # Save state
   # ==========================
   LASTPROCESSEDLINE="${socketrecords[1]}" # we're using the second line [1] as the first line [0] may be corrupted or incomplete
   WRITE_RECORDS ignore-lock
-  debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
+  debug_print "Wrote $RECORDSFILE"
 
   # # ==========================
   # # Emit CSV snapshot
   # # ==========================
 
+
+  # This looks complex but is highly opimized for speed by using awk for the heavy lifting.
   tmpfile="$(mktemp)"
   # Export records[] to awk as NUL-safe stream. 
   {
@@ -881,12 +882,15 @@ if (( ${#socketrecords[@]} > 0 )); then
   ' > "$tmpfile" # write to tmpfile first so $CSVOUT is always a full file
   mv -f "$tmpfile" "$CSVOUT"
 
+  debug_print "Wrote CSV object to $CSVOUT"
+
   ### Generate JSON object
+  # This is done with (g)awk + jq for speed
   tmpfile="$(mktemp)"
   {
     re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
     for k in "${!records[@]}"; do
-      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; else debug_print "[SKIP] $k"; fi
+      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
   } \
   | gawk -v RS='\0' -v ORS='\0' '
@@ -914,11 +918,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # emit idx\0key\0sub\0value\0
     printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
     count++
-  }
-  END {
-    printf "[DEBUG] JSON tuples generated: %d\n", count > "/dev/stderr"
-  }
-  ' | \
+  }' | \
   jq -R -s '
     split("\u0000")
     | .[:-1]
@@ -945,13 +945,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     | map({index:(.key|tonumber)} + .value)
   '  > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
-
-  # debug summary
-  printf '[DEBUG] Wrote JSON to %s (%d bytes)\n' "$JSONOUT" "$(wc -c <"$JSONOUT" 2>/dev/null || echo 0)" >&2
-  head -n 5 "$JSONOUT" >&2 || true
-  tail -n 5 "$JSONOUT" >&2 || true
-
-  debug_print "Wrote $JSONOUT"
+  debug_print "Wrote JSON object to $JSONOUT"
 
 fi
 debug_print "Done."
