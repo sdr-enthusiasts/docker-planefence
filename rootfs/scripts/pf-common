@@ -61,6 +61,7 @@ READ_RECORDS() {
     declare -gA last_idx_for_icao=()
     declare -gA lastseen_for_icao=()
     records[maxindex]=-1
+    LASTPROCESSEDLINE=""
     return
   fi
 
@@ -90,7 +91,9 @@ WRITE_RECORDS() {
   { declare -p records
     declare -p heatmap
     declare -p last_idx_for_icao
-    declare -p lastseen_for_icao; } > "$RECORDSFILE"
+    declare -p lastseen_for_icao
+    echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
+  } > "$RECORDSFILE"
   sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
   debug_print "Records written by $0"
   UNLOCK_RECORDS

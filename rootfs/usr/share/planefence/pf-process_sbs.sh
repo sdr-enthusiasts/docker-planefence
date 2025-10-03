@@ -59,8 +59,6 @@ YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}"
 CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
 
-LASTSOCKETRECFILE="/usr/share/planefence/persist/.planefence-state-lastrec"
-
 # Precompute midnight of today only once:
 midnight_epoch=$(date -d "$(date +%F) 00:00:00" +%s)
 today_ymd=$(date +%Y/%m/%d)
@@ -189,7 +187,7 @@ GET_ROUTE_BULK () {
         fi
       done
 
-    done <<< "$(curl -sSL -X 'POST' 'https://adsb.im/api/0/routeset' -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
+    done <<< "$(curl -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
   fi
 }
 
@@ -483,7 +481,7 @@ debug_print "Hello. Starting $0"
 
 if [[ "$1" == "reset" ]]; then
   debug_print "Resetting records"
-  rm -f "$LASTSOCKETRECFILE" "$RECORDSFILE" "$CSVOUT" "$JSONOUT" "/tmp/.records.lock"
+  rm -f "$RECORDSFILE" "$CSVOUT" "$JSONOUT" "/tmp/.records.lock"
   unset records
   declare -A records 
   records[maxindex]="-1"
@@ -507,21 +505,21 @@ fi
 # ==========================
 # Collect new lines
 # ==========================
-if [[ -f "$LASTSOCKETRECFILE" ]]; then
-  read -r LASTPROCESSEDLINE < "$LASTSOCKETRECFILE"
+if [[ -n "$LASTPROCESSEDLINE" ]]; then
   lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
 fi
 
 debug_print "Collecting new records. Last processed date is $lastdate"
-
 
 if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
   nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then 
   records[totallines]="$(cat "$TODAYFILE" | wc -l)"
+  nowlines="${records[totallines]}"
 else
   records[totallines]="0"
+  nowlines=0
 fi
 
 readarray -t socketrecords <<< "$(
@@ -561,7 +559,10 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     [[ -z $line ]] && continue
     IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
-    [[ $icao == "hex_ident" ]] && continue
+    [[ $icao == "hex_ident" ]] || [[ -z "$time" ]] && continue # skip header or incomplete lines
+
+    (( linecount++ )) || true
+    (( processed++ )) || true
 
     # Parse timestamp fast (assumes most lines are for today)
     t=${time%%.*}
@@ -660,7 +661,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       [[ -n $angle ]] && records["$idx":angle]="$angle"
       [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
       [[ -n $track ]] && records["$idx":track]="$track"
-      records["$idx":time:at:mindist]="$seentime"
+      records["$idx":time_at_mindist]="$seentime"
       [[ -n $squawk ]] && records["$idx":squawk]="$squawk"
     else
       # ensure squawk gets set once if still empty
@@ -764,7 +765,10 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     # get Nominating location
     # nomstart=$(date +%s.%3N)
-    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":nominatim:checked]}"; then
+    if chk_enabled "${records["$idx":complete]}" && \
+       ! chk_enabled "${records["$idx":nominatim:checked]}" && \
+       [[ -n "${records["$idx":lat]}" ]] && \
+       [[ -n "${records["$idx":lon]}" ]]; then
       records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
       records["$idx":nominatim:checked]=true
     fi
@@ -791,7 +795,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   # ==========================
   # Save state
   # ==========================
-  echo "${socketrecords[0]}" > "$LASTSOCKETRECFILE"
+  LASTPROCESSEDLINE="${socketrecords[1]}" # we're using the second line [1] as the first line [0] may be corrupted or incomplete
   WRITE_RECORDS ignore-lock
   debug_print "Wrote $RECORDSFILE and $LASTSOCKETRECFILE"
 
@@ -799,107 +803,155 @@ if (( ${#socketrecords[@]} > 0 )); then
   # # Emit CSV snapshot
   # # ==========================
 
-  # # shellcheck disable=SC2207
-  # keys=($(printf '%s\n' "${!records[@]}" | awk -F'[:\\]]' '!seen[$2]++ && !/heatmap/ {print $2}' | sort -u))
-  # printf -v csvindex "%s," "${keys[@]}"; csvindex="${csvindex:0:-1}"
-
-  # {
-  #   echo "index,$csvindex"
-  #   for ((idx=0; idx<records[maxindex]; idx++)); do
-  #       csv="$idx,"
-  #       for key in "${keys[@]}"; do
-  #           csv+="$(csv_encode "${records["$idx":$key]}"),"
-  #       done
-  #       echo "${csv:0:-1}"
-  #   done
-  # } > "$CSVOUT" &
-
-  # # ==========================
-  # # Emit JSON snapshot
-  # # ==========================
-  # {
-  #   echo "["
-  #   sep=""
-  #   for ((idx=0; idx<records[maxindex]; idx++)); do
-  #       printf '%s{\n' "$sep"
-  #       sep=","
-  #       keysep=""
-  #       for key in "${keys[@]}"; do
-  #           val="$(json_encode "${records["$idx":$key]}")"
-  #           printf '%s "%s":"%s"' "$keysep" "$key" "$val"
-  #           keysep=","
-  #       done
-  #       echo -e "\n}"
-  #   done
-  #   echo "]"
-  # } > "$JSONOUT" &
-
-  # wait $!
-
-  declare -A seen=()
-  keys=()
-  for k in "${!records[@]}"; do
-    # match "<idx>:<key]" or "<idx>:<key>" variants. Extract part after first colon.
-    # Fast split using parameter expansion.
-    case $k in
-      (*:*)
-        key=${k#*:}
-        ;;
-      (*)
-        continue
-        ;;
-    esac
-    [[ $key == *heatmap* ]] && continue
-    if [[ -z ${seen[$key]+x} ]]; then
-      seen[$key]=1
-      keys+=("$key")
-    fi
-  done
-  debug_print "Wrote indices"
-
-  # Write CSV
+  tmpfile="$(mktemp)"
+  # Export records[] to awk as NUL-safe stream. 
   {
-    printf 'index'
-    for key in "${keys[@]}"; do
-      printf ',%s' "$key"
+    printf 'MAXIDX\x01%s\n' "${records[maxindex]}"
+    # Use "${!records[@]}" directly; it's fast enough for ~40k entries
+    for k in "${!records[@]}"; do
+      [[ $k == maxindex ]] && continue
+      printf '%s\x01%s\n' "$k" "${records[$k]}"
     done
-    printf '\n'
-
-    max=${records[maxindex]}
-    for ((idx=0; idx<max; idx++)); do
-      printf '%s' "$idx"
-      for key in "${keys[@]}"; do
-        val=${records["$idx":"$key"]}
-        enc=$(csv_encode "$val")
-        printf ',%s' "$enc"
-      done
-      printf '\n'
-      debug_print "Wrote record $idx of $max to $CSVOUT" 
-    done
-  } >"$CSVOUT" &
-
-  # Write JSON (compact, newline-separated objects, no echo -e)
+  } | awk -v OFS=',' -v soh="$(printf '\001')" '
+  function isdec(s){ return (s ~ /^[0-9]+$/) }
+  function has_heatmap(s){ return (s ~ /heatmap/) }
+  function split_key(k,   n, i, rest) {
+    # Expect formats: index:key or index:key:subkey
+    n = index(k, ":")
+    if (n == 0) return 0
+    i = substr(k, 1, n-1)
+    rest = substr(k, n+1)
+    if (!isdec(i)) return 0
+    if (has_heatmap(rest)) return 0
+    key = rest
+    idx = i
+    return 1
+  }
+  BEGIN{
+    FS = soh
+  }
+  NR==1 {
+    # First line carries maxindex
+    if ($1 == "MAXIDX") maxidx = $2 + 0
+    next
+  }
   {
-    printf '[\n'
-    max=${records[maxindex]}
-    for ((idx=0; idx<max; idx++)); do
-      ((idx>0)) && printf ',\n'
-      printf '{'
-      for ((j=0; j<${#keys[@]}; j++)); do
-        key=${keys[j]}
-        val=${records["$idx":"$key"]}
-        enc=$(json_encode "$val")
-        printf '%s"%s":"%s"' "$([[ $j -gt 0 ]] && printf ',')" "$key" "$enc"
-      done
-      printf '}'
-      debug_print "Wrote record $idx of $max to $JSONOUT" 
+    rawk = $1; val = $2
+    # rawk looks like records[INDEX:KEY...] in bash variable name? No: we fed the map key only.
+    # Our bash loop printed keys exactly as "INDEX:KEY..." or "maxindex".
+    # So rawk is like "12:temperature" or "12:meta:unit"
+    key=""; idx=""
+    if (!split_key(rawk)) next
+    # Collect unique keys and values
+    if (!(key in keyseen)) { keyseen[key]=1; keys_order[++kcount]=key }
+    table[idx SUBSEP key] = val
+    if (idx+0 > hiidx) hiidx = idx+0
+  }
+  END{
+    # Decide max index bound
+    if (maxidx == 0 && hiidx > 0) maxidx = hiidx
+    # Header
+    printf "index"
+    # Stable order as encountered; if you prefer lexicographic, uncomment sort
+    # Sort keys lexicographically for deterministic CSV
+    n = asorti(keyseen, skeys)
+    for (i=1; i<=n; i++) {
+      printf ",%s", skeys[i]
+      cols[i] = skeys[i]
+    }
+    printf "\n"
+    # Rows
+    for (i=0; i<=maxidx; i++) {
+      printf "%d", i
+      for (c=1; c<=n; c++) {
+        k = cols[c]
+        v = table[i SUBSEP k]
+        # Simple CSV encoding here; keep minimal and let shell csv_encode if desired
+        # Escape in awk for speed: double quotes double, wrap if needed
+        if (v ~ /["\n,]/) {
+          gsub(/"/, "\"\"", v)
+          printf ",\"%s\"", v
+        } else {
+          printf ",%s", v
+        }
+      }
+      printf "\n"
+    }
+  }
+  ' > "$tmpfile" # write to tmpfile first so $CSVOUT is always a full file
+  mv -f "$tmpfile" "$CSVOUT"
+
+  ### Generate JSON object
+  tmpfile="$(mktemp)"
+  {
+    re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
+    for k in "${!records[@]}"; do
+      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; else debug_print "[SKIP] $k"; fi
     done
-    printf '\n]\n'
-  } >"$JSONOUT" &
+  } \
+  | gawk -v RS='\0' -v ORS='\0' '
+  BEGIN { count = 0 }
+  {
+    # read key and value in pairs
+    if (NR % 2 == 1) {
+      key = $0
+      next
+    } else {
+      val = $0
+    }
 
-  wait
+    n = split(key, a, ":")
+    if (n < 2 || n > 3) next
+    if (a[1] !~ /^[0-9]+$/) next
+    if (a[2] !~ /^[A-Za-z0-9_-]+$/) next
+    if (n == 3 && a[3] !~ /^[A-Za-z0-9_-]+$/) next
 
-  debug_print "Wrote $CSVOUT and $JSONOUT"
+    idx = a[1]
+    k = a[2]
+    subkey = ""
+    if (n == 3) subkey = a[3]
+
+    # emit idx\0key\0sub\0value\0
+    printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
+    count++
+  }
+  END {
+    printf "[DEBUG] JSON tuples generated: %d\n", count > "/dev/stderr"
+  }
+  ' | \
+  jq -R -s '
+    split("\u0000")
+    | .[:-1]
+    | [range(0; length; 4) as $i |
+        {i:(.[ $i ]|tonumber),
+        k:.[ $i+1 ],
+        s:(if (.[ $i+2 ]|length)==0 then null else .[ $i+2 ] end),
+        v:.[ $i+3 ] }
+      ]
+    | reduce .[] as $t ({};
+        .[$t.i|tostring] |= (
+          (. // {})
+          | if $t.s == null then
+              # Set scalar; overwrite object—last write wins
+              .[$t.k] = $t.v
+            else
+              # Ensure object before setting subkey
+              .[$t.k] = ((.[$t.k] | if type=="object" then . else {} end) | .[$t.s] = $t.v)
+            end
+        )
+      )
+    | to_entries
+    | sort_by(.key|tonumber)
+    | map({index:(.key|tonumber)} + .value)
+  '  > "$tmpfile"
+  mv -f "$tmpfile" "$JSONOUT"
+
+  # debug summary
+  printf '[DEBUG] Wrote JSON to %s (%d bytes)\n' "$JSONOUT" "$(wc -c <"$JSONOUT" 2>/dev/null || echo 0)" >&2
+  head -n 5 "$JSONOUT" >&2 || true
+  tail -n 5 "$JSONOUT" >&2 || true
+
+  debug_print "Wrote $JSONOUT"
 
 fi
 debug_print "Done."
