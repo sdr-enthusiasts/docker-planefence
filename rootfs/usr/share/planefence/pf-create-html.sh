@@ -139,7 +139,7 @@ CREATEHTMLTABLE () {
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
 			else
 				# angle available, so print arrow too
-				printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0.gif"  # round angle to nearest 10 degrees for arrow
+				printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0_day.png"  # round angle to nearest 10 degrees for arrow
 			fi
 
 			# track

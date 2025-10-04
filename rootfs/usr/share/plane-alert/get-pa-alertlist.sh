@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2154
 
-source /scripts/common
+source /scripts/pf-common
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -12,7 +12,7 @@ source /scripts/common
 # -----------------------------------------------------------------------------------
 #
 # Make sure the /run directory exists
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "get-pa-alertlist.sh started"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "$0 started"; fi
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 if [[ -n "$ALERTLIST" ]]; then IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt"); fi
@@ -57,19 +57,19 @@ if [[ $inhibit_update == "false" ]]; then
 	do
 		if (("${#TYPE} >= 3")) && (("${#TYPE} <= 4"))
 		then
-			echo "$TYPE appears to be an ICAO type and is valid, entries excluded:" "$(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			debug_print "\"$TYPE\" appears to be an ICAO type and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			sed -i "/,$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		elif [[ "$TYPE" =~ ^[0-9a-fA-F]{6}$ ]]
 		then
-			echo "$TYPE appears to be an ICAO hex and is valid, entries excluded:" "$(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			debug_print "\"$TYPE\" appears to be an ICAO hex and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			sed -r -i "/^$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		elif [[ -n "$TYPE" ]]
 		then
-			echo "$TYPE appears to be a freeform search pattern, entries excluded:" "$(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			debug_print "\"$TYPE\" appears to be a freeform search pattern, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			# shellcheck disable=SC1087
 			sed -r -i "/,[A-Za-z0-9\-\.\+ ]*$TYPE[A-Za-z0-9\-\.\+ ]*,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		else
-			echo "$TYPE is invalid, skipping!"
+			debug_print "\"$TYPE\" is invalid, skipping!"
 		fi
 	done
 	count_end="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
@@ -83,4 +83,4 @@ else
 fi
 
 rm -f /tmp/alertlist*.txt
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "get-pa-alertlist.sh finished"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "$0 finished"; fi
