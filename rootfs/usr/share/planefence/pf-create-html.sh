@@ -138,8 +138,8 @@ CREATEHTMLTABLE () {
 				# no angle available, so no arrow
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
 			else
-				# angle available, so print arrow too
-				printf "   <td>%s %s<br><img src=\"%s\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "arrow$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0_day.png"  # round angle to nearest 10 degrees for arrow
+				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
+				printf "   <td>%s %s<br><img src=\"arrow%s_%s.png\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
 			fi
 
 			# track
@@ -447,6 +447,16 @@ if chk_enabled "$PLANEALERT"; then
 	template="$(template_replace "<||PA-->" "" "$template")"
 else
 	template="$(sed -z 's/<!--PA||>.*<||PA-->//g' <<< "$template")"
+fi
+
+# Day vs Night mode
+debug_print "Setting Day/Night mode"
+if chk_enabled "$DARKMODE"; then
+	template="$(template_replace "||FGCOLOR||" "white" "$template")"
+	template="$(template_replace "||BGCOLOR||" "black" "$template")"
+else
+	template="$(template_replace "||FGCOLOR||" "black" "$template")"
+	template="$(template_replace "||BGCOLOR||" "#f0f6f6" "$template")"
 fi
 
 debug_print "Adding history links"

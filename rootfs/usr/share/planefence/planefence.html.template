@@ -57,8 +57,8 @@
 	<script src="scripts/leaflet.js"></script>
 <style>
 body { font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
-	   background-color: black;
-		 color: white;
+	   background-color: ||BGCOLOR||;
+		 color: ||FGCOLOR||;
      }
 a { color: #0077ff; }
 h1 {text-align: center}
@@ -68,8 +68,8 @@ h2 {text-align: center}
 .footer{ border: none; margin: 0; padding: 0; font: 12px/1.4 "Helvetica Neue", Arial, sans-serif; text-align: center }
 /* Sticky table header */
 table thead tr th tbody, table.dataTable tbody th, table.dataTable tbody td {
-	   background-color: black;
-		 color: white;
+	   background-color: ||BGCOLOR||;
+		 color: ||FGCOLOR||;
      position: sticky;
      z-index: 100;
 		 top: 0 !important;
