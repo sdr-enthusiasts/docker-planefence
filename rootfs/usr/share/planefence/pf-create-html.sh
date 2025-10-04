@@ -144,7 +144,7 @@ CREATEHTMLTABLE () {
 
 			# track
 			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s&deg;<br><img src=\"arrow%s_%s.png\"></td><!-- track -->\n" "${records["$idx":track]}" "$(( (${records["$idx":track]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
+				printf "   <td>%s&deg;<br><img src=\"arrow%s_%s.png\"></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi
@@ -337,7 +337,7 @@ CREATENOTIFICATIONS () {
 TODAY="$(date +%y%m%d)"
 NOWTIME="$(date +%s)"
 RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
-debug_print "Hello."
+debug_print "Hello. Starting $0"
 
 # Load the template into a variable that we can manipulate:
 if ! template=$(<"$PLANEFENCEDIR/planefence.html.template"); then
