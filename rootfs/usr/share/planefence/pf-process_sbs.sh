@@ -472,6 +472,157 @@ to_epoch() {
   # compute offset using seconds since epoch at midnight plus H:M:S. Precompute midnight once:
 }
 
+GENERATE_CSV() {
+  # This looks complex but is highly opimized for speed by using awk for the heavy lifting.
+  local tmpfile="$(mktemp)"
+  local re
+  local k
+  # Export records[] to awk as NUL-safe stream. 
+  {
+    printf 'MAXIDX\x01%s\n' "${records[maxindex]}"
+    # Use "${!records[@]}" directly; it's fast enough for ~40k entries
+    re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
+    for k in "${!records[@]}"; do      
+      if [[ $k =~ $re ]]; then printf '%s\x01%s\n' "$k" "${records[$k]}"; fi
+    done
+  } | awk -v OFS=',' -v soh="$(printf '\001')" '
+  function isdec(s){ return (s ~ /^[0-9]+$/) }
+  function has_heatmap(s){ return (s ~ /heatmap/) }
+  function split_key(k,   n, i, rest) {
+    # Expect formats: index:key or index:key:subkey
+    n = index(k, ":")
+    if (n == 0) return 0
+    i = substr(k, 1, n-1)
+    rest = substr(k, n+1)
+    if (!isdec(i)) return 0
+    if (has_heatmap(rest)) return 0
+    key = rest
+    idx = i
+    return 1
+  }
+  BEGIN{
+    FS = soh
+  }
+  NR==1 {
+    # First line carries maxindex
+    if ($1 == "MAXIDX") maxidx = $2 + 0
+    next
+  }
+  {
+    rawk = $1; val = $2
+    # rawk looks like records[INDEX:KEY...] in bash variable name? No: we fed the map key only.
+    # Our bash loop printed keys exactly as "INDEX:KEY..." or "maxindex".
+    # So rawk is like "12:temperature" or "12:meta:unit"
+    key=""; idx=""
+    if (!split_key(rawk)) next
+    # Collect unique keys and values
+    if (!(key in keyseen)) { keyseen[key]=1; keys_order[++kcount]=key }
+    table[idx SUBSEP key] = val
+    if (idx+0 > hiidx) hiidx = idx+0
+  }
+  END{
+    # Decide max index bound
+    if (maxidx == 0 && hiidx > 0) maxidx = hiidx
+    # Header
+    printf "index"
+    # Stable order as encountered; if you prefer lexicographic, uncomment sort
+    # Sort keys lexicographically for deterministic CSV
+    n = asorti(keyseen, skeys)
+    for (i=1; i<=n; i++) {
+      printf ",%s", skeys[i]
+      cols[i] = skeys[i]
+    }
+    printf "\n"
+    # Rows
+    for (i=0; i<=maxidx; i++) {
+      printf "%d", i
+      for (c=1; c<=n; c++) {
+        k = cols[c]
+        v = table[i SUBSEP k]
+        # Simple CSV encoding here; keep minimal and let shell csv_encode if desired
+        # Escape in awk for speed: double quotes double, wrap if needed
+        if (v ~ /["\n,]/) {
+          gsub(/"/, "\"\"", v)
+          printf ",\"%s\"", v
+        } else {
+          printf ",%s", v
+        }
+      }
+      printf "\n"
+    }
+  }
+  ' > "$tmpfile" # write to tmpfile first so $CSVOUT is always a full file
+  mv -f "$tmpfile" "$CSVOUT"
+  chmod a+r "$CSVOUT"
+}
+
+GENERATE_JSON() {
+  ### Generate JSON object
+  # This is done with (g)awk + jq for speed
+  local tmpfile="$(mktemp)"
+  local re
+  local k
+  {
+    re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
+    for k in "${!records[@]}"; do
+      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
+    done
+  } \
+  | gawk -v RS='\0' -v ORS='\0' '
+  BEGIN { count = 0 }
+  {
+    # read key and value in pairs
+    if (NR % 2 == 1) {
+      key = $0
+      next
+    } else {
+      val = $0
+    }
+
+    n = split(key, a, ":")
+    if (n < 2 || n > 3) next
+    if (a[1] !~ /^[0-9]+$/) next
+    if (a[2] !~ /^[A-Za-z0-9_-]+$/) next
+    if (n == 3 && a[3] !~ /^[A-Za-z0-9_-]+$/) next
+
+    idx = a[1]
+    k = a[2]
+    subkey = ""
+    if (n == 3) subkey = a[3]
+
+    # emit idx\0key\0sub\0value\0
+    printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
+    count++
+  }' | \
+  jq -R -s '
+    split("\u0000")
+    | .[:-1]
+    | [range(0; length; 4) as $i |
+        {i:(.[ $i ]|tonumber),
+        k:.[ $i+1 ],
+        s:(if (.[ $i+2 ]|length)==0 then null else .[ $i+2 ] end),
+        v:.[ $i+3 ] }
+      ]
+    | reduce .[] as $t ({};
+        .[$t.i|tostring] |= (
+          (. // {})
+          | if $t.s == null then
+              # Set scalar; overwrite object—last write wins
+              .[$t.k] = $t.v
+            else
+              # Ensure object before setting subkey
+              .[$t.k] = ((.[$t.k] | if type=="object" then . else {} end) | .[$t.s] = $t.v)
+            end
+        )
+      )
+    | to_entries
+    | sort_by(.key|tonumber)
+    | map({index:(.key|tonumber)} + .value)
+  '  > "$tmpfile"
+  mv -f "$tmpfile" "$JSONOUT"
+  chmod a+r "$JSONOUT"
+}
+
 
 debug_print "Hello. Starting $0"
 
@@ -601,6 +752,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z $idx ]]; then
       idx=$(( records[maxindex] + 1 ))
       records[maxindex]="$idx"
+      records["$idx":complete]=false
     fi
 
     # Update fast ICAO index maps
@@ -803,150 +955,10 @@ if (( ${#socketrecords[@]} > 0 )); then
   # # ==========================
 
 
-  # This looks complex but is highly opimized for speed by using awk for the heavy lifting.
-  tmpfile="$(mktemp)"
-  # Export records[] to awk as NUL-safe stream. 
-  {
-    printf 'MAXIDX\x01%s\n' "${records[maxindex]}"
-    # Use "${!records[@]}" directly; it's fast enough for ~40k entries
-    for k in "${!records[@]}"; do
-      [[ $k == maxindex ]] && continue
-      printf '%s\x01%s\n' "$k" "${records[$k]}"
-    done
-  } | awk -v OFS=',' -v soh="$(printf '\001')" '
-  function isdec(s){ return (s ~ /^[0-9]+$/) }
-  function has_heatmap(s){ return (s ~ /heatmap/) }
-  function split_key(k,   n, i, rest) {
-    # Expect formats: index:key or index:key:subkey
-    n = index(k, ":")
-    if (n == 0) return 0
-    i = substr(k, 1, n-1)
-    rest = substr(k, n+1)
-    if (!isdec(i)) return 0
-    if (has_heatmap(rest)) return 0
-    key = rest
-    idx = i
-    return 1
-  }
-  BEGIN{
-    FS = soh
-  }
-  NR==1 {
-    # First line carries maxindex
-    if ($1 == "MAXIDX") maxidx = $2 + 0
-    next
-  }
-  {
-    rawk = $1; val = $2
-    # rawk looks like records[INDEX:KEY...] in bash variable name? No: we fed the map key only.
-    # Our bash loop printed keys exactly as "INDEX:KEY..." or "maxindex".
-    # So rawk is like "12:temperature" or "12:meta:unit"
-    key=""; idx=""
-    if (!split_key(rawk)) next
-    # Collect unique keys and values
-    if (!(key in keyseen)) { keyseen[key]=1; keys_order[++kcount]=key }
-    table[idx SUBSEP key] = val
-    if (idx+0 > hiidx) hiidx = idx+0
-  }
-  END{
-    # Decide max index bound
-    if (maxidx == 0 && hiidx > 0) maxidx = hiidx
-    # Header
-    printf "index"
-    # Stable order as encountered; if you prefer lexicographic, uncomment sort
-    # Sort keys lexicographically for deterministic CSV
-    n = asorti(keyseen, skeys)
-    for (i=1; i<=n; i++) {
-      printf ",%s", skeys[i]
-      cols[i] = skeys[i]
-    }
-    printf "\n"
-    # Rows
-    for (i=0; i<=maxidx; i++) {
-      printf "%d", i
-      for (c=1; c<=n; c++) {
-        k = cols[c]
-        v = table[i SUBSEP k]
-        # Simple CSV encoding here; keep minimal and let shell csv_encode if desired
-        # Escape in awk for speed: double quotes double, wrap if needed
-        if (v ~ /["\n,]/) {
-          gsub(/"/, "\"\"", v)
-          printf ",\"%s\"", v
-        } else {
-          printf ",%s", v
-        }
-      }
-      printf "\n"
-    }
-  }
-  ' > "$tmpfile" # write to tmpfile first so $CSVOUT is always a full file
-  mv -f "$tmpfile" "$CSVOUT"
-  chmod a+r "$CSVOUT"
-
+  GENERATE_CSV
   debug_print "Wrote CSV object to $CSVOUT"
 
-  ### Generate JSON object
-  # This is done with (g)awk + jq for speed
-  tmpfile="$(mktemp)"
-  {
-    re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
-    for k in "${!records[@]}"; do
-      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
-    done
-  } \
-  | gawk -v RS='\0' -v ORS='\0' '
-  BEGIN { count = 0 }
-  {
-    # read key and value in pairs
-    if (NR % 2 == 1) {
-      key = $0
-      next
-    } else {
-      val = $0
-    }
-
-    n = split(key, a, ":")
-    if (n < 2 || n > 3) next
-    if (a[1] !~ /^[0-9]+$/) next
-    if (a[2] !~ /^[A-Za-z0-9_-]+$/) next
-    if (n == 3 && a[3] !~ /^[A-Za-z0-9_-]+$/) next
-
-    idx = a[1]
-    k = a[2]
-    subkey = ""
-    if (n == 3) subkey = a[3]
-
-    # emit idx\0key\0sub\0value\0
-    printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
-    count++
-  }' | \
-  jq -R -s '
-    split("\u0000")
-    | .[:-1]
-    | [range(0; length; 4) as $i |
-        {i:(.[ $i ]|tonumber),
-        k:.[ $i+1 ],
-        s:(if (.[ $i+2 ]|length)==0 then null else .[ $i+2 ] end),
-        v:.[ $i+3 ] }
-      ]
-    | reduce .[] as $t ({};
-        .[$t.i|tostring] |= (
-          (. // {})
-          | if $t.s == null then
-              # Set scalar; overwrite object—last write wins
-              .[$t.k] = $t.v
-            else
-              # Ensure object before setting subkey
-              .[$t.k] = ((.[$t.k] | if type=="object" then . else {} end) | .[$t.s] = $t.v)
-            end
-        )
-      )
-    | to_entries
-    | sort_by(.key|tonumber)
-    | map({index:(.key|tonumber)} + .value)
-  '  > "$tmpfile"
-  mv -f "$tmpfile" "$JSONOUT"
-  chmod a+r "$JSONOUT"
+  GENERATE_JSON
   debug_print "Wrote JSON object to $JSONOUT"
 
 fi
