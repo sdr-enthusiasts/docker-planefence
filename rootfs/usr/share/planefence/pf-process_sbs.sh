@@ -881,6 +881,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   }
   ' > "$tmpfile" # write to tmpfile first so $CSVOUT is always a full file
   mv -f "$tmpfile" "$CSVOUT"
+  chmod a+r "$CSVOUT"
 
   debug_print "Wrote CSV object to $CSVOUT"
 
@@ -945,6 +946,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     | map({index:(.key|tonumber)} + .value)
   '  > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
+  chmod a+r "$JSONOUT"
   debug_print "Wrote JSON object to $JSONOUT"
 
 fi
