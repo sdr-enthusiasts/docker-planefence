@@ -144,7 +144,7 @@ CREATEHTMLTABLE () {
 
 			# track
 			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s<img src=\"%s\"></td><!-- track -->\n" "${records["$idx":track]}&deg;" "arrow$(( ${records["$idx":track]%%.*} / 10 ))0.gif"
+				printf "   <td>%s&deg;<br><img src=\"arrow%s_%s.png\"></td><!-- track -->\n" "${records["$idx":track]}" "$(( (${records["$idx":track]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi
