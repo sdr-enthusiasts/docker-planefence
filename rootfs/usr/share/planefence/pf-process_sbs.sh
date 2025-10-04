@@ -136,12 +136,17 @@ GET_CALLSIGN() {
   return
 }
 
+GET_TYPE () {
+  local apiUrl="https://api.adsb.lol/v2/hex"
+  curl -sSL "$apiUrl/$1" | jq -r '.ac[] .t' 2>/dev/null
+}
+
 GET_ROUTE_BULK () {
   # function to get a route by callsign. Must have a callsign - ICAO won't work
   # Usage: GET_ROUTE <callsign>
   # Uses the adsb.im API to retrieve the route
 
-  local apiUrl=https://adsb.im/api/0/routeset
+  local apiUrl="https://adsb.im/api/0/routeset"
   declare -A routesarray=()
   declare -a indexarray=()
   local idx line call route plausible
@@ -775,6 +780,11 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
     fi
 
+    # get type
+    if [[ -z "${records["$idx":type]}" ]]; then
+      records["$idx":type]="$(GET_TYPE "${records["$idx":icao]}")"
+    fi
+
     # Callsign handling
     callsign="${callsign//[[:space:]]/}"
     if [[ -n $callsign ]]; then
@@ -782,7 +792,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
     fi
 
-    if [[ -z "${records["$idx":faa:link]}" ]] && [[ -n "${records["$idx":tail]}" ]] && [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z ${records["$idx":faa:link]} ]]; then
+    if [[ -z "${records["$idx":faa:link]}" ]] && [[ -n "${records["$idx":tail]}" ]] && [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z "${records["$idx":faa:link]}" ]]; then
       records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
     fi
 

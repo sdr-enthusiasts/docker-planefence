@@ -54,6 +54,7 @@ CREATEHTMLTABLE () {
 			$(if chk_enabled "${records[HASIMAGES]}"; then echo "<th style=\"width: auto; text-align: center\">Aircraft Image</th>"; fi)
 			<th style=\"width: auto; text-align: center\">Transponder ID</th>
 			<th style=\"width: auto; text-align: center\">Tail</th>
+			<th style=\"width: auto; text-align: center\">Type</th>
 			<th style=\"width: auto; text-align: center\">Flight</th>
 			$(if chk_enabled "${records[HASROUTE]}"; then echo "<th style=\"width: auto; text-align: center\">Flight Route</th>"; fi)
 			<th style=\"width: auto; text-align: center\">Airline or Owner</th>
@@ -113,6 +114,13 @@ CREATEHTMLTABLE () {
 				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":tail]}"
 			fi
 
+			# Aircraft type
+			if [[ -n "${records["$idx":type]}" ]]; then
+				printf "   <td>%s</td><!-- Aircraft type -->\n" "${records["$idx":type]}"
+			else
+				printf "   <td></td><!-- no aircraft type available -->\n"
+			fi
+
 			# Flight number
 			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}"
 
@@ -139,12 +147,12 @@ CREATEHTMLTABLE () {
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
 			else
 				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
-				printf "   <td>%s %s<br><img src=\"arrow%s_%s.png\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
+				printf "   <td>%s %s <img src=\"arrow%s_%s.png\" style=\"height:1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
 			fi
 
 			# track
 			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s&deg;<br><img src=\"arrow%s_%s.png\"></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
+				printf "   <td>%s&deg; <img src=\"arrow%s_%s.png\"style=\"height:1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi
