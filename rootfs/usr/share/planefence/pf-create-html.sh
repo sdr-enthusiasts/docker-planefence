@@ -175,7 +175,7 @@ CREATEHTMLTABLE () {
 				printf "   <td>%s %s</td><!-- 10 minute avg audio levels -->\n" "${records["$idx":sound:10min]}" "$([[ -n "${records["$idx":sound:10min]}" ]] && echo "dBFS")"
 				printf "   <td>%s %s</td><!-- 1 hour avg audio levels -->\n" "${records["$idx":sound:1hour]}" "$([[ -n "${records["$idx":sound:1hour]}" ]] && echo "dBFS")"
 				if [[ -n "${records["$idx":spectro:link]}" ]]; then
-					printf "   <td><a href=\"%s\" target=\"_blank\">Spectrogram</a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" # print spectrogram
+					printf "   <td><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"height: 5em;\"></a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" "${records["$idx":spectro:link]}" # print spectrogram
 				else
 					printf "   <td></td>"
 				fi
@@ -345,22 +345,16 @@ CREATENOTIFICATIONS () {
 TODAY="$(date +%y%m%d)"
 NOWTIME="$(date +%s)"
 RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
-debug_print "Hello. Starting $0"
+log_print INFO "Hello. Starting $0"
 
 # Load the template into a variable that we can manipulate:
 if ! template=$(<"$PLANEFENCEDIR/planefence.html.template"); then
-	debug_print "Failed to load template"
+	log_print ERR "Failed to load template"
 	exit 1
 fi
 
 # Load the records
-if [[ -f "$RECORDSFILE" ]]; then
-	# shellcheck disable=SC1090
-	source "$RECORDSFILE"
-else
-	debug_print "Failed to load records"
-	exit 1
-fi
+READ_RECORDS
 
 # Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
 if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( NOWTIME - $(</tmp/add_delete.uuid.used) > 300 )) ); then
@@ -482,8 +476,8 @@ CREATEHTMLTABLE
 # ---------------------------------------------------------------------------
 #      FINALIZE AND WRITE THE FILES
 # ---------------------------------------------------------------------------
-debug_print "Writing HTML file"
+log_print INFO "Writing HTML file"
 echo "$template" > "$OUTFILEDIR/planefence-$TODAY.html"
 ln -sf "$OUTFILEDIR/planefence-$TODAY.html" "$OUTFILEDIR/index.html"
 
-debug_print "Done - Wrote HTML file to $OUTFILEDIR/planefence-$TODAY.html"
+log_print INFO "Done - Wrote HTML file to $OUTFILEDIR/planefence-$TODAY.html"

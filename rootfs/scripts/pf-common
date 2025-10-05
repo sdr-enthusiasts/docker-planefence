@@ -18,16 +18,34 @@ MAXWAITTIME=300   # max time we'll wait for the records lock to expire
 declare -gA records
 
 debug_print() {
-    local currenttime
-    if [[ -z "$execstarttime" ]]; then
-      execstarttime="$(date +%s.%3N)"
-      execlaststeptime="$execstarttime"
-    fi
-    currenttime="$(date +%s.%3N)"
-    if chk_enabled "$DEBUG"; then 
-      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
-    fi
-    execlaststeptime="$currenttime"
+  if ! chk_enabled "$DEBUG"; then return; fi
+  local currenttime
+  if [[ -z "$execstarttime" ]]; then
+    execstarttime="$(date +%s.%3N)"
+    execlaststeptime="$execstarttime"
+  fi
+  currenttime="$(date +%s.%3N)"
+  "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$1" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+  execlaststeptime="$currenttime"
+}
+
+log_print() {
+  local loglevel logmsg
+
+  case "${1^^}" in
+    INFO) loglevel="INFO" ;;
+    WARN|WARNING) loglevel="WARNING" ;;
+    ERROR|ERR|FATAL) loglevel="FATAL" ;;
+  esac
+
+  if [[ -z "$loglevel" ]]; then
+    loglevel="INFO"
+    logmsg="$1"
+  else
+    logmsg="$2"
+  fi
+
+  "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
 }
 
 # shellcheck disable=SC2120

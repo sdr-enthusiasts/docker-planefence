@@ -60,7 +60,7 @@ CLEANUP ()
     touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
     touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
     touch -d "3 hours ago" /tmp/timestamp.screenshotcache
-    find /usr/share/planefence/html/plane*{.html,.js,.csv,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/html/plane*{.html,.js,.csv,.json,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
     find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
@@ -93,17 +93,6 @@ CLEANUP ()
       tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
       mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
     fi
-    if [[ -f /tmp/planetweet.log ]]
-    then
-      tail -n $MAXLOGLINES /tmp/planetweet.log >/tmp/planetweet.log.tmp 2>/dev/null
-      mv -f /tmp/planetweet.log.tmp /tmp/planetweet.log 2>/dev/null
-    fi
-    if [[ -f /tmp/tweets.log ]]
-    then
-      tail -n $MAXLOGLINES /tmp/tweets.log >/tmp/tweets.log.tmp 2>/dev/null
-      mv -f /tmp/tweets.log.tmp /tmp/tweets.log 2>/dev/null
-    fi
-
     # remove empty lines from ignore file
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 

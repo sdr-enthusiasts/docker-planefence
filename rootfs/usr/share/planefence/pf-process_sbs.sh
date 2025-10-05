@@ -158,8 +158,6 @@ GET_ROUTE_BULK () {
     fi
   done
 
-  # debug_print "route: lookup for indices ${indexarray[*]} / ${routesarray[*]}"
-
   # If there's anything to be looked up, then create a JSON object and submit it to the API. The call returns a comma separated object with call,route,plausibility(boolean)
   if (( ${#indexarray[@]} > 0 )); then
     records[HASROUTE]=true
@@ -185,7 +183,6 @@ GET_ROUTE_BULK () {
             if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
           fi
         records["$idx":route:checked]=true
-        # debug_print "Got route for $idx: $call,${records["$idx":route]}"
         fi
       done
 
@@ -302,6 +299,17 @@ GET_SCREENSHOT () {
 
   if [[ -z "$idx" ]]; then return; fi
   records["$idx":screenshot:checked]=true
+
+  # check if the screenshot container is up and running. If it isn't, suspend screenshot attempts
+  if [[ -z "$SCREENSHOTSERVICE" ]] && ping -W 1 -c 1 "$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$SCREENSHOTURL")" &>/dev/null; then
+    SCREENSHOTSERVICE=true
+  else
+    SCREENSHOTSERVICE=false
+  fi
+  if chk_disabled "$SCREENSHOTSERVICE"; then
+    log_print WARN "Screenshot service disabled or not reachable at ${SCREENSHOTURL:-screenshot}"
+    return
+  fi
   
   # get new screenshot
   if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
@@ -367,8 +375,8 @@ CREATE_NOISEPLOT () {
   
   local STARTTIME="$2"
 	local ENDTIME="$3"
-	local TITLE="Noise plot for $1 at $(date -d "@$2" +"%y%m%d-%H%M%S")"
-	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$(date -d "@${STARTTIME}" +"%y%m%d-%H%M%S")-$4.png"
+	local TITLE="Noise plot for $1 at $(date -d "@$2")"
+	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$STARTTIME-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
     if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
@@ -406,6 +414,7 @@ CREATE_SPECTROGRAM () {
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
     if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+      debug_print "Cannot create Spectrogram: could not retrieve noisecapt log"
       return
     fi
     noiselog="$(</tmp/noisecapt.log)"
@@ -414,19 +423,52 @@ CREATE_SPECTROGRAM () {
 	# get the measurement from /tmp/noisecapt.log that contains the peak value
 	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
 	spectrotime="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt.log)"
-  if [[ "$spectrotime" == "0" ]]; then return; fi
+  if [[ "$spectrotime" == "0" ]]; then 
+    debug_print "There's no noise data between $(date -d "@$STARTTIME") and $(date -d "@$ENDTIME")."
+    return
+  fi
+
 	sf="noisecapt-spectro-${spectrotime}.png"
 
 	if [[ ! -s "$OUTFILEDIR/$sf" ]]; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
-		if ( [[ $noiselist =~ "$sf" ]] && ! curl -fsSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf" 2>/dev/null ) || (( $(if [[ -f "$sf" ]]; then find "$(dirname "$sf")" -name "$(basename "$sf")" -exec stat -c "%s" {} \;; else echo "0"; fi) < 10 )); then
-      rm -f "$OUTFILEDIR/$sf"
+		if [[ $noiselist =~ "$sf" ]]; then 
+      debug_print "Getting spectrogram $sf from $REMOTENOISE"
+      if ! curl -fsSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf" || \
+        { [[ -f "$sf" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${sf:---}" 2>/dev/null || echo 0) < 10 ));}; then
+          debug_print "Curling spectrogram $sf from $REMOTENOISE failed!"
+          rm -f "$OUTFILEDIR/$sf"
+          return
+      fi
+    else
+      debug_print "Spectrogram $sf not found in remote file list."
       return
     fi
 	fi
-  
+  debug_print "Spectrogram file: $OUTFILEDIR/$sf"
   echo "$OUTFILEDIR/$sf"
+
+  # link the latest spectrogram to a fixed name for easy access
+  # Save current nullglob state
+  org_nullglob="$(shopt -p nullglob)"
+  shopt -s nullglob
+
+  # shellcheck disable=SC2206
+  files=($OUTFILEDIR/noisecapt-spectro-*.png)
+
+  if (( ${#files[@]} > 0)); then
+    ln -sf "$(printf '%s\0' "${files[@]}" \
+      | xargs -0 stat -c '%W %Y %n' \
+      | awk '{w=$1; y=$2; $1=$2=""; sub(/^  */,""); n=$0; t=(w>0?w:y); if(t>max){max=t; f=n}} END{print f}')" \
+      "$OUTFILEDIR/noisecapt-spectro-latest.png"
+  fi
+
+  # Restore original nullglob state
+  $org_nullglob
+
+  printf '%s\n' "$newest"
+
 }
 
 CREATE_MP3 () {
@@ -629,14 +671,14 @@ GENERATE_JSON() {
 }
 
 
-debug_print "Hello. Starting $0"
+log_print INFO "Hello. Starting $0"
 
 # ==========================
 # Prep-work:
 # ==========================
 
 if [[ "$1" == "reset" ]]; then
-  debug_print "Resetting records"
+  log_print INFO "Resetting records"
   rm -f "$RECORDSFILE" "$CSVOUT" "$JSONOUT" "/tmp/.records.lock"
   unset records
   declare -A records 
@@ -665,7 +707,7 @@ if [[ -n "$LASTPROCESSEDLINE" ]]; then
   lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
 fi
 
-debug_print "Collecting new records. Last processed date is $lastdate"
+log_print INFO "Collecting new records. Last processed date is $lastdate"
 
 if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
   nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
@@ -703,8 +745,7 @@ readarray -t socketrecords <<< "$(
       | grep -v -i -f "$IGNORELIST" 2>/dev/null \
       | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }'
   )"
-
-debug_print "Of a total of $nowlines lines, got ${#socketrecords[@]} records that are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude. Initial processing..."
+log_print INFO "Collected $nowlines new SBS records from your ADSB data feed, of which ${#socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
 
 # ==========================
 # Process lines
@@ -829,7 +870,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
   done
 
-  debug_print "Initial processing complete. Got a total of ${records[maxindex]} records. Continuing to add callsigns, routes, and owners."
+  log_print INFO "Initial processing complete. Total number of records is now ${records[maxindex]}. Continue adding more info."
 
   # try to pre-seed the noisecapt log:
   if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
@@ -892,7 +933,6 @@ if (( ${#socketrecords[@]} > 0 )); then
     # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
        ! chk_enabled "${records["$idx":noisedata:checked]}" && \
-       chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":sound:peak]}" ]]; then
           # Make sure we have the noiselist
           if [[ -z "$noiselist" ]]; then
@@ -962,7 +1002,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
   if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
 
-  debug_print "Processing complete. Now writing results to disk..."
+  log_print INFO "Processing complete. Now writing results to disk..."
 
   # ==========================
   # Save state
@@ -983,4 +1023,4 @@ if (( ${#socketrecords[@]} > 0 )); then
   debug_print "Wrote JSON object to $JSONOUT"
 
 fi
-debug_print "Done."
+log_print INFO "Done."
