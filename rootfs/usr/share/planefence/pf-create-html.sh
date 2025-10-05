@@ -99,7 +99,7 @@ CREATEHTMLTABLE () {
 			# image:
 			if chk_enabled "${SHOWIMAGES}" && [[ -n "${records["$idx":image:thumblink]}" ]]; then
 				# shellcheck disable=SC2030
-				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 75px;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image:link]}" "${records["$idx":image:thumblink]}"
+				printf "   <td><a href=\"%s\" target=_blank><img src=\"%s\" style=\"width: auto; height: 5em;\"></a></td><!-- image file and link to planespotters.net -->\n" "${records["$idx":image:link]}" "${records["$idx":image:thumblink]}"
 			elif chk_enabled "${SHOWIMAGES}"; then
 				printf "   <td></td><!-- images enabled but no image file available for this entry -->\n"
 			fi
@@ -143,16 +143,16 @@ CREATEHTMLTABLE () {
 
 			# min distance
 			if [[ -n "${records["$idx":angle]}" ]]; then
+				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
+				printf "   <td>%s %s <img src=\"arrow%s_%s.png\" style=\"height: 1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
+			else
 				# no angle available, so no arrow
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
-			else
-				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
-				printf "   <td>%s %s <img src=\"arrow%s_%s.png\" style=\"height:1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
 			fi
 
 			# track
 			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s&deg; <img src=\"arrow%s_%s.png\"style=\"height:1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
+				printf "   <td>%s&deg; <img src=\"arrow%s_%s.png\"style=\"height: 1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi

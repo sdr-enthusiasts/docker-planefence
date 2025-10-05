@@ -59,6 +59,7 @@ CLEANUP ()
     touch -d "yesterday 00:00:00" /tmp/timestamp
     touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
     touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
+    touch -d "3 hours ago" /tmp/timestamp.screenshotcache
     find /usr/share/planefence/html/plane*{.html,.js,.csv,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
     find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
@@ -66,7 +67,7 @@ CLEANUP ()
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    #find /usr/share/planefence/persist/planepix/cache/* -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/planepix/cache/screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null
     find /usr/share/planefence/persist/plane{fence,-alert}-discord.template.~[0-9]*~ -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     rm -f /tmp/heatmap-*.log
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null

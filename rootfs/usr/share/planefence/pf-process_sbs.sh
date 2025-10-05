@@ -49,6 +49,7 @@ mkdir -p "$HTMLDIR"
 TODAY="$(date +%y%m%d)"
 YESTERDAY="$(date -d "yesterday" +%y%m%d)"
 NOWTIME="$(date +%s)"
+CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
 
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
@@ -69,10 +70,6 @@ COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
-# optional tiny LRU window reset threshold to avoid stale growth
-RESET_AFTER=50000  # tune if needed
-processed=0
-
 
 if [[ -z "$TRACKSERVICE" ]] || [[ "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -282,35 +279,38 @@ GET_PS_PHOTO () {
   find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
 }
 
+CHK_NOTIFICATIONS_ENABLED () {
+  # Check if any notifications are enabled
+  if chk_enabled "$PF_DISCORD" || \
+     { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
+     [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
+     [[ -n "$MQTT_URL" ]] || \
+     [[ -n "${PF_TELEGRAM_CHAT_ID}" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 GET_SCREENSHOT () {
 	# Function to get a screenshot
-	# Usage: GET_PS_PHOTO index 
+	# Usage: GET_SCREENSHOT index 
   # returns file path to screenshot if successful, or empty if no screenshot was captured
   
   local idx="$1"
-  local screenfile="/usr/share/planefence/persist/planepix/cache/screenshot-${records["$idx":icao]}.jpg"
+  local screenfile="/usr/share/planefence/persist/planepix/cache/screenshot-${records["$idx":icao]}-${records["$idx":lastseen]}.jpg"
 
-  if [[ -z "$idx" ]] || ! chk_enabled "${records["$idx":complete]}"; then return; fi
-
-  # check screenshot already exists and if we can use the cached screenshot - creation time must be later than FIRSTSEEN but earlier than LASTSEEN+COLLAPSEWITHIN
-  if [[ -f "$screenfile" ]]; then
-    screentime="$(stat -c %W -- "$screenfile")"
-    if (( screentime >= ${records["$idx":firstseen]} )) || (( screentime <= ${records["$idx":firstseen]} + COLLAPSEWITHIN )); then
-      echo "$screenfile"
-      records["$idx":screenshot:checked]=true
-      return
-    fi
-  fi
+  if [[ -z "$idx" ]]; then return; fi
+  records["$idx":screenshot:checked]=true
+  
   # get new screenshot
-  if curl -s -L --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
+  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
     echo "$screenfile"
-    records["$idx":screenshot:checked]=true
     return
   fi
 
-  # remove any leftovers and return nothing
+  # if retrieving the screenshot failed, remove any leftovers and return nothing
   rm -f "$screenfile"
-  records["$idx":screenshot:checked]=true
   return
 }
 
@@ -488,7 +488,7 @@ GENERATE_CSV() {
     # Use "${!records[@]}" directly; it's fast enough for ~40k entries
     re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
     for k in "${!records[@]}"; do      
-      if [[ $k =~ $re ]]; then printf '%s\x01%s\n' "$k" "${records[$k]}"; fi
+      if [[ $k =~ $re && $k != *":checked" ]] ; then printf '%s\x01%s\n' "$k" "${records[$k]}"; fi
     done
   } | awk -v OFS=',' -v soh="$(printf '\001')" '
   function isdec(s){ return (s ~ /^[0-9]+$/) }
@@ -570,7 +570,7 @@ GENERATE_JSON() {
   {
     re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
     for k in "${!records[@]}"; do
-      if [[ $k =~ $re ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
+      if [[ $k =~ $re && $k != *":checked" ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
   } \
   | gawk -v RS='\0' -v ORS='\0' '
@@ -701,7 +701,7 @@ readarray -t socketrecords <<< "$(
     fi; } \
       | tac \
       | grep -v -i -f "$IGNORELIST" 2>/dev/null \
-      | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt { print }'
+      | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }'
   )"
 
 debug_print "Of a total of $nowlines lines, got ${#socketrecords[@]} records that are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude. Initial processing..."
@@ -710,15 +710,11 @@ debug_print "Of a total of $nowlines lines, got ${#socketrecords[@]} records tha
 # Process lines
 # ==========================
 if (( ${#socketrecords[@]} > 0 )); then
-  linecount=0
-    for line in "${socketrecords[@]}"; do
+  for line in "${socketrecords[@]}"; do
 
     [[ -z $line ]] && continue
     IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
     [[ $icao == "hex_ident" ]] || [[ -z "$time" ]] && continue # skip header or incomplete lines
-
-    (( linecount++ )) || true
-    (( processed++ )) || true
 
     # Parse timestamp fast (assumes most lines are for today)
     t=${time%%.*}
@@ -734,24 +730,17 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     # Collapse window lookup (O(1))
     idx=""
-    ignore_this_dupe=false
     ls="${lastseen_for_icao[$icao]}"
     if [[ -n $ls ]]; then
       dt=$(( ls - seentime ))
       if (( ${dt//-/} <= COLLAPSEWITHIN )); then
         idx="${last_idx_for_icao[$icao]}"
       else
-        # mark old record complete; optionally skip duplicate if configured
-        old_idx="${last_idx_for_icao[$icao]}"
-        if [[ -n $old_idx ]]; then
-          records["$old_idx":complete]=true
-        fi
         if chk_enabled "$IGNOREDUPES"; then
-          ignore_this_dupe=true
+          continue  # ignore this dupe
         fi
       fi
     fi
-    $ignore_this_dupe && continue
 
     # Create new idx if needed
     if [[ -z $idx ]]; then
@@ -775,14 +764,24 @@ if (( ${#socketrecords[@]} > 0 )); then
       fi
     fi
 
-    # get tail
-    if [[ -n "${records["$idx":tail]}" ]]; then
-      records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
+    # add a tail if there isn't any
+    if ! chk_enabled "${records["$idx":tail:checked]}" && [[ -z "${records["$idx":tail]}" ]]; then
+      records["$idx":tail]="$(GET_TAIL "$icao")"
+      if [[ -n "${records["$idx":tail]}" ]]; then 
+        if [[ ${icao:0:1} =~ [aA] ]]; then
+          records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
+        elif [[ ${icao:0:1} =~ [cC] ]]; then
+          t="${records["$idx":tail]:1}"  # remove leading C
+          records["$idx":faa:link]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
+        fi
+      fi
+      records["$idx":tail:checked]=true
     fi
 
     # get type
-    if [[ -z "${records["$idx":type]}" ]]; then
+    if ! chk_enabled "${records["$idx":type:checked]}" && [[ -z "${records["$idx":type]}" ]]; then
       records["$idx":type]="$(GET_TYPE "${records["$idx":icao]}")"
+      records["$idx":type:checked]=true
     fi
 
     # Callsign handling
@@ -790,10 +789,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -n $callsign ]]; then
       records["$idx":callsign]="$callsign"
       records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
-    fi
-
-    if [[ -z "${records["$idx":faa:link]}" ]] && [[ -n "${records["$idx":tail]}" ]] && [[ "${records["$idx":icao]:0:1}" == "A" ]] && [[ -z "${records["$idx":faa:link]}" ]]; then
-      records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
+      records["$idx":callsign:checked]=true
     fi
 
     # First/last seen
@@ -836,34 +832,19 @@ if (( ${#socketrecords[@]} > 0 )); then
   debug_print "Initial processing complete. Got a total of ${records[maxindex]} records. Continuing to add callsigns, routes, and owners."
 
   # try to pre-seed the noisecapt log:
-  if curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
+  if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
     noiselog="$(</tmp/noisecapt.log)"
   fi
 
-  lc=0
-  timingstart=$(date +%s.%3N)
+#  lc=0
+#  timingstart=$(date +%s.%3N)
   
   # Now try to add callsigns and owners for those that don't already have them:
   for ((idx=0; idx<records[maxindex]; idx++)); do
-    # Add complete label if current time is outside COLLAPSEWITHIN window
-    if [[ -z "${records["$idx":complete]}" ]] && (( NOWTIME - ${records["$idx":lastseen]} > COLLAPSEWITHIN )); then
-      records["$idx":complete]="true"
-    fi
 
-    # add a tail if there isn't any
-    if [[ -z "${records["$idx":tail]}" ]]; then
-      records["$idx":tail]="$(GET_TAIL "${records["$idx":icao]}")"
-    fi
-
-    # callstart=$(date +%s.%3N)
-    # Add a callsign if there isn't any
-    if chk_enabled "${records["$idx":complete]}" && [[ -z "${records["$idx":callsign]}" ]]; then
-      callsign="$(GET_CALLSIGN "${records["$idx":icao]}")"
-      records["$idx":callsign]="${callsign//[[:space:]]/}"
-      records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
-    fi
-    # calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
-
+    # ------------------------------------------------------------------------------------
+    # The first portion of this loop can be done regardless of completeness of the record
+    # ------------------------------------------------------------------------------------
     # get the owner's name
     # namestart=$(date +%s.%3N)
     if ! chk_enabled "${records["$idx":owner:checked]}" && [[ -n "${records["$idx":callsign]}" ]]; then
@@ -886,6 +867,27 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
     # imgtiming=$(bc -l <<< "${imgtiming:-0} + $(date +%s.%3N) - $imgstart")
 
+    # callstart=$(date +%s.%3N)
+    # Add a callsign if there isn't any
+    if [[ -z "${records["$idx":callsign]}" ]]; then
+      callsign="$(GET_CALLSIGN "${records["$idx":icao]}")"
+      records["$idx":callsign]="${callsign//[[:space:]]/}"
+      records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+    fi
+    # calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
+
+    # ------------------------------------------------------------------------------------
+    # The remainder of this loop only makes sense for complete records. It also only needs to be done once.
+    # So skip if already complete.
+    # ------------------------------------------------------------------------------------
+    
+    # Add complete label if current time is outside COLLAPSEWITHIN window
+    if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":lastseen]} > COLLAPSEWITHIN )); then
+      records["$idx":complete]=true
+    else
+      continue
+    fi
+
     # Add noisecapt stuff
     # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
@@ -904,8 +906,7 @@ if (( ${#socketrecords[@]} > 0 )); then
           records[HASNOISE]=true
     fi
     if [[ -n "$REMOTENOISE" ]] && \
-       ! chk_enabled "${records["$idx":noisegraph:checked]}" && \
-       chk_enabled "${records["$idx":complete]}" && \
+       ! chk_enabled "${records["$idx":noisegraph:checked]}" && \chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":noisegraph:file]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
           records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":firstseen]}" "${records["$idx":lastseen]}" "${records["$idx":icao]}")"
@@ -924,11 +925,9 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
     # noisetiming=$(bc -l <<< "${noisetiming:-0} + $(date +%s.%3N) - $noisestart")
 
-
-    # get Nominating location
+    # get Nominating location. Note - this is slow because we need to do an API call for each lookup
     # nomstart=$(date +%s.%3N)
-    if chk_enabled "${records["$idx":complete]}" && \
-       ! chk_enabled "${records["$idx":nominatim:checked]}" && \
+    if ! chk_enabled "${records["$idx":nominatim:checked]}" && \
        [[ -n "${records["$idx":lat]}" ]] && \
        [[ -n "${records["$idx":lon]}" ]]; then
       records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
@@ -939,6 +938,18 @@ if (( ${#socketrecords[@]} > 0 )); then
     # save distance and altitude units
     if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
+
+    # get a screenshot if needed. To avoid long delays, only do this if the record was observed after we started the container
+    if CHK_NOTIFICATIONS_ENABLED && \
+       ! chk_enabled "${records["$idx":screenshot:checked]}" && \
+       (( "${records["$idx":lastseen]}" > CONTAINERSTARTTIME )); then
+      records["$idx":screenshot:file]="$(GET_SCREENSHOT "$idx")"
+      if [[ -n "${records["$idx":screenshot:file]}" ]]; then
+        debug_print "Got screenshot for ${records["$idx":icao]} (${records["$idx":tail]}): ${records["$idx":screenshot:file]}"
+      else
+        debug_print "Screenshot failed for ${records["$idx":icao]} (${records["$idx":tail]})"
+      fi
+    fi
 
   done
 
@@ -956,7 +967,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   # ==========================
   # Save state
   # ==========================
-  LASTPROCESSEDLINE="${socketrecords[1]}" # we're using the second line [1] as the first line [0] may be corrupted or incomplete
+  LASTPROCESSEDLINE="${socketrecords[0]}"
   WRITE_RECORDS ignore-lock
   debug_print "Wrote $RECORDSFILE"
 
