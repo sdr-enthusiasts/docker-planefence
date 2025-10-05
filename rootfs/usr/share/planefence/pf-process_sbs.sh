@@ -670,7 +670,6 @@ GENERATE_JSON() {
   chmod a+r "$JSONOUT"
 }
 
-
 log_print INFO "Hello. Starting $0"
 
 # ==========================
@@ -686,7 +685,8 @@ if [[ "$1" == "reset" ]]; then
 fi
 
 debug_print "Getting $RECORDSFILE"
-READ_RECORDS
+LOCK_RECORDS
+READ_RECORDS ignore-lock
 
 debug_print "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -975,9 +975,10 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
     # nomtiming=$(bc -l <<< "${nomtiming:-0} + $(date +%s.%3N) - $nomstart")
 
-    # save distance and altitude units
+    # save distance / altitude / speed units
     if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
+    if [[ -z "${records["$idx":groundspeed:unit]}" ]]; then records["$idx":groundspeed:unit]="$SPEEDUNIT"; fi
 
     # get a screenshot if needed. To avoid long delays, only do this if the record was observed after we started the container
     if CHK_NOTIFICATIONS_ENABLED && \

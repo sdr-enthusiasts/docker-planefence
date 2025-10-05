@@ -62,6 +62,7 @@ CREATEHTMLTABLE () {
 			<th style=\"width: auto; text-align: center\">Time Last Seen</th>
 			<th style=\"width: auto; text-align: center\">Min. Altitude</th>
 			<th style=\"width: auto; text-align: center\">Min. Distance</th>
+			<th style=\"width: auto; text-align: center\">Ground Speed</th>
 			<th style=\"width: auto; text-align: center\">Track</th>"
 
 		if chk_enabled "${records[HASNOISE]}"; then
@@ -148,6 +149,13 @@ CREATEHTMLTABLE () {
 			else
 				# no angle available, so no arrow
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
+			fi
+
+			# groundspeed
+			if [[ -n "${records["$idx":groundspeed]}" ]]; then
+				printf "   <td>%s %s</td><!-- groundspeed -->\n" "${records["$idx":groundspeed]}" "$SPEEDUNIT"
+			else
+				printf "   <td></td><!-- no groundspeed available -->\n"
 			fi
 
 			# track

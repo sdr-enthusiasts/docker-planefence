@@ -1,91 +1,68 @@
 {
-    "username": "##USER##",
-    "avatar_url": "##AVATAR##",
+    "username": "||USER||",
+    "avatar_url": "||AVATAR||",
     "tts": false,
     "embeds": [
         {
             "tts": false,
             "type": "rich",
-            "title": "##TITLE##",
-            "description": "##DESCRIPTION## ",
+            "title": "||TITLE||",
+            "description": "||DESCRIPTION|| ",
             "color": "16711680",
             "fields": [
                 {
-                    "name": "Callsign",
-                    "value": "##CALLSIGN## ",
-                    "inline": true
-                },
-                {
                     "name": "ICAO",
-                    "value": "##ICAO##",
+                    "value": "||ICAO||",
                     "inline": true
                 },
                 {
-                    "name": "Owner",
-                    "value": "##OWNER## ",
+                    "name": "Tail Number",
+                    "value": "||TAIL||",
+                    "inline": true
+                },
+                {
+                    "name": "Callsign",
+                    "value": "||CALLSIGN|| ",
                     "inline": true
                 },
                 {
                     "name": "Type",
-                    "value": "##TYPE## ",
+                    "value": "||TYPE|| ",
                     "inline": true
                 },
                 {
-                    "name": "Distance",
-                    "value": "##DISTANCE## ",
-                    "inline": false
+                    "name": "Min dist",
+                    "value": "||DISTANCE|| ",
+                    "inline": true
                 },
-                {
-                    "name": "Altitude",
-                    "value": "##FLAG##",
+                                {
+                    "name": "Gnd Speed",
+                    "value": "||GROUNDSPEED|| ",
                     "inline": true
                 },
                 {
-                    "name": "Msgs rcvd",
-                    "value": "##COUNT##",
+                    "name": "Track",
+                    "value": "||TRACK||",
                     "inline": true
-                },
+                }||NOISE--,
                 {
-                    "name": "RSSI",
-                    "value": "##SIGNAL## dBFS",
+                    "name": "Loudness",
+                    "value": "||LOUDNESS|| ",
                     "inline": true
-                },
-                {
-                    "name": "Status",
-                    "value": "##STATUS## ",
-                    "inline": false
-                },
-                {
-                    "name": "Speed",
-                    "value": "##SPEED## ",
-                    "inline": true
-                },
-                {
-                    "name": "Heading",
-                    "value": "##HEADING## ",
-                    "inline": false
-                },
-                {
-                    "name": "External Links",
-                    "value": "##SM--[Station Map](##STNMAP##) | --SM##[AIS-Catcher](https://aiscatcher.org/ship/details/##MMSI##) | [ShipXplorer](https://www.shipxplorer.com/data/vessels/IMO-MMSI-##MMSI##) | [MarineTraffic](https://www.marinetraffic.com/en/ais/details/ships/##MMSI##) | [VesselFinder](https://www.vesselfinder.com/vessels/details/##MMSI##) | [ShipSpotting photo gallery](https://www.shipspotting.com/photos/gallery?mmsi=##MMSI##)",
-                    "inline": false
-                }
+                }--NOISE||
             ],
-            "timestamp": "##TIMESTAMP##",
-            "thumbnail":
+            "timestamp": "||TIMESTAMP||",
+            ||THUMBNAIL--"thumbnail":
             {
-                "url": "https://photos.marinetraffic.com/ais/showphoto.aspx?mmsi=##MMSI##"
-            },
+                "url": "||THUMBNAIL||"
+            },--THUMBNAIL||
             "footer":
             {
-                "text": "VesselAlert by kx1t"
-            },
-            "url": "https://www.vesselalert.com"
-            ##SCRSHT--
-            ,
+                "text": "Planefence by kx1t - https://sdr-e.com/docker-planefence"
+            }||IMAGE--,
             "image":
             {
-                "url":"attachment://##SCREENSHOTFILE##"
-            }--SCRSHT##
+                "url":"attachment://||IMAGE||"
+            }--IMAGE||
             }]
         }

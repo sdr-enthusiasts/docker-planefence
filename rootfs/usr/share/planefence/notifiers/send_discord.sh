@@ -25,23 +25,23 @@ source /usr/share/planefence/planefence.conf
 # Load a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$PF_DISCORD"; then
-  debug_print "[INFO] Discord notifications not enabled. Exiting."
+  log_print INFO "Discord notifications not enabled. Exiting."
   exit
 fi
 if [[ -z "$PF_DISCORD_WEBHOOKS" ]]; then
-  debug_print "[FATAL] No Discord webhooks defined. Aborting."
+  log_print ERR "No Discord webhooks defined. Aborting."
   exit 1
 fi
 
 if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
-  debug_print "[FATAL] Discord Feeder Name not defined. Aborting."
+  log_print ERR "Discord Feeder Name not defined. Aborting."
   exit 1
 fi
 
 if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
   template="$(</usr/share/planefence/notifiers/discord.template)"
 else
-  debug_print "ERROR - No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
+  log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
   exit 1
 fi
 
@@ -50,158 +50,81 @@ READ_RECORDS
 for (( idx=0; idx<=records[maxindex]; i++ )); do
 
   # Don't notify if the record is not complete or if notification has been sent already
-  if ! chk_enabled "${records["$idx":complete]}" || chk:enabled "${records["$idx":discord:notified]}"; then continue; fi
+  if ! chk_enabled "${records["$idx":complete]}" || chk_enabled "${records["$idx":discord:notified]}"; then continue; fi
 
   # re-read the template cleanly after each notification
   if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
     template="$(</usr/share/planefence/notifiers/discord.template)"
   else
-    debug_print "ERROR - No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
+    log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
     exit 1
   fi
 
-  # Set title
-  template="$(template_replace "##TITLE##" "${records["$idx":owner]} is overhead at ${records["$idx":nominatim]}}" "$template")"
-
-
-
-
-  #shellcheck disable=SC2001
-  if [[ "${*:2}" =~ .*tropoalert=.* ]]; then
-    notify_tropo=true
-
+  # Set strings:
+  template="$(template_replace "||TITLE||" "${records["$idx":owner]} is overhead at ${records["$idx":nominatim]}}" "$template")"
+  template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":map:link]})" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
+  template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
+  template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
+  template="$(template_replace "||DISTANCE||" "${records["$idx:distance"]} $DISTUNIT (${records["$idx":angle]}°)" "$template")"
+  template="$(template_replace "||ALTITUDE||" "${records["$idx:altitude"]} $ALTUNIT" "$template")"
+  template="$(template_replace "||GROUNDSPEED||" "${records["$idx:groundspeed"]} $SPEEDUNIT" "$template")"
+  template="$(template_replace "||TAIL||" "${records["$idx:tail"]}" "$template")"
+  template="$(template_replace "||ROUTE||" "${records["$idx:route"]}" "$template")"
+  template="$(template_replace "||TRACK||" "${records["$idx:track"]}°" "$template")"
+  template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
+  if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
+    template="$(template_replace "!!AVATAR!!" "${DISCORD_AVATAR_URL}" "$template")"
   else
-    unset notify_tropo
-    template="${template//##TITLE##/VesselAlert}"
+    template="${template_replace '"avatar_url": "||AVATAR||",' "" "$template"}"
   fi
 
-  if [[ -z "${DISCORD_WEBHOOKS}" ]]; then
-    "${s6wrap[@]}" echo "[ERROR] DISCORD_WEBHOOKS not defined. Cannot send a Discord notification"
-    exit 1
-  fi
-
-  if [[ -z "${DISCORD_NAME}" ]]; then
-    "${s6wrap[@]}" echo "[ERROR] DISCORD_NAME not defined. Cannot send a Discord notification"
-    exit 1
-  fi
-
-  readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
-
-  # First do some clean up
-  if [[ -n "${VESSELS[$1:shipname]}" ]]; then
-    VESSELS[$1:shipname]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:shipname]}")"
-  fi
-  if [[ -n "${VESSELS[$1:destination]}" ]]; then
-    VESSELS[$1:destination]="$(sed -e ':a;s/^\(\([^"]*[,.]\?\|"[^",.]*"[,.]\?\)*"[^",.]*\)[,.]/\1 /;ta' -e 's|["'\''.]||g' -e 's|[^A-Z0-9,\.\-\<\>]\+| |g' -e 's|_,|,|g' <<< "${VESSELS[$1:destination]}")"
-  fi
-
-  # If a screenshot exists, then make sure we'll include it:
-  if [[ -f "${IMAGECACHE}/screenshots/$1.jpg" ]]; then
-    SCREENSHOTCURL="-F file1=@${IMAGECACHE}/screenshots/$1.jpg"
-    template="${template//##SCREENSHOTFILE##/$1.jpg}"
-    template="${template//##SCRSHT--/}"
-    template="${template//--SCRSHT##/}"
-    "${s6wrap[@]}" echo "[INFO] Discord notification for $1 (${VESSELS[$1:shipname]}) - screenshot found"
+  #Do a few more complex replacements:
+  if chk_enabled "${records[HASNOISE]}"; then
+    template="$(template_replace "||NOISE--" "" "$template")"
+    template="$(template_replace "--NOISE||" "" "$template")"
+    template="$(template_replace "||LOUDNESS||" "${records["$idx:noise"]} dB" "$template")"
   else
-    SCREENSHOTCURL=""
-    template="${template//##SCRSHT--*---SCRSHT##/}"
-    "${s6wrap[@]}" echo "[INFO] Discord notification for $1 (${VESSELS[$1:shipname]}) - no screenshot found"
+    template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
+  case "$DISCORDMEDIA" in
+    photo)
+      image="${records["$idx":image:link]}"
+      thumb=""
+      curlfile=""
+      ;;
+    "photo+screenshot")
+      image="${records["$idx":image:link]}"
+      thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
+      curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      ;;
+    "screenshot+photo")
+      thumb="${records["$idx":image:thumblink]}"
+      image="attachment://$(basename "${records["$idx":screenshot:file]}")"
+      curlfile="-F file1=@${records["$idx":screenshot:file]}"    
+      ;;
+    screenshot)
+      image="attachment://$(basename "${records["$idx":screenshot:file]}")"
+      thumb=""
+      curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      ;;
+    "")
+      image=""
+      thumb=""
+      curlfile=""
+  esac
 
-  # Add a Map URL if configured:
-  [[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" == "http" ]] && NOTIFICATION_MAPURL="${NOTIFICATION_MAPURL}?mmsi=${VESSELS[$1:mmsi]}"
-  [[ -n "${NOTIFICATION_MAPURL}" ]] && [[ "${NOTIFICATION_MAPURL:0:4}" != "http" ]] && NOTIFICATION_MAPURL="${AIS_URL}?mmsi=${VESSELS[$1:mmsi]}"
-  if [[ -n "${NOTIFICATION_MAPURL}" ]]; then
-    template="${template//##STNMAP##/${NOTIFICATION_MAPURL}}"
-    template="${template//##SM--/}"
-    template="${template//--SM##/}"
+  if [[ -z "${image}${thumb}" ]]; then
+    template="$(sed -z 's/||IMAGE--.*--IMAGE||//g' <<< "$template")"
+    template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
   else
-    template="${template//##SM--*--SM##/}"
-  fi
-
-  # Now replace a bunch of parameters in the template:
-  template="${template//##USER##/${DISCORD_NAME}}"
-
-  {
-    description=""
-    if [[ -n "${notify_tropo}" ]]; then
-      description+="TropoAlert - Long Distance Atmospheric Propagation: $(bc -l <<< "scale=1; ${VESSELS[$1:distance]} / 1") nm "
-    else
-      [[ -z "${VESSELS[$1:notification:last]}" ]] && description+="${NOTIF_TERM[NEW2]} " || description+="${NOTIF_TERM[AGAIN]} "
-      [[ -n "${VESSELS[$1:shipname]}" ]] && description+="${NOTIF_TERM[SHIP]} ${VESSELS[$1:shipname]//_/ } " || description+="${NOTIF_TERM[SHIP]} $1 "
-      [[ -n "${notify_distance}" ]] && description+="${NOTIF_TERM[ISMOVING]} " || description+="${NOTIF_TERM[ISSEENON]} "
-    fi
-    description+="$(date +"%R %Z")"
-    template="${template//##DESCRIPTION##/${description}}"
-  }
-
-  [[ -n "${DISCORD_AVATAR_URL}" ]] && template="${template//##AVATAR##/${DISCORD_AVATAR_URL}}" || template="${template//\"avatar_url\": \"##AVATAR##\",/}"
-
-  template="${template//##MMSI##/$1}"
-
-  template="${template//##VESSELNAME##/${VESSELS[$1:shipname]//_/ }}"
-
-  template="${template//##CALLSIGN##/${VESSELS[$1:callsign]}}"
-
-  {
-    type="${SHIPTYPE[${VESSELS[$1:shiptype]}]}"
-    template="${template//##TYPE##/${type//#/}}"
-  }
-
-  {
-    if chk_enabled "$USE_FRIENDLY_DESTINATION" && [[ -n "${VESSELS[$1:destination:friendly]}" ]]; then
-      template="${template//##DESTINATION##/${VESSELS[$1:destination:friendly]//_/ }}"
-    else
-      template="${template//##DESTINATION##/${VESSELS[$1:destination]//_/ }}"
-    fi
-  }
-
-  {
-    flag="${COUNTRY[${VESSELS[$1:country]}]}"
-    template="${template//##FLAG##/${flag}}"
-  }
-
-  template="${template//##COUNT##/${VESSELS[$1:count]}}"
-
-  {
-    printf -v signal -- "%.1f" "${VESSELS[$1:level]}"
-    template="${template//##SIGNAL##/${signal}}"
-  }
-
-  {
-    status="${SHIPSTATUS[${VESSELS[$1:status]}]}"
-    status="${status#*#}";
-    status="${status//_/ }";
-    # [[ -z "${VESSELS[$1:notification:last]}" ]] && status+=" #New"
-    # [[ "${notify_timing}" == "true" ]] && [[ -n "${VESSELS[$1:notification:last]}" ]] && status+=" #SeenBefore"
-    # [[ -n "${notify_distance}" ]] && status+=" #OnTheMove"
-    template="${template//##STATUS##/${status}}"
-  }
-
-  {
-    if [[ -n "${notify_distance}" ]] && [[ -n "${VESSELS[$1:speed]}" ]]; then
-      printf -v speed -- "%.1f kts -  ${NOTIF_TERM[DIST_SINCE_LAST]}" "${VESSELS[$1:speed]:-0}" "${notify_distance}"
-    else
-      printf -v speed -- "%.1f kts" "${VESSELS[$1:speed]:-0}"
-    fi
-    [[ -z "${VESSELS[$1:speed]}" ]] && speed=""
-    template="${template//##SPEED##/${speed}}"
-  }
-
-  [[ "${VESSELS[$1:heading]}" != "null" ]] && template="${template//##HEADING##/${VESSELS[$1:heading]} deg}" || template="${template//##HEADING##/--}"
-
-  {
-    timestamp="$(date -d @$(( $(date +%s) - ${VESSELS[$1:last_signal]} )) +"%Y-%m-%dT%H:%M:%S%z")"
-    template="${template//##TIMESTAMP##/${timestamp}}"
-  }
-
-  if [[ -n "${VESSELS[$1:lat]}" ]] && [[ -n "${VESSELS[$1:lon]}" ]] && [[ -n "$LAT" ]] && [[ -n "$LON" ]]; then
-    distance="$(bc -l <<< "scale=1; $(distance "${VESSELS[$1:lat]}" "${VESSELS[$1:lon]}" "$LAT" "$LON") / 1")"
-    template="${template//##DISTANCE##/${distance}}"
-    template="${template//##HASDIST--/}"
-    template="${template//--HASDIST##/}"
-  else
-    template="${template//##HASDIST--*--HASDIST##/}"
+    template="$(template_replace "||IMAGE--" "" "$template")"
+    template="$(template_replace "--IMAGE||" "" "$template")"
+    template="$(template_replace "||IMAGE||" "$image" "$template")"
+    template="$(template_replace "||THUMBNAIL--" "" "$template")"
+    template="$(template_replace "--THUMBNAIL||" "" "$template")"
+    template="$(template_replace "||THUMBNAIL||" "$thumb" "$template")"
   fi
 
   # replace " " and "" by "--" to appease Discord's weird restriction on empty and almost empty strings
@@ -210,39 +133,32 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
 
   # make the JSON object into a single line:
   template_org="$template"
-  if ! template="$(jq -c . <<< "${template}")"; then 
-    "${s6wrap[@]}" echo "[ERROR] JSON error for $1 (${VESSELS[$1:shipname]}). JSON is invalid: <!-->${template_org}<-->"
+  if ! template="$(jq -c . <<< "${template}")"; then
+    log_print ERR "JSON error for $1 (${VESSELS[$1:shipname]}). JSON is invalid: <!-->${template_org}<-->"
   fi
 
-  # Now send the Discord notification:
+  # Now send the notification to Discord
+  readarray -td, webhooks <<<"${PF_DISCORD_WEBHOOKS}"
+
   #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do
     url="${url//$'\n'/}"    # remove any stray newlines from the URL
-    response="$(curl -sSL ${SCREENSHOTCURL} -F "payload_json=${template}" ${url} 2>&1)"
+    response="$(curl -sSL ${curlfile} -F "payload_json=${template}" ${url} 2>&1)"
 
     # check if there was an error
     result="$(jq '.id' <<< "${response}" 2>/dev/null | xargs)"
     if [[ "${result}" != "null" ]]; then
-      "${s6wrap[@]}" echo -n "[INFO] Discord post for $1 (${VESSELS[$1:shipname]}) generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
-      [[ -z "${VESSELS[$1:notification:last]}" ]] && echo -n " #NEW "
-      #shellcheck disable=SC2154
-      [[ -n "${notify_timing}" ]] && [[ -n "${VESSELS[$1:notification:last]}" ]] && echo -n " #OLD "
-      [[ -n "${notify_distance}" ]] && echo -n " #ONTHEMOVE"
-      echo ""
+      log_print INFO "Discord post for ${records["$idx":tail]}) generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
+      records["$idx":discord:notified]=true
+      records[HASNOTIFS]=true
     else
-      "${s6wrap[@]}" echo "[ERROR] Discord post error for $1 (${VESSELS[$1:shipname]}). Discord returned this error: ${response}"
-      notification_error="true"
+      log_print WARNING "Discord post error for ${records["$idx":tail]}). Discord returned this error: ${response}"
+      records["$idx":discord:notified]=false
     fi
   done
-
-  if [[ "$notification_error" != "true" ]]; then
-    # Update the Assoc Array with the latest values:
-    VESSELS[$1:notification:lat]="${VESSELS[$1:lat]}"
-    VESSELS[$1:notification:lon]="${VESSELS[$1:lon]}"
-    VESSELS[$1:notification:last]="$(date +%s)"
-    VESSELS[$1:notification:discord]="true"
-
-    source /usr/share/vesselalert/save_databases
-  fi
-
 done
+
+# Save the records again
+debug_print "Saving records after Discord notifications"
+WRITE_RECORDS
+log_print INFO "Discord notifications run completed."

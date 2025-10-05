@@ -104,7 +104,7 @@ WRITE_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
-  LOCK_RECORDS ignore-lock
+  LOCK_RECORDS "$1"
   #declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
   { declare -p records
     declare -p heatmap
@@ -114,7 +114,7 @@ WRITE_RECORDS() {
   } > "$RECORDSFILE"
   sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
   debug_print "Records written by $0"
-  UNLOCK_RECORDS
+  if [[ "$1" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
 
 # Function to encode special characters for XML
@@ -176,12 +176,9 @@ template_replace() {
   rm -f -- "$tmp"
 }
 
-
-DISTUNIT="mi"
-ALTUNIT="ft"
-TO_METER=1609
+# Default units
 if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
-	case "$(grep "^distanceunit=" "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" |sed "s/distanceunit=//g")" in
+	case "$(awk -F= -v var="distunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
 		nauticalmile)
 		DISTUNIT="nm"
     TO_METER=1852
@@ -198,11 +195,21 @@ if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 		DISTUNIT="m"
 		TO_METER=1
 	esac
-	case "$(grep "^altitudeunit=" "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" |sed "s/altitudeunit=//g")" in
+	case "$(awk -F= -v var="altitudeunit" '$1==var {print $2;found=1;exit} END {if(!found) print "meter"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
 		feet)
 		ALTUNIT="ft"
 		;;
 		meter)
 		ALTUNIT="m"
+	esac
+  	case "$(awk -F= -v var="speedunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometerph"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
+		kilometerph)
+		SPEEDUNIT="km/h"
+		;;
+		knotph)
+		SPEEDUNIT="kt"
+    ;;
+    mileph)
+    SPEEDUNIT="mph"
 	esac
 fi
