@@ -25,19 +25,18 @@ LOOPTIME="${LOOPTIME:-60}"
 
 PLANEFENCEDIR=/usr/share/planefence
 
-if [[ "$LOGLEVEL" != "ERROR" ]]; then
-    log_print INFO "Screenshot started as an s6 service"
-fi
+log_print INFO "Screenshot started as an s6 service"
 
-initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
+# Wait until pf-process_sbs.sh has run at least once
 
-if [[ "$LOGLEVEL" != "ERROR" ]]; then 
-    log_print INFO "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
-else
-    log_print INFO "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
-fi
-sleep "$initial_looptime" & wait
-if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Planefence starting its initial run now"; fi
+while [[ ! -f /run/pf-process_sbs.pid ]]; do
+    sleep 1
+done
+pid="$(< /run/pf-process_sbs.pid)"
+while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
+
+
+if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Screenshot starting its initial run now"; fi
 
 while true
 do
@@ -52,4 +51,5 @@ do
             sleep 1 &
         fi
         wait
+        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Starting Screenshot run..." || true
 done

@@ -38,6 +38,7 @@ DEBUG=true
 ## initialization:
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
+echo "$" > /run/planefence.pid
 
 # ==========================
 # Config and initialization

@@ -41,7 +41,12 @@ DEBUG=true
 
 cd "$PFDIR"
 
-./pf-process_sbs.sh		# read and process SBS data
+./pf-process_sbs.sh	&	# read and process SBS data
+pid=$!
+echo "$pid" > /run/pf-process_sbs.pid
+wait "$pid"
+rm -f /run/pf-process_sbs.pid
+
 ./pf-create-html.sh		# create PF HTML page
 
 # Run notifiers scripts in the background
