@@ -14,6 +14,7 @@
 source /scripts/common
 
 MAXWAITTIME=300   # max time we'll wait for the records lock to expire
+CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
 
 declare -gA records
 
@@ -174,6 +175,40 @@ template_replace() {
   } >"$tmp"
   cat "$tmp"
   rm -f -- "$tmp"
+}
+
+CHK_SCREENSHOT_ENABLED() {
+  # Check if screenshot additions are enabled
+  local screenshothost
+  local screenshoturl="$PF_SCREENSHOTURL"
+  if [[ -z "$screenshoturl" ]]; then
+    screenshoturl="$(sed -n 's/\(^\s*PF_SCREENSHOTURL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
+  fi
+  screenshothost="$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$screenshoturl")"
+
+  if chk_disabled "$screenshoturl"; then
+    log_print INFO "Screenshot additions not enabled, exiting"
+    return 1
+  fi
+  # check if the screenshot container can be reached. If it can't, exit
+  if ! ping -W 1 -c 1 "$screenshothost" &>/dev/null; then
+    log_print ERR "Screenshot service not reachable at ${screenshoturl}, exiting"
+    return 1
+  fi
+  return 0
+}
+
+CHK_NOTIFICATIONS_ENABLED () {
+  # Check if any notifications are enabled
+  if chk_enabled "$PF_DISCORD" || \
+     { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
+     [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
+     [[ -n "$MQTT_URL" ]] || \
+     [[ -n "${PF_TELEGRAM_CHAT_ID}" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # Default units

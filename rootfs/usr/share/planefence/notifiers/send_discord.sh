@@ -45,12 +45,24 @@ else
   exit 1
 fi
 
+if CHK_SCREENSHOT_ENABLED; then
+  screenshots=true
+else
+  screenshots=false
+fi
+
+
 READ_RECORDS
 
 for (( idx=0; idx<=records[maxindex]; i++ )); do
 
-  # Don't notify if the record is not complete or if notification has been sent already
-  if ! chk_enabled "${records["$idx":complete]}" || chk_enabled "${records["$idx":discord:notified]}"; then continue; fi
+  # Don't notify if the record is not complete or if notification has been sent already, or if we need a screenshot but don't have one yet
+  if ! chk_enabled "${records["$idx":complete]}" || \
+     chk_enabled "${records["$idx":discord:notified]}" ||
+     [[ "${records["$idx":discord:notified]}" == "error" ]] ||
+     { $screenshots && ! chk_enabled "${records["$idx":screenshot:checked]}"; }; then
+        continue
+  fi
 
   # re-read the template cleanly after each notification
   if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
@@ -88,40 +100,44 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
   else
     template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
+
+  image=""; thumb=""; curlfile=""
   case "$DISCORDMEDIA" in
-    photo)
+    "photo")
       image="${records["$idx":image:link]}"
-      thumb=""
-      curlfile=""
       ;;
     "photo+screenshot")
       image="${records["$idx":image:link]}"
-      thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
-      curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      if $screenshots; then
+        thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
+        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      fi
       ;;
     "screenshot+photo")
       thumb="${records["$idx":image:thumblink]}"
-      image="attachment://$(basename "${records["$idx":screenshot:file]}")"
-      curlfile="-F file1=@${records["$idx":screenshot:file]}"    
+      if $screenshots; then 
+        image="attachment://$(basename "${records["$idx":screenshot:file]}")"
+        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      fi
       ;;
-    screenshot)
-      image="attachment://$(basename "${records["$idx":screenshot:file]}")"
-      thumb=""
-      curlfile="-F file1=@${records["$idx":screenshot:file]}"
+    "screenshot")
+      if $screenshots; then
+        image="attachment://$(basename "${records["$idx":screenshot:file]}")"
+        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      fi
       ;;
-    "")
-      image=""
-      thumb=""
-      curlfile=""
   esac
 
-  if [[ -z "${image}${thumb}" ]]; then
+  if [[ -z "${image}" ]]; then
     template="$(sed -z 's/||IMAGE--.*--IMAGE||//g' <<< "$template")"
-    template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
   else
     template="$(template_replace "||IMAGE--" "" "$template")"
     template="$(template_replace "--IMAGE||" "" "$template")"
     template="$(template_replace "||IMAGE||" "$image" "$template")"
+  fi
+  if [[ -z "${thumb}" ]]; then
+    template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
+  else
     template="$(template_replace "||THUMBNAIL--" "" "$template")"
     template="$(template_replace "--THUMBNAIL||" "" "$template")"
     template="$(template_replace "||THUMBNAIL||" "$thumb" "$template")"
@@ -134,7 +150,7 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
   # make the JSON object into a single line:
   template_org="$template"
   if ! template="$(jq -c . <<< "${template}")"; then
-    log_print ERR "JSON error for $1 (${VESSELS[$1:shipname]}). JSON is invalid: <!-->${template_org}<-->"
+    log_print ERR "JSON error for ${records["$idx":tail]}. JSON is invalid: <!-->${template_org}<-->"
   fi
 
   # Now send the notification to Discord
@@ -148,12 +164,12 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
     # check if there was an error
     result="$(jq '.id' <<< "${response}" 2>/dev/null | xargs)"
     if [[ "${result}" != "null" ]]; then
-      log_print INFO "Discord post for ${records["$idx":tail]}) generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
+      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
       records["$idx":discord:notified]=true
       records[HASNOTIFS]=true
     else
       log_print WARNING "Discord post error for ${records["$idx":tail]}). Discord returned this error: ${response}"
-      records["$idx":discord:notified]=false
+      records["$idx":discord:notified]=error
     fi
   done
 done

@@ -49,7 +49,6 @@ mkdir -p "$HTMLDIR"
 TODAY="$(date +%y%m%d)"
 YESTERDAY="$(date -d "yesterday" +%y%m%d)"
 NOWTIME="$(date +%s)"
-CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
 
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
@@ -287,39 +286,6 @@ CHK_NOTIFICATIONS_ENABLED () {
   else
     return 1
   fi
-}
-
-GET_SCREENSHOT () {
-	# Function to get a screenshot
-	# Usage: GET_SCREENSHOT index 
-  # returns file path to screenshot if successful, or empty if no screenshot was captured
-  
-  local idx="$1"
-  local screenfile="/usr/share/planefence/persist/planepix/cache/screenshot-${records["$idx":icao]}-${records["$idx":lastseen]}.jpg"
-
-  if [[ -z "$idx" ]]; then return; fi
-  records["$idx":screenshot:checked]=true
-
-  # check if the screenshot container is up and running. If it isn't, suspend screenshot attempts
-  if [[ -z "$SCREENSHOTSERVICE" ]] && ping -W 1 -c 1 "$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$SCREENSHOTURL")" &>/dev/null; then
-    SCREENSHOTSERVICE=true
-  else
-    SCREENSHOTSERVICE=false
-  fi
-  if chk_disabled "$SCREENSHOTSERVICE"; then
-    log_print WARN "Screenshot service disabled or not reachable at ${SCREENSHOTURL:-screenshot}"
-    return
-  fi
-  
-  # get new screenshot
-  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
-    echo "$screenfile"
-    return
-  fi
-
-  # if retrieving the screenshot failed, remove any leftovers and return nothing
-  rm -f "$screenfile"
-  return
 }
 
 GET_NOISEDATA () {
@@ -979,18 +945,6 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
     if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
     if [[ -z "${records["$idx":groundspeed:unit]}" ]]; then records["$idx":groundspeed:unit]="$SPEEDUNIT"; fi
-
-    # get a screenshot if needed. To avoid long delays, only do this if the record was observed after we started the container
-    if CHK_NOTIFICATIONS_ENABLED && \
-       ! chk_enabled "${records["$idx":screenshot:checked]}" && \
-       (( "${records["$idx":lastseen]}" > CONTAINERSTARTTIME )); then
-      records["$idx":screenshot:file]="$(GET_SCREENSHOT "$idx")"
-      if [[ -n "${records["$idx":screenshot:file]}" ]]; then
-        debug_print "Got screenshot for ${records["$idx":icao]} (${records["$idx":tail]}): ${records["$idx":screenshot:file]}"
-      else
-        debug_print "Screenshot failed for ${records["$idx":icao]} (${records["$idx":tail]})"
-      fi
-    fi
 
   done
 
