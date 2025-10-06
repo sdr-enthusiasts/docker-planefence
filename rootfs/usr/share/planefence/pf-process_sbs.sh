@@ -295,44 +295,52 @@ GET_NOISEDATA () {
   # Usage: GET_NOISEDATA <firstseen_epoch> [<lastseen_epoch>]
   if [[ -z "$REMOTENOISE" ]] || [[ -z "$1" ]]; then return; fi
   local firstseen lastseen samplescount=0 ts level level_1min level_5min level_10min level_1hr loudness color avglevel avg1min avg5min avg10min avg1hr
-
+  local noiselogdate
   firstseen="$1"
+  lastseen="$2"
   if [[ -z "$lastseen" ]] || (( lastseen - firstseen < 15 )); then lastseen="$(( firstseen + 15 ))"; fi
 
-  # check if we can get the noisecapt log:
-  if [[ -z "$noiselog" ]]; then
-    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
-      return
-    fi
-    noiselog="$(</tmp/noisecapt.log)"
+  # get the noisecapt log - download them all in case there's a date discrepancy
+  # Extract matching filenames, sorted
+  mapfile -t files < <(
+    printf '%s\n' "$noiselist" |
+      sed -En 's/.*\b(noisecapt-[0-9]{6}\.log)\b.*/\1/p' |
+      sort -u
+  )
+
+  # Fetch in order, filter by first field (epoch seconds), collect into Bash array
+  noiserecords=()
+  while IFS= read -r line; do
+    noiserecords+=("$line")
+  done < <(
+    for f in "${files[@]}"; do
+      curl -fsSL "$REMOTENOISE/$f"
+    done | awk -F',' -v s="$firstseen" -v e="$lastseen" '{ t=$1+0; if (t>=s && t<=e) print }'
+  )
+
+  for line in "${noiserecords[@]}"; do
+    if [[ -z "$line" ]]; then continue; fi
+    IFS=, read -r ts level level_1min level_5min level_10min level_1hr <<< "$line"
+    (( samplescount++ )) || true
+    avglevel="$(( avglevel + level ))"
+    avg1min="$(( avg1min + level_1min ))"
+    avg5min="$(( avg5min + level_5min ))"
+    avg10min="$(( avg10min + level_10min ))"
+    avg1hr="$(( avg1hr + level_1hr ))"
+  done
+  if (( samplescount > 0 )); then
+    avglevel="$(( avglevel/samplescount ))"
+    avg1min="$(( avg1min/samplescount ))"
+    avg5min="$(( avg5min/samplescount ))"
+    avg10min="$(( avg10min/samplescount ))"
+    avg1hr="$(( avg1hr/samplescount ))"
+    loudness="$(( avglevel - avg1hr ))"
+    if (( loudness > YELLOWLIMIT )); then color="$RED"
+    elif (( loudness > GREENLIMIT )); then color="$YELLOW"
+    else color="$GREEN"; fi
+
+    echo "$avglevel $avg1min $avg5min $avg10min $avg1hr $loudness $color"
   fi
-
-  while IFS=, read -r ts level level_1min level_5min level_10min level_1hr; do
-    if (( ts >= firstseen )) && (( ts <= lastseen )); then
-      (( samplescount++ )) || true
-      avglevel="$(( avglevel + level ))"
-      avg1min="$(( avg1min + level_1min ))"
-      avg5min="$(( avg5min + level_5min ))"
-      avg10min="$(( avg10min + level_10min ))"
-      avg1hr="$(( avg1hr + level_1hr ))"
-    elif (( ts > lastseen )); then
-      break
-    fi
-  done <<< "$noiselog"
-    if (( samplescount > 0 )); then
-      avglevel="$(( avglevel/samplescount ))"
-      avg1min="$(( avg1min/samplescount ))"
-      avg5min="$(( avg5min/samplescount ))"
-      avg10min="$(( avg10min/samplescount ))"
-      avg1hr="$(( avg1hr/samplescount ))"
-
-      loudness="$(( avglevel - avg1hr ))"
-      if (( loudness > YELLOWLIMIT )); then color="$RED"
-      elif (( loudness > GREENLIMIT )); then color="$YELLOW"
-      else color="$GREEN"; fi
-
-      echo "$avglevel $avg1min $avg5min $avg10min $avg1hr $loudness $color"
-    fi
 }
 
 CREATE_NOISEPLOT () {
@@ -908,6 +916,8 @@ if (( ${#socketrecords[@]} > 0 )); then
             rm -f /tmp/.allnoise
             # noisestart=$(date +%s.%3N)
           fi
+          noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
+          noisedate="${noisedate:-$TODAY}"
           read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
           records["$idx":noisedata:checked]=true
           records[HASNOISE]=true

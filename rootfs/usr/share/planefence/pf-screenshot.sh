@@ -45,7 +45,6 @@ declare -A screenshot_checked=()
 # Constants
 # ==========================
 SCREENFILEDIR="/usr/share/planefence/persist/planepix/cache"
-RECORDSFILE="$HTMLDIR/.planefence-records-$(date +%y%m%d)"
 
 # ==========================
 # Functions
@@ -98,27 +97,27 @@ for ((idx=0; idx<records[maxindex]; idx++)); do
 
   # Skip if record is incomplete or screenshot already checked
   if chk_enabled "${records["$idx":screenshot:checked]}" || ! chk_enabled "${records["$idx":complete]}"; then
-    debug_print "Record incomplete or screenshot already attempted for ${records["$idx":icao]} (${records["$idx":tail]})"
+    debug_print "Record incomplete or screenshot already attempted for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
     continue
   fi
 
   # Skip if lastseen is older than container start time (i.e. before this container was started). We won't notify or get screenshots for these
   # as getting screenshots is computationally expensive and pointless for old records
   if (( "${records["$idx":lastseen]}" <= CONTAINERSTARTTIME )); then
-    debug_print "Skipping screenshot for ${records["$idx":icao]} (${records["$idx":tail]}) - lastseen before container start time"
+    debug_print "Skipping screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]}) - lastseen before container start time"
     screenshot_checked["$idx"]=true
     continue
   fi
 
   # If we reach here, try to get a screenshot if not already checked and lastseen is after container start time
-  debug_print "Attempting screenshot for ${records["$idx":icao]} (${records["$idx":tail]})"
+  debug_print "Attempting screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
 
   if [[ -n "${screenshot_file["$idx"]}" ]]; then
-    debug_print "Got screenshot for ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
+    debug_print "Got screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
   else
     unset "${screenshot_file["$idx"]}"
-    debug_print "Screenshot failed for ${records["$idx":icao]} (${records["$idx":tail]})"
+    debug_print "Screenshot failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   fi
   screenshot_checked["$idx"]=true
 done
@@ -132,5 +131,7 @@ done
 for idx in "${!screenshot_checked[@]}"; do
     records["$idx":screenshot:checked]=true
 done
-WRITE_RECORDS
+debug_print "Wrote screenshot files to indices: ${!screenshot_file[*]}"
+debug_print "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
+WRITE_RECORDS ignore-lock
 log_print INFO "Screenshot additions run completed."
