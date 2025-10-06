@@ -45,6 +45,7 @@ declare -A screenshot_checked=()
 # Constants
 # ==========================
 SCREENFILEDIR="/usr/share/planefence/persist/planepix/cache"
+RECORDSFILE="$HTMLDIR/.planefence-records-$(date +%y%m%d)"
 
 # ==========================
 # Functions

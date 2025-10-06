@@ -71,6 +71,7 @@ UNLOCK_RECORDS() {
 
 READ_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local HTMLDIR="${HTMLDIR:-/usr/share/planefence/html}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
@@ -103,6 +104,7 @@ READ_RECORDS() {
 WRITE_RECORDS() {
 
   local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local HTMLDIR="${HTMLDIR:-/usr/share/planefence/html}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
 
   LOCK_RECORDS "$1"
