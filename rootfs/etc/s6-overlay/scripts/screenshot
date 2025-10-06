@@ -25,31 +25,26 @@ LOOPTIME="${LOOPTIME:-60}"
 
 PLANEFENCEDIR=/usr/share/planefence
 
-log_print INFO "Screenshot started as an s6 service"
+log_print INFO "Screenshot started as an s6 service. Waiting for Planefence to finish its initial run..."
 
 # Wait until pf-process_sbs.sh has run at least once
 
 while [[ ! -f /run/pf-process_sbs.pid ]]; do
-    sleep 1
+  sleep 1
 done
 pid="$(< /run/pf-process_sbs.pid)"
 while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
-
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Screenshot starting its initial run now"; fi
 
 while true
 do
-        starttime=$(date +%s)
-        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Starting Screenshot run..." || true
-        $PLANEFENCEDIR/pf-screenshot.sh
-        endtime=$(date +%s)
-        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Screenshot ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) )." || true
-        if (( starttime + LOOPTIME > endtime )); then
-            sleep $(( (starttime + LOOPTIME) - endtime )) &
-        else
-            sleep 1 &
-        fi
-        wait
-        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Starting Screenshot run..." || true
+  starttime=$(date +%s)
+  $PLANEFENCEDIR/pf-screenshot.sh
+  endtime=$(date +%s)
+  [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Screenshot ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) )." || true
+  if (( starttime + LOOPTIME > endtime )); then
+      sleep $(( (starttime + LOOPTIME) - endtime )) &
+  fi
+  wait
 done

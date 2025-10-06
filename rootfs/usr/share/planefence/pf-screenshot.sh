@@ -37,6 +37,9 @@ DEBUG=true
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
+declare -A screenshot_file=()
+declare -A screenshot_checked=()
+
 
 # ==========================
 # Constants
@@ -102,23 +105,31 @@ for ((idx=0; idx<records[maxindex]; idx++)); do
   # as getting screenshots is computationally expensive and pointless for old records
   if (( "${records["$idx":lastseen]}" <= CONTAINERSTARTTIME )); then
     debug_print "Skipping screenshot for ${records["$idx":icao]} (${records["$idx":tail]}) - lastseen before container start time"
-    records["$idx":screenshot:checked]=true
+    screenshot_checked["$idx"]=true
     continue
   fi
 
   # If we reach here, try to get a screenshot if not already checked and lastseen is after container start time
   debug_print "Attempting screenshot for ${records["$idx":icao]} (${records["$idx":tail]})"
-  records["$idx":screenshot:file]="$(GET_SCREENSHOT "$idx")"
+  screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
 
-  if chk_enabled "$DEBUG" && [[ -n "${records["$idx":screenshot:file]}" ]]; then
-    debug_print "Got screenshot for ${records["$idx":icao]} (${records["$idx":tail]}): ${records["$idx":screenshot:file]}"
+  if [[ -n "${screenshot_file["$idx"]}" ]]; then
+    debug_print "Got screenshot for ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
   else
+    unset "${screenshot_file["$idx"]}"
     debug_print "Screenshot failed for ${records["$idx":icao]} (${records["$idx":tail]})"
   fi
-
-  records["$idx":screenshot:checked]=true
+  screenshot_checked["$idx"]=true
 done
-# Save the records again
+# Read records again, lock them, update them, and write them back
 debug_print "Saving records after screenshot attempts"
+LOCK_RECORDS
+READ_RECORDS
+for idx in "${!screenshot_file[@]}"; do
+    records["$idx":screenshot:file]="${screenshot_file["$idx"]}"
+done
+for idx in "${!screenshot_checked[@]}"; do
+    records["$idx":screenshot:checked]=true
+done
 WRITE_RECORDS
 log_print INFO "Screenshot additions run completed."
