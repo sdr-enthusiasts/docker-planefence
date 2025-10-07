@@ -48,6 +48,10 @@ wait "$pid" &>/dev/null
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
 ./pf-create-html.sh		# create PF HTML page
 
+
+# manually start discord notifier for testing
+/usr/share/planefence/notifiers/send_discord.sh
+
 # Run notifiers scripts in the background
 # if compgen -G "notifiers/send*.sh" > /dev/null; then
 # 	scripts=( notifiers/send*.sh )
