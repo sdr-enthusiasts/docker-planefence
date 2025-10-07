@@ -54,8 +54,8 @@ NOWTIME="$(date +%s)"
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
-RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
-YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}"
+RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
+YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}.gz"
 
 CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"

@@ -352,7 +352,7 @@ CREATENOTIFICATIONS () {
 
 TODAY="$(date +%y%m%d)"
 NOWTIME="$(date +%s)"
-RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}"
+RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
 log_print INFO "Hello. Starting $0"
 
 # Load the template into a variable that we can manipulate:
@@ -479,7 +479,7 @@ CREATENOTIFICATIONS
 # due to the large increase of size of the template
 debug_print "Adding HTML table"
 CREATEHTMLTABLE
-
+debug_print "Done updating the template"
 
 # ---------------------------------------------------------------------------
 #      FINALIZE AND WRITE THE FILES

@@ -95,7 +95,7 @@ if ! CHK_SCREENSHOT_ENABLED; then
   exit 0
 fi
 
-debug_print "Getting $RECORDSFILE"
+debug_print "Getting RECORDSFILE"
 READ_RECORDS ignore-lock
 
 # Make an index of records to process
@@ -158,6 +158,12 @@ readarray -t stale_indices < <(
 )
 
 rm -f "$tmpfile"
+
+# If there's nothing to do, exit
+if (( ${#index[@]} + ${#stale_indices[@]} == 0 )); then
+  log_print INFO "No new records to process or stale records to mark, exiting"
+  exit 0
+fi
 
 counter=0
 for idx in "${index[@]}"; do

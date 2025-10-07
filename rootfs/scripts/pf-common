@@ -60,13 +60,13 @@ LOCK_RECORDS() {
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
   fi
-  echo "$0" > "/tmp/.records.lock"
-  debug_print "Records locked by $0"
+  basename "$0" > "/tmp/.records.lock"
+  debug_print "Records locked by $(basename "$0")"
 }
 
 UNLOCK_RECORDS() {
   rm -f "/tmp/.records.lock"
-  debug_print "Records unlocked by $0"
+  debug_print "Records unlocked by $(basename "$0")"
 }
 
 READ_RECORDS() {
@@ -95,7 +95,7 @@ READ_RECORDS() {
     done
     debug_print "Records.lock unlocked. Continuing..."
   fi
-  debug_print "Records read by $0"
+  debug_print "Records read by $(basename "$0")"
   # shellcheck disable=SC1090
   source "$RECORDSFILE"
 
@@ -105,7 +105,7 @@ WRITE_RECORDS() {
 
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local HTMLDIR="${HTMLDIR:-/usr/share/planefence/html}"
-  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
+  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}.gz}"
 
   LOCK_RECORDS "$1"
   #declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
@@ -114,9 +114,10 @@ WRITE_RECORDS() {
     declare -p last_idx_for_icao
     declare -p lastseen_for_icao
     echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
-  } > "$RECORDSFILE"
-  sed -i 's/declare \(-.\{1\}\) /declare \1g /g' "$RECORDSFILE" # make sure the declare function includes "-g" for global
-  debug_print "Records written by $0"
+  } | \
+    sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
+    gzip -c > "$RECORDSFILE"
+  debug_print "Records written by $(basename "$0")"
   if [[ "$1" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
 
