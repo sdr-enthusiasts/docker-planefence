@@ -166,22 +166,24 @@ if (( ${#index[@]} + ${#stale_indices[@]} == 0 )); then
 fi
 
 counter=0
+if (( ${#index[@]} < MAXSCREENSHOTSPERRUN )); then MAXSCREENSHOTSPERRUN=${#index[@]}; fi
+
 for idx in "${index[@]}"; do
   # Process each record in the records array
-  counter=$((counter++))
+  counter=$((++counter))
   if (( counter > MAXSCREENSHOTSPERRUN )); then
     debug_print "Reached max screenshots per run ($MAXSCREENSHOTSPERRUN), stopping here"
     break
   fi
 
-  debug_print "Attempting screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
+  debug_print "Attempting screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
 
   if [[ -n "${screenshot_file["$idx"]}" ]]; then
-    debug_print "Got screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
+    debug_print "Got screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
   else
     unset "${screenshot_file["$idx"]}"
-    debug_print "Screenshot failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
+    debug_print "Screenshot ($counter/$MAXSCREENSHOTSPERRUN) failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   fi
   screenshot_checked["$idx"]=true
 done

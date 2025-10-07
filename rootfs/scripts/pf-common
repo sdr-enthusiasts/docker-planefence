@@ -51,8 +51,8 @@ log_print() {
 
 # shellcheck disable=SC2120
 LOCK_RECORDS() {
-    if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
-    debug_print "Waiting for records.lock ($(</tmp/.records.lock)) to become unlocked..."
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
     # wait until the lock is gone, or 120 seconds (whichever is shorter)
     while :; do
       starttime="$(date +%s)"
@@ -60,19 +60,23 @@ LOCK_RECORDS() {
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
   fi
-  basename "$0" > "/tmp/.records.lock"
-  debug_print "Records locked by $(basename "$0")"
+  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.records.lock"
+  debug_print "Records locked by $(</tmp/.records.lock)"
 }
 
 UNLOCK_RECORDS() {
-  rm -f "/tmp/.records.lock"
-  debug_print "Records unlocked by $(basename "$0")"
+  if [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Unlocking records locked by $(</tmp/.records.lock)"
+    rm -f "/tmp/.records.lock"
+  else
+    debug_print "Unlocking records (they were already unlocked)"
+  fi
 }
 
 READ_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local HTMLDIR="${HTMLDIR:-/usr/share/planefence/html}"
-  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}}"
+  local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}.gz}"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
     debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
@@ -87,8 +91,8 @@ READ_RECORDS() {
 
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
-    debug_print "Waiting for records.lock to become unlocked..."
     starttime="$(date +%s)"
+    debug_print "Waiting for records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
     while :; do
       sleep "0.${RANDOM: -3}s"
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
@@ -97,7 +101,7 @@ READ_RECORDS() {
   fi
   debug_print "Records read by $(basename "$0")"
   # shellcheck disable=SC1090
-  source "$RECORDSFILE"
+  source <(gzip -cd "$RECORDSFILE")
 
 }
 
@@ -106,6 +110,8 @@ WRITE_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local HTMLDIR="${HTMLDIR:-/usr/share/planefence/html}"
   local RECORDSFILE="${RECORDSFILE:-$HTMLDIR/.planefence-records-${TODAY}.gz}"
+  local tmpfile
+  tmpfile="$(mktemp)"
 
   LOCK_RECORDS "$1"
   #declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
@@ -116,7 +122,8 @@ WRITE_RECORDS() {
     echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
   } | \
     sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
-    gzip -c > "$RECORDSFILE"
+    gzip -c > "$tmpfile"
+    mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
   debug_print "Records written by $(basename "$0")"
   if [[ "$1" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
