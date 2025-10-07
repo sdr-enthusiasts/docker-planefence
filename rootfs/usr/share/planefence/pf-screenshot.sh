@@ -29,6 +29,7 @@
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
 set -eo pipefail
+LC_ALL=C
 
 ## DEBUG stuff:
 DEBUG=true
@@ -39,12 +40,14 @@ source /usr/share/planefence/planefence.conf
 
 declare -A screenshot_file=()
 declare -A screenshot_checked=()
+declare -a index
 
 
 # ==========================
 # Constants
 # ==========================
 SCREENFILEDIR="/usr/share/planefence/persist/planepix/cache"
+MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensure we can batch-process them
 
 # ==========================
 # Functions
@@ -56,12 +59,18 @@ GET_SCREENSHOT () {
   # returns file path to screenshot if successful, or empty if no screenshot was captured
   
   local idx="$1"
-  local screenfile="$SCREENFILEDIR/screenshot-${records["$idx":icao]}-${records["$idx":lastseen]}.jpg"
-
+  local screenfile="$SCREENFILEDIR/screenshot-${records["$idx":icao]}-${records["$idx":lastseen]}.png"
+  local image
   if [[ -z "$idx" ]]; then return; fi
   
   # get new screenshot
   if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
+    image=$(mktemp)
+    # pngquant will reduce the image to about 1/3 of its original size
+    # drawback: it takes about a second or so to run
+    if pngquant -f -o "$image" 64 "$screenfile" &>/dev/null; then
+      mv -f "$image" "$screenfile"
+    fi
     echo "$screenfile"
     return
   fi
@@ -70,9 +79,6 @@ GET_SCREENSHOT () {
   rm -f "$screenfile"
   return
 }
-
-
-
 
 # ==========================
 # Main code
@@ -92,24 +98,76 @@ fi
 debug_print "Getting $RECORDSFILE"
 READ_RECORDS ignore-lock
 
-for ((idx=0; idx<records[maxindex]; idx++)); do
+# Make an index of records to process
+# Pre-filter keys in bash to reduce awk input volume
+tmpfile="$(mktemp)"
+
+# Only dump keys we care about; avoids 2/3 of 50k lines if many are irrelevant
+for k in "${!records[@]}"; do
+  case "$k" in
+    *:complete|*:lastseen|*:screenshot:checked)
+      printf '%s\037%s\n' "$k" "${records[$k]}" >>"$tmpfile"
+      ;;
+  esac
+done
+
+readarray -t index < <(
+  awk -v CST="$CONTAINERSTARTTIME" -v RS='\n' -v FS='\037' '
+    {
+      # k = key "idx:..."; v = value
+      k=$1; v=$2
+      # split key into idx + components
+      n=split(k, p, ":"); idx=p[1]
+      if (idx !~ /^[0-9]+$/) next
+
+      have[idx]=1
+      # map attribute
+      if (n==2) {
+        if (p[2]=="complete")      complete[idx]=(v=="true")
+        else if (p[2]=="lastseen") lastseen[idx]=v+0
+      } else if (n==3 && p[2]=="screenshot" && p[3]=="checked") {
+        scrchk[idx]=(v=="true")
+      }
+    }
+    END {
+      for (i in have)
+        if (complete[i] && !scrchk[i] && (i in lastseen) && lastseen[i] >= CST)
+          print i
+    }
+  ' "$tmpfile"
+)
+
+# Second query: indices where lastseen < CST and screenshot:checked != true
+readarray -t stale_indices < <(
+  awk -v CST="$CONTAINERSTARTTIME" -v FS='\037' '
+    {
+      k=$1; v=$2
+      n=split(k, p, ":"); idx=p[1]
+      if (idx !~ /^[0-9]+$/) next
+
+      if (n==2 && p[2]=="lastseen")               lastseen[idx]=v+0
+      else if (n==3 && p[2]=="screenshot" && p[3]=="checked") scrchk[idx]=(v=="true")
+      seen[idx]=1
+    }
+    END {
+      for (i in seen)
+        if ((i in lastseen) && lastseen[i] < CST && !scrchk[i])
+          print i
+    }
+  ' "$tmpfile"
+)
+
+rm -f "$tmpfile"
+
+counter=0
+for idx in "${index[@]}"; do
   # Process each record in the records array
-
-  # Skip if record is incomplete or screenshot already checked
-  if chk_enabled "${records["$idx":screenshot:checked]}" || ! chk_enabled "${records["$idx":complete]}"; then
-    debug_print "Record incomplete or screenshot already attempted for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
-    continue
+  counter=$((counter++))
+  if (( counter > MAXSCREENSHOTSPERRUN )); then
+    debug_print "Reached max screenshots per run ($MAXSCREENSHOTSPERRUN), stopping here"
+    break
   fi
 
-  # Skip if lastseen is older than container start time (i.e. before this container was started). We won't notify or get screenshots for these
-  # as getting screenshots is computationally expensive and pointless for old records
-  if (( "${records["$idx":lastseen]}" <= CONTAINERSTARTTIME )); then
-    debug_print "Skipping screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]}) - lastseen before container start time"
-    screenshot_checked["$idx"]=true
-    continue
-  fi
-
-  # If we reach here, try to get a screenshot if not already checked and lastseen is after container start time
   debug_print "Attempting screenshot for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
 
@@ -121,10 +179,17 @@ for ((idx=0; idx<records[maxindex]; idx++)); do
   fi
   screenshot_checked["$idx"]=true
 done
+
+for idx in "${stale_indices[@]}"; do
+  # Mark stale records as checked, so we don't try again
+  screenshot_checked["$idx"]=true
+  debug_print "Marking stale record #$idx ${records["$idx":icao]} (${records["$idx":tail]}) as checked"
+done
+
 # Read records again, lock them, update them, and write them back
 debug_print "Saving records after screenshot attempts"
 LOCK_RECORDS
-READ_RECORDS
+READ_RECORDS ignore-lock
 for idx in "${!screenshot_file[@]}"; do
     records["$idx":screenshot:file]="${screenshot_file["$idx"]}"
 done
@@ -134,4 +199,7 @@ done
 debug_print "Wrote screenshot files to indices: ${!screenshot_file[*]}"
 debug_print "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
 WRITE_RECORDS ignore-lock
+
+# Cleanup old screenshots
+find "$SCREENFILEDIR" -type f -name 'screenshot-*.png' -mmin +180 -exec rm -f {} \;
 log_print INFO "Screenshot additions run completed."
