@@ -42,6 +42,8 @@ DEBUG=true
 
 # Function to write the Planefence HTML table
 CREATEHTMLTABLE () {
+	
+	readarray -t notifs <<< "$(printf "%s\n" "${!records[@]}" | awk -F: -v idx="$idx" '{if ($1==idx && $3=="notified") {print $2}}'| sort -u)"
 
 	# Write the HTML table header
 	# shellcheck disable=SC2034
@@ -191,19 +193,23 @@ CREATEHTMLTABLE () {
 
 			# Print notifications, if there are any:
 			if chk_enabled "${records[HASNOTIFS]}"; then
-				notifstr=""
+				notifstr=""			
 				# read array of available notification services into notifs array
-				readarray -t notifs <<< "$(printf "%s\n" "${!records[@]}" | awk -F: -v idx="$idx" '{if ($1==idx && $3=="notified") {print $2}}'| sort -u)"
 				for notif in "${notifs[@]}"; do
 					if [[ "${records["$idx":"$notif":notified]}" == "true" ]]; then
-						# if set to true, notification was successfully done but there's no link
-						notifstr+="$(printf "%s - "  "$notif")"
-					elif [[ "${records["$idx":"$notif":notified]}" != "false" ]]; then
-						# if not set to true or false and not empty, then it's a link to the notification
-						notifstr+="$(printf "<a href=\"%s\" target=\"_blank\">%s</a> - " "${records["$idx":"$notif":notified]}" "$notif")"
+						if [[ -z "${records["$idx":"$notif":link]}" ]]; then
+							# if there's no link, just print the notification name
+							notifstr+="$(printf "%s - "  "$notif")"
+						else
+							# if there's a link, make the notification name a link
+							IFS=',' readarray -t links <<< "${records["$idx":"$notif":link]}"
+							for link in "${links[@]}"; do
+								notifstr+="$(printf "<a href=\"%s\" target=\"_blank\">%s</a> - " "$link" "$notif")"
+							done
+						fi
 					fi
 				done
-				if (( ${#notifstr} > 3 )); then notifstr="${notifstr:0:-3}"; fi	# get rid of trailing " - "
+				if [[ ${notifstr: -3} == " - " ]]; then notifstr="${notifstr:0:-3}"; fi	# get rid of trailing " - "
 				printf "<td>%s</td>\n" "$notifstr"
 			fi
 

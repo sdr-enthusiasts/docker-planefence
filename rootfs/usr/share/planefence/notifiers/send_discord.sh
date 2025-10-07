@@ -20,7 +20,9 @@
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
+DEBUG=true
 
+log_print INFO "Hello. Starting Discord notification run"
 
 # Load a bunch of stuff and determine if we should notify
 
@@ -51,10 +53,17 @@ else
   screenshots=false
 fi
 
+debug_print "Reading records for Discord notification"
 
 READ_RECORDS
 
-for (( idx=0; idx<=records[maxindex]; i++ )); do
+for (( idx=0; idx<=records[maxindex]; idx++ )); do
+  # or if it was last seen before the container started
+  if (( ${records["$idx":lastseen]} < CONTAINERSTARTTIME )); then
+    debug_print "Skipping record #$idx ${records["$idx":tail]} (last seen before container start)"
+    records["$idx":discord:notified]="error"
+    continue
+  fi
 
   # Don't notify if the record is not complete or if notification has been sent already, or if we need a screenshot but don't have one yet
   if ! chk_enabled "${records["$idx":complete]}" || \
@@ -63,6 +72,8 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
      { $screenshots && ! chk_enabled "${records["$idx":screenshot:checked]}"; }; then
         continue
   fi
+
+debug_print "Preparing Discord notification for ${records["$idx":tail]}"
 
   # re-read the template cleanly after each notification
   if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
@@ -87,41 +98,42 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
   template="$(template_replace "||TRACK||" "${records["$idx:track"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
-    template="$(template_replace "!!AVATAR!!" "${DISCORD_AVATAR_URL}" "$template")"
+    template="$(template_replace "||AVATAR||" "${DISCORD_AVATAR_URL}" "$template")"
   else
-    template="${template_replace '"avatar_url": "||AVATAR||",' "" "$template"}"
+    template="$(template_replace '"avatar_url": "||AVATAR||",' "" "$template")"
   fi
 
   #Do a few more complex replacements:
-  if chk_enabled "${records[HASNOISE]}"; then
+  if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||NOISE--" "" "$template")"
     template="$(template_replace "--NOISE||" "" "$template")"
-    template="$(template_replace "||LOUDNESS||" "${records["$idx:noise"]} dB" "$template")"
+    template="$(template_replace "||LOUDNESS||" "${records["$idx":sound:loudness]} dB" "$template")"
   else
     template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
 
   image=""; thumb=""; curlfile=""
-  case "$DISCORDMEDIA" in
+  debug_print "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
+  case "$DISCORD_MEDIA" in
     "photo")
-      image="${records["$idx":image:link]}"
+      image="${records["$idx":image:thumblink]}"
       ;;
     "photo+screenshot")
-      image="${records["$idx":image:link]}"
-      if $screenshots; then
-        thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      image="${records["$idx":image:thumblink]}"
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+          thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
+          curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot+photo")
       thumb="${records["$idx":image:thumblink]}"
-      if $screenshots; then 
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot")
-      if $screenshots; then
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
@@ -129,15 +141,19 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
   esac
 
   if [[ -z "${image}" ]]; then
+    debug_print "No image available for ${records["$idx":tail]}, removing image section from template"
     template="$(sed -z 's/||IMAGE--.*--IMAGE||//g' <<< "$template")"
   else
+    debug_print "Image available for ${records["$idx":tail]}, adding to template"
     template="$(template_replace "||IMAGE--" "" "$template")"
     template="$(template_replace "--IMAGE||" "" "$template")"
     template="$(template_replace "||IMAGE||" "$image" "$template")"
   fi
   if [[ -z "${thumb}" ]]; then
+    debug_print "No thumbnail available for ${records["$idx":tail]}, removing thumbnail section from template"
     template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
   else
+    debug_print "Thumbnail available for ${records["$idx":tail]}, adding to template"
     template="$(template_replace "||THUMBNAIL--" "" "$template")"
     template="$(template_replace "--THUMBNAIL||" "" "$template")"
     template="$(template_replace "||THUMBNAIL||" "$thumb" "$template")"
@@ -159,13 +175,13 @@ for (( idx=0; idx<=records[maxindex]; i++ )); do
   #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do
     url="${url//$'\n'/}"    # remove any stray newlines from the URL
-    response="$(curl -sSL ${curlfile} -F "payload_json=${template}" ${url} 2>&1)"
-
+    response="$(curl -sSL ${curlfile} -F "payload_json=${template}" ${url}?wait=true)"
     # check if there was an error
-    result="$(jq '.id' <<< "${response}" 2>/dev/null | xargs)"
-    if [[ "${result}" != "null" ]]; then
-      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Post ID is ${result//$'\n'/}."
+    if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
+      discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
+      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Link: ${discord_link}."
       records["$idx":discord:notified]=true
+      records["$idx":discord:link]+="${records["$idx":discord:link]:+,}$discord_link"
       records[HASNOTIFS]=true
     else
       log_print WARNING "Discord post error for ${records["$idx":tail]}). Discord returned this error: ${response}"

@@ -1,68 +1,76 @@
 {
-    "username": "||USER||",
-    "avatar_url": "||AVATAR||",
-    "tts": false,
-    "embeds": [
+  "username": "||USER||",
+  "avatar_url": "||AVATAR||",
+  "tts": false,
+  "embeds": 
+    [
+      {
+        "tts": false,
+        "type": "rich",
+        "title": "||TITLE||",
+        "description": "||DESCRIPTION|| ",
+        "color": "16711680",
+        "fields":
+        [
+          {
+            "name": "ICAO",
+            "value": "||ICAO||",
+            "inline": true
+          },
+          {
+            "name": "Tail Number",
+            "value": "||TAIL||",
+            "inline": true
+          },
+          {
+            "name": "Callsign",
+            "value": "||CALLSIGN|| ",
+            "inline": true
+          },
+          {
+            "name": "Type",
+            "value": "||TYPE|| ",
+            "inline": true
+          },
+          {
+            "name": "Min dist",
+            "value": "||DISTANCE|| ",
+            "inline": true
+          },
+          {
+            "name": "Gnd Speed",
+            "value": "||GROUNDSPEED|| ",
+            "inline": true
+          },
+          {
+            "name": "Track",
+            "value": "||TRACK||",
+            "inline": true
+          }||NOISE--,
+          {
+            "name": "Loudness",
+            "value": "||LOUDNESS|| ",
+            "inline": true
+          }--NOISE||
+        ],
+        "timestamp": "||TIMESTAMP||",
+        ||THUMBNAIL--"thumbnail":
         {
-            "tts": false,
-            "type": "rich",
-            "title": "||TITLE||",
-            "description": "||DESCRIPTION|| ",
-            "color": "16711680",
-            "fields": [
-                {
-                    "name": "ICAO",
-                    "value": "||ICAO||",
-                    "inline": true
-                },
-                {
-                    "name": "Tail Number",
-                    "value": "||TAIL||",
-                    "inline": true
-                },
-                {
-                    "name": "Callsign",
-                    "value": "||CALLSIGN|| ",
-                    "inline": true
-                },
-                {
-                    "name": "Type",
-                    "value": "||TYPE|| ",
-                    "inline": true
-                },
-                {
-                    "name": "Min dist",
-                    "value": "||DISTANCE|| ",
-                    "inline": true
-                },
-                                {
-                    "name": "Gnd Speed",
-                    "value": "||GROUNDSPEED|| ",
-                    "inline": true
-                },
-                {
-                    "name": "Track",
-                    "value": "||TRACK||",
-                    "inline": true
-                }||NOISE--,
-                {
-                    "name": "Loudness",
-                    "value": "||LOUDNESS|| ",
-                    "inline": true
-                }--NOISE||
-            ],
-            "timestamp": "||TIMESTAMP||",
-            ||THUMBNAIL--"thumbnail":
-            {
-                "url": "||THUMBNAIL||"
-            },--THUMBNAIL||
-            "footer":
-            {
-                "text": "Planefence by kx1t - https://sdr-e.com/docker-planefence"
-            }||IMAGE--,
-            "image":
-            {
-                "url":"attachment://||IMAGE||"
-            }--IMAGE||
-            }]
+          "url": "||THUMBNAIL||"
+        },--THUMBNAIL||
+        "footer":
+        {
+          "text": "Planefence © 2025 by kx1t"
+        }||IMAGE--,
+        "image":
+        {
+          "url":"||IMAGE||"
+        }--IMAGE||,
+        "author":
+        {
+          "name": "Planefence",
+          "url": "https://sdr-e.com/docker-planefence"
         }
+      }
+    ]
+}
