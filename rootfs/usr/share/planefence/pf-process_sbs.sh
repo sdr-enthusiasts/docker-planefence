@@ -843,9 +843,9 @@ if (( ${#socketrecords[@]} > 0 )); then
       [[ -n $lat ]] && records["$idx":lat]="$lat"
       [[ -n $lon ]] && records["$idx":lon]="$lon"
       [[ -n $altitude ]] && records["$idx":altitude]="$altitude"
-      [[ -n $angle ]] && records["$idx":angle]="${angle%.*}"
+      [[ -n $angle ]] && records["$idx":angle]="${angle%.*}" && records["$idx":angle:name]="$(deg_to_compass "$angle")"
       [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
-      [[ -n $track ]] && records["$idx":track]="$track"
+      [[ -n $track ]] && records["$idx":track]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time_at_mindist]="$seentime"
       [[ -n $squawk ]] && records["$idx":squawk]="$squawk"
     else

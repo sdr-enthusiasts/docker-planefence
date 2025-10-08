@@ -150,7 +150,7 @@ CREATEHTMLTABLE () {
 			# min distance
 			if [[ -n "${records["$idx":angle]}" ]]; then
 				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
-				printf "   <td>%s %s <img src=\"arrow%s_%s.png\" style=\"height: 1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
+				printf "   <td>%s %s %s <img src=\"arrow%s_%s.png\" style=\"height: 1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "${records["$idx":angle:name]}" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
 			else
 				# no angle available, so no arrow
 				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
@@ -165,7 +165,7 @@ CREATEHTMLTABLE () {
 
 			# track
 			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s&deg; <img src=\"arrow%s_%s.png\"style=\"height: 1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
+				printf "   <td>%s&deg; %s<img src=\"arrow%s_%s.png\"style=\"height: 1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "${records["$idx":track:name]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi

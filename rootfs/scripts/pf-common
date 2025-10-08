@@ -300,6 +300,18 @@ GET_SQUAWK_DESCRIPTION () {
   esac
 }
 
+deg_to_compass() {
+  local d=${1%%.*}
+  if [[ ! $d =~ ^-?[0-9]+$ ]]; then 
+    log_print ERR "$1 is not a valid angle"
+    return 1
+  fi
+  d=$(( ((d % 360) + 360) % 360 ))
+  local -a dirs=(N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW);
+  local idx=$(( ((d * 10 + 112) / 225) % 16 ))
+  printf '%s\n' "${dirs[$idx]}"
+}
+
 # Default units
 if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 	case "$(awk -F= -v var="distunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
