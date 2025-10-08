@@ -312,6 +312,20 @@ deg_to_compass() {
   printf '%s\n' "${dirs[$idx]}"
 }
 
+extract_url() {
+  local s=$*
+  # Unquoted regex to avoid shell escaping issues; & is literal in [].
+  local re='https?://[A-Za-z0-9._~:/?#$$$$@!$'"&"'\x27()*+,;=%-]+'
+  if [[ $s =~ $re ]]; then
+    printf '%s\n' "${BASH_REMATCH[0]}"
+    return 0
+  else
+    printf '%s\n' "$s"
+    return 1
+  fi
+}
+
+
 # Default units
 if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 	case "$(awk -F= -v var="distunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in

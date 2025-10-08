@@ -12,11 +12,15 @@
 source /usr/share/planefence/persist/planefence.config
 source /scripts/pf-common
 
+exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
+                    # Normally this isn't an issue, butspost2bsky is called from another script, and we don't want to polute the returns with info text
+
 shopt -s extglob
 
 # Set the default values
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
 BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
+SPACE=$'\x1F'   # "special" space
 
 if (( ${#@} < 1 )); then
   log_print ERR "Usage: $0 <text> [image1] [image2] ..."
@@ -192,6 +196,9 @@ for tag in "${hashtags[@]}"; do
   fi
   post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
 done
+
+# ${SPACE} is used as a token instead of spaces inside hashtags. Replace all ${SPACE} with a space
+post_text="${post_text//${SPACE}/ }"
 
 # add links
 linkcounter=0

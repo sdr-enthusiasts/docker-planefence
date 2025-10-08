@@ -21,9 +21,15 @@ shopt -s extglob
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
+exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
+                    # Normally this isn't an issue, butspost2bsky is called from another script, and we don't want to polute the returns with info text
+
+
 # shellcheck disable=SC2034
 DEBUG=true
 declare -a INDEX STALE
+
+SPACE=$'\x1F'   # "special" space
 
 log_print INFO "Hello. Starting Bsky notification run"
 
@@ -159,11 +165,11 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
-  squawk="${records["$idx:squawk"]}"
+  squawk="${records["$idx":squawk]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk$'\n'" "$template")"
+    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
-      template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx:squawk:description"]} " "$template")"
+      template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx:squawk:description"]// /${SPACE}} " "$template")"
     else
       template="$(template_replace "||EMERGENCY||" "" "$template")"
     fi
@@ -171,19 +177,23 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||SQUAWK||" "" "$template")"
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
-  
-  template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
-  template="$(template_replace "||TAIL||" "${records["$idx:tail"]}" "$template")"
-  template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
-  if [[ "${records["$idx:route"]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx:route"]}" "$template")"
+  if [[ -n "${records["$idx":owner]}" ]]; then
+    template="$(template_replace "||OWNER||" "Owner: #${records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
+  else
+    template="$(template_replace "||OWNER||" "" "$template")"
+  fi
+  template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
+  template="$(template_replace "||TAIL||" "${records["$idx":tail]}" "$template")"
+  template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
+  if [[ "${records["$idx":route]}" != "n/a" ]]; then 
+    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
   template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${records["$idx:altitude"]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx:distance"]} $DISTUNIT (${records["$idx":angle]}° ${records["$idx":angle:name]})" "$template")"
+  template="$(template_replace "||ALT||" "${records["$idx":altitude]} $ALTUNIT" "$template")"
+  template="$(template_replace "||DIST||" "${records["$idx":distance]} $DISTUNIT (${records["$idx":angle]}° ${records["$idx":angle:name]})" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
   else
@@ -206,17 +216,18 @@ for idx in "${INDEX[@]}"; do
   fi
 
   # Post to Bsky
-  debug_print "Posting to Bsky: ${records["$idx:tail"]} (${records["$idx:icao"]})"
+  debug_print "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
 echo "$template" > /tmp/bsky.tmplt
 
   # shellcheck disable=SC2068,SC2086
-  if posturl="$(/scripts/post2bsky.sh $template ${img_array[@]})" && [[ "${posturl:0:4}" == "http" ]]; then
-    log_print INFO "Bsky notification successful for ${records["$idx:tail"]} (${records["$idx:icao"]}): $posturl"
+  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})"
+  if posturl="$(extract_url "$posturl")"; then
+    log_print INFO "Bsky notification successful for ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
     records["$idx":bsky:notified]=true
     records["$idx":bsky:link]="$posturl"
   else
-    log_print ERR "Bsky notification failed for ${records["$idx:tail"]} (${records["$idx:icao"]})"
-    log_print ERR "Bsky notification error details: $posturl"
+    log_print ERR "Bsky notification failed for ${records["$idx":tail]} (${records["$idx":icao]})"
+    log_print ERR "Bsky notification error details:$'\n'$posturl"
     records["$idx":bsky:notified]="error"
   fi
 done
