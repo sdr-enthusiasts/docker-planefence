@@ -13,7 +13,7 @@ source /usr/share/planefence/persist/planefence.config
 source /scripts/pf-common
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, butspost2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
 
 shopt -s extglob
 
@@ -366,17 +366,6 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
   uri="$(jq -r '.uri' <<< "$response")"
   echo "https://bsky.app/profile/$handle/post/${uri##*/}"
 else
-  log_print ERR "BlueSky Posting Error: $response. $ratelimit_str"
-  if [[ -f /tmp/bsky.json ]]; then
-      err="$(</tmp/bsky.json)"
-      if [[ "${err: -1}" != "," ]]; then echo " ," >>/tmp/bsky.json; fi
-  fi
-  { echo "{ \"title\": \"BlueSky Posting Error\" ,"
-    echo "  \"response\": $response ,"
-    echo "  \"ratelimit\": $ratelimit_str ,"
-    echo "  \"postdata\": $post_data } ,"
-  } >> /tmp/bsky.json
-  err="$(</tmp/bsky.json)"; if [[ "${err: -1}" == "," ]]; then printf "%s\n" "${err:0:-1}" >/tmp/bsky.json; fi
-  echo "$response"
+  log_print ERR "BlueSky Posting Error: $ratelimit_str; response was (original had http instead of hxttp): ${response//http/hxttp}"
   exit 1
 fi

@@ -12,6 +12,9 @@
 source /scripts/pf-common
 source /usr/share/planefence/persist/planefence.config
 
+exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
+
+
 if (( ${#@} < 1 )); then
   log_print INFO "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
@@ -35,7 +38,7 @@ elif [[ "${1,,}" == "pa" ]]; then
   fi
 else
   log_print ERR "you must specify either 'PF' or 'PA' as the first argument to $0"
-  log_print INFO "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  log_print ERR "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
@@ -58,7 +61,7 @@ IMAGES=("${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}") # up to 4 images
 
 if [[ -z "$TEXT" ]]; then
   log_print ERR "a message text must be included in the request to $0"
-  log_print INFO "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  log_print ERR "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
@@ -119,13 +122,10 @@ for image in "${IMAGES[@]}"; do
 
     if (( image_counter == 1)); then
       if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-        log_print INFO "Error sending photo to Telegram: $response"
-        { echo "{ \"title\": \"Telegram Photo Send Error\","
-          echo "  \"response\": $response }"
-        } >> /tmp/telegram.json
+        log_print ERR "Error sending photo to Telegram: (original had http instead of hxttp): ${response//http/hxttp}"
       else
-        echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
-        log_print INFO "Photo message sent successfully to Telegram; link: $(</tmp/telegram.link)"
+        echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" 
+        log_print DEBUG "Photo message sent successfully to Telegram"
       fi
     fi
 
@@ -142,13 +142,10 @@ if (( image_count == 0 )); then
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-      log_print INFO "Error sending message to Telegram: $response"
-      { echo "{ \"title\": \"Telegram Message Send Error\","
-        echo "  \"response\": $response }"
-      } >> /tmp/telegram.json
+      log_print ERR "Error sending message to Telegram: (original had http instead of hxttp): ${response//http/hxttp}"
       exit 1
     else
-      echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
-      log_print INFO "Text message sent successfully to Telegram; link: $(</tmp/telegram.link)"
+      echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}"
+      log_print INFO "Text message sent successfully to Telegram"
     fi
 fi

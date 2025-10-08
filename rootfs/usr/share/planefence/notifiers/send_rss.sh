@@ -23,7 +23,7 @@ source "/usr/share/planefence/planefence.conf"
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
 set -eo pipefail
-DEBUG=true
+#DEBUG=true
 
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')

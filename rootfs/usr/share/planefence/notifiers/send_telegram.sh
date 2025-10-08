@@ -15,23 +15,23 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <https://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------
-# This script sends a Bsky notification
+# This script sends a Telegram notification
 shopt -s extglob
 
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, butspost2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, butspost2telegram is called from another script, and we don't want to polute the returns with info text
 
 
 # shellcheck disable=SC2034
 DEBUG=true
 declare -a INDEX STALE
 
-SPACE=$'\x1F'   # "special" space
+SPACE="_"   # "special" space replacement character for hashtagged items
 
-log_print INFO "Hello. Starting Bsky notification run"
+log_print INFO "Hello. Starting Telegram notification run"
 
 # ----------------------
 # Functions
@@ -39,7 +39,7 @@ log_print INFO "Hello. Starting Bsky notification run"
 
 # Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
 # Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|bsky:notified|complete|screenshot:checked"
+#   - records[...] assoc with keys: "<id>:lastseen|telegram:notified|complete|screenshot:checked"
 #   - CONTAINERSTARTTIME (epoch, integer)
 #   - screenshots (0/1 or truthy string)
 build_index_and_stale() {
@@ -63,7 +63,7 @@ build_index_and_stale() {
         field=${k#*:}
         # Only pass fields we care about to reduce awk work
         case $field in
-          lastseen|bsky:notified|complete|screenshot:checked)
+          lastseen|telegram:notified|complete|screenshot:checked)
             printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
             ;;
         esac
@@ -73,7 +73,7 @@ build_index_and_stale() {
       {
         id=$1; key=$2; val=$3
         if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="bsky:notified")    notified[id]=val
+        else if (key=="telegram:notified")    notified[id]=val
         else if (key=="complete")            complete[id]=val
         else if (key=="screenshot:checked")  schecked[id]=val
       }
@@ -111,15 +111,15 @@ build_index_and_stale() {
 
 # Load a bunch of stuff and determine if we should notify
 
-if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
-  log_print INFO "Bluesky notifications not enabled. Exiting."
+if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$PF_TELEGRAM_CHAT_ID" ]]; then
+  log_print INFO "Telegram notifications not enabled. Exiting."
   exit
 fi
 
-if [[ -f "/usr/share/planefence/notifiers/bluesky.template" ]]; then
-  template="$(</usr/share/planefence/notifiers/bluesky.template)"
+if [[ -f "/usr/share/planefence/notifiers/telegram.template" ]]; then
+  template="$(</usr/share/planefence/notifiers/telegram.template)"
 else
-  log_print ERR "No Bluesky template found at /usr/share/planefence/notifiers/bluesky.template. Aborting."
+  log_print ERR "No Telegram template found at /usr/share/planefence/notifiers/telegram.template. Aborting."
   exit 1
 fi
 
@@ -129,17 +129,17 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Bsky notification"
+debug_print "Reading records for Telegram notification"
 
 READ_RECORDS
 
-debug_print "Getting indices of records ready for Bsky notification and stale records"
+debug_print "Getting indices of records ready for Telegram notification and stale records"
 build_index_and_stale INDEX STALE
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Bsky notification: ${INDEX[*]}"
+  debug_print "Records ready for Telegram notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Bsky notification"
+  debug_print "No records ready for Telegram notification"
 fi
 if (( ${#STALE[@]} )); then
   debug_print "Stale records (no notification will be sent): ${STALE[*]}"
@@ -147,19 +147,19 @@ else
   debug_print "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bsky notification. Exiting."
+  log_print INFO "No records eligible for Telegram notification. Exiting."
   exit 0
 fi
 
 # deal with stale records first
 for idx in "${STALE[@]}"; do
-  records["$idx":bsky:notified]=stale
+  records["$idx":telegram:notified]=stale
 done
 
-template_clean="$(</usr/share/planefence/notifiers/bluesky.template)"
+template_clean="$(</usr/share/planefence/notifiers/telegram.template)"
 
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Bsky notification for ${records["$idx":tail]}"
+  debug_print "Preparing Telegram notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -201,9 +201,10 @@ for idx in "${INDEX[@]}"; do
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
-  links="${records["$idx":map:link]}${records["$idx":map:link]:+ }"
-  links+="${records["$idx":fa:link]}${records["$idx":fa:link]:+ }"
-  links+="${records["$idx":faa:link]}"
+  links=""
+  if [[ -n "${records["$idx":map:link]}" ]]; then links+="•<a href=\"${records["$idx":map:link]}\">$(extract_base "${records["$idx":map:link]}")</a>"; fi
+  if [[ -n "${records["$idx":fa:link]}" ]]; then links+="•<a href=\"${records["$idx":fa:link]}\">$(extract_base "${records["$idx":fa:link]}")</a>"; fi
+  if [[ -n "${records["$idx":faa:link]}" ]]; then links+="•<a href=\"${records["$idx":faa:link]}\">$(extract_base "${records["$idx":faa:link]}")</a>"; fi
   template="$(template_replace "||LINKS||" "$links" "$template")"
 
   # Handle images
@@ -215,23 +216,23 @@ for idx in "${INDEX[@]}"; do
     img_array+=("${records["$idx":screenshot:file]}")
   fi
 
-  # Post to Bsky
-  debug_print "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
+  # Post to Telegram
+  debug_print "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})"
+  posturl="$(/scripts/post2telegram.sh "$template" ${img_array[@]})"
   if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Bsky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
-    records["$idx":bsky:notified]=true
-    records["$idx":bsky:link]="$posturl"
+    log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+    records["$idx":telegram:notified]=true
+    records["$idx":telegram:link]="$posturl"
   else
-    log_print ERR "Bsky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
-    log_print ERR "Bsky notification error details:$'\n'$posturl"
-    records["$idx":bsky:notified]="error"
+    log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+    log_print ERR "Telegram notification error details:$'\n'$posturl"
+    records["$idx":telegram:notified]="error"
   fi
 done
 
 # Save the records again
-debug_print "Saving records after Bsky notifications"
+debug_print "Saving records after Telegram notifications"
 WRITE_RECORDS
 log_print INFO "Bsky notifications run completed."
