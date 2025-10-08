@@ -22,8 +22,6 @@ source "/usr/share/planefence/planefence.conf"
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
-HTMLDIR=/tmp
-OUTFILEDIR=/tmp
 set -eo pipefail
 DEBUG=true
 

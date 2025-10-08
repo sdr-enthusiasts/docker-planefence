@@ -31,12 +31,13 @@ debug_print() {
 }
 
 log_print() {
-  local loglevel logmsg
+  local loglevel="" logmsg=""
 
   case "${1^^}" in
-    INFO) loglevel="INFO" ;;
+    INF|INFO) loglevel="INFO" ;;
     WARN|WARNING) loglevel="WARNING" ;;
     ERROR|ERR|FATAL) loglevel="FATAL" ;;
+    DEBUG) loglevel="DEBUG" ;;
   esac
 
   if [[ -z "$loglevel" ]]; then
@@ -44,6 +45,11 @@ log_print() {
     logmsg="$1"
   else
     logmsg="$2"
+  fi
+
+  if [[ "$loglevel" == "DEBUG" ]]; then
+    debug_print "$logmsg"
+    return
   fi
 
   "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
@@ -219,6 +225,76 @@ CHK_NOTIFICATIONS_ENABLED () {
   else
     return 1
   fi
+}
+
+extract_base() {
+  awk '
+    BEGIN {
+      split("co.uk|ac.uk|gov.uk|co.jp|com.au|net.au|org.au|co.nz|com.br|com.mx|co.in", PSL, "|")
+      for (i in PSL) psl[PSL[i]] = 1
+    }
+    {
+      url = $0
+      sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url)  # scheme
+      sub(/^[^@]*@/, "", url)                        # creds
+      host = url
+      if (match(host, /[\/?#]/)) host = substr(host, 1, RSTART-1)
+      if (host ~ /^\[/) { print ""; next }           # IPv6 -> no basename
+      sub(/:[0-9]+$/, "", host)                      # port
+
+      n = split(host, parts, /\./)
+      if (n < 2) { print ""; next }
+
+      sfx = parts[n-1] "." parts[n]
+      if (psl[sfx] && n >= 3) print parts[n-2]
+      else print parts[n-1]
+    }
+  ' <<< "$1"
+}
+
+GET_SQUAWK_DESCRIPTION () {
+  local squawk_code=$1
+  case "$squawk_code" in
+    1000) echo "IFR generic (EU)" ;;
+    1200) echo "VFR below 18kft" ;;
+    1201) echo "VFR firefighting (US)" ;;
+    1202) echo "Glider" ;;
+    1255) echo "Balloon (US)" ;;
+    1276) echo "Parachute jumping (US)" ;;
+    2000) echo "IFR (EU); SVFR (US)" ;;
+    2100) echo "Helicopter offshore" ;;
+    3000) echo "VFR generic (EU)" ;;
+    4000) echo "Military" ;;
+    4401) echo "Formation flight" ;;
+    4402) echo "Formation flight" ;;
+    5101) echo "Military" ;;
+    5102) echo "Military" ;;
+    5103) echo "Military" ;;
+    5104) echo "Military" ;;
+    5105) echo "Military" ;;
+    5106) echo "Military" ;;
+    5107) echo "Military" ;;
+    5108) echo "Military" ;;
+    5109) echo "Military" ;;
+    5110) echo "Military" ;;
+    5111) echo "Military" ;;
+    5112) echo "Military" ;;
+    5113) echo "Military" ;;
+    5114) echo "Military" ;;
+    5115) echo "Military" ;;
+    5116) echo "Military" ;;
+    5117) echo "Military" ;;
+    7000) echo "VFR generic (EU)/Glider (US)" ;;
+    7001) echo "Aerobatics" ;;
+    7004) echo "Military fast-jet (UK)" ;;
+    7007) echo "Military" ;;
+    7010) echo "RPAS/UAS (EU)" ;;
+    7400) echo "Lost C2 link (RPAS/UAS)" ;;
+    7500) echo "Hijack" ;;
+    7600) echo "No Radio" ;;
+    7700) echo "Emergency" ;;
+    7777) echo "No Transponder" ;;
+  esac
 }
 
 # Default units
