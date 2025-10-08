@@ -26,8 +26,9 @@
 
 source /scripts/pf-common
 
-PFDIR="/usr/share/planefence"
-PADIR="/usr/share/plane-alert"
+PF_PATH="/usr/share/planefence"
+PA_PATH="/usr/share/plane-alert"
+NOTIFY_PATH="$PF_PATH/notifiers"
 
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
@@ -39,27 +40,21 @@ DEBUG=true
 #      RUN PLANEFENCE
 # -----------------------------------------------------------------------------------
 
-cd "$PFDIR"
+cd "$PF_PATH"
 
 ./pf-process_sbs.sh	&	# read and process SBS data
 pid=$!
 echo "$pid" > /run/pf-process_sbs.pid
 wait "$pid" &>/dev/null
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
-./pf-create-html.sh		# create PF HTML page
-
-
-# manually start discord notifier for testing
-/usr/share/planefence/notifiers/send_discord.sh
+./pf-create-html.sh	&	# create PF HTML page
 
 # Run notifiers scripts in the background
-# if compgen -G "notifiers/send*.sh" > /dev/null; then
-# 	scripts=( notifiers/send*.sh )
-#   for script in "${scripts[@]}"; do
-#     if [ -f "$script" ]; then
-#       bash "$script" || true &
-#     fi
-#   done
-# fi
+if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
+  while read -r script; do
+      bash "$script" || true &  
+  done <<< "$script_array"
+fi
+wait # wait for all background processes to finish
 
 #/usr/share/plane-alert/plane-alert.sh	# run plane-alert

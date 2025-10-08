@@ -35,6 +35,74 @@ source /scripts/pf-common
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS
 # -----------------------------------------------------------------------------------
+# Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
+# Assumes:
+#   - records[...] assoc with keys: "<id>:lastseen|discord:notified|complete|screenshot:checked"
+#   - CONTAINERSTARTTIME (epoch, integer)
+#   - screenshots (0/1 or truthy string)
+build_index_and_stale() {
+  local -n _INDEX=$1
+  local -n _STALE=$2
+  _INDEX=(); _STALE=()
+
+  # Optional numeric ceiling from records[maxindex]
+  local MAXIDX
+  MAXIDX=${records[maxindex]}
+
+  # Capture gawk output once, then demux without subshells
+  local out
+  out="$(
+    {
+      local k id field
+      for k in "${!records[@]}"; do
+        [[ $k == +([0-9]):* ]] || continue
+        id=${k%%:*}
+        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
+        field=${k#*:}
+        # Only pass fields we care about to reduce awk work
+        case $field in
+          lastseen|mqtt:notified|complete)
+            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
+            ;;
+        esac
+      done
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" '
+      BEGIN { FS="\t" }
+      {
+        id=$1; key=$2; val=$3
+        if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
+        else if (key=="mqtt:notified")       notified[id]=val
+        else if (key=="complete")            complete[id]=val
+      }
+      END {        
+        CSTN = CST+0
+        # Evaluate only ids that have lastseen
+        for (id in ids) {
+          n  = (id in notified)? notified[id] : ""
+          ls = lastseen[id]
+          # stale first
+          if (ls < CSTN && n == "") { stale[id]=1; continue }
+          # eligibility checks
+          c  = (id in complete)? complete[id] : ""
+          if (!enabled(c)) continue
+          if (enabled(n)) continue
+          if (n=="error") continue
+          ok[id]=1
+        }
+        # Print lists (tagged), numerically sorted
+        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
+        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
+      }
+      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
+    '
+  )"
+
+  local tag id
+  while IFS=$'\t' read -r tag id; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
+  done <<< "$out"
+}
 
 generate_mqtt() {
   # Generate a MQTT notification
@@ -107,23 +175,47 @@ generate_mqtt() {
 
 debug_print "Starting generation of RSS feed"
 
-# Create/update symlink for today's feed
-LOCK_RECORDS
-READ_RECORDS ignore-lock
+# declare arrays to hold index and stale ids
+declare -a INDEX=() STALE=()
 
 if [[ -z "$MQTT_URL" ]]; then
   debug_print "MQTT notifications are disabled - exiting"
   exit 0
 fi
 
-for ((idx=0; idx<records[maxindex]; idx++)); do
+# read the records file
+READ_RECORDS
 
-  # Skip if the record is not complete or if a notification was already sent
-  if ! chk_enabled "${records["$idx":complete]}" || chk:enabled "${records["$idx":mqtt:notified]}"; then continue; fi
-  if generate_mqtt $idx; then records["$idx":mqtt:notified]=true; else records["$idx":mqtt:notified]=false; fi
+# build index and stale arrays
+build_index_and_stale INDEX STALE
+
+# check if there's anything to do
+if (( ${#INDEX[@]} )); then
+  debug_print "Records ready for MQTT notification: ${INDEX[*]}"
+else
+  debug_print "No records ready for MQTT notification"
+fi
+if (( ${#STALE[@]} )); then
+  debug_print "Stale records (no MQTT notification will be sent): ${STALE[*]}"
+else
+  debug_print "No stale records for MQTT notification"
+fi
+if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
+  log_print INFO "No records eligible for MQTT notification. Exiting."
+  exit 0
+fi
+
+# Loop through the STALE array and mark those records as notified with status "stale"
+for idx in "${STALE[@]}"; do
+	records["$idx":mqtt:notified]="stale"
+done
+
+# Loop through the INDEX array and send MQTT notifications
+
+for idx in "${INDEX[@]}"; do
+  if generate_mqtt "$idx"; then records["$idx":mqtt:notified]=true; else records["$idx":mqtt:notified]=error; fi
 done
 
 ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
 WRITE_RECORDS ignore-lock
 debug_print "Done!"
-

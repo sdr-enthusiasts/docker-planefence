@@ -117,5 +117,5 @@ debug_print "Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
 if generate_rss; then
-  ln -sf "planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
+  ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
 fi
