@@ -58,7 +58,7 @@ log_print() {
 # shellcheck disable=SC2120
 LOCK_RECORDS() {
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
-    debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
     # wait until the lock is gone, or 120 seconds (whichever is shorter)
     while :; do
       starttime="$(date +%s)"

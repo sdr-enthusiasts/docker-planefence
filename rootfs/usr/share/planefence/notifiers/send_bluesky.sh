@@ -176,8 +176,12 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||TAIL||" "${records["$idx:tail"]}" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
-  template="$(template_replace "||ROUTE||" "${records["$idx:route"]}" "$template")"
-  template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time_at_mindist]}" "${NOTIF_DATEFORMAT:-+%H:%M:%S %Z}")" "$template")"
+  if [[ "${records["$idx:route"]}" != "n/a" ]]; then 
+    template="$(template_replace "||ROUTE||" "#${records["$idx:route"]}" "$template")"
+  else
+    template="$(template_replace "||ROUTE||" "" "$template")"
+  fi
+  template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
   template="$(template_replace "||ALT||" "${records["$idx:altitude"]} $ALTUNIT" "$template")"
   template="$(template_replace "||DIST||" "${records["$idx:distance"]} $DISTUNIT (${records["$idx":angle]}°)" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
@@ -185,7 +189,7 @@ for idx in "${INDEX[@]}"; do
   else
     template="$(template_replace "||LOUDNESS||" "" "$template")"
   fi
-  template="$(template_replace "||ATTRIB||" "$ATTRIB•" "$template")"
+  template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
   links="${records["$idx:map:link"]}${records["$idx:map:link"]:+ }"
   links+="${records["$idx:fa:link"]}${records["$idx:fa:link"]:+ }"
@@ -203,13 +207,16 @@ for idx in "${INDEX[@]}"; do
 
   # Post to Bsky
   debug_print "Posting to Bsky: ${records["$idx:tail"]} (${records["$idx:icao"]})"
+echo "$template" > /tmp/bsky.tmplt
+
   # shellcheck disable=SC2068,SC2086
-  if posturl="$(post_to_bsky $template ${img_array[@]})"; then
-    log_print INFO "Bsky notification posted for ${records["$idx:tail"]} (${records["$idx:icao"]}): $posturl"
+  if posturl="$(/scripts/post2bsky.sh $template ${img_array[@]})" && [[ "${posturl:0:4}" == "http" ]]; then
+    log_print INFO "Bsky notification successful for ${records["$idx:tail"]} (${records["$idx:icao"]}): $posturl"
     records["$idx":bsky:notified]=true
     records["$idx":bsky:link]="$posturl"
   else
     log_print ERR "Bsky notification failed for ${records["$idx:tail"]} (${records["$idx:icao"]})"
+    log_print ERR "Bsky notification error details: $posturl"
     records["$idx":bsky:notified]="error"
   fi
 done
