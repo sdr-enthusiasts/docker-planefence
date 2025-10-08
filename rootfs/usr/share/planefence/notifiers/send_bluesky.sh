@@ -219,7 +219,7 @@ for idx in "${INDEX[@]}"; do
   debug_print "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})"
+  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
     log_print INFO "Bsky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
     records["$idx":bsky:notified]=true
