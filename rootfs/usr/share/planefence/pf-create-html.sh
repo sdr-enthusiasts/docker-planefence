@@ -42,8 +42,12 @@ DEBUG=true
 
 # Function to write the Planefence HTML table
 CREATEHTMLTABLE () {
-	
-	readarray -t notifs <<< "$(printf "%s\n" "${!records[@]}" | awk -F: -v idx="$idx" '{if ($1==idx && $3=="notified") {print $2}}'| sort -u)"
+	local table notif notifstr links link idx
+
+	# read array of available notification services into notifs array
+	if chk_enabled "${records[HASNOTIFS]}"; then
+		readarray -t notifs <<< "$(printf "%s\n" "${!records[@]}" | awk -F:  '{if ($3=="notified") {print $2}}'| sort -u)"
+	fi
 
 	# Write the HTML table header
 	# shellcheck disable=SC2034
@@ -171,9 +175,9 @@ CREATEHTMLTABLE () {
 			if chk_enabled "${records[HASNOISE]}"; then
 				# First the loudness field, which needs a color and a link to a noise graph:
 				if [[ -n "${records["$idx":noisegraph:link]}" ]]; then
-					printf "   <td style=\"background-color: %s\"><a href=\"%s\" target=\"_blank\">%s %s</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound:color]}" "${records["$idx":noisegraph:link]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
+					printf "   <td style=\"color: %s\"><a href=\"%s\" target=\"_blank\">%s %s</a></td><!-- loudness with noisegraph -->\n" "${records["$idx":sound:color]}" "${records["$idx":noisegraph:link]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
 				else
-					printf "   <td style=\"background-color: %s\">%s %s</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
+					printf "   <td style=\"color: %s\">%s %s</td><!-- loudness (no noisegraph available) -->\n" "${records["$idx":sound:color]}" "${records["$idx":sound:loudness]}" "$([[ -n "${records["$idx":sound:loudness]}" ]] && echo "dB")"
 				fi
 				if [[ -n "${records["$idx":mp3:link]}" ]]; then
 					printf "   <td><a href=\"%s\" target=\"_blank\">%s %s</td><!-- peak RMS value with MP3 link -->\n" "${records["$idx":mp3:link]}" "${records["$idx":sound:peak]}" "$([[ -n "${records["$idx":sound:peak]}" ]] && echo "dBFS")" # print actual value with "dBFS" unit
@@ -187,7 +191,7 @@ CREATEHTMLTABLE () {
 				if [[ -n "${records["$idx":spectro:link]}" ]]; then
 					printf "   <td><a href=\"%s\" target=\"_blank\"><img src=\"%s\" style=\"height: 5em;\"></a></td><!-- spectrogram -->\n" "${records["$idx":spectro:link]}" "${records["$idx":spectro:link]}" # print spectrogram
 				else
-					printf "   <td></td>"
+					printf "   <td></td><!-- no spectrogram available -->\n"
 				fi
 			fi
 
@@ -210,7 +214,7 @@ CREATEHTMLTABLE () {
 					fi
 				done
 				if [[ ${notifstr: -3} == " - " ]]; then notifstr="${notifstr:0:-3}"; fi	# get rid of trailing " - "
-				printf "<td>%s</td>\n" "$notifstr"
+				printf "<td>%s</td><!-- notifications -->\n" "$notifstr"
 			fi
 
 			# Print a delete button, if we have the SHOWIGNORE variable set

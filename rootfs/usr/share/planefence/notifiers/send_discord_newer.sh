@@ -23,7 +23,6 @@ source /usr/share/planefence/planefence.conf
 
 # shellcheck disable=SC2034
 DEBUG=true
-declare -a INDEX STALE
 
 log_print INFO "Hello. Starting Discord notification run"
 
@@ -31,77 +30,69 @@ log_print INFO "Hello. Starting Discord notification run"
 # Functions
 # ----------------------
 
-# Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
-# Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|discord:notified|complete|screenshot:checked"
-#   - CONTAINERSTARTTIME (epoch, integer)
-#   - screenshots (0/1 or truthy string)
+# Build INDEX and STALE arrays from records[...] in one pass.
+# Usage:
+#   declare -a INDEX STALE
+#   build_index_and_stale INDEX STALE
 build_index_and_stale() {
   local -n _INDEX=$1
   local -n _STALE=$2
-  _INDEX=(); _STALE=()
 
-  # Optional numeric ceiling from records[maxindex]
-  local MAXIDX
-  MAXIDX=${records[maxindex]}
+  _INDEX=()
+  _STALE=()
 
-  # Capture gawk output once, then demux without subshells
-  local out
-  out="$(
+  {
+    # Emit only numeric-id keys to a single gawk process
+    local k id field
+    for k in "${!records[@]}"; do
+      [[ $k == +([0-9]):* ]] || continue
+      id=${k%%:*}
+      field=${k#*:}
+      printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
+    done
+  } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
+    BEGIN { FS = "\t" }
     {
-      local k id field
-      for k in "${!records[@]}"; do
-        [[ $k == +([0-9]):* ]] || continue
-        id=${k%%:*}
-        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
-        field=${k#*:}
-        # Only pass fields we care about to reduce awk work
-        case $field in
-          lastseen|discord:notified|complete|screenshot:checked)
-            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
-            ;;
-        esac
-      done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
-      BEGIN { FS="\t" }
-      {
-        id=$1; key=$2; val=$3
-        if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="discord:notified")    notified[id]=val
-        else if (key=="complete")            complete[id]=val
-        else if (key=="screenshot:checked")  schecked[id]=val
-      }
-      END {        
-        CSTN = CST+0
-        # Evaluate only ids that have lastseen
-        for (id in ids) {
-          n  = (id in notified)? notified[id] : ""
-          ls = lastseen[id]
-          # stale first
-          if (ls < CSTN && n == "") { stale[id]=1; continue }
-          # eligibility checks
-          c  = (id in complete)? complete[id] : ""
-          if (!enabled(c)) continue
-          if (enabled(n)) continue
-          if (n=="error") continue
-          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
-          ok[id]=1
+      id = $1; key = $2; val = $3
+      if (key == "lastseen")                 lastseen[id] = val + 0
+      else if (key == "discord:notified")    notified[id] = val
+      else if (key == "complete")            complete[id] = val
+      else if (key == "screenshot:checked")  schecked[id] = val
+    }
+    END {
+      # Decide membership using ids that have lastseen
+      for (id in lastseen) {
+        n = (id in notified) ? notified[id] : ""
+        if ((lastseen[id] < CST) && (n == "")) {
+          stale[id] = 1
+          continue
         }
-        # Print lists (tagged), numerically sorted
-        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
-        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
+        c  = (id in complete) ? complete[id] : ""
+        if (!enabled(c)) continue
+        if (enabled(n)) continue
+        if (n == "error") continue
+        sc = (id in schecked) ? schecked[id] : ""
+        if (SS && !enabled(sc)) continue
+        ok[id] = 1
       }
-      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
-    '
-  )"
-
-  local tag id
-  while IFS=$'\t' read -r tag id; do
-    [[ -z "$tag" ]] && continue
-    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
-  done <<< "$out"
+      # Output tagged, numerically sorted lists
+      ni = asorti(ok, oi, "@ind_num_asc")
+      for (i = 1; i <= ni; i++) printf "I\t%s\n", oi[i]
+      ns = asorti(stale, os, "@ind_num_asc")
+      for (i = 1; i <= ns; i++) printf "S\t%s\n", os[i]
+    }
+    function enabled(x, y) {
+      y = tolower(x)
+      return (x != "" && x != 0 && y != "false" && y != "no")
+    }
+  ' | while IFS=$'\t' read -r tag id; do
+        if [[ $tag == I ]]; then
+          _INDEX+=("$id")
+        else
+          _STALE+=("$id")
+        fi
+      done
 }
-
 
 # Load a bunch of stuff and determine if we should notify
 
@@ -127,45 +118,55 @@ else
 fi
 
 if CHK_SCREENSHOT_ENABLED; then
-  screenshots=1
+  screenshots=true
 else
-  screenshots=0
+  screenshots=false
 fi
 
 debug_print "Reading records for Discord notification"
 
 READ_RECORDS
 
-debug_print "Getting indices of records ready for Discord notification and stale records"
-build_index_and_stale INDEX STALE
+# Ensure extglob for pattern [[ $k == +([0-9]):* ]]
 
-if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Discord notification: ${INDEX[*]}"
-else
-  debug_print "No records ready for Discord notification"
-fi
-if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no notification will be sent): ${STALE[*]}"
-else
-  debug_print "No stale records"
-fi
-if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Discord notification. Exiting."
-  exit 0
-fi
 
-# deal with stale records first
-for idx in "${STALE[@]}"; do
-  records["$idx":discord:notified]=stale
-done
 
-template_clean="$(</usr/share/planefence/notifiers/discord.template)"
 
-for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Discord notification for ${records["$idx":tail]}"
+# Example use:
+# declare -a INDEX STALE
+# build_index_and_stale INDEX STALE
+# for idx in "${INDEX[@]}"; do
+#   debug_print "Preparing Discord notification for ${records["$idx":tail]}"
+# done
+# for idx in "${STALE[@]}"; do
+#   records["$idx":discord:notified]="stale"
+# done
 
-  # reset the template cleanly after each notification
-  template="$template_clean"
+for (( idx=0; idx<=records[maxindex]; idx++ )); do
+  # or if it was last seen before the container started
+  if (( ${records["$idx":lastseen]} < CONTAINERSTARTTIME )); then
+    debug_print "Skipping record #$idx ${records["$idx":tail]} (last seen before container start)"
+    records["$idx":discord:notified]="error"
+    continue
+  fi
+
+  # Don't notify if the record is not complete or if notification has been sent already, or if we need a screenshot but don't have one yet
+  if ! chk_enabled "${records["$idx":complete]}" || \
+     chk_enabled "${records["$idx":discord:notified]}" ||
+     [[ "${records["$idx":discord:notified]}" == "error" ]] ||
+     { $screenshots && ! chk_enabled "${records["$idx":screenshot:checked]}"; }; then
+        continue
+  fi
+
+debug_print "Preparing Discord notification for ${records["$idx":tail]}"
+
+  # re-read the template cleanly after each notification
+  if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
+    template="$(</usr/share/planefence/notifiers/discord.template)"
+  else
+    log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
+    exit 1
+  fi
 
   # Set strings:
   template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude]} $ALTUNIT above ${records["$idx":nominatim]}}" "$template")"
@@ -204,20 +205,20 @@ for idx in "${INDEX[@]}"; do
       ;;
     "photo+screenshot")
       image="${records["$idx":image:thumblink]}"
-      if chk_enabled $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
           thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
           curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot+photo")
       thumb="${records["$idx":image:thumblink]}"
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot")
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+      if $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
@@ -263,7 +264,7 @@ for idx in "${INDEX[@]}"; do
     # check if there was an error
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
-      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Link: ${discord_link}"
+      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Link: ${discord_link}."
       records["$idx":discord:notified]=true
       records["$idx":discord:link]+="${records["$idx":discord:link]:+,}$discord_link"
       records[HASNOTIFS]=true

@@ -150,7 +150,7 @@ GET_ROUTE_BULK () {
 
   # first comb through records[] to get the callsigns we need to look up the route for
   for (( idx=0; idx<=records[maxindex]; idx++ )); do
-    if chk_enabled "${records["$idx":complete]}" && ! chk_enabled "${records["$idx":route:checked]}"; then
+    if ! chk_enabled "${records["$idx":route:checked]}" && [[ -n "${records["$idx":callsign]}" ]]; then
       routesarray["$idx":callsign]="${records["$idx":callsign]:-${records["$idx":tail]}}"
       routesarray["$idx":lat]="${records["$idx":lat]}"
       routesarray["$idx":lon]="${records["$idx":lon]}"
@@ -302,7 +302,7 @@ GET_NOISEDATA () {
 
   # get the noisecapt log - download them all in case there's a date discrepancy
   # Extract matching filenames, sorted
-  mapfile -t files < <(
+  readarray -t files < <(
     printf '%s\n' "$noiselist" |
       sed -En 's/.*\b(noisecapt-[0-9]{6}\.log)\b.*/\1/p' |
       sort -u
@@ -381,68 +381,82 @@ CREATE_SPECTROGRAM () {
 
   if [[ -z "$REMOTENOISE" ]]; then return; fi
   
-	local STARTTIME="$1"
-	local ENDTIME="$2"
-	local sf spectrotime
-	if (( ENDTIME - STARTTIME < 30 )); then ENDTIME=$(( STARTTIME + 30 )); fi
+  local MAXSPREAD=${MAXSPREAD:-15}
+  local spectrofile
 
-  # check if we can get the noisecapt log:
-  if [[ -z "$noiselog" ]]; then
-    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
-      debug_print "Cannot create Spectrogram: could not retrieve noisecapt log"
-      return
-    fi
-    noiselog="$(</tmp/noisecapt.log)"
-  fi
-  
-	# get the measurement from /tmp/noisecapt.log that contains the peak value
-	# limited by $STARTTIME and $ENDTIME, and then get the corresponding spectrogram file name
-	spectrotime="$(awk -F, -v a="$STARTTIME" -v b="$ENDTIME" 'BEGIN{c=-999; d=0}{if ($1>=0+a && $1<=1+b && $2>0+c) {c=$2; d=$1}} END{print d}' /tmp/noisecapt.log)"
-  if [[ "$spectrotime" == "0" ]]; then 
-    debug_print "There's no noise data between $(date -d "@$STARTTIME") and $(date -d "@$ENDTIME")."
+  # get the noisecapt log - download them all in case there's a date discrepancy
+  # Extract matching filenames, sorted
+  readarray -t files < <(
+    printf '%s\n' "$noiselist" |
+      sed -En 's/.*\b(noisecapt-[0-9]{6}\.log)\b.*/\1/p' |
+      sort -u
+  )
+
+  # Assumes $noiselist is newline-separated filenames
+  spectrofile="$(awk -v T="${records["$idx":time_at_mindist]}" -v L="$MAXSPREAD" '
+    BEGIN {
+      INF = 9223372036854775807   # big sentinel
+      best_before_dt = INF; best_after_dt = INF
+      best_before = ""; best_after = ""
+    }
+    $0 ~ /^noisecapt-spectro-[0-9]+\.png$/ {
+      if (match($0, /noisecapt-spectro-([0-9]+)\.png/, m)) {
+        ts = m[1] + 0
+        if (ts <= T) {
+          dt = T - ts
+          if (dt < best_before_dt) { best_before_dt = dt; best_before = $0 }
+        } else {
+          dt = ts - T
+          if (dt < best_after_dt)  { best_after_dt  = dt; best_after  = $0 }
+        }
+      }
+    }
+    END {
+      if (best_before != "" && best_before_dt <= L) { print best_before; exit }
+      if (best_after  != "" && best_after_dt  <= L) { print best_after;  exit }
+      # else print nothing (empty result)
+    }
+  ' <<< "$noiselist")"
+
+
+	if [[ -z "$spectrofile" ]]; then 
+    # debug_print "There's no noise data between $(date -d "@$STARTTIME") and $(date -d "@$ENDTIME")."
     return
   fi
 
-	sf="noisecapt-spectro-${spectrotime}.png"
 
-	if [[ ! -s "$OUTFILEDIR/$sf" ]]; then
-		# we don't have $sf locally, or if it's an empty file, we get it:
+	if [[ ! -s "$OUTFILEDIR/$spectrofile" ]]; then
+		# we don't have $spectrofile locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
-		if [[ $noiselist =~ "$sf" ]]; then 
-      debug_print "Getting spectrogram $sf from $REMOTENOISE"
-      if ! curl -fsSL "$REMOTENOISE/$sf" > "$OUTFILEDIR/$sf" || \
-        { [[ -f "$sf" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${sf:---}" 2>/dev/null || echo 0) < 10 ));}; then
-          debug_print "Curling spectrogram $sf from $REMOTENOISE failed!"
-          rm -f "$OUTFILEDIR/$sf"
+
+      debug_print "Getting spectrogram $spectrofile from $REMOTENOISE"
+      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/$spectrofile" || \
+        { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
+          debug_print "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
+          rm -f "$OUTFILEDIR/$spectrofile"
           return
       fi
-    else
-      debug_print "Spectrogram $sf not found in remote file list."
-      return
-    fi
+
 	fi
-  debug_print "Spectrogram file: $OUTFILEDIR/$sf"
-  echo "$OUTFILEDIR/$sf"
+  debug_print "Spectrogram file: $OUTFILEDIR/$spectrofile"
+  echo "$OUTFILEDIR/$spectrofile"
+}
+
+LINK_LATEST_SPECTROFILE () {
 
   # link the latest spectrogram to a fixed name for easy access
   # Save current nullglob state
-  org_nullglob="$(shopt -p nullglob)"
-  shopt -s nullglob
+  local latestfile
+  latestfile="$(find "$OUTFILEDIR" \
+                  -maxdepth 1 \
+                  -type f \
+                  -regextype posix-extended \
+                  -regex '.*/noisecapt-spectro-[0-9]+\.png' \
+                  -printf '%f\n' | sort | tail -n 1)"
 
-  # shellcheck disable=SC2206
-  files=($OUTFILEDIR/noisecapt-spectro-*.png)
-
-  if (( ${#files[@]} > 0)); then
-    ln -sf "$(printf '%s\0' "${files[@]}" \
-      | xargs -0 stat -c '%W %Y %n' \
-      | awk '{w=$1; y=$2; $1=$2=""; sub(/^  */,""); n=$0; t=(w>0?w:y); if(t>max){max=t; f=n}} END{print f}')" \
-      "$OUTFILEDIR/noisecapt-spectro-latest.png"
+  if [[ -n "$latestfile" ]]; then
+    ln -sf "$OUTFILEDIR/$latestfile" "$OUTFILEDIR/noisecapt-spectro-latest.png"
   fi
-
-  # Restore original nullglob state
-  $org_nullglob
-
-  printf '%s\n' "$newest"
 
 }
 
@@ -832,7 +846,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       [[ -n $lat ]] && records["$idx":lat]="$lat"
       [[ -n $lon ]] && records["$idx":lon]="$lon"
       [[ -n $altitude ]] && records["$idx":altitude]="$altitude"
-      [[ -n $angle ]] && records["$idx":angle]="$angle"
+      [[ -n $angle ]] && records["$idx":angle]="${angle%.*}"
       [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
       [[ -n $track ]] && records["$idx":track]="$track"
       records["$idx":time_at_mindist]="$seentime"
@@ -966,7 +980,9 @@ if (( ${#socketrecords[@]} > 0 )); then
 
   if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
   if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
-  if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; fi
+  if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+
+
 
   log_print INFO "Processing complete. Now writing results to disk..."
 
