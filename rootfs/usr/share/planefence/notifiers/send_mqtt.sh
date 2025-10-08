@@ -1,10 +1,10 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash
 #shellcheck disable=SC1091,SC2154,SC2034
-# planefence-rss.sh
-# A script to generate RSS feeds from Planefence CSV files
+# send_mqtt.sh
+# A script to generate MQTT posts from Planefence
 #
-# Usage: ./planefence-rss.sh 
+# Usage: ./send_mqtt.sh 
 #
 # This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.
@@ -16,19 +16,17 @@
 # https://github.com/sdr-enthusiasts/docker-planefence
 #
 
-# Set paths - use the same as planefence.sh
+source /scripts/pf-common
 source "/usr/share/planefence/planefence.conf"
 
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
-set -eo pipefail
-DEBUG=true
+# DEBUG=true
 
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')
 
-source /scripts/pf-common
 
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS

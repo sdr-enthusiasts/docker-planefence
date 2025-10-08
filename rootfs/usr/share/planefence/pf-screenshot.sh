@@ -28,11 +28,9 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
-set -eo pipefail
-LC_ALL=C
 
 ## DEBUG stuff:
-DEBUG=true
+# DEBUG=true
 
 ## initialization:
 source /scripts/pf-common

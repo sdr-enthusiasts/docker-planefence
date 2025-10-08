@@ -31,8 +31,7 @@ source /usr/share/planefence/planefence.conf
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
 HTMLDIR="$OUTFILEDIR"
-set -eo pipefail
-DEBUG=true
+#DEBUG=true
 
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS

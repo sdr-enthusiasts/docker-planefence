@@ -28,12 +28,9 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 # Only change the variables below if you know what you are doing.
-set -eo pipefail
 
 ## DEBUG stuff:
-execstarttime="$(date +%s.%3N)"
-execlaststeptime="$execstarttime"
-DEBUG=true
+# DEBUG=true
 
 ## initialization:
 source /scripts/pf-common

@@ -22,7 +22,8 @@ source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 # shellcheck disable=SC2034
-DEBUG=true
+#DEBUG=true
+
 declare -a INDEX STALE
 
 log_print INFO "Hello. Starting Discord notification run"

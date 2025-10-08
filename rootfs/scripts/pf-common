@@ -13,6 +13,9 @@
 
 source /scripts/common
 
+set -eo pipefail
+LC_ALL=C
+
 MAXWAITTIME=300   # max time we'll wait for the records lock to expire
 CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
 

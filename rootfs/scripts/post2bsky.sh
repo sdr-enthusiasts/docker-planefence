@@ -13,8 +13,6 @@ source /usr/share/planefence/persist/planefence.config
 source /scripts/pf-common
 
 shopt -s extglob
-set -eo pipefail
-LC_ALL=C
 
 # Set the default values
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"

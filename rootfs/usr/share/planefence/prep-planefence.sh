@@ -11,7 +11,7 @@
 #
 # -----------------------------------------------------------------------------------
 #
-source /scripts/common
+source /scripts/pf-common
 
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
