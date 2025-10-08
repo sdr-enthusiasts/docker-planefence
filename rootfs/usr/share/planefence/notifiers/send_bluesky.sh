@@ -15,23 +15,24 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <https://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------
-# This script sends a Bsky notification
+# This script sends a Blueskynotification
 shopt -s extglob
 
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, butspost2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
 
 
 # shellcheck disable=SC2034
 DEBUG=true
 declare -a INDEX STALE
+declare -A link
 
 SPACE=$'\x1F'   # "special" space
 
-log_print INFO "Hello. Starting Bsky notification run"
+log_print INFO "Hello. Starting Bluesky notification run"
 
 # ----------------------
 # Functions
@@ -129,17 +130,17 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Bsky notification"
+debug_print "Reading records for Bluesky notification"
 
 READ_RECORDS
 
-debug_print "Getting indices of records ready for Bsky notification and stale records"
+debug_print "Getting indices of records ready for Bluesky notification and stale records"
 build_index_and_stale INDEX STALE
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Bsky notification: ${INDEX[*]}"
+  debug_print "Records ready for Bluesky notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Bsky notification"
+  debug_print "No records ready for Bluesky notification"
 fi
 if (( ${#STALE[@]} )); then
   debug_print "Stale records (no notification will be sent): ${STALE[*]}"
@@ -147,19 +148,14 @@ else
   debug_print "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bsky notification. Exiting."
+  log_print INFO "No records eligible for Bluesky notification. Exiting."
   exit 0
 fi
-
-# deal with stale records first
-for idx in "${STALE[@]}"; do
-  records["$idx":bsky:notified]=stale
-done
 
 template_clean="$(</usr/share/planefence/notifiers/bluesky.template)"
 
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Bsky notification for ${records["$idx":tail]}"
+  debug_print "Preparing Bluesky notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -221,17 +217,32 @@ for idx in "${INDEX[@]}"; do
   # shellcheck disable=SC2068,SC2086
   posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Bsky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
-    records["$idx":bsky:notified]=true
-    records["$idx":bsky:link]="$posturl"
+    log_print INFO "Bluesky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
   else
-    log_print ERR "Bsky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
-    log_print ERR "Bsky notification error details:$'\n'$posturl"
+    log_print ERR "Bluesky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+    log_print ERR "Bluesky notification error details:\n$posturl"
+  fi
+  link["$idx"]="$posturl"
+done
+
+# read, update, and thensave the records:
+log_print DEBUG "Updating records after Bluesky notifications"
+LOCK_RECORDS
+READ_RECORDS ignore-lock
+
+for idx in "${STALE[@]}"; do
+  records["$idx":bsky:notified]="stale"
+done
+for idx in "${!link[@]}"; do
+  if [[ "${link["$idx"]:0:4}" == "http" ]]; then
+    records["$idx":bsky:notified]=true
+    records["$idx":bsky:link]="${link["$idx"]}"
+  else
     records["$idx":bsky:notified]="error"
   fi
 done
 
 # Save the records again
-debug_print "Saving records after Bsky notifications"
+log_print DEBUG "Saving records..."
 WRITE_RECORDS
-log_print INFO "Bsky notifications run completed."
+log_print INFO "Bluesky notifications run completed."

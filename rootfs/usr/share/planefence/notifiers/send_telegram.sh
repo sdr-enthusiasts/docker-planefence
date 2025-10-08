@@ -28,6 +28,7 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 # shellcheck disable=SC2034
 DEBUG=true
 declare -a INDEX STALE
+declare -A link
 
 SPACE="_"   # "special" space replacement character for hashtagged items
 
@@ -108,7 +109,6 @@ build_index_and_stale() {
   done <<< "$out"
 }
 
-
 # Load a bunch of stuff and determine if we should notify
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$PF_TELEGRAM_CHAT_ID" ]]; then
@@ -129,37 +129,32 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Telegram notification"
+log_print DEBUG "Reading records for Telegram notification"
 
 READ_RECORDS
 
-debug_print "Getting indices of records ready for Telegram notification and stale records"
+log_print DEBUG "Getting indices of records ready for Telegram notification and stale records"
 build_index_and_stale INDEX STALE
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Telegram notification: ${INDEX[*]}"
+  log_print DEBUG "Records ready for Telegram notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Telegram notification"
+  log_print DEBUG "No records ready for Telegram notification"
 fi
 if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no notification will be sent): ${STALE[*]}"
+  log_print DEBUG "Stale records (no notification will be sent): ${STALE[*]}"
 else
-  debug_print "No stale records"
+  log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for Telegram notification. Exiting."
   exit 0
 fi
 
-# deal with stale records first
-for idx in "${STALE[@]}"; do
-  records["$idx":telegram:notified]=stale
-done
-
 template_clean="$(</usr/share/planefence/notifiers/telegram.template)"
 
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Telegram notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Telegram notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -217,22 +212,37 @@ for idx in "${INDEX[@]}"; do
   fi
 
   # Post to Telegram
-  debug_print "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
+  log_print DEBUG "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
   posturl="$(/scripts/post2telegram.sh "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
     log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
-    records["$idx":telegram:notified]=true
-    records["$idx":telegram:link]="$posturl"
   else
     log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
-    log_print ERR "Telegram notification error details:$'\n'$posturl"
+    log_print ERR "Telegram notification error details:\n$posturl"
+  fi
+  link["$idx"]="$posturl"
+done
+
+# read, update, and thensave the records:
+log_print DEBUG "Updating records after Telegram notifications"
+LOCK_RECORDS
+READ_RECORDS ignore-lock
+
+for idx in "${STALE[@]}"; do
+  records["$idx":telegram:notified]="stale"
+done
+for idx in "${!link[@]}"; do
+  if [[ "${link["$idx"]:0:4}" == "http" ]]; then
+    records["$idx":telegram:notified]=true
+    records["$idx":telegram:link]="${link["$idx"]}"
+  else
     records["$idx":telegram:notified]="error"
   fi
 done
 
 # Save the records again
-debug_print "Saving records after Telegram notifications"
+log_print DEBUG "Saving records..."
 WRITE_RECORDS
-log_print INFO "Bsky notifications run completed."
+log_print INFO "Telegram notifications run completed."
