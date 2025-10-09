@@ -26,7 +26,7 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 
 
 # shellcheck disable=SC2034
-DEBUG=true
+#DEBUG=true
 declare -a INDEX STALE
 declare -A link
 

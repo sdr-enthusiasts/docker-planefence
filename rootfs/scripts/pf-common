@@ -18,6 +18,8 @@ LC_ALL=C
 
 MAXWAITTIME=300   # max time we'll wait for the records lock to expire
 CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
+NEWLINE="
+"
 
 declare -gA records
 
@@ -253,6 +255,28 @@ extract_base() {
       else print parts[n-1]
     }
   ' <<< "$1"
+}
+
+# assumes: extract_base prints the base label (domain text) for a URL
+# replace_urls "text with https://example.com/a?b=1 and http://foo.co.uk/x"
+# -> text with <a href="https://example.com/a?b=1">example</a> and <a href="http://foo.co.uk/x">foo</a>
+replace_urls() {
+  local s=$1 url dom out rest
+  out=""
+  rest=$s
+
+  # Best‑effort URL regex (http/https). Unquoted on RHS of =~.
+  local re='https?://[A-Za-z0-9._~:/?#$$$$@!$'"&"'\x27()*+,;=%-]+'
+
+  while [[ $rest =~ $re ]]; do
+    url=${BASH_REMATCH[0]}
+    out+="${rest%%"$url"*}"
+    dom=$(extract_base "$url")
+    [[ -n $dom ]] || dom="$url"
+    out+="<a href=\"$url\">$dom</a>"
+    rest=${rest#*"$url"}
+  done
+  printf '%s\n' "$out"
 }
 
 GET_SQUAWK_DESCRIPTION () {

@@ -65,9 +65,8 @@ generate_rss() {
     <atom:link href="$(xml_encode "${SITE_LINK}${rss_file##*/}")" rel="self" type="application/rss+xml" />
 EOF
 
-
-        # Now loop through the detected aircraft:
-for ((idx=0; idx <= records[maxindex]; idx++)); do
+  # Now loop through the detected aircraft:
+  for ((idx=0; idx <= records[maxindex]; idx++)); do
 
   if [[ -z "${records["$idx":icao]}" ]]; then continue; fi
   
@@ -101,19 +100,21 @@ EOF
 
   # Close the RSS feed
   cat >> "$rss_file" <<EOF
-</channel>
-</rss>
+    </channel>
+  </rss>
 EOF
 
   # Set proper permissions
   chmod u=rw,go=r "$rss_file"
-  debug_print "RSS feed generated at $rss_file"
 }
 
-
-debug_print "Starting generation of RSS feed"
+lo
+log_print INFO "Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
 if generate_rss; then
   ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
+  log_print INFO "RSS feed generated at $rss_file"
+else
+  log_print ERR "RSS feed generation failed!"
 fi

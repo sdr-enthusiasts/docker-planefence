@@ -67,6 +67,7 @@ COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
+declare -a updatedrecords
 
 if [[ -z "$TRACKSERVICE" ]] || [[ "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -706,6 +707,8 @@ else
   nowlines=0
 fi
 
+currentrecords=$(( records[maxindex] + 1 ))
+
 readarray -t socketrecords <<< "$(
     { if [[ -n "$LASTPROCESSEDLINE" ]]; then
       # Check if last run was yesterday
@@ -762,6 +765,7 @@ if (( ${#socketrecords[@]} > 0 )); then
       dt=$(( ls - seentime ))
       if (( ${dt//-/} <= COLLAPSEWITHIN )); then
         idx="${last_idx_for_icao[$icao]}"
+        updatedrecords[idx]=1
       else
         if chk_enabled "$IGNOREDUPES"; then
           continue  # ignore this dupe
@@ -856,7 +860,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
   done
 
-  log_print INFO "Initial processing complete. Total number of records is now ${records[maxindex]}. Continue adding more info."
+  log_print INFO "Initial processing complete. New/Updated: $((records[maxindex] + 1 - currentrecords))/${#updatedrecords[@]}. Total number of records is now ${records[maxindex]}. Continue adding more info."
 
   # try to pre-seed the noisecapt log:
   if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then

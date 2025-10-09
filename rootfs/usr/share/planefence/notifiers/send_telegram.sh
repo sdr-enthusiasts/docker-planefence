@@ -26,7 +26,7 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 
 
 # shellcheck disable=SC2034
-DEBUG=true
+#DEBUG=true
 declare -a INDEX STALE
 declare -A link
 
@@ -155,6 +155,9 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   exit 0
 fi
 
+# Fix $ATTRIB so it will show as a shortened URL:
+ATTRIB="$(replace_urls "$ATTRIB")"
+
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Telegram notification for ${records["$idx":tail]}"
 
@@ -164,7 +167,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   squawk="${records["$idx":squawk]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
+    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk${NEWLINE}" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
       template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
     else
@@ -180,11 +183,11 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||OWNER||" "" "$template")"
   fi
   template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]//-/}" "$template")"
   template="$(template_replace "||TAIL||" "${records["$idx":tail]}" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
   if [[ "${records["$idx":route]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
+    template="$(template_replace "||ROUTE||" "#${records["$idx":route]//-/-#}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
@@ -217,7 +220,7 @@ for idx in "${INDEX[@]}"; do
   log_print DEBUG "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2telegram.sh "$template" ${img_array[@]})" || true
+  posturl="$(/scripts/post2telegram.sh PF "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
     log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
   else

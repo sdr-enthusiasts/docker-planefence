@@ -84,9 +84,9 @@ image_counter=1
 # shellcheck disable=SC2034
 IFS=" " read -r header CALL TAIL TYPE ROUTE <<< "$(grep -i "^flt:" <<< "$TEXT")"
 image_header=""
+if [[ -n "$CALL" ]]; then image_header+="Flt ${CALL//#/} - "; fi
 if [[ -n "$TAIL" ]]; then image_header+="Tail ${TAIL//#/} - "; fi
 if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
-if [[ -n "$FLIGHT" ]]; then image_header+="Flt ${FLIGHT//#/} - "; fi
 if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
 
 for image in "${IMAGES[@]}"; do
