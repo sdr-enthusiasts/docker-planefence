@@ -81,7 +81,7 @@ GET_SCREENSHOT () {
 # ==========================
 # Main code
 # ==========================
-log_print INFO "Starting screenshot additions run"
+log_print INFO "Hello. Starting screenshot run"
 
 if ! CHK_NOTIFICATIONS_ENABLED; then
   log_print ERR "No notifications enabled, exiting"
@@ -93,14 +93,14 @@ if ! CHK_SCREENSHOT_ENABLED; then
   exit 0
 fi
 
-debug_print "Getting RECORDSFILE"
+log_print DEBUG "Getting RECORDSFILE"
 READ_RECORDS ignore-lock
 
 # Make an index of records to process
 # Pre-filter keys in bash to reduce awk input volume
 tmpfile="$(mktemp)"
 
-# Only dump keys we care about; avoids 2/3 of 50k lines if many are irrelevant
+# Only dump keys we care about; avoids lines if many are irrelevant
 for k in "${!records[@]}"; do
   case "$k" in
     *:complete|*:lastseen|*:screenshot:checked)
@@ -166,22 +166,26 @@ fi
 counter=0
 if (( ${#index[@]} < MAXSCREENSHOTSPERRUN )); then MAXSCREENSHOTSPERRUN=${#index[@]}; fi
 
-for idx in "${index[@]}"; do
+# Go through the indices in reverse order. That way, the newest/latest are processed first
+
+readarray -t rev_index < <(printf '%s\n' "${index[@]}" | sort -nr)
+
+for idx in "${rev_index[@]}"; do
   # Process each record in the records array
   counter=$((++counter))
   if (( counter > MAXSCREENSHOTSPERRUN )); then
-    debug_print "Reached max screenshots per run ($MAXSCREENSHOTSPERRUN), stopping here"
+    log_print DEBUG "Reached max screenshots per run ($MAXSCREENSHOTSPERRUN), stopping here"
     break
   fi
 
-  debug_print "Attempting screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
+  log_print DEBUG "Attempting screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
 
   if [[ -n "${screenshot_file["$idx"]}" ]]; then
-    debug_print "Got screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
+    log_print DEBUG "Got screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
   else
     unset "${screenshot_file["$idx"]}"
-    debug_print "Screenshot ($counter/$MAXSCREENSHOTSPERRUN) failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
+    log_print DEBUG "Screenshot ($counter/$MAXSCREENSHOTSPERRUN) failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
   fi
   screenshot_checked["$idx"]=true
 done
@@ -189,11 +193,11 @@ done
 for idx in "${stale_indices[@]}"; do
   # Mark stale records as checked, so we don't try again
   screenshot_checked["$idx"]=true
-  debug_print "Marking stale record #$idx ${records["$idx":icao]} (${records["$idx":tail]}) as checked"
+  log_print DEBUG "Marking stale record #$idx ${records["$idx":icao]} (${records["$idx":tail]}) as checked"
 done
 
 # Read records again, lock them, update them, and write them back
-debug_print "Saving records after screenshot attempts"
+log_print DEBUG "Saving records after screenshot attempts"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 for idx in "${!screenshot_file[@]}"; do
@@ -202,10 +206,10 @@ done
 for idx in "${!screenshot_checked[@]}"; do
     records["$idx":screenshot:checked]=true
 done
-debug_print "Wrote screenshot files to indices: ${!screenshot_file[*]}"
-debug_print "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
+log_print DEBUG "Wrote screenshot files to indices: ${!screenshot_file[*]}"
+log_print DEBUG "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
 WRITE_RECORDS ignore-lock
 
 # Cleanup old screenshots
 find "$SCREENFILEDIR" -type f -name 'screenshot-*.png' -mmin +180 -exec rm -f {} \;
-log_print INFO "Screenshot additions run completed."
+log_print INFO "Screenshot run completed."

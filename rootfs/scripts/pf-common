@@ -36,6 +36,8 @@ debug_print() {
 }
 
 log_print() {
+  # Give up quickly is DEBUG isn't on:
+  if [[ "${1^^}" == "DEBUG" ]] && ! chk_enabled "$DEBUG"; then return; fi
   local loglevel="" logmsg=""
 
   case "${1^^}" in

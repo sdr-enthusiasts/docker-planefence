@@ -108,13 +108,12 @@ EOF
   chmod u=rw,go=r "$rss_file"
 }
 
-lo
 log_print INFO "Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
 if generate_rss; then
   ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
-  log_print INFO "RSS feed generated at $rss_file"
+  log_print INFO "RSS feed generated at $OUTFILEDIR/planefence-$TODAY.rss"
 else
   log_print ERR "RSS feed generation failed!"
 fi

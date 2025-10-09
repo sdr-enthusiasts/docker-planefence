@@ -118,6 +118,8 @@ td, table.dataTable tbody td {
 <h1>Planefence</h1>
 <h2>Show aircraft in range of <a href="||MYURL||" target="_top">||MY||</a> ADS-B station for a specific day</h2>
 
+||MOTD||
+
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
@@ -241,7 +243,7 @@ td, table.dataTable tbody td {
 <li>For spectrograms related to overflying aircraft, see table above
 </ul>
 <a href="noisecapt-spectro-latest.png" target="_blank"><img src="noisecapt-spectro-latest.png"></a>
-<a href="noiseplot-latest.jpg" target="_blank"><img src="noiseplot-latest.jpg"></a>
+<a href="noisegraph-latest.png" target="_blank"><img src="noisegraph-latest.png"></a>
 </details>
 </section>
 <||NOISEDATA-->

@@ -96,8 +96,12 @@ CREATEHTMLTABLE () {
 		# Now write the table
 
 		for (( idx=0; idx <= records[maxindex]; idx++ )); do
-			# debug_print "Processing record $idx (ICAO ${records["$idx":icao]}) for HTML table"
-			printf "<tr>\n"
+
+			if ! chk_enabled "${records["$idx":complete]}"; then 
+				printf "<tr style=\"background-color: %s;\">\n" "$(chk_enabled "$DARKMODE" && echo "#505050" || echo "#E0E0E0")"
+			else
+				printf "<tr>\n"
+			fi
 
 			# table index number:
 			printf "   <td style=\"text-align: center\">%s</td>\n" "$idx"
@@ -424,7 +428,8 @@ template="$(template_replace "||LASTUPDATE||" "$(date -d "@$NOWTIME")" "$templat
 template="$(template_replace "||TRACKURL||" "$TRACKURL" "$template")"
 template="$(template_replace "||LATFUDGED||" "$LATFUDGED" "$template")"
 template="$(template_replace "||LONFUDGED||" "$LONFUDGED" "$template")"
-template="$(template_replace "||TODAY||" "$TODAY" "$template")"
+template="$(template_replace "||MOTD||" "$PF_MOTD" "$template")"
+
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then

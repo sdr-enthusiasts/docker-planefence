@@ -349,7 +349,7 @@ CREATE_NOISEPLOT () {
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2")"
-	local NOISEGRAPHFILE="$OUTFILEDIR"/"noisegraph-$STARTTIME-$4.png"
+	local NOISEGRAPHFILE="$OUTFILEDIR/noisegraph-$STARTTIME-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
     if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
@@ -369,6 +369,7 @@ CREATE_NOISEPLOT () {
 		if gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" "$PLANEFENCEDIR/noiseplot.gnuplot"; then
 			# Plotting succeeded
       echo "$NOISEGRAPHFILE"
+      ln -sf "$NOISEGRAPHFILE" "$OUTFILEDIR/noisegraph-latest.png"
 		fi
 	fi
 }
