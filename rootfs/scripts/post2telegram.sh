@@ -80,14 +80,14 @@ for image in "${IMAGES[@]}"; do
 done
 image_counter=1
 # shellcheck disable=SC2001
-ICAO="$(sed -n 's/.*ICAO: #\?\([A-Fa-f0-9]\{6\}\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
-TAIL="$(sed -n 's/.*Tail: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
-FLIGHT="$(sed -n 's/.*Flt: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
 
-if [[ -n "$ICAO" ]]; then image_header="ICAO $ICAO"; else image_header=""; fi
-if [[ -n "$TAIL" ]]; then image_header+="${image_header:+ - }Tail $TAIL"; fi
-if [[ -n "$FLIGHT" ]]; then image_header+="${image_header:+ - }Flight $FLIGHT"; fi
-image_header="${image_header:+$image_header - }"
+# shellcheck disable=SC2034
+IFS=" " read -r header CALL TAIL TYPE ROUTE <<< "$(grep -i "^flt:" <<< "$TEXT")"
+image_header=""
+if [[ -n "$TAIL" ]]; then image_header+="Tail ${TAIL//#/} - "; fi
+if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
+if [[ -n "$FLIGHT" ]]; then image_header+="Flt ${FLIGHT//#/} - "; fi
+if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
 
 for image in "${IMAGES[@]}"; do
     # Skip if the image is not a file that exists
@@ -122,7 +122,11 @@ for image in "${IMAGES[@]}"; do
 
     if (( image_counter == 1)); then
       if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-        log_print ERR "Error sending photo to Telegram: (original had http instead of hxttp): ${response//http/hxttp}"
+        log_print ERR "Error sending photo message to Telegram: (original had http instead of hxttp):
+        ${response//http/hxttp}
+        Original JSON posted:
+        $image_text"
+        exit 1
       else
         echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" 
         log_print DEBUG "Photo message sent successfully to Telegram"
@@ -142,8 +146,11 @@ if (( image_count == 0 )); then
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-      log_print ERR "Error sending message to Telegram: (original had http instead of hxttp): ${response//http/hxttp}"
-      exit 1
+      log_print ERR "Error sending text-only message to Telegram: (original had http instead of hxttp):
+        ${response//http/hxttp}
+        Original JSON posted:
+        $image_text"
+        exit 1
     else
       echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}"
       log_print INFO "Text message sent successfully to Telegram"

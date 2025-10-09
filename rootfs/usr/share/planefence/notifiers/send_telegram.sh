@@ -109,15 +109,19 @@ build_index_and_stale() {
   done <<< "$out"
 }
 
-# Load a bunch of stuff and determine if we should notify
+# Check a bunch of stuff and determine if we should notify
 
-if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$PF_TELEGRAM_CHAT_ID" ]]; then
-  log_print INFO "Telegram notifications not enabled. Exiting."
+if ! chk_enabled "$TELEGRAM_ENABLED"; then
+  log_print INFO "Telegram is not enabled. Exiting."
+fi
+
+if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
+  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
   exit
 fi
 
 if [[ -f "/usr/share/planefence/notifiers/telegram.template" ]]; then
-  template="$(</usr/share/planefence/notifiers/telegram.template)"
+  template_clean="$(</usr/share/planefence/notifiers/telegram.template)"
 else
   log_print ERR "No Telegram template found at /usr/share/planefence/notifiers/telegram.template. Aborting."
   exit 1
@@ -150,8 +154,6 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for Telegram notification. Exiting."
   exit 0
 fi
-
-template_clean="$(</usr/share/planefence/notifiers/telegram.template)"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Telegram notification for ${records["$idx":tail]}"
@@ -244,5 +246,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_RECORDS
+WRITE_RECORDS ignore-lock
 log_print INFO "Telegram notifications run completed."

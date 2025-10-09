@@ -315,6 +315,9 @@ fi
 # Configure Telegram parameters:
 configure_planefence "TELEGRAM_ENABLED" "$PF_TELEGRAM_ENABLED"
 configure_planealert "TELEGRAM_ENABLED" "$PA_TELEGRAM_ENABLED"
+configure_both "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
+configure_planefence "TELEGRAM_CHAT_ID" "$PF_TELEGRAM_CHAT_ID"
+configure_planealert "TELEGRAM_CHAT_ID" "$PA_TELEGRAM_CHAT_ID"
 
 configure_planealert "NAME" "${PF_NAME:-My}"
 configure_planealert "ADSBLINK" "$PF_MAPURL"

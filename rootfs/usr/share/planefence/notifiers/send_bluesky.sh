@@ -118,7 +118,7 @@ if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
 fi
 
 if [[ -f "/usr/share/planefence/notifiers/bluesky.template" ]]; then
-  template="$(</usr/share/planefence/notifiers/bluesky.template)"
+  template_clean="$(</usr/share/planefence/notifiers/bluesky.template)"
 else
   log_print ERR "No Bluesky template found at /usr/share/planefence/notifiers/bluesky.template. Aborting."
   exit 1
@@ -151,8 +151,6 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for Bluesky notification. Exiting."
   exit 0
 fi
-
-template_clean="$(</usr/share/planefence/notifiers/bluesky.template)"
 
 for idx in "${INDEX[@]}"; do
   debug_print "Preparing Bluesky notification for ${records["$idx":tail]}"
@@ -244,5 +242,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_RECORDS
+WRITE_RECORDS ignore-lock
 log_print INFO "Bluesky notifications run completed."

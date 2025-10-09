@@ -187,8 +187,12 @@ post_text="${post_text%%+([[:space:]])}"  # trim trailing spaces
 # This is necessary because BSky tags text portions as Facets, with a start/end position
 readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g' 2>/dev/null)"
 
+# ${SPACE} is used as a token instead of spaces inside hashtags. Replace all ${SPACE} with a space
+post_text="${post_text//${SPACE}/ }"
+
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
+  tag="${tag//${SPACE}/ }"
   if [[ -z "${tagstart[${tag:1}]}" ]]; then
     # first occurrence of the tag in the string
     tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
@@ -197,8 +201,7 @@ for tag in "${hashtags[@]}"; do
   post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
 done
 
-# ${SPACE} is used as a token instead of spaces inside hashtags. Replace all ${SPACE} with a space
-post_text="${post_text//${SPACE}/ }"
+
 
 # add links
 linkcounter=0
@@ -358,7 +361,7 @@ fi
 response=$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $access_jwt" \
-  -d "$post_data" 2>/tmp/bsky.headers)
+  -d "$post_data")
 
 get_rate_str
 
@@ -366,6 +369,6 @@ if [[ "$(jq -r '.uri' <<< "$response")" != "null" ]]; then
   uri="$(jq -r '.uri' <<< "$response")"
   echo "https://bsky.app/profile/$handle/post/${uri##*/}"
 else
-  log_print ERR "BlueSky Posting Error: $ratelimit_str; response was (original had http instead of hxttp): ${response//http/hxttp}"
+  log_print ERR "BlueSky Posting Error: $ratelimit_str; response was (original had http instead of hxttp):\n${response//http/hxttp}\nOriginal:\n${post_data//http/hxttp}"
   exit 1
 fi
