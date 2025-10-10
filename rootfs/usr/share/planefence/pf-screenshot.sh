@@ -103,7 +103,7 @@ tmpfile="$(mktemp)"
 # Only dump keys we care about; avoids lines if many are irrelevant
 for k in "${!records[@]}"; do
   case "$k" in
-    *:complete|*:lastseen|*:screenshot:checked)
+    *:complete|*:lastseen|*:checked:screenshot)
       printf '%s\037%s\n' "$k" "${records[$k]}" >>"$tmpfile"
       ;;
   esac
@@ -204,7 +204,7 @@ for idx in "${!screenshot_file[@]}"; do
     records["$idx":screenshot:file]="${screenshot_file["$idx"]}"
 done
 for idx in "${!screenshot_checked[@]}"; do
-    records["$idx":screenshot:checked]=true
+    records["$idx":checked:screenshot]=true
 done
 log_print DEBUG "Wrote screenshot files to indices: ${!screenshot_file[*]}"
 log_print DEBUG "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"

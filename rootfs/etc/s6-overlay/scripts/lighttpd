@@ -40,7 +40,7 @@ sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
 if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Starting FastCGI"; fi
-lighttpd-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
+lighttpd-enable-mod fastcgi fastcgi-php mod_alias mod_cgi extforward >/dev/null 2>&1 || true
 #
 # -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:

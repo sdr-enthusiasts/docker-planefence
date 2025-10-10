@@ -148,7 +148,7 @@ GET_ROUTE_BULK () {
 
   # first comb through records[] to get the callsigns we need to look up the route for
   for (( idx=0; idx<=records[maxindex]; idx++ )); do
-    if [[ "${records["$idx":route:checked]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
+    if [[ "${records["$idx":checked:route]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
       routesarray["$idx":callsign]="${records["$idx":callsign]:-${records["$idx":tail]}}"
       routesarray["$idx":lat]="${records["$idx":lat]}"
       routesarray["$idx":lon]="${records["$idx":lon]}"
@@ -180,7 +180,7 @@ GET_ROUTE_BULK () {
             records["$idx":route]="$route"
             if chk_disabled "$plausibe"; then records["$idx":route]=+" (?)";fi
           fi
-        records["$idx":route:checked]=true
+        records["$idx":checked:route]=true
         fi
       done
 
@@ -600,7 +600,7 @@ GENERATE_JSON() {
   {
     re='^(HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!records[@]}"; do
-      if [[ $k =~ $re && $k != *":checked" ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
+      if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
   } \
   | gawk -v RS='\0' -v ORS='\0' '
@@ -801,7 +801,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     fi
 
     # add a tail if there isn't any
-    if [[ "${records["$idx":tail:checked]}" != "true" && -z "${records["$idx":tail]}" ]]; then
+    if [[ "${records["$idx":checked:tail]}" != "true" && -z "${records["$idx":tail]}" ]]; then
       records["$idx":tail]="$(GET_TAIL "$icao")"
       if [[ -n "${records["$idx":tail]}" ]]; then 
         if [[ ${icao:0:1} =~ [aA] ]]; then
@@ -811,13 +811,13 @@ if (( ${#socketrecords[@]} > 0 )); then
           records["$idx":link:faa]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
         fi
       fi
-      records["$idx":tail:checked]=true
+      records["$idx":checked:tail]=true
     fi
 
     # get type
-    if [[ "${records["$idx":type:checked]}" != "true" && -z "${records["$idx":type]}" ]]; then
+    if [[ "${records["$idx":checked:type]}" != "true" && -z "${records["$idx":type]}" ]]; then
       records["$idx":type]="$(GET_TYPE "${records["$idx":icao]}")"
-      records["$idx":type:checked]=true
+      records["$idx":checked:type]=true
     fi
 
     # Callsign handling
@@ -825,7 +825,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -n $callsign ]]; then
       records["$idx":callsign]="$callsign"
       records["$idx":link:fa]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
-      records["$idx":callsign:checked]=true
+      records["$idx":checked:callsign]=true
     fi
 
     # First/last seen
@@ -894,22 +894,22 @@ if (( ${#socketrecords[@]} > 0 )); then
     # ------------------------------------------------------------------------------------
     # get the owner's name
     # namestart=$(date +%s.%3N)
-    if [[ "${records["$idx":owner:checked]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
+    if [[ "${records["$idx":checked:owner]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
-      records["$idx":owner:checked]=true
+      records["$idx":checked:owner]=true
     fi
     # nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
 
     # get images
     # imgstart=$(date +%s.%3N)
     if chk_enabled "$SHOWIMAGES" && \
-       [[ "${records["$idx":image:checked]}" != "true" ]] && \
+       [[ "${records["$idx":checked:image]}" != "true" ]] && \
        [[ -z "${records["$idx":image:thumblink]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
           records["$idx":image:thumblink]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
           records["$idx":image:link]="$(GET_PS_PHOTO "${records["$idx":icao]}" "link")"
           records["$idx":image:file]="$(GET_PS_PHOTO "${records["$idx":icao]}" "image")"
-          records["$idx":image:checked]=true
+          records["$idx":checked:image]=true
           records[HASIMAGES]=true
     fi
     # imgtiming=$(bc -l <<< "${imgtiming:-0} + $(date +%s.%3N) - $imgstart")
@@ -938,7 +938,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # Add noisecapt stuff
     # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
-       [[ "${records["$idx":noisedata:checked]}" != "true" ]] && \
+       [[ "${records["$idx":checked:noisedata]}" != "true" ]] && \
        [[ -z "${records["$idx":sound:peak]}" ]]; then
           # Make sure we have the noiselist
           if [[ -z "$noiselist" ]]; then
@@ -950,11 +950,11 @@ if (( ${#socketrecords[@]} > 0 )); then
           noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
           noisedate="${noisedate:-$TODAY}"
           read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
-          records["$idx":noisedata:checked]=true
+          records["$idx":checked:noisedata]=true
           records[HASNOISE]=true
     fi
     if [[ -n "$REMOTENOISE" ]] && \
-       [[ "${records["$idx":noisegraph:checked]}" != "true" ]] && \chk_enabled "${records["$idx":complete]}" && \
+       [[ "${records["$idx":checked:noisegraph]}" != "true" ]] && \chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":noisegraph:file]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
           records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}" "${records["$idx":icao]}")"
@@ -969,17 +969,17 @@ if (( ${#socketrecords[@]} > 0 )); then
           if [[ -n "${records["$idx":mp3:file]}" ]]; then
             records["$idx":mp3:link]="$(basename "${records["$idx":mp3:file]}")"
           fi
-          records["$idx":noisegraph:checked]=true
+          records["$idx":checked:noisegraph]=true
     fi
     # noisetiming=$(bc -l <<< "${noisetiming:-0} + $(date +%s.%3N) - $noisestart")
 
     # get Nominating location. Note - this is slow because we need to do an API call for each lookup
     # nomstart=$(date +%s.%3N)
-    if [[ "${records["$idx":nominatim:checked]}" != "true" ]] && \
+    if [[ "${records["$idx":checked:nominatim]}" != "true" ]] && \
        [[ -n "${records["$idx":lat]}" ]] && \
        [[ -n "${records["$idx":lon]}" ]]; then
       records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
-      records["$idx":nominatim:checked]=true
+      records["$idx":checked:nominatim]=true
     fi
   done
 

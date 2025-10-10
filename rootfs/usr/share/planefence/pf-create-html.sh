@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
-# shellcheck disable=SC1091,SC2034,SC2154,SC2155
+# shellcheck disable=SC1091,SC2034,SC2154,SC2155,SC2030,SC2031
 #
 # #-----------------------------------------------------------------------------------
 # PF-CREATE-HTML.SH

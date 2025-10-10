@@ -20,6 +20,7 @@ RUN \
     # Ensure the planefence and plane-alert config is available for lighttpd:
     ln -sf /etc/lighttpd/conf-available/88-planefence.conf /etc/lighttpd/conf-enabled && \
     ln -sf /etc/lighttpd/conf-available/88-plane-alert.conf /etc/lighttpd/conf-enabled && \
+    ln -sf /etc/lighttpd/conf-available/88-new-planefence-cgi.conf /etc/lighttpd/conf-enabled && \
     # Install dump1090.socket30003. Note - this could move to a lower layer, but we need to have rootfs copied in.
     # In any case, it doesn't take much (build)time.
     pushd /app/socket30003 && \
