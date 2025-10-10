@@ -72,8 +72,8 @@ EOF
   
   # Create title and description
   TITLE="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} detected"
-  DESC="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} was detected within ${records["$idx":distance:value]} ${DISTUNIT} of the receiver"
-  DESC="${DESC} at altitude ${records["$idx":altitude:value]} ${ALTUNIT} from $(date -d "@${records["$idx":firstseen]}") to $(date -d "@${records["$idx":lastseen]}")"
+  DESC="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} was detected within ${records["$idx":distance:value]} ${records["$idx":distance:unit]} of the receiver"
+  DESC="${DESC} at altitude ${records["$idx":altitude:value]} ${ALTUNIT} from $(date -d "@${records["$idx":time:firstseen]}") to $(date -d "@${records["$idx":time:lastseen]}")"
   
   # Add noise data if available
   if [[ -n "${records["$idx":sound:peak]}" ]]; then
@@ -83,8 +83,8 @@ EOF
   # Create item link - use the tracking URL if available
   ITEM_LINK="${records["$idx":link:map]:-$SITE_LINK}"
   
-  # Calculate pub date from LASTSEEN 
-  PUBDATE=$(date -R -d "@${records["$idx":lastseen]}")
+  # Calculate pub date from time:lastseen 
+  PUBDATE=$(date -R -d "@${records["$idx":time:lastseen]}")
   
   # Write RSS item
   cat >> "$rss_file" <<EOF
@@ -92,7 +92,7 @@ EOF
         <title>$(xml_encode "$TITLE")</title>
         <description>$(xml_encode "$DESC")</description>
         <link>$ITEM_LINK</link>
-        <guid isPermaLink="false">${records["$idx":icao]}-${records["$idx":firstseen]}</guid>
+        <guid isPermaLink="false">${records["$idx":icao]}-${records["$idx":time:firstseen]}</guid>
         <pubDate>$PUBDATE</pubDate>
     </item>
 EOF
