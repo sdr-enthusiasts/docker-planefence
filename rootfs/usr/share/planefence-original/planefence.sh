@@ -436,10 +436,10 @@ WRITEHTMLTABLE () {
 
 			records[$index:firstseen]="$(date -d "${data[2]}" +%s)"
 			records[$index:lastseen]="$(date -d "${data[3]}" +%s)"
-			records[$index:altitude]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
-			records[$index:distance]="${data[5]//$'\n'/}"
-			records[$index:map:link]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
-			records[$index:fa:link]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
+			records[$index:altitude:value]="$(sed ':a;s/\B[0-9]\{3\}\>/,&/g;ta' <<< "${data[4]//$'\n'/}")"
+			records[$index:distance:value]="${data[5]//$'\n'/}"
+			records[$index:link:map]="${data[6]//globe.adsbexchange.com/"$TRACKSERVICE"}"
+			records[$index:link:fa]="https://flightaware.com/live/modes/${records[$index:icao]}/ident/${records[$index:callsign]}/redirect"
 			records[$index:owner]="$(/usr/share/planefence/airlinename.sh "${records[$index:callsign]}" "${records[$index:icao]}")"
 			records[$index:owner]="${records[$index:owner]:-unknown}"
 			records[$index:notif:link]="${data[7]//$'\n'/}" 	# this will be adjusted if there's noise data
@@ -447,7 +447,7 @@ WRITEHTMLTABLE () {
 				[[ "${records[$index:callsign]:0:4}" != "NATO" ]] && \
 				[[ "${records[$index:icao]:0:1}" == "A" ]]
 			then
-				records[$index:faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
+				records[$index:link:faa]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records[$index:callsign]}"
 			fi
 
 			# get an image links
@@ -595,16 +595,16 @@ EOF
 			printf "   <td></td><!-- images enabled but no image file available for this entry -->\n" >&3
 		fi
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:map:link]}" "${records[$index:icao]}" >&3 # ICAO
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records[$index:link:map]}" "${records[$index:icao]}" >&3 # ICAO
 
-		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:fa:link]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
+		printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records[$index:link:fa]}" "${records[$index:callsign]}" >&3 # Flight number/tail with FlightAware link
 
 		if ${HASROUTE}; then 
 			printf "   <td>%s</td><!-- route -->\n" "${records[$index:route]}" >&3 # route
 		fi
 
-		if [[ -n "${records[$index:faa:link]}" ]]; then
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:faa:link]}" "${records[$index:owner]}" >&3
+		if [[ -n "${records[$index:link:faa]}" ]]; then
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- owner with FAA link -->\n" "${records[$index:link:faa]}" "${records[$index:owner]}" >&3
 		else
 			printf "   <td>%s</td><!-- owner -->\n" "${records[$index:owner]}" >&3
 		fi
@@ -613,8 +613,8 @@ EOF
 
 		printf "   <td style=\"text-align: center\">%s</td><!-- date/time last seen -->\n" "$(date -d "@${records[$index:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" >&3 # time last seen
 
-		printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records[$index:altitude]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
-		printf "   <td>%s %s</td><!-- min distance -->\n" "${records[$index:distance]}" "$DISTUNIT" >&3 # min distance
+		printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records[$index:altitude:value]}" "$ALTUNIT" "$ALTREFERENCE" >&3 # min altitude
+		printf "   <td>%s %s</td><!-- min distance -->\n" "${records[$index:distance:value]}" "$DISTUNIT" >&3 # min distance
 
 		# Print the noise values if we have determined that there is data
 		if "$HASNOISE"; then

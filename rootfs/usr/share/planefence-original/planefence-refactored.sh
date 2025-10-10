@@ -376,24 +376,24 @@ if (( ${#socketrecords[@]} > 0 )); then
     callsign="${callsign//[[:space:]]/}"  # remove spaces from callsign
     if [[ -n "$callsign" ]]; then
         records["$idx":callsign]="$callsign"  
-        records["$idx":fa:link]="https://flightaware.com/live/modes/$hex_ident/ident/$callsign/redirect"
+        records["$idx":link:fa]="https://flightaware.com/live/modes/$hex_ident/ident/$callsign/redirect"
     fi
 
-    if [[ -z "${records["$idx":map:link]}" ]]; then records["$idx":map:link]="https://globe.adsbexchange.com/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
+    if [[ -z "${records["$idx":link:map]}" ]]; then records["$idx":link:map]="https://globe.adsbexchange.com/?icao=$hex_ident&lat=$lat&lon=$lon&showTrace=$TODAY"; fi
     records["$idx":firstseen]="$seentime"
     if [[ -z "${records["$idx":lastseen]}" ]]; then records["$idx":lastseen]="$seentime"; fi
-    newdist="$(awk "BEGIN { if ($distance < ${records["$idx":distance]:-999999}) print $distance }")"
+    newdist="$(awk "BEGIN { if ($distance < ${records["$idx":distance:value]:-999999}) print $distance }")"
     if [[ -n "$newdist" ]]; then 
-      records["$idx":distance]="$newdist"
+      records["$idx":distance:value]="$newdist"
       if [[ -n "$lat" ]]; then records["$idx":lat]="$lat"; fi
       if [[ -n "$lon" ]]; then records["$idx":lon]="$lon"; fi
-      if [[ -n "$altitude" ]]; then records["$idx":altitude]="$altitude"; fi
-      if [[ -n "$angle" ]]; then records["$idx":angle]="$angle"; fi
-      if [[ -n "$gs" ]]; then records["$idx":groundspeed]="$gs"; fi
-      if [[ -n "$track" ]]; then records["$idx":track]="$track"; fi
+      if [[ -n "$altitude" ]]; then records["$idx":altitude:value]="$altitude"; fi
+      if [[ -n "$angle" ]]; then records["$idx":angle:value]="$angle"; fi
+      if [[ -n "$gs" ]]; then records["$idx":groundspeed:value]="$gs"; fi
+      if [[ -n "$track" ]]; then records["$idx":track:value]="$track"; fi
     fi
-    if [[ -z "${records["$idx":squawk]}" ]]; then
-      records["$idx":squawk]=""
+    if [[ -z "${records["$idx":squawk:value]}" ]]; then
+      records["$idx":squawk:value]=""
     fi
 
     # Placeholders for later enrichment
@@ -425,7 +425,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(ICAO2TAIL "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
-      records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+      records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
     if [[ -z "${records["$idx":owner]}" ]] && [[ -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"

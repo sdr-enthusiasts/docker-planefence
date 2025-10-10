@@ -159,7 +159,7 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
-  squawk="${records["$idx":squawk]}"
+  squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
     template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
@@ -186,8 +186,8 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
   template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${records["$idx":altitude]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance]} $DISTUNIT (${records["$idx":angle]}° ${records["$idx":angle:name]})" "$template")"
+  template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
+  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
   else
@@ -195,9 +195,9 @@ for idx in "${INDEX[@]}"; do
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
-  links="${records["$idx":map:link]}${records["$idx":map:link]:+ }"
-  links+="${records["$idx":fa:link]}${records["$idx":fa:link]:+ }"
-  links+="${records["$idx":faa:link]}"
+  links="${records["$idx":link:map]}${records["$idx":link:map]:+ }"
+  links+="${records["$idx":link:fa]}${records["$idx":link:fa]:+ }"
+  links+="${records["$idx":link:faa]}"
   template="$(template_replace "||LINKS||" "$links" "$template")"
 
   # Handle images

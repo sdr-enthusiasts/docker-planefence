@@ -69,7 +69,7 @@ chk_enabled "$MASTODON_LINK_VESSELFINDER" && links+="https://www.vesselfinder.co
 unset mast_str
 
 if [[ -n "$notify_tropo" ]]; then
-    mast_str="#${NOTIF_TERM[TROPOMAXDIST]} = $(printf "%.1f" "${VESSELS[$1:distance]}") nm\n"
+    mast_str="#${NOTIF_TERM[TROPOMAXDIST]} = $(printf "%.1f" "${VESSELS[$1:distance:value]}") nm\n"
 fi
 
 mast_str+="#VesselAlert"
@@ -100,7 +100,7 @@ if [[ -n "${VESSELS[$1:destination]}" ]]; then mast_str+="${NOTIF_TERM[DESTINATI
 
 if [[ -n "${VESSELS[$1:lat]}" ]] && [[ -n "${VESSELS[$1:lon]}" ]] && [[ -n "$LAT" ]] && [[ -n "$LON" ]]; then
     distance="$(bc -l <<< "scale=1; $(distance "${VESSELS[$1:lat]}" "${VESSELS[$1:lon]}" "$LAT" "$LON") / 1")"
-    mast_str+="${NOTIF_TERM[DISTANCE]}: $distance nm\n"
+    mast_str+="${NOTIF_TERM[distance:value]}: $distance nm\n"
 fi
 
 mast_str+="${NOTIF_TERM[SIGNAL]} #RSSI: $(printf "%.1f dBFS" "${VESSELS[$1:level]}")\n"

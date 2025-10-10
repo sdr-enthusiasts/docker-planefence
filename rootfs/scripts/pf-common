@@ -223,11 +223,11 @@ CHK_SCREENSHOT_ENABLED() {
 
 CHK_NOTIFICATIONS_ENABLED () {
   # Check if any notifications are enabled
-  if chk_enabled "$PF_DISCORD" || \
+  if chk_enabled "$DISCORD_ENABLED" || \
      { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
      [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
      [[ -n "$MQTT_URL" ]] || \
-     [[ -n "${PF_TELEGRAM_CHAT_ID}" ]]; then
+     chk_enabled "${TELEGRAM_ENABLED}"; then
     return 0
   else
     return 1
@@ -359,10 +359,6 @@ if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 		DISTUNIT="nm"
     TO_METER=1852
 		;;
-		kilometer)
-		DISTUNIT="km"
-		TO_METER=1000
-		;;
 		mile)
 		DISTUNIT="mi"
 		TO_METER=1609
@@ -370,22 +366,32 @@ if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 		meter)
 		DISTUNIT="m"
 		TO_METER=1
+    ;;
+    *)
+    # socket30003 default is kilometer; we don't have to check this explicitly for this value
+		DISTUNIT="km"
+		TO_METER=1000
+		;;
 	esac
 	case "$(awk -F= -v var="altitudeunit" '$1==var {print $2;found=1;exit} END {if(!found) print "meter"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
 		feet)
 		ALTUNIT="ft"
 		;;
-		meter)
+		*)
+    # socket30003 default is meter; we don't have to check this explicitly for this value
 		ALTUNIT="m"
 	esac
   	case "$(awk -F= -v var="speedunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometerph"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
-		kilometerph)
-		SPEEDUNIT="km/h"
-		;;
 		knotph)
 		SPEEDUNIT="kt"
     ;;
     mileph)
     SPEEDUNIT="mph"
+    ;;
+    *)
+    # socket30003 default is kilometerph; we don't have to check this explicitly for this value
+		SPEEDUNIT="km/h"
+		;;
 	esac
 fi
+(( ${ALTCORR:-0} > 0 )) && ALTREF="AGL" || ALTREF="MSL" 

@@ -165,7 +165,7 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
-  squawk="${records["$idx":squawk]}"
+  squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
     template="$(template_replace "||SQUAWK||" "#Squawk: $squawk${NEWLINE}" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
@@ -192,8 +192,8 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
   template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${records["$idx":altitude]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance]} $DISTUNIT (${records["$idx":angle]}° ${records["$idx":angle:name]})" "$template")"
+  template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
+  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
   else
@@ -202,9 +202,9 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
   links=""
-  if [[ -n "${records["$idx":map:link]}" ]]; then links+="•<a href=\"${records["$idx":map:link]}\">$(extract_base "${records["$idx":map:link]}")</a>"; fi
-  if [[ -n "${records["$idx":fa:link]}" ]]; then links+="•<a href=\"${records["$idx":fa:link]}\">$(extract_base "${records["$idx":fa:link]}")</a>"; fi
-  if [[ -n "${records["$idx":faa:link]}" ]]; then links+="•<a href=\"${records["$idx":faa:link]}\">$(extract_base "${records["$idx":faa:link]}")</a>"; fi
+  if [[ -n "${records["$idx":link:map]}" ]]; then links+="•<a href=\"${records["$idx":link:map]}\">$(extract_base "${records["$idx":link:map]}")</a>"; fi
+  if [[ -n "${records["$idx":link:fa]}" ]]; then links+="•<a href=\"${records["$idx":link:fa]}\">$(extract_base "${records["$idx":link:fa]}")</a>"; fi
+  if [[ -n "${records["$idx":link:faa]}" ]]; then links+="•<a href=\"${records["$idx":link:faa]}\">$(extract_base "${records["$idx":link:faa]}")</a>"; fi
   template="$(template_replace "||LINKS||" "$links" "$template")"
 
   # Handle images

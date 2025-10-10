@@ -67,9 +67,9 @@ COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
-declare -a updatedrecords
+declare -a updatedrecords newrecords processed_indices
 
-if [[ -z "$TRACKSERVICE" ]] || [[ "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
+if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
 elif [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then
   TRACKURL="flightaware"
@@ -102,7 +102,7 @@ GET_TAIL() {
 	fi
 
   # If there is a OpenSkyDB file, check that one:
-  if [[ -z "$tail" ]] && [[ -f /run/OpenSkyDB.csv ]]; then
+  if [[ -z "$tail" && -f /run/OpenSkyDB.csv ]]; then
     tail="$(grep -m1 -i -F "$icao" /run/OpenSkyDB.csv | awk -F, '{print $27}')"
     tail="${tail//[ \"\']/}"
   fi
@@ -148,7 +148,7 @@ GET_ROUTE_BULK () {
 
   # first comb through records[] to get the callsigns we need to look up the route for
   for (( idx=0; idx<=records[maxindex]; idx++ )); do
-    if ! chk_enabled "${records["$idx":route:checked]}" && [[ -n "${records["$idx":callsign]}" ]]; then
+    if [[ "${records["$idx":route:checked]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
       routesarray["$idx":callsign]="${records["$idx":callsign]:-${records["$idx":tail]}}"
       routesarray["$idx":lat]="${records["$idx":lat]}"
       routesarray["$idx":lon]="${records["$idx":lon]}"
@@ -174,7 +174,7 @@ GET_ROUTE_BULK () {
 
       for idx in "${indexarray[@]}"; do
         if [[ "${routesarray["$idx":callsign]}" == "$call" ]]; then
-          if [[ -z "$route" ]] || [[ "$route" == "unknown" ]] || [[ "$route" == "null" ]]; then
+          if [[ -z "$route" || "$route" == "unknown" || "$route" == "null" ]]; then
             records["$idx":route]="n/a"
           else
             records["$idx":route]="$route"
@@ -209,11 +209,11 @@ GET_ROUTE_INDIVIDUAL () {
 													-H 'Content-Type: application/json' \
 													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
 								| jq -r '.[]._airport_codes_iata')" \
-				&& [[ -n "$route" ]] && [[ "$route" != "unknown" ]] && [[ "$route" != "null" ]]
+				&& [[ -n "$route" && "$route" != "unknown" && "$route" != "null" ]]
 		then
 			echo "${1^^},$route" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
 			echo "$route"
-		elif [[ "${route,,}" == "unknown" ]] || [[ "${route,,}" == "null" ]]; then
+		elif [[ "${route,,}" == "unknown" || "${route,,}" == "null" ]]; then
 			echo "${1^^},unknown" >> "/usr/share/planefence/persist/.internal/routecache-$(date +%y%m%d).txt"
 		fi
 }
@@ -277,10 +277,10 @@ GET_PS_PHOTO () {
 CHK_NOTIFICATIONS_ENABLED () {
   # Check if any notifications are enabled
   if chk_enabled "$PF_DISCORD" || \
-     { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
-     [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
-     [[ -n "$MQTT_URL" ]] || \
-     [[ -n "${PF_TELEGRAM_CHAT_ID}" ]]; then
+     [[ ( -n "${BLUESKY_APP_PASSWORD}" && -n "$BLUESKY_HANDLE" ) || \
+     -n "${MASTODON_ACCESS_TOKEN}" || \
+     -n "$MQTT_URL" || \
+     -n "${PF_TELEGRAM_CHAT_ID}" ]]; then
     return 0
   else
     return 1
@@ -291,7 +291,7 @@ GET_NOISEDATA () {
   # Get noise data from the remote server
   # It returns the average values over the specified time range
   # Usage: GET_NOISEDATA <firstseen_epoch> [<lastseen_epoch>]
-  if [[ -z "$REMOTENOISE" ]] || [[ -z "$1" ]]; then return; fi
+  if [[ -z "$REMOTENOISE" || -z "$1" ]]; then return; fi
   local firstseen lastseen samplescount=0 ts level level_1min level_5min level_10min level_1hr loudness color avglevel avg1min avg5min avg10min avg1hr
   local noiselogdate
   firstseen="$1"
@@ -392,7 +392,7 @@ CREATE_SPECTROGRAM () {
   )
 
   # Assumes $noiselist is newline-separated filenames
-  spectrofile="$(awk -v T="${records["$idx":time_at_mindist]}" -v L="$MAXSPREAD" '
+  spectrofile="$(awk -v T="${records["$idx":time:time_at_mindist]}" -v L="$MAXSPREAD" '
     BEGIN {
       INF = 9223372036854775807   # big sentinel
       best_before_dt = INF; best_after_dt = INF
@@ -484,7 +484,7 @@ CREATE_MP3 () {
 	mp3f="noisecapt-recording-${mp3time}.mp3"
 
 	# shellcheck disable=SC2076
-	if [[ ! -s "$OUTFILEDIR/$mp3f" ]] && [[ $noiselist =~ "$mp3f" ]] ; then
+	if [[ ! -s "$OUTFILEDIR/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
 		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f" 2>/dev/null
 	fi 
@@ -598,7 +598,7 @@ GENERATE_JSON() {
   local re
   local k
   {
-    re='^([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?$'
+    re='^(HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!records[@]}"; do
       if [[ $k =~ $re && $k != *":checked" ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
@@ -615,8 +615,8 @@ GENERATE_JSON() {
     }
 
     n = split(key, a, ":")
-    if (n < 2 || n > 3) next
-    if (a[1] !~ /^[0-9]+$/) next
+    if (n < 1 || n > 3) next
+    if (a[1] !~ /^(max.*|HAS.*|[0-9]+([.][0-9]+)?)$/) next
     if (a[2] !~ /^[A-Za-z0-9_-]+$/) next
     if (n == 3 && a[3] !~ /^[A-Za-z0-9_-]+$/) next
 
@@ -624,6 +624,7 @@ GENERATE_JSON() {
     k = a[2]
     subkey = ""
     if (n == 3) subkey = a[3]
+
 
     # emit idx\0key\0sub\0value\0
     printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
@@ -652,6 +653,7 @@ GENERATE_JSON() {
       )
     | to_entries
     | sort_by(.key|tonumber)
+    | reverse
     | map({index:(.key|tonumber)} + .value)
   '  > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
@@ -745,7 +747,7 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     [[ -z $line ]] && continue
     IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
-    [[ $icao == "hex_ident" ]] || [[ -z "$time" ]] && continue # skip header or incomplete lines
+    [[ $icao == "hex_ident" || -z "$time" ]] && continue # skip header or incomplete lines
 
     # Parse timestamp fast (assumes most lines are for today)
     t=${time%%.*}
@@ -766,7 +768,6 @@ if (( ${#socketrecords[@]} > 0 )); then
       dt=$(( ls - seentime ))
       if (( ${dt//-/} <= COLLAPSEWITHIN )); then
         idx="${last_idx_for_icao[$icao]}"
-        updatedrecords[idx]=1
       else
         if chk_enabled "$IGNOREDUPES"; then
           continue  # ignore this dupe
@@ -779,6 +780,9 @@ if (( ${#socketrecords[@]} > 0 )); then
       idx=$(( records[maxindex] + 1 ))
       records[maxindex]="$idx"
       records["$idx":complete]=false
+      newrecords[idx]=1
+    else
+      updatedrecords[idx]=1
     fi
 
     # Update fast ICAO index maps
@@ -790,28 +794,28 @@ if (( ${#socketrecords[@]} > 0 )); then
       records["$idx":icao]="$icao"
       # map link at first touch
       if [[ -n $lat && -n $lon ]]; then
-        records["$idx":map:link]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
+        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
       else
-        records["$idx":map:link]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
+        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
       fi
     fi
 
     # add a tail if there isn't any
-    if ! chk_enabled "${records["$idx":tail:checked]}" && [[ -z "${records["$idx":tail]}" ]]; then
+    if [[ "${records["$idx":tail:checked]}" != "true" && -z "${records["$idx":tail]}" ]]; then
       records["$idx":tail]="$(GET_TAIL "$icao")"
       if [[ -n "${records["$idx":tail]}" ]]; then 
         if [[ ${icao:0:1} =~ [aA] ]]; then
-          records["$idx":faa:link]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
+          records["$idx":link:faa]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${records["$idx":tail]}"
         elif [[ ${icao:0:1} =~ [cC] ]]; then
           t="${records["$idx":tail]:1}"  # remove leading C
-          records["$idx":faa:link]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
+          records["$idx":link:faa]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
         fi
       fi
       records["$idx":tail:checked]=true
     fi
 
     # get type
-    if ! chk_enabled "${records["$idx":type:checked]}" && [[ -z "${records["$idx":type]}" ]]; then
+    if [[ "${records["$idx":type:checked]}" != "true" && -z "${records["$idx":type]}" ]]; then
       records["$idx":type]="$(GET_TYPE "${records["$idx":icao]}")"
       records["$idx":type:checked]=true
     fi
@@ -820,16 +824,16 @@ if (( ${#socketrecords[@]} > 0 )); then
     callsign="${callsign//[[:space:]]/}"
     if [[ -n $callsign ]]; then
       records["$idx":callsign]="$callsign"
-      records["$idx":fa:link]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
+      records["$idx":link:fa]="https://flightaware.com/live/modes/$icao/ident/$callsign/redirect"
       records["$idx":callsign:checked]=true
     fi
 
     # First/last seen
-    if (( seentime < ${records["$idx":firstseen]:-9999999999} )); then records["$idx":firstseen]="$seentime"; fi
-    if (( seentime > ${records["$idx":lastseen]:-0} )); then records["$idx":lastseen]="$seentime"; fi
+    if (( seentime < ${records["$idx":time:firstseen]:-9999999999} )); then records["$idx":time:firstseen]="$seentime"; fi
+    if (( seentime > ${records["$idx":time:lastseen]:-0} )); then records["$idx":time:lastseen]="$seentime"; fi
 
     # Min-distance update (float-safe without awk by string compare fallback)
-    curdist=${records["$idx":distance]}
+    curdist=${records["$idx":distance:value]}
     do_update=false
     if [[ -z $curdist ]]; then
       do_update=true
@@ -844,24 +848,35 @@ if (( ${#socketrecords[@]} > 0 )); then
       if (( s1 < s2 )); then do_update=true; fi
     fi
     if $do_update; then
-      records["$idx":distance]="$distance"
+      records["$idx":distance:value]="$distance" && records["$idx":distance:unit]="$DISTUNIT"
       [[ -n $lat ]] && records["$idx":lat]="$lat"
       [[ -n $lon ]] && records["$idx":lon]="$lon"
-      [[ -n $altitude ]] && records["$idx":altitude]="$altitude"
-      [[ -n $angle ]] && records["$idx":angle]="${angle%.*}" && records["$idx":angle:name]="$(deg_to_compass "$angle")"
-      [[ -n $gs ]] && records["$idx":groundspeed]="$gs"
-      [[ -n $track ]] && records["$idx":track]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
-      records["$idx":time_at_mindist]="$seentime"
-      [[ -n $squawk ]] && records["$idx":squawk]="$squawk"
+      [[ -n $altitude ]] && records["$idx":altitude:value]="$altitude" && records["$idx":altitude:unit]="$ALTUNIT" && records["$idx":altitude:reference]="$ALTREF"
+      [[ -n $angle ]] && records["$idx":angle:value]="${angle%.*}" && records["$idx":angle:name]="$(deg_to_compass "$angle")"
+      [[ -n $gs ]] && records["$idx":groundspeed:value]="$gs" && records["$idx":groundspeed:unit]="$SPEEDUNIT"
+      [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
+      records["$idx":time:time_at_mindist]="$seentime"
+      [[ -n $squawk ]] && records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
     else
       # ensure squawk gets set once if still empty
-      if [[ -n $squawk && -z ${records["$idx":squawk]} ]]; then
-        records["$idx":squawk]="$squawk"
+      if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
+        records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
       fi
+    fi
+
+    # last - make sure we're storing the idx in the list of processed indices:
+    processed_indices[idx]=1
+  done
+
+  # check if we need to process some of the indices that have timed out but that aren't marked yet as complete:
+
+  for ((idx=0; idx<records[maxindex]; idx++)); do
+    if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
+      processed_indices[idx]=1
     fi
   done
 
-  log_print INFO "Initial processing complete. New/Updated: $((records[maxindex] + 1 - currentrecords))/${#updatedrecords[@]}. Total number of records is now ${records[maxindex]}. Continue adding more info."
+  log_print INFO "Initial processing complete. New/Updated: ${#newrecords[@]}/${#updatedrecords[@]}.Total number of records is now ${records[maxindex]}. Continue adding more info for records ${!processed_indices[*]}"
 
   # try to pre-seed the noisecapt log:
   if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
@@ -872,14 +887,14 @@ if (( ${#socketrecords[@]} > 0 )); then
 #  timingstart=$(date +%s.%3N)
   
   # Now try to add callsigns and owners for those that don't already have them:
-  for ((idx=0; idx<records[maxindex]; idx++)); do
+  for idx in "${!processed_indices[@]}"; do
 
     # ------------------------------------------------------------------------------------
     # The first portion of this loop can be done regardless of completeness of the record
     # ------------------------------------------------------------------------------------
     # get the owner's name
     # namestart=$(date +%s.%3N)
-    if ! chk_enabled "${records["$idx":owner:checked]}" && [[ -n "${records["$idx":callsign]}" ]]; then
+    if [[ "${records["$idx":owner:checked]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
       records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
       records["$idx":owner:checked]=true
     fi
@@ -888,7 +903,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # get images
     # imgstart=$(date +%s.%3N)
     if chk_enabled "$SHOWIMAGES" && \
-       ! chk_enabled "${records["$idx":image:checked]}" && \
+       [[ "${records["$idx":image:checked]}" != "true" ]] && \
        [[ -z "${records["$idx":image:thumblink]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
           records["$idx":image:thumblink]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
@@ -904,7 +919,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     if [[ -z "${records["$idx":callsign]}" ]]; then
       callsign="$(GET_CALLSIGN "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
-      records["$idx":fa:link]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+      records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
     # calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
 
@@ -914,7 +929,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # ------------------------------------------------------------------------------------
     
     # Add complete label if current time is outside COLLAPSEWITHIN window
-    if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":lastseen]} > COLLAPSEWITHIN )); then
+    if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
       records["$idx":complete]=true
     else
       continue
@@ -923,7 +938,7 @@ if (( ${#socketrecords[@]} > 0 )); then
     # Add noisecapt stuff
     # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
-       ! chk_enabled "${records["$idx":noisedata:checked]}" && \
+       [[ "${records["$idx":noisedata:checked]}" != "true" ]] && \
        [[ -z "${records["$idx":sound:peak]}" ]]; then
           # Make sure we have the noiselist
           if [[ -z "$noiselist" ]]; then
@@ -934,23 +949,23 @@ if (( ${#socketrecords[@]} > 0 )); then
           fi
           noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
           noisedate="${noisedate:-$TODAY}"
-          read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           records["$idx":noisedata:checked]=true
           records[HASNOISE]=true
     fi
     if [[ -n "$REMOTENOISE" ]] && \
-       ! chk_enabled "${records["$idx":noisegraph:checked]}" && \chk_enabled "${records["$idx":complete]}" && \
+       [[ "${records["$idx":noisegraph:checked]}" != "true" ]] && \chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":noisegraph:file]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
-          records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":firstseen]}" "${records["$idx":lastseen]}" "${records["$idx":icao]}")"
+          records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}" "${records["$idx":icao]}")"
           if [[ -n "${records["$idx":noisegraph:file]}" ]]; then
             records["$idx":noisegraph:link]="$(basename "${records["$idx":noisegraph:file]}")"
           fi
-          records["$idx":spectro:file]="$(CREATE_SPECTROGRAM "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          records["$idx":spectro:file]="$(CREATE_SPECTROGRAM "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":spectro:file]}" ]]; then
             records["$idx":spectro:link]="$(basename "${records["$idx":spectro:file]}")"
           fi
-          records["$idx":mp3:file]="$(CREATE_MP3 "${records["$idx":firstseen]}" "${records["$idx":lastseen]}")"
+          records["$idx":mp3:file]="$(CREATE_MP3 "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":mp3:file]}" ]]; then
             records["$idx":mp3:link]="$(basename "${records["$idx":mp3:file]}")"
           fi
@@ -960,29 +975,20 @@ if (( ${#socketrecords[@]} > 0 )); then
 
     # get Nominating location. Note - this is slow because we need to do an API call for each lookup
     # nomstart=$(date +%s.%3N)
-    if ! chk_enabled "${records["$idx":nominatim:checked]}" && \
+    if [[ "${records["$idx":nominatim:checked]}" != "true" ]] && \
        [[ -n "${records["$idx":lat]}" ]] && \
        [[ -n "${records["$idx":lon]}" ]]; then
       records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
       records["$idx":nominatim:checked]=true
     fi
-    # nomtiming=$(bc -l <<< "${nomtiming:-0} + $(date +%s.%3N) - $nomstart")
-
-    # save distance / altitude / speed units
-    if [[ -z "${records["$idx":altitude:unit]}" ]]; then records["$idx":altitude:unit]="$ALTUNIT"; fi
-    if [[ -z "${records["$idx":distance:unit]}" ]]; then records["$idx":distance:unit]="$DISTUNIT"; fi
-    if [[ -z "${records["$idx":groundspeed:unit]}" ]]; then records["$idx":groundspeed:unit]="$SPEEDUNIT"; fi
-
   done
 
   # get route information in bulk (single API call)
-  # routestart=$(date +%s.%3N)
   if ! chk_disabled "$CHECKROUTE"; then GET_ROUTE_BULK; fi
-  # routetiming=$(bc -l <<< "${routetiming:-0} + $(date +%s.%3N) - $routestart")
 
-  if ! chk_enabled "${records[HASROUTE]}"; then records[HASROUTE]=false; fi
-  if ! chk_enabled "${records[HASIMAGES]}"; then records[HASIMAGES]=false; fi
-  if ! chk_enabled "${records[HASNOISE]}"; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+  if [[ -z "${records[HASROUTE]}" ]]; then records[HASROUTE]=false; fi
+  if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
+  if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
 
 
 

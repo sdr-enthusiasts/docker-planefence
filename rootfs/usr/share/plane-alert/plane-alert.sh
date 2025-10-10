@@ -441,8 +441,8 @@ if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
 			# now put all relevant info into the associative array:
 			msg_array[icao]="${pa_record[0]//#/}"
 			msg_array[tail]="${pa_record[1]//#/}"
-			msg_array[squawk]="${pa_record[10]//#/}"
-			[[ "${msg_array[squawk]}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
+			msg_array[squawk:value]="${pa_record[10]//#/}"
+			[[ "${msg_array[squawk:value]}" == "7700 " ]] && msg_array[emergency]=true || msg_array[emergency]=false
 			msg_array[flight]="${pa_record[8]//#/}"
 			if [[ -n "${pa_record[2]}" ]]; then
 				msg_array[operator]="${pa_record[2]//[\'\"]/ }"

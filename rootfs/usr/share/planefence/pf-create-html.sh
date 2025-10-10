@@ -115,13 +115,13 @@ CREATEHTMLTABLE () {
 			fi
 
 			# ICAO
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":map:link]}" "${records["$idx":icao]}"
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- ICAO with map link -->\n" "${records["$idx":link:map]}" "${records["$idx":icao]}"
 
 			# Tail
-			if [[ -z "${records["$idx":faa:link]}" ]]; then
+			if [[ -z "${records["$idx":link:faa]}" ]]; then
 				printf "   <td>%s</td><!-- Tail -->\n" "${records["$idx":tail]}"
 			else
-				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail with FAA link -->\n" "${records["$idx":faa:link]}" "${records["$idx":tail]}"
+				printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- tail with FAA link -->\n" "${records["$idx":link:faa]}" "${records["$idx":tail]}"
 			fi
 
 			# Aircraft type
@@ -132,7 +132,7 @@ CREATEHTMLTABLE () {
 			fi
 
 			# Flight number
-			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":fa:link]}" "${records["$idx":callsign]}"
+			printf "   <td><a href=\"%s\" target=\"_blank\">%s</a></td><!-- Flight number/tail with FlightAware link -->\n" "${records["$idx":link:fa]}" "${records["$idx":callsign]}"
 
 			# Route
 			if chk_enabled "${records[HASROUTE]}"; then
@@ -143,33 +143,33 @@ CREATEHTMLTABLE () {
 			printf "   <td>%s</td><!-- owner -->\n" "${records["$idx":owner]}"
 
 			# time first seen
-			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
+			printf "   <td style=\"text-align: center\">%s</td><!-- date/time first seen -->\n" "$(date -d "@${records["$idx":time:firstseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")"
 
 			# time last seen
-			printf "   <td style=\"text-align: center\">%s%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" "$(if ! chk_enabled "${records["$idx":complete]}"; then echo "<br>(still processing)"; fi)"
+			printf "   <td style=\"text-align: center\">%s%s</td><!-- date/time last seen -->\n" "$(date -d "@${records["$idx":time:lastseen]}" "+${NOTIF_DATEFORMAT:-%F %T %Z}")" "$(if ! chk_enabled "${records["$idx":complete]}"; then echo "<br>(still processing)"; fi)"
 
 			# min altitude
-			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude]}" "$ALTUNIT" "$ALTREFERENCE"
+			printf "   <td>%s %s %s</td><!-- min altitude -->\n" "${records["$idx":altitude:value]}" "${records["$idx":altitude:unit]}" "${records["$idx":altitude:name]}"
 
 			# min distance
-			if [[ -n "${records["$idx":angle]}" ]]; then
+			if [[ -n "${records["$idx":angle:value]}" ]]; then
 				# angle available, so print arrow too. Make sure to use the correct day or night version of the arrow
-				printf "   <td>%s %s %s <img src=\"arrow%s_%s.png\" style=\"height: 1em;\"></td><!-- min distance -->\n" "${records["$idx":distance]}" "$DISTUNIT" "${records["$idx":angle:name]}" "$(( (${records["$idx":angle]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
+				printf "   <td>%s %s %s <img src=\"arrow%s_%s.png\" style=\"height: 1em;\"></td><!-- min distance -->\n" "${records["$idx":distance:value]}" "${records["$idx":distance:unit]}" "${records["$idx":angle:name]}" "$(( (${records["$idx":angle:value]%%.*} + 180) / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")"  # round angle to nearest 10 degrees for arrow
 			else
 				# no angle available, so no arrow
-				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance]}" "$DISTUNIT"
+				printf "   <td>%s %s</td><!-- min distance, no angle available -->\n" "${records["$idx":distance:value]}" "${records["$idx":distance:unit]}"
 			fi
 
 			# groundspeed
-			if [[ -n "${records["$idx":groundspeed]}" ]]; then
-				printf "   <td>%s %s</td><!-- groundspeed -->\n" "${records["$idx":groundspeed]}" "$SPEEDUNIT"
+			if [[ -n "${records["$idx":groundspeed:value]}" ]]; then
+				printf "   <td>%s %s</td><!-- groundspeed -->\n" "${records["$idx":groundspeed:value]}" "$SPEEDUNIT"
 			else
 				printf "   <td></td><!-- no groundspeed available -->\n"
 			fi
 
 			# track
-			if [[ -n "${records["$idx":track]}" ]]; then
-				printf "   <td>%s&deg; %s<img src=\"arrow%s_%s.png\"style=\"height: 1em;\" ></td><!-- track -->\n" "${records["$idx":track]}" "${records["$idx":track:name]}" "$(( ${records["$idx":track]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
+			if [[ -n "${records["$idx":track:value]}" ]]; then
+				printf "   <td>%s&deg; %s<img src=\"arrow%s_%s.png\"style=\"height: 1em;\" ></td><!-- track -->\n" "${records["$idx":track:value]}" "${records["$idx":track:name]}" "$(( ${records["$idx":track:value]%%.*} / 10 ))0" "$(chk_enabled "$DARKMODE" && printf "night" || printf "day")" 
 			else
 				printf "   <td></td><!-- no track available -->\n"
 			fi
@@ -394,7 +394,7 @@ printf -v LONFUDGED "%.${FUDGELOC:-3}f" "$LON"
 
 # Get the altitude reference:
 if [[ -n "$ALTCORR" ]]; then ALTREF="AGL"; else ALTREF="MSL"; fi
-# "DIST is $DIST $DISTUNIT; Conv to meters is $TO_METER"
+# "DIST is $DIST ${records["$idx":distance:unit]}; Conv to meters is $TO_METER"
 DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 
 # -----------------------------------------------------------------------------------
@@ -421,7 +421,7 @@ template="$(template_replace "||VERSION||" "$VERSION" "$template")"
 template="$(template_replace "||BUILD||" "$(</.VERSION)" "$template")"
 template="$(template_replace "||SOCKETLINES||" "$SOCKETLINES" "$template")"
 template="$(template_replace "||DIST||" "$DIST" "$template")"
-template="$(template_replace "||DISTUNIT||" "$DISTUNIT" "$template")"
+template="$(template_replace "||DISTUNIT||" "${records["$idx":distance:unit]}" "$template")"
 template="$(template_replace "||ALTUNIT||" "$ALTUNIT" "$template")"
 template="$(template_replace "||ALTREF||" "$ALTREF" "$template")"
 template="$(template_replace "||LASTUPDATE||" "$(date -d "@$NOWTIME")" "$template")"

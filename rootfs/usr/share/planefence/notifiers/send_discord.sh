@@ -169,13 +169,13 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
-  template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude]} $ALTUNIT above ${records["$idx":nominatim]}}" "$template")"
+  template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":map:link]})" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":link:map]})" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
-  template="$(template_replace "||DISTANCE||" "${records["$idx:distance"]} $DISTUNIT (${records["$idx":angle]}°)" "$template")"
+  template="$(template_replace "||DISTANCE||" "${records["$idx:distance"]} $DISTUNIT (${records["$idx":angle:value]}°)" "$template")"
   template="$(template_replace "||ALTITUDE||" "${records["$idx:altitude"]} $ALTUNIT" "$template")"
   template="$(template_replace "||GROUNDSPEED||" "${records["$idx:groundspeed"]} $SPEEDUNIT" "$template")"
   template="$(template_replace "||TAIL||" "${records["$idx:tail"]}" "$template")"

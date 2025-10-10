@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PlaneFence</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <!-- 1) CSS: row dim + small updater + dark zebra fix -->
+  <style>
+    /* ... keep your existing styles ... */
+
+    /* Dim entire row while incomplete */
+    tr.row-incomplete { color: var(--row-incomplete); }
+    tr.row-incomplete a { color: inherit; }
+    tr.row-incomplete .muted { color: inherit; opacity: .9; }
+
+    /* Small “still updating” */
+    .still-updating { font-size: 0.85em; }
+
+    /* Override DataTables zebra to adapt to theme */
+    table.dataTable.stripe tbody tr.odd,
+    table.dataTable.display tbody tr.odd {
+      background-color: var(--table-stripe);
+    }
+    /* Ensure even rows use base bg in both themes */
+    table.dataTable tbody tr.even { background-color: var(--bg); }
+
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666;
+      --soft: #f5f5f5;
+      --accent: #0b5fff;
+      --danger-bg: #fff3f3;
+      --danger-fg: #a40000;
+      --row-incomplete: #6b6b6b;
+      --chip-bg: #eee;
+      --chip-fg: #222;
+      --link: #0b5fff;
+      --link-visited: #5a32a3;
+      --table-stripe: #fafafa;
+    }
+    html.dark {
+      --bg: #0f1115;
+      --fg: #e6e6e6;
+      --muted: #9aa0a6;
+      --soft: #1a1d23;
+      --accent: #6ca0ff;
+      --danger-bg: #2a1212;
+      --danger-fg: #ff8a8a;
+      --row-incomplete: #9aa0a6;
+      --chip-bg: #1f2430;
+      --chip-fg: #e6e6e6;
+      --link: #8fb1ff;
+      --link-visited: #c6a6ff;
+      --table-stripe: #151922;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      background: var(--bg); color: var(--fg);
+      line-height: 1.45;
+    }
+    header, footer { padding: .75rem 1rem; background: var(--soft); display: flex; align-items: center; gap: .75rem; }
+    header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+    header .spacer { flex: 1; }
+    button, .btn {
+      background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
+    }
+    button:hover { border-color: var(--fg); }
+    a { color: var(--link); text-decoration: none; }
+    a:visited { color: var(--link-visited); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .muted { color: var(--muted); }
+    .status { margin-left: .5rem; }
+
+    table.dataTable tbody tr:nth-child(odd) { background: var(--table-stripe); }
+    table.dataTable thead th { white-space: nowrap; }
+    th, td { vertical-align: middle; }
+    img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
+    .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
+    .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
+    .dot { display:inline-block; width:.6em; height:.6em; border-radius:50%; vertical-align:middle; }
+    .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
+
+    .seen-incomplete { color: var(--row-incomplete); }
+
+    .nowrap { white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PlaneFence</h1>
+    <span class="status mono" id="progress">Loading…</span>
+    <div class="spacer"></div>
+    <button id="themeToggle" title="Toggle dark/light">Dark</button>
+    <button id="reload" title="Reload data">Reload</button>
+  </header>
+
+  <main style="padding: 0 1rem 1rem;">
+    <div style="overflow:auto;">
+      <table id="t" class="display compact stripe" style="width:100%;">
+        <thead id="thead">
+          <tr></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    <small class="muted">&copy; 2025</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net@2/js/dataTables.min.js"></script>
+
+  <script>
+  // -------- Config --------
+  const cfg = {
+    // Base URL where docroot images live (arrowXXX_day|night.png, thumbnails if hosted locally)
+    // Ensure trailing slash. Change as needed, e.g., `${location.origin}/assets/`
+    // mediaBase: location.origin + 'assets/',
+    mediaBase: './assets/',
+  };
+
+  // -------- Theme (dark/light) --------
+  const THEME_KEY = 'pf-theme';
+  function applyTheme(theme){
+    const dark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = dark ? 'Light' : 'Dark';
+    localStorage.setItem(THEME_KEY, theme);
+  }
+  function currentTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  applyTheme(currentTheme());
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+    if (window.table) window.table.rows().invalidate().draw(false); // refresh arrow assets
+  });
+
+  // -------- Helpers --------
+  const prog = document.getElementById('progress');
+  const theadRow = document.querySelector('#thead tr');
+  const reloadBtn = document.getElementById('reload');
+  reloadBtn?.addEventListener('click', () => location.reload());
+
+  function fmtInt(s){ const n = Number(s); return Number.isFinite(n)? n : null; }
+  function safe(s){ return String(s ?? ""); }
+  function isHttp(u){ return typeof u === 'string' && /^https?:\/\//i.test(u); }
+  function toFixed4(n){ const x = Number(n); return Number.isFinite(x)? x.toFixed(4) : ""; }
+  function degBucket10(n){
+    const num = Number(n);
+    if (!Number.isFinite(num)) return null;
+    const rounded = Math.round(num);
+    let b = Math.round(rounded/10)*10;
+    b = ((b % 360) + 360) % 360;
+    if (b === 360) b = 0;
+    return b;
+  }
+  function angleAssetName(deg, dark){
+    const b = degBucket10(deg);
+    if (b==null) return null;
+    return `arrow${b}_${dark? 'night':'day'}.png`;
+  }
+
+  // 3) Seen rendering: two lines, small “still updating”, no “at”
+  function formatSeen(secStr, completeFlag, preferTs){
+    const s = Number(preferTs ?? secStr);
+    if (!Number.isFinite(s)) return "";
+    const nowMs = Date.now();
+    const tsMs = s * 1000;
+    const diffSec = Math.max(0, Math.floor((nowMs - tsMs)/1000));
+    const rel = diffSec < 60 ? `${diffSec}s ago`
+          : diffSec < 3600 ? `${Math.floor(diffSec/60)}m ago`
+          : `${Math.floor(diffSec/3600)}h ago`;
+
+    const dt = new Date(tsMs);
+    const timeFmt = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+    });
+    const timeStr = timeFmt.format(dt);
+
+    const today = new Date();
+    const sameDay = dt.getFullYear()===today.getFullYear()
+                && dt.getMonth()===today.getMonth()
+                && dt.getDate()===today.getDate();
+    const dateStr = sameDay ? "" : new Intl.DateTimeFormat(undefined, {
+      year:'numeric', month:'short', day:'numeric'
+    }).format(dt);
+
+    const updating = (String(completeFlag) !== 'true')
+      ? `<div class="still-updating">· still updating</div>` : "";
+
+    // Line 1: relative; Line 2: time (+ date if not today)
+    return `<div class="mono">${rel}</div><div class="mono">${timeStr}${dateStr ? ' · ' + dateStr : ''}</div>${updating}`;
+  }
+
+
+  function hasSound(r){
+    return r['sound:peak'] || r['sound:loudness'] || r['sound:color'] || r['noisegraph:link'];
+  }
+  function hasNotifications(r){
+    return r['discord:link'] || r['bsky:link'] || r['telegram:link'] || r['mqtt:notified'];
+  }
+
+  // -------- Columns definition --------
+  const viewCols = [
+    { key:"idx", title:"#", width:"4%" },
+    { key:"thumb", title:"", width:"6%" },
+    { key:"when", title:"Seen", width:"16%" },
+    { key:"aircraft", title:"Aircraft", width:"22%" },
+    { key:"route", title:"Route", width:"10%" },
+    { key:"position", title:"Position", width:"16%" },
+    { key:"alt", title:"Alt", width:"7%" },
+    { key:"spd", title:"Spd", width:"6%" },
+    { key:"trk", title:"Track", width:"7%" },
+    { key:"sound", title:"Sound", width:"10%" },
+    { key:"squawk", title:"Squawk", width:"8%" },
+    { key:"links", title:"Links", width:"10%" },
+    { key:"notify", title:"Notifications", width:"12%" }
+  ];
+
+  let table = null;
+
+  // 2) DataTables init: numeric sort for idx, keep Seen desc
+ function buildHeader(){
+  theadRow.innerHTML = "";
+  for (const c of viewCols){
+    const th = document.createElement('th');
+    th.textContent = c.title;
+    if (c.width) th.style.width = c.width;
+    theadRow.appendChild(th);
+  }
+
+  // Create DataTable and capture API
+  const api = $('#t').DataTable({
+    deferRender: true,
+    pageLength: 25,
+    responsive: true,
+    order: [[2, 'desc']],
+    columns: viewCols.map(_ => ({ title: _.title })),
+    columnDefs: [
+      { targets: 0, type: 'num' },
+      { targets: "_all", render: (data)=>data }
+    ],
+    createdRow: function(row, data){
+      if ((data?.[2] || '').includes('still-updating')) {
+        row.classList.add('row-incomplete');
+      }
+    }
+  });
+
+  // Store globally if you need it
+  table = api;
+  window.table = api;
+
+  // Bind draw handler AFTER api exists
+  api.on('draw', function(){
+    // Only rows in the current page are guaranteed to have nodes
+    api.rows({ page: 'current' }).every(function(){
+      const tr = this.node();
+      if (!tr) return; // node may be null when not in DOM
+      const seenCell = (this.data()?.[2] || '');
+      if (seenCell.includes('still-updating')) tr.classList.add('row-incomplete');
+      else tr.classList.remove('row-incomplete');
+    });
+  });
+}
+
+// 5) Render row with row class + position split link + numeric idx data source
+function renderRow(r) {
+  const idx = fmtInt(r.index) ?? safe(r.index);
+  const idxVal = fmtInt(r.index);
+  const idxCell = idxVal != null
+    ? `<span class="mono" data-order="${idxVal}">${idxVal}</span>`
+    : `<span class="mono">${safe(r.index)}</span>`;
+
+  // Seen
+  const lastSeen = r["time:lastseen"] || "";
+  const firstSeen = r["time:firstseen"] || "";
+  const atMindist = r["time:time_at_mindist"] || "";
+  const whenHtml = (atMindist || lastSeen || firstSeen)
+    ? formatSeen(lastSeen || firstSeen, r.complete, atMindist || lastSeen || firstSeen)
+    : "";
+
+  const icao = safe(r.icao);
+  const tail = safe(r.tail);
+  const cs = safe(r.callsign);
+  const typ = safe(r.type);
+  const owner = safe(r.owner);
+  const faalink = safe(r["link:faa"] || r["link:fa"]);
+  const ownerHtml = owner ? (isHttp(faalink) ? `<a href="${faalink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
+  const op = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
+  const aircraft = `
+    <div class="mono">${cs || icao}</div>
+    <div>${tail ? tail+' · ' : ''}${typ}${op? ' · '+op : ''}</div>
+  `.trim();
+
+  const route = safe(r.route);
+
+  // Position: coords link only; angle outside link; add N/E
+  const lat = r.lat, lon = r.lon;
+  const coordText = formatLatLon(lat, lon);
+  const map = safe(r["link:map"]);
+  const angleDegRaw = Number(r["angle:value"]);
+  const angleDegInt = Number.isFinite(angleDegRaw) ? Math.round(angleDegRaw) : null;
+  const angleName = r["angle:name"] ? ` (${safe(r["angle:name"])})` : "";
+  const angleStr = angleDegInt != null ? `${angleDegInt}°${angleName}` : "";
+  const angleImg = (() => {
+    const a = angleAssetName(angleDegRaw, document.documentElement.classList.contains('dark'));
+    return a ? `<img class="angle-img" alt="" src="${cfg.mediaBase}${a}">` : "";
+  })();
+  const coordsHtml = coordText
+    ? (map ? `<a href="${map}" target="_blank" rel="noopener">${coordText}</a>` : coordText)
+    : "";
+  const position = [coordsHtml, [angleStr, angleImg].filter(Boolean).join('')].filter(Boolean).join(' · ');
+
+  const alt = r["altitude:value"] ? `${safe(r["altitude:value"])} ${safe(r["altitude:unit"] || "ft")}` : "";
+  const spdNum = fmtInt(r["groundspeed:value"]);
+  const spdUnit = safe(r["groundspeed:unit"] || "kt");
+  const spd = spdNum != null ? `${spdNum} ${spdUnit}` : "";
+
+  const trackDegRaw = Number(r["track:value"]);
+  const trackDegInt = Number.isFinite(trackDegRaw) ? Math.round(trackDegRaw) : null;
+  const trackName = r["track:name"] ? ` (${safe(r["track:name"])})` : "";
+  const trkStr = trackDegInt != null ? `${trackDegInt}°${trackName}` : "";
+  const trkImg = (() => {
+    const a = angleAssetName(trackDegRaw, document.documentElement.classList.contains('dark'));
+    return a ? `<img class="angle-img" alt="" src="${cfg.mediaBase}${a}">` : "";
+  })();
+  const trk = trkStr ? `${trkStr}${trkImg}` : "";
+
+  const thumbUrl = r["image:thumblink"];
+  const thumbEl = isHttp(thumbUrl) ? `<img class="thumb" src="${thumbUrl.replace(/"/g,'&quot;')}" alt="thumb">` : "";
+
+  const links = [];
+  const photo = safe(r["image:link"]);
+  const spectro = safe(r["spectro:link"]);
+  const noise = safe(r["noisegraph:link"]);
+  const mp3 = safe(r["mp3:link"]);
+  if (photo && isHttp(photo)) links.push(`<a href="${photo}" target="_blank" rel="noopener">photo</a>`);
+  if (spectro) links.push(`<a href="${spectro}" target="_blank" rel="noopener">spectro</a>`);
+  if (noise) links.push(`<a href="${noise}" target="_blank" rel="noopener">noise</a>`);
+  if (mp3) links.push(`<a href="${mp3}" target="_blank" rel="noopener">mp3</a>`);
+
+  const notifyLinks = [];
+  const discord = r["discord:link"];
+  const bsky = r["bsky:link"];
+  const telegram = r["telegram:link"];
+  const mqttNotified = String(r["mqtt:notified"]) === 'true';
+  if (discord) notifyLinks.push(`<a href="${safe(discord)}" target="_blank" rel="noopener">Discord</a>`);
+  if (bsky) notifyLinks.push(`<a href="${safe(bsky)}" target="_blank" rel="noopener">Bluesky</a>`);
+  if (telegram) notifyLinks.push(`<a href="${safe(telegram)}" target="_blank" rel="noopener">Telegram</a>`);
+  if (mqttNotified) notifyLinks.push(`MQTT`);
+
+  let sound = "";
+  if (hasSound(r)) {
+    const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"])}` : "";
+    const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"])}` : "";
+    const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"])}"></span>` : "";
+    const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
+    const ng = r["noisegraph:link"];
+    sound = ng ? `<a href="${safe(ng)}" target="_blank" rel="noopener">${inner}</a>` : inner;
+  }
+
+  const squawkVal = safe(r["squawk:value"]);
+  const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
+  const isEmerg = squawkVal === "7500" || squawkVal === "7600" || squawkVal === "7700";
+  const squawk = squawkVal ? `<span class="${isEmerg ? 'danger' : ''} mono">${squawkVal}</span>${squawkDesc}` : "";
+
+  return {
+    row: [
+      `<span class="mono">${idx}</span>`,
+      `${thumbEl}`,
+      `${whenHtml}`,
+      `${aircraft}`,
+      `${route || ""}`,
+      `${position}`,
+      `${alt}`,
+      `${spd}`,
+      `${trk}`,
+      `${sound}`,
+      `${squawk}`,
+      `${links.join(' · ')}`,
+      `${notifyLinks.join(' · ')}`
+    ],
+    incomplete: String(r.complete) !== 'true'
+  };
+}
+
+
+// 6) Prepend newest-first during streaming and apply row class
+function addRow(r){
+  const rendered = renderRow(r);
+  // Use row.add() + draw order OR unshift: DataTables APIs don’t support unshift directly,
+  // but we can insert at top by drawing with order and using row.add, then re-order.
+  // Simpler: add, then immediately order by Seen desc (already set) and draw.
+  const apiRow = table.row.add(rendered.row);
+  const node = apiRow.node();
+  if (rendered.incomplete) {
+    // Node may not exist until draw; hook into createdRow instead:
+  }
+  return apiRow;
+}
+
+  // 4) Position: link only coords, add N/E; angle outside link
+  function formatLatLon(lat, lon){
+    const latNum = Number(lat);
+    const lonNum = Number(lon);
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return "";
+    return `${toFixed4(latNum)} N, ${toFixed4(lonNum)} E`;
+  }
+
+
+  // Build header immediately (schema not needed since columns are curated)
+  if (!table) buildHeader();
+
+(async function(){
+  const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
+  if (!resp.ok || !resp.body) { prog.textContent = 'Stream failed'; return; }
+
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let added = 0;
+
+  const redraw = ()=> table.order([[0,'asc']]).page('first').draw(true);
+
+  while (true) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream:true});
+    let nl;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl); buf = buf.slice(nl+1);
+      if (!line.trim()) continue;
+      let obj;
+      try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
+      if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
+        prog.textContent = `Error: ${obj.error}`;
+        continue;
+      }
+      addRow(obj);
+      added++;
+      if (added % 25 === 0) {
+        redraw();
+        prog.textContent = `Loaded ${table.rows().count()}…`;
+      }
+    }
+  }
+
+  if (buf.trim()) { try { addRow(JSON.parse(buf)); } catch(e){} }
+  redraw();
+  if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${table.rows().count()}`;
+})();
+
+</script>
+
+</body></html>
