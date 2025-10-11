@@ -77,7 +77,7 @@ build_index_and_stale() {
             ;;
         esac
       done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" '
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
@@ -89,15 +89,16 @@ build_index_and_stale() {
         CSTN = CST+0
         # Evaluate only ids that have lastseen
         for (id in ids) {
+          # should we even look at the record?
+          if (!enabled((id in schecked)? schecked[id] : "")) continue
           ls = lastseen[id]
           # stale first
-          if (ls < CSTN && n == "") { stale[id]=1; continue }
+          if (ls < CSTN) { stale[id]=1; continue }
           # eligibility checks
           c  = (id in complete)? complete[id] : ""
           if (!enabled(c)) continue
           if (enabled(n)) continue
           if (n=="error") continue
-          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
           ok[id]=1
         }
         # Print lists (tagged), numerically sorted
@@ -122,7 +123,7 @@ GET_SCREENSHOT () {
   # returns file path to screenshot if successful, or empty if no screenshot was captured
   
   local idx="$1"
-  local screenfile="$SCREENFILEDIR/screenshot-${records["$idx":icao]}-${records["$idx":lastseen]}.png"
+  local screenfile="$SCREENFILEDIR/screenshot-${records["$idx":icao]}-${records["$idx":time:lastseen]}.png"
   local image
   if [[ -z "$idx" ]]; then return; fi
   
