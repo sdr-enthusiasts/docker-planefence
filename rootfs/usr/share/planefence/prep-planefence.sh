@@ -15,6 +15,8 @@ source /scripts/pf-common
 
 REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
 
+shopt -s nullglob
+
 function configure_planefence() {
 	local SETTING_NAME="$1"
 	local SETTING_VALUE="$2"

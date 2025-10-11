@@ -30,7 +30,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-# DEBUG=true
+DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
@@ -38,7 +38,7 @@ source /usr/share/planefence/planefence.conf
 
 declare -A screenshot_file=()
 declare -A screenshot_checked=()
-declare -a index
+declare -a INDEX STALE
 
 
 # ==========================
@@ -50,6 +50,71 @@ MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensu
 # ==========================
 # Functions
 # ==========================
+
+build_index_and_stale() {
+  local -n _INDEX=$1
+  local -n _STALE=$2
+  _INDEX=(); _STALE=()
+
+  # Optional numeric ceiling from records[maxindex]
+  local MAXIDX
+  MAXIDX=${records[maxindex]}
+
+  # Capture gawk output once, then demux without subshells
+  local out
+  out="$(
+    {
+      local k id field
+      for k in "${!records[@]}"; do
+        [[ $k == +([0-9]):* ]] || continue
+        id=${k%%:*}
+        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
+        field=${k#*:}
+        # Only pass fields we care about to reduce awk work
+        case $field in
+            complete|time:lastseen|checked:screenshot)
+            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
+            ;;
+        esac
+      done
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
+      BEGIN { FS="\t" }
+      {
+        id=$1; key=$2; val=$3
+        if (key=="time:lastseen")           { lastseen[id]=val+0; ids[id]=1 }
+        else if (key=="complete")           complete[id]=val
+        else if (key=="checked:screenshot") schecked[id]=val
+      }
+      END {        
+        CSTN = CST+0
+        # Evaluate only ids that have lastseen
+        for (id in ids) {
+          ls = lastseen[id]
+          # stale first
+          if (ls < CSTN && n == "") { stale[id]=1; continue }
+          # eligibility checks
+          c  = (id in complete)? complete[id] : ""
+          if (!enabled(c)) continue
+          if (enabled(n)) continue
+          if (n=="error") continue
+          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
+          ok[id]=1
+        }
+        # Print lists (tagged), numerically sorted
+        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
+        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
+      }
+      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
+    '
+  )"
+
+  local tag id
+  while IFS=$'\t' read -r tag id; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
+  done <<< "$out"
+}
+
 
 GET_SCREENSHOT () {
 	# Function to get a screenshot
@@ -97,78 +162,22 @@ log_print DEBUG "Getting RECORDSFILE"
 READ_RECORDS ignore-lock
 
 # Make an index of records to process
-# Pre-filter keys in bash to reduce awk input volume
-tmpfile="$(mktemp)"
-
-# Only dump keys we care about; avoids lines if many are irrelevant
-for k in "${!records[@]}"; do
-  case "$k" in
-    *:complete|*:lastseen|*:checked:screenshot)
-      printf '%s\037%s\n' "$k" "${records[$k]}" >>"$tmpfile"
-      ;;
-  esac
-done
-
-readarray -t index < <(
-  awk -v CST="$CONTAINERSTARTTIME" -v RS='\n' -v FS='\037' '
-    {
-      # k = key "idx:..."; v = value
-      k=$1; v=$2
-      # split key into idx + components
-      n=split(k, p, ":"); idx=p[1]
-      if (idx !~ /^[0-9]+$/) next
-
-      have[idx]=1
-      # map attribute
-      if (n==2) {
-        if (p[2]=="complete")      complete[idx]=(v=="true")
-        else if (p[2]=="lastseen") lastseen[idx]=v+0
-      } else if (n==3 && p[2]=="screenshot" && p[3]=="checked") {
-        scrchk[idx]=(v=="true")
-      }
-    }
-    END {
-      for (i in have)
-        if (complete[i] && !scrchk[i] && (i in lastseen) && lastseen[i] >= CST)
-          print i
-    }
-  ' "$tmpfile"
-)
-
-# Second query: indices where lastseen < CST and checked:screenshot != true
-readarray -t stale_indices < <(
-  awk -v CST="$CONTAINERSTARTTIME" -v FS='\037' '
-    {
-      k=$1; v=$2
-      n=split(k, p, ":"); idx=p[1]
-      if (idx !~ /^[0-9]+$/) next
-
-      if (n==2 && p[2]=="lastseen")               lastseen[idx]=v+0
-      else if (n==3 && p[2]=="screenshot" && p[3]=="checked") scrchk[idx]=(v=="true")
-      seen[idx]=1
-    }
-    END {
-      for (i in seen)
-        if ((i in lastseen) && lastseen[i] < CST && !scrchk[i])
-          print i
-    }
-  ' "$tmpfile"
-)
-
-rm -f "$tmpfile"
+debug_print "Getting indices ready for new and stale records"
+build_index_and_stale INDEX STALE
 
 # If there's nothing to do, exit
-if (( ${#index[@]} + ${#stale_indices[@]} == 0 )); then
-  log_print INFO "No new records to process or stale records to mark, exiting"
+if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
+  log_print INFO "No records eligible for Bluesky notification. Exiting."
   exit 0
+else debug_print "Records to process: ${#INDEX[@]} new, ${#STALE[@]} stale"
 fi
 
 counter=0
-if (( ${#index[@]} < MAXSCREENSHOTSPERRUN )); then MAXSCREENSHOTSPERRUN=${#index[@]}; fi
+if (( ${#INDEX[@]} < MAXSCREENSHOTSPERRUN )); then MAXSCREENSHOTSPERRUN=${#INDEX[@]}; fi
 
 # Go through the indices in reverse order. That way, the newest/latest are processed first
 
-readarray -t rev_index < <(printf '%s\n' "${index[@]}" | sort -nr)
+readarray -t rev_index < <(printf '%s\n' "${INDEX[@]}" | sort -nr)
 
 for idx in "${rev_index[@]}"; do
   # Process each record in the records array

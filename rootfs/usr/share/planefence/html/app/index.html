@@ -128,10 +128,12 @@
   <header>
     <h1>PlaneFence</h1>
     <span class="status mono" id="progress">Loading…</span>
-    <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
+  <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
+  <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
     <div class="spacer"></div>
-    <button id="themeToggle" title="Toggle dark/light">Dark</button>
-    <button id="reload" title="Reload data">Reload</button>
+  <button id="themeToggle" title="Toggle dark/light">Dark</button>
+  <button id="manualUpdate" title="Update now">Update</button>
+  <button id="reload" title="Reload data">Reload</button>
   </header>
 
   <main style="padding: 0 1rem 1rem;">
@@ -164,8 +166,13 @@
     noisePrefix: 'noise/',
   // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
   // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
-  noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
-  mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E'
+    noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
+  mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E',
+    // Enable or disable the live stream reader and/or periodic polling. Set one or both to true as needed.
+    enableStream: true,
+    enablePoll: true,
+    // Poll interval in seconds (used when enablePoll is true)
+    pollIntervalSec: 60
   };
 
   // -------- Theme (dark/light) --------
@@ -191,9 +198,50 @@
   // -------- Helpers --------
   const prog = document.getElementById('progress');
   const lastUpdateEl = document.getElementById('lastupdate');
+  const nextUpdateEl = document.getElementById('nextupdate');
   const theadRow = document.querySelector('#thead tr');
   const reloadBtn = document.getElementById('reload');
   reloadBtn?.addEventListener('click', () => location.reload());
+  const manualUpdateBtn = document.getElementById('manualUpdate');
+
+  // Next-poll tracking (timestamp in ms)
+  let nextPollAt = null;
+  let countdownTimerId = null;
+
+  function startCountdown() {
+    if (!nextUpdateEl) return;
+    if (countdownTimerId) clearInterval(countdownTimerId);
+    countdownTimerId = setInterval(()=>{
+      if (!nextPollAt) { nextUpdateEl.textContent = 'Next update: --'; return; }
+      const sec = Math.max(0, Math.round((nextPollAt - Date.now())/1000));
+      nextUpdateEl.textContent = `Next update: ${sec}s`;
+    }, 250);
+  }
+
+  function scheduleNextPoll(afterSec) {
+    nextPollAt = Date.now() + (afterSec * 1000);
+    startCountdown();
+  }
+
+  // Toggle countdown and manual update UI depending on polling configuration
+  if (!cfg.enablePoll) {
+    if (nextUpdateEl) nextUpdateEl.style.display = 'none';
+    if (manualUpdateBtn) {
+      manualUpdateBtn.disabled = true;
+      manualUpdateBtn.title = 'Polling disabled';
+    }
+  } else {
+    if (manualUpdateBtn) manualUpdateBtn.title = 'Trigger immediate update';
+  }
+
+  // Expose a global rowCount helper so non-streaming code (poller, UI) can query
+  // current number of rows without depending on the streaming IIFE's local function.
+  function rowCount() {
+    try {
+      if (!table) return 0;
+      return Math.max(0, table.rows().count() - 1);
+    } catch (e) { return 0; }
+  }
 
   function fmtInt(s){ const n = Number(s); return Number.isFinite(n)? n : null; }
   function safe(s){ return String(s ?? ""); }
@@ -226,8 +274,9 @@
           : `${Math.floor(diffSec/3600)}h ago`;
 
     const dt = new Date(tsMs);
+    // Use 24-hour clock (hour12: false) with two-digit hour for consistency
     const timeFmt = new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short', hour12: false
     });
     const timeStr = timeFmt.format(dt);
 
@@ -306,6 +355,10 @@
   ];
 
   let table = null;
+  // Map of index -> DataTables row API for fast incremental updates
+  const rowByIndex = new Map();
+  // Map of index -> consecutive-miss count used to implement a grace period before purging
+  const missingCounts = new Map();
 
   // 2) DataTables init: numeric sort for idx, keep Seen desc
  function buildHeader(){
@@ -329,15 +382,46 @@
       { targets: "_all", render: (data)=>data }
     ],
     createdRow: function(row, data){
+      // Mark rows that are still updating
       if ((data?.[2] || '').includes('still-updating')) {
         row.classList.add('row-incomplete');
+      } else {
+        row.classList.remove('row-incomplete');
       }
+
+      // Try to extract numeric index from the first-cell HTML and stash it on the TR.
+      try {
+        const first = data && data[0] ? String(data[0]) : '';
+        const m = first.match(/data-order="(-?\d+)"/);
+        if (m) {
+          const id = Number(m[1]);
+          row.dataset.idx = id;
+          // If the table API is available, store the API row reference for fast lookup
+          if (table) rowByIndex.set(id, table.row(row));
+        }
+      } catch (e) { /* ignore */ }
     }
   });
 
   // Store globally if you need it
   table = api;
   window.table = api;
+
+  // Populate rowByIndex for any rows DataTables already created during init
+  try {
+    api.rows().every(function(){
+      const tr = this.node();
+      if (!tr) return;
+      const d = this.data();
+      const first = d && d[0] ? String(d[0]) : '';
+      const m = first.match(/data-order="(-?\d+)"/);
+      if (m) {
+        const id = Number(m[1]);
+        tr.dataset.idx = id;
+        rowByIndex.set(id, api.row(tr));
+      }
+    });
+  } catch (e) { /* ignore */ }
 
   // Bind draw handler AFTER api exists
   api.on('draw', function(){
@@ -531,10 +615,17 @@ function addRow(r){
   // but we can insert at top by drawing with order and using row.add, then re-order.
   // Simpler: add, then immediately order by Seen desc (already set) and draw.
   const apiRow = table.row.add(rendered.row);
-  const node = apiRow.node();
-  if (rendered.incomplete) {
-    // Node may not exist until draw; hook into createdRow instead:
-  }
+  // Try to extract the index from the rendered HTML and register it in our map.
+  try {
+    const first = rendered.row && rendered.row[0] ? String(rendered.row[0]) : '';
+    const m = first.match(/data-order="(-?\d+)"/);
+    if (m) {
+      const id = Number(m[1]);
+      const node = apiRow.node();
+      if (node) node.dataset.idx = id;
+      rowByIndex.set(id, apiRow);
+    }
+  } catch (e) { /* ignore */ }
   return apiRow;
 }
 
@@ -550,88 +641,160 @@ function addRow(r){
   // Build header immediately (schema not needed since columns are curated)
   if (!table) buildHeader();
 
-(async function(){
-  const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
-  if (!resp.ok || !resp.body) { prog.textContent = 'Stream failed'; return; }
+  // If enabled, run the streaming reader (ReadableStream) to ingest rows as they arrive
+  if (cfg.enableStream) {
+    (async function(){
+      try {
+        const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
+        if (!resp.ok || !resp.body) { prog.textContent = 'Stream failed'; return; }
 
-  const reader = resp.body.getReader();
-  const dec = new TextDecoder();
-  let buf = '';
-  let added = 0;
-  let seenHeader = false;
-  let streamGlobals = {};
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        let added = 0;
+        let seenHeader = false;
+        let streamGlobals = {};
 
-  // Normalize/coerce globals into useful JS types
-  function setStreamGlobals(g) {
-    streamGlobals = {};
-    if (!g || typeof g !== 'object') return;
-    // Booleans stored as strings "true"/"1"/"yes"
-    const truthy = v => {
-      if (v === true || v === 1) return true;
-      if (typeof v !== 'string') return false;
-      const s = v.toLowerCase();
-      return s === 'true' || s === '1' || s === 'yes';
-    };
-    streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
-    streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
-    streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
-    streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
-    streamGlobals.maxindex = Number(g.maxindex) || 0;
-    // Preserve any other keys as-is
-    for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+        // Normalize/coerce globals into useful JS types
+        function setStreamGlobals(g) {
+          streamGlobals = {};
+          if (!g || typeof g !== 'object') return;
+          // Booleans stored as strings "true"/"1"/"yes"
+          const truthy = v => {
+            if (v === true || v === 1) return true;
+            if (typeof v !== 'string') return false;
+            const s = v.toLowerCase();
+            return s === 'true' || s === '1' || s === 'yes';
+          };
+          streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
+          streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
+          streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
+          streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
+          streamGlobals.maxindex = Number(g.maxindex) || 0;
+          // Preserve any other keys as-is
+          for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+        }
+
+        const redraw = ()=> table.order([[0,'asc']]).page('first').draw(true);
+
+        function rowCount() {
+          // Subtract 1 to exclude the header row
+          return Math.max(0, table.rows().count() - 1);
+        }
+
+        while (true) {
+          const {value, done} = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, {stream:true});
+          let nl;
+          while ((nl = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, nl); buf = buf.slice(nl+1);
+            if (!line.trim()) continue;
+            let obj;
+            try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
+            // The stream may emit a globals object first, then a schema (__columns), then rows.
+            if (obj && obj.__globals) {
+              // Store and coerce globals
+              setStreamGlobals(obj.__globals || {});
+              // Update LASTUPDATE in header if present in globals (coerced)
+              if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
+                const dt = new Date(streamGlobals.LASTUPDATE * 1000);
+                const hh = String(dt.getHours()).padStart(2,'0');
+                const mm = String(dt.getMinutes()).padStart(2,'0');
+                lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
+              }
+              // Show maxindex in progress element if available
+              if (streamGlobals.maxindex && streamGlobals.maxindex > 0) {
+                prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
+              }
+              continue; // consumed globals
+            }
+
+            // The first object is likely the schema with __columns; subsequent objects are rows.
+            if (!seenHeader && obj && obj.__columns) {
+              seenHeader = true;
+              continue; // skip schema object
+            }
+            if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
+              prog.textContent = `Error: ${obj.error}`;
+              continue;
+            }
+            // If the object is a normal row, merge in globals so renderRow can read flags
+            // (e.g., HASNOISE, HASIMAGES, LASTUPDATE)
+            const payload = (obj && typeof obj === 'object')
+              ? Object.assign({}, streamGlobals, obj)
+              : obj;
+
+            // Apply temporary noise prefix if configured and links exist
+            if (payload && typeof payload === 'object' && cfg.noisePrefix) {
+              const p = cfg.noisePrefix;
+              if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
+                payload['noisegraph:link'] = p + payload['noisegraph:link'];
+              }
+              if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
+                payload['spectro:link'] = p + payload['spectro:link'];
+              }
+              if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
+                payload['mp3:link'] = p + payload['mp3:link'];
+              }
+            }
+
+        // Normalize payload row-level fields
+        const norm = normalizeRow(payload);
+        addRow(norm);
+            added++;
+            if (added % 10 === 0) {
+              redraw();
+              prog.textContent = `Loaded ${rowCount()}…`;
+            }
+          }
+        }
+
+        if (buf.trim()) { try { addRow(JSON.parse(buf)); } catch(e){} }
+        redraw();
+        if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
+      } catch (e) {
+        console.error('stream error', e);
+        prog.textContent = 'Stream error';
+      }
+    })();
   }
 
-  const redraw = ()=> table.order([[0,'asc']]).page('first').draw(true);
+// -------- Polling snapshot every 60s and apply incremental updates --------
+// Uses same endpoint (`./cgi/stream.sh`) which emits NDJSON (globals, schema, rows)
+// and updates existing rows (by index) or appends new rows. Does a single draw at end.
+async function pollAndMerge() {
+  try {
+    const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
+    if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
+    const txt = await resp.text();
+    if (!txt) return;
 
-  function rowCount() {
-    // Subtract 1 to exclude the header row
-    return Math.max(0, table.rows().count() - 1);
-  }
+    const lines = txt.split('\n');
+    let localGlobals = {};
+    let seenHeader = false;
+  const toAdd = [];
+  const toUpdate = [];
+  // Track which numeric indices were present in the latest snapshot so we can purge missing rows
+  const seenIndices = new Set();
 
-  while (true) {
-    const {value, done} = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, {stream:true});
-    let nl;
-    while ((nl = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, nl); buf = buf.slice(nl+1);
+    for (const line of lines) {
       if (!line.trim()) continue;
       let obj;
-      try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
-      // The stream may emit a globals object first, then a schema (__columns), then rows.
-      if (obj && obj.__globals) {
-        // Store and coerce globals
-        setStreamGlobals(obj.__globals || {});
-        // Update LASTUPDATE in header if present in globals (coerced)
-        if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
-          const dt = new Date(streamGlobals.LASTUPDATE * 1000);
+      try { obj = JSON.parse(line); } catch (e) { console.warn('poll: bad json', e, line); continue; }
+      if (obj && obj.__globals) { localGlobals = obj.__globals || {};
+        if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
+          const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');
           const mm = String(dt.getMinutes()).padStart(2,'0');
           lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
         }
-        // Show maxindex in progress element if available
-        if (streamGlobals.maxindex && streamGlobals.maxindex > 0) {
-          prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
-        }
-        continue; // consumed globals
-      }
+        continue; }
+      if (!seenHeader && obj && obj.__columns) { seenHeader = true; continue; }
+      if (!obj || typeof obj !== 'object') continue;
 
-      // The first object is likely the schema with __columns; subsequent objects are rows.
-      if (!seenHeader && obj && obj.__columns) {
-        seenHeader = true;
-        continue; // skip schema object
-      }
-      if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
-        prog.textContent = `Error: ${obj.error}`;
-        continue;
-      }
-      // If the object is a normal row, merge in globals so renderRow can read flags
-      // (e.g., HASNOISE, HASIMAGES, LASTUPDATE)
-      const payload = (obj && typeof obj === 'object')
-        ? Object.assign({}, streamGlobals, obj)
-        : obj;
-
-      // Apply temporary noise prefix if configured and links exist
+      const payload = Object.assign({}, localGlobals, obj);
+      // Same noise prefix handling as stream
       if (payload && typeof payload === 'object' && cfg.noisePrefix) {
         const p = cfg.noisePrefix;
         if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
@@ -645,21 +808,142 @@ function addRow(r){
         }
       }
 
-  // Normalize payload row-level fields
-  const norm = normalizeRow(payload);
-  addRow(norm);
-      added++;
-      if (added % 10 === 0) {
-        redraw();
-        prog.textContent = `Loaded ${rowCount()}…`;
+      const norm = normalizeRow(payload);
+      const rendered = renderRow(norm);
+
+      // Fast lookup: use rowByIndex map to find existing row by numeric index
+      const numericIdx = Number(norm.index);
+      if (Number.isFinite(numericIdx)) seenIndices.add(numericIdx);
+      const foundApi = Number.isFinite(numericIdx) ? rowByIndex.get(numericIdx) : null;
+      if (foundApi) {
+        // Existing row: update and clear any missing counter
+        toUpdate.push({ api: foundApi, row: rendered.row, idx: numericIdx });
+        missingCounts.delete(numericIdx);
+      } else {
+        // New row: add and clear any missing counter (might have been previously missing)
+        toAdd.push({ row: rendered.row, idx: numericIdx });
+        missingCounts.delete(numericIdx);
       }
     }
-  }
 
-  if (buf.trim()) { try { addRow(JSON.parse(buf)); } catch(e){} }
-  redraw();
-  if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
-})();
+    // Apply updates
+    for (const u of toUpdate) {
+      try {
+        // Prefer direct API update. Some API objects may be stale before a draw,
+        // so if this fails, fall back to locating the row node by data-idx.
+        u.api.data(u.row);
+      } catch(e) {
+        console.warn('poll: update failed via api, trying fallback', e, u && u.idx);
+        try {
+          if (Number.isFinite(u.idx)) {
+            const tr = document.querySelector(`tr[data-idx="${u.idx}"]`);
+            if (tr) table.row(tr).data(u.row);
+            else console.warn('poll: fallback row not found for idx', u.idx);
+          }
+        } catch (ee) { console.warn('poll: fallback update failed', ee); }
+      }
+    }
+    // Append new rows and register them in rowByIndex
+    for (const item of toAdd) {
+      const apiRow = table.row.add(item.row);
+      // If we know the numeric index, register the newly added row in the map
+      try {
+        if (Number.isFinite(item.idx)) {
+          const node = apiRow.node();
+          if (node) node.dataset.idx = item.idx;
+          rowByIndex.set(item.idx, apiRow);
+        } else {
+          // Fallback: attempt to parse from the first-cell HTML
+          const first = item.row && item.row[0] ? String(item.row[0]) : '';
+          const m = first.match(/data-order="(-?\d+)"/);
+          if (m) {
+            const id = Number(m[1]);
+            const node = apiRow.node();
+            if (node) node.dataset.idx = id;
+            rowByIndex.set(id, apiRow);
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // After applying updates/adds, purge any rows not present in the snapshot.
+    // Purge rows that have been absent for at least 2 consecutive polls
+    let purged = 0;
+    try {
+      for (const [idx, apiRow] of rowByIndex.entries()) {
+        const nidx = Number(idx);
+        if (seenIndices.has(nidx)) continue; // present in this snapshot
+
+        // Increment miss counter
+        const prev = missingCounts.get(nidx) || 0;
+        const now = prev + 1;
+        missingCounts.set(nidx, now);
+
+        // If absent for 2 or more polls, purge it
+        if (now >= 2) {
+          try {
+            const node = apiRow.node();
+            if (node) table.row(node).remove();
+          } catch (e) { /* ignore per-row remove errors */ }
+          rowByIndex.delete(nidx);
+          missingCounts.delete(nidx);
+          purged++;
+        }
+      }
+    } catch (e) { console.warn('poll: purge failed', e); }
+
+    // Single redraw to refresh display (preserve paging)
+    if (toUpdate.length || toAdd.length || purged) {
+      table.draw(false);
+      // After the draw, ensure any newly-created row nodes are registered in rowByIndex.
+      try {
+        table.rows().every(function(){
+          const tr = this.node();
+          if (!tr) return;
+          // If the TR already has an idx, ensure the map contains it
+          if (tr.dataset && tr.dataset.idx) {
+            const id = Number(tr.dataset.idx);
+            if (Number.isFinite(id) && !rowByIndex.has(id)) rowByIndex.set(id, table.row(tr));
+            return;
+          }
+          // Otherwise try to parse the first-cell HTML for data-order and set dataset
+          try {
+            const d = this.data();
+            const first = d && d[0] ? String(d[0]) : '';
+            const m = first.match(/data-order="(-?\d+)"/);
+            if (m) {
+              const id = Number(m[1]);
+              tr.dataset.idx = id;
+              if (Number.isFinite(id)) rowByIndex.set(id, table.row(tr));
+            }
+          } catch (e) { /* ignore per-row */ }
+        });
+      } catch (e) { console.warn('poll: post-draw registration failed', e); }
+      prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
+    }
+  } catch (e) {
+    console.error('pollAndMerge error', e);
+  }
+}
+
+// Start polling if enabled. Run an immediate poll once and then schedule repeated polls.
+if (cfg.enablePoll) {
+  // Run immediately
+  (async ()=>{
+    await pollAndMerge();
+    // schedule next
+    scheduleNextPoll(cfg.pollIntervalSec || 60);
+  })();
+  // Schedule subsequent polls
+  setInterval(async ()=>{ await pollAndMerge(); scheduleNextPoll(cfg.pollIntervalSec || 60); }, (cfg.pollIntervalSec || 60) * 1000);
+}
+
+// Manual Update button: trigger immediate poll
+manualUpdateBtn?.addEventListener('click', async ()=>{
+  // run a poll and reset next schedule
+  await pollAndMerge();
+  scheduleNextPoll(cfg.pollIntervalSec || 60);
+});
 
 </script>
 

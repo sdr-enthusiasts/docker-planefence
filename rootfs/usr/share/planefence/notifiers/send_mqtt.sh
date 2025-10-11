@@ -57,18 +57,19 @@ build_index_and_stale() {
         field=${k#*:}
         # Only pass fields we care about to reduce awk work
         case $field in
-          lastseen|mqtt:notified|complete)
+          time:lastseen|mqtt:notified|complete|checked:screenshot)
             printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
             ;;
         esac
       done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" '
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
-        if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
+        if (key=="time:lastseen")            { lastseen[id]=val+0; ids[id]=1 }
         else if (key=="mqtt:notified")       notified[id]=val
         else if (key=="complete")            complete[id]=val
+        else if (key=="checked:screenshot")  schecked[id]=val
       }
       END {        
         CSTN = CST+0
@@ -83,6 +84,7 @@ build_index_and_stale() {
           if (!enabled(c)) continue
           if (enabled(n)) continue
           if (n=="error") continue
+          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
           ok[id]=1
         }
         # Print lists (tagged), numerically sorted

@@ -64,7 +64,7 @@ build_index_and_stale() {
         field=${k#*:}
         # Only pass fields we care about to reduce awk work
         case $field in
-          lastseen|bsky:notified|complete|checked:screenshot)
+          time:lastseen|bsky:notified|complete|checked:screenshot)
             printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
             ;;
         esac
@@ -73,8 +73,8 @@ build_index_and_stale() {
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
-        if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="bsky:notified")    notified[id]=val
+        if (key=="time:lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
+        else if (key=="bsky:notified")       notified[id]=val
         else if (key=="complete")            complete[id]=val
         else if (key=="checked:screenshot")  schecked[id]=val
       }
