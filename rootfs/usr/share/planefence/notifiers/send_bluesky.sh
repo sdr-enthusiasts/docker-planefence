@@ -40,7 +40,7 @@ log_print INFO "Hello. Starting Bluesky notification run"
 
 # Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
 # Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|bsky:notified|complete|screenshot:checked"
+#   - records[...] assoc with keys: "<id>:lastseen|bsky:notified|complete|checked:screenshot"
 #   - CONTAINERSTARTTIME (epoch, integer)
 #   - screenshots (0/1 or truthy string)
 build_index_and_stale() {
@@ -64,7 +64,7 @@ build_index_and_stale() {
         field=${k#*:}
         # Only pass fields we care about to reduce awk work
         case $field in
-          lastseen|bsky:notified|complete|screenshot:checked)
+          lastseen|bsky:notified|complete|checked:screenshot)
             printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
             ;;
         esac
@@ -76,7 +76,7 @@ build_index_and_stale() {
         if (key=="lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
         else if (key=="bsky:notified")    notified[id]=val
         else if (key=="complete")            complete[id]=val
-        else if (key=="screenshot:checked")  schecked[id]=val
+        else if (key=="checked:screenshot")  schecked[id]=val
       }
       END {        
         CSTN = CST+0

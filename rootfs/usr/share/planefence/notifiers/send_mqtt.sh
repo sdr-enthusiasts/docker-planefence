@@ -33,7 +33,7 @@ TODAY=$(date --date="today" '+%y%m%d')
 # -----------------------------------------------------------------------------------
 # Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
 # Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|discord:notified|complete|screenshot:checked"
+#   - records[...] assoc with keys: "<id>:lastseen|discord:notified|complete|checked:screenshot"
 #   - CONTAINERSTARTTIME (epoch, integer)
 #   - screenshots (0/1 or truthy string)
 build_index_and_stale() {

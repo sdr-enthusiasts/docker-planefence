@@ -82,6 +82,11 @@
     th, td { vertical-align: middle; }
     img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
     .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
+  /* Position cell: give a little gap between coords and angle line */
+  td.position-cell div { line-height: 1.2; }
+  td.position-cell div + div { margin-top: 0.15rem; }
+  /* Ensure angle image aligns center with the angle text */
+  .angle-img { vertical-align: middle; height: 1em; margin-left: .35rem; }
     .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
     .dot { display:inline-block; width:.6em; height:.6em; border-radius:50%; vertical-align:middle; }
     .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
@@ -89,12 +94,18 @@
     .seen-incomplete { color: var(--row-incomplete); }
 
     .nowrap { white-space: nowrap; }
+  /* Prevent Seen column from collapsing too narrow */
+  /* DataTables places columns in the table header; target the third th (index starts at 1) */
+  /* Keep Seen column readable but compact: single-line with ellipsis if too long */
+  table.dataTable thead th:nth-child(3) { min-width: 8rem; max-width: 12rem; }
+  table.dataTable tbody td:nth-child(3) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
   <header>
     <h1>PlaneFence</h1>
     <span class="status mono" id="progress">Loading…</span>
+    <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
     <div class="spacer"></div>
     <button id="themeToggle" title="Toggle dark/light">Dark</button>
     <button id="reload" title="Reload data">Reload</button>
@@ -125,6 +136,9 @@
     // Ensure trailing slash. Change as needed, e.g., `${location.origin}/assets/`
     // mediaBase: location.origin + 'assets/',
     mediaBase: './assets/',
+    // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
+    // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
+    noisePrefix: 'noise/'
   };
 
   // -------- Theme (dark/light) --------
@@ -149,6 +163,7 @@
 
   // -------- Helpers --------
   const prog = document.getElementById('progress');
+  const lastUpdateEl = document.getElementById('lastupdate');
   const theadRow = document.querySelector('#thead tr');
   const reloadBtn = document.getElementById('reload');
   reloadBtn?.addEventListener('click', () => location.reload());
@@ -216,16 +231,16 @@
   const viewCols = [
     { key:"idx", title:"#", width:"4%" },
     { key:"thumb", title:"", width:"6%" },
-    { key:"when", title:"Seen", width:"16%" },
+  { key:"when", title:"Seen" },
     { key:"aircraft", title:"Aircraft", width:"22%" },
-    { key:"route", title:"Route", width:"10%" },
+  // Route column removed; route will be shown in Aircraft column after callsign
     { key:"position", title:"Position", width:"16%" },
     { key:"alt", title:"Alt", width:"7%" },
     { key:"spd", title:"Spd", width:"6%" },
     { key:"trk", title:"Track", width:"7%" },
-    { key:"sound", title:"Sound", width:"10%" },
-    { key:"squawk", title:"Squawk", width:"8%" },
-    { key:"links", title:"Links", width:"10%" },
+  { key:"squawk", title:"Squawk", width:"8%" },
+  { key:"sound", title:"Sound", width:"10%" },
+  { key:"spectro", title:"Spectro", width:"10%" },
     { key:"notify", title:"Notifications", width:"12%" }
   ];
 
@@ -300,12 +315,13 @@ function renderRow(r) {
   const faalink = safe(r["link:faa"] || r["link:fa"]);
   const ownerHtml = owner ? (isHttp(faalink) ? `<a href="${faalink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
   const op = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
+  const route = safe(r.route);
+  // Show route after callsign in the same Aircraft cell, unless it's 'n/a'
+  const routeHtml = (route && route.toLowerCase() !== 'n/a') ? ` · ${route}` : '';
   const aircraft = `
-    <div class="mono">${cs || icao}</div>
+    <div class="mono">${cs || icao}${routeHtml}</div>
     <div>${tail ? tail+' · ' : ''}${typ}${op? ' · '+op : ''}</div>
   `.trim();
-
-  const route = safe(r.route);
 
   // Position: coords link only; angle outside link; add N/E
   const lat = r.lat, lon = r.lon;
@@ -322,7 +338,10 @@ function renderRow(r) {
   const coordsHtml = coordText
     ? (map ? `<a href="${map}" target="_blank" rel="noopener">${coordText}</a>` : coordText)
     : "";
-  const position = [coordsHtml, [angleStr, angleImg].filter(Boolean).join('')].filter(Boolean).join(' · ');
+  // Put coords on first line and angle (text + image) on a separate second line within the same cell.
+  const angleCombined = [angleStr, angleImg].filter(Boolean).join('');
+  const positionInner = [coordsHtml ? `<div>${coordsHtml}</div>` : '', angleCombined ? `<div>${angleCombined}</div>` : ''].filter(Boolean).join('');
+  const position = positionInner ? `<div class="position-cell">${positionInner}</div>` : "";
 
   const alt = r["altitude:value"] ? `${safe(r["altitude:value"])} ${safe(r["altitude:unit"] || "ft")}` : "";
   const spdNum = fmtInt(r["groundspeed:value"]);
@@ -347,30 +366,66 @@ function renderRow(r) {
   const spectro = safe(r["spectro:link"]);
   const noise = safe(r["noisegraph:link"]);
   const mp3 = safe(r["mp3:link"]);
-  if (photo && isHttp(photo)) links.push(`<a href="${photo}" target="_blank" rel="noopener">photo</a>`);
-  if (spectro) links.push(`<a href="${spectro}" target="_blank" rel="noopener">spectro</a>`);
-  if (noise) links.push(`<a href="${noise}" target="_blank" rel="noopener">noise</a>`);
-  if (mp3) links.push(`<a href="${mp3}" target="_blank" rel="noopener">mp3</a>`);
+  // Photo is shown as thumbnail; remove it from Links list to avoid duplication
+  // We'll render spectro as a thumbnail in the Spectro column and noise/mp3 as badges in the Sound column.
 
-  const notifyLinks = [];
-  const discord = r["discord:link"];
-  const bsky = r["bsky:link"];
-  const telegram = r["telegram:link"];
-  const mqttNotified = String(r["mqtt:notified"]) === 'true';
-  if (discord) notifyLinks.push(`<a href="${safe(discord)}" target="_blank" rel="noopener">Discord</a>`);
-  if (bsky) notifyLinks.push(`<a href="${safe(bsky)}" target="_blank" rel="noopener">Bluesky</a>`);
-  if (telegram) notifyLinks.push(`<a href="${safe(telegram)}" target="_blank" rel="noopener">Telegram</a>`);
-  if (mqttNotified) notifyLinks.push(`MQTT`);
-
-  let sound = "";
-  if (hasSound(r)) {
-    const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"])}` : "";
-    const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"])}` : "";
-    const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"])}"></span>` : "";
-    const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
-    const ng = r["noisegraph:link"];
-    sound = ng ? `<a href="${safe(ng)}" target="_blank" rel="noopener">${inner}</a>` : inner;
+  // Spectro cell: if a spectro link exists, show it as a small thumbnail (same height as main thumb)
+  // Note: the link may be relative (we applied cfg.noisePrefix earlier), so allow non-http URLs
+  let spectroCell = '';
+  if (spectro) {
+    const sUrl = safe(spectro);
+    spectroCell = `<a href="${sUrl}" target="_blank" rel="noopener"><img src="${sUrl}" alt="spectro" style="height:56px;width:56px;object-fit:cover;border-radius:.25rem"></a>`;
   }
+
+  // Notifications: show link if available, otherwise show a notified badge when the *_notified flag is true
+  const notifyLinks = [];
+  const discordLink = r["discord:link"];
+  const bskyLink = r["bsky:link"];
+  const telegramLink = r["telegram:link"];
+  const mqttFlag = r["mqtt:notified"];
+  // Treat several textual representations as truthy
+  const truthy = v => {
+    if (v === true || v === 1) return true;
+    const s = String(v || '').toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  };
+  const discordNotified = truthy(r["discord:notified"]);
+  const bskyNotified = truthy(r["bsky:notified"]);
+  const telegramNotified = truthy(r["telegram:notified"]);
+  const mqttNotified = truthy(mqttFlag);
+
+  if (discordLink) notifyLinks.push(`<a href="${safe(discordLink)}" target="_blank" rel="noopener">Discord</a>`);
+  else if (discordNotified) notifyLinks.push(`<span class="chip muted">Discord</span>`);
+
+  if (bskyLink) notifyLinks.push(`<a href="${safe(bskyLink)}" target="_blank" rel="noopener">Bluesky</a>`);
+  else if (bskyNotified) notifyLinks.push(`<span class="chip muted">Bluesky</span>`);
+
+  if (telegramLink) notifyLinks.push(`<a href="${safe(telegramLink)}" target="_blank" rel="noopener">Telegram</a>`);
+  else if (telegramNotified) notifyLinks.push(`<span class="chip muted">Telegram</span>`);
+
+  if (mqttNotified) notifyLinks.push(`<span class="chip muted">MQTT</span>`);
+
+  // Sound column: show a small chip with peak/loud info, and separate small clickable badges for noisegraph and mp3 if present.
+  let sound = "";
+  const parts = [];
+  if (hasSound(r)) {
+  const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"]) } dbFS` : "";
+  const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"]) } dB` : "";
+  const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
+    const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
+    parts.push(inner);
+  }
+  // Noisegraph badge
+  if (noise) {
+    const nUrl = safe(noise);
+    parts.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener">noise</a>`);
+  }
+  // MP3 badge
+  if (mp3) {
+    const mUrl = safe(mp3);
+    parts.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener">mp3</a>`);
+  }
+  sound = parts.join(' ');
 
   const squawkVal = safe(r["squawk:value"]);
   const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
@@ -379,20 +434,19 @@ function renderRow(r) {
 
   return {
     row: [
-      `<span class="mono">${idx}</span>`,
-      `${thumbEl}`,
-      `${whenHtml}`,
-      `${aircraft}`,
-      `${route || ""}`,
-      `${position}`,
-      `${alt}`,
-      `${spd}`,
-      `${trk}`,
-      `${sound}`,
-      `${squawk}`,
-      `${links.join(' · ')}`,
-      `${notifyLinks.join(' · ')}`
-    ],
+    `${idxCell}`,
+    `${thumbEl}`,
+    `${whenHtml}`,
+  `${aircraft}`,
+  `${position}`,
+    `${alt}`,
+    `${spd}`,
+    `${trk}`,
+    `${squawk}`,
+    `${sound}`,
+  `${spectroCell}`,
+    `${notifyLinks.join(' · ')}`
+  ],
     incomplete: String(r.complete) !== 'true'
   };
 }
@@ -417,7 +471,7 @@ function addRow(r){
     const latNum = Number(lat);
     const lonNum = Number(lon);
     if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return "";
-    return `${toFixed4(latNum)} N, ${toFixed4(lonNum)} E`;
+    return `${toFixed4(latNum)}&deg; N, ${toFixed4(lonNum)}&deg; E`;
   }
 
 
@@ -432,8 +486,35 @@ function addRow(r){
   const dec = new TextDecoder();
   let buf = '';
   let added = 0;
+  let seenHeader = false;
+  let streamGlobals = {};
+
+  // Normalize/coerce globals into useful JS types
+  function setStreamGlobals(g) {
+    streamGlobals = {};
+    if (!g || typeof g !== 'object') return;
+    // Booleans stored as strings "true"/"1"/"yes"
+    const truthy = v => {
+      if (v === true || v === 1) return true;
+      if (typeof v !== 'string') return false;
+      const s = v.toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    };
+    streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
+    streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
+    streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
+    streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
+    streamGlobals.maxindex = Number(g.maxindex) || 0;
+    // Preserve any other keys as-is
+    for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+  }
 
   const redraw = ()=> table.order([[0,'asc']]).page('first').draw(true);
+
+  function rowCount() {
+    // Subtract 1 to exclude the header row
+    return Math.max(0, table.rows().count() - 1);
+  }
 
   while (true) {
     const {value, done} = await reader.read();
@@ -445,22 +526,65 @@ function addRow(r){
       if (!line.trim()) continue;
       let obj;
       try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
+      // The stream may emit a globals object first, then a schema (__columns), then rows.
+      if (obj && obj.__globals) {
+        // Store and coerce globals
+        setStreamGlobals(obj.__globals || {});
+        // Update LASTUPDATE in header if present in globals (coerced)
+        if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
+          const dt = new Date(streamGlobals.LASTUPDATE * 1000);
+          const hh = String(dt.getHours()).padStart(2,'0');
+          const mm = String(dt.getMinutes()).padStart(2,'0');
+          lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
+        }
+        // Show maxindex in progress element if available
+        if (streamGlobals.maxindex && streamGlobals.maxindex > 0) {
+          prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
+        }
+        continue; // consumed globals
+      }
+
+      // The first object is likely the schema with __columns; subsequent objects are rows.
+      if (!seenHeader && obj && obj.__columns) {
+        seenHeader = true;
+        continue; // skip schema object
+      }
       if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
         prog.textContent = `Error: ${obj.error}`;
         continue;
       }
-      addRow(obj);
+      // If the object is a normal row, merge in globals so renderRow can read flags
+      // (e.g., HASNOISE, HASIMAGES, LASTUPDATE)
+      const payload = (obj && typeof obj === 'object')
+        ? Object.assign({}, streamGlobals, obj)
+        : obj;
+
+      // Apply temporary noise prefix if configured and links exist
+      if (payload && typeof payload === 'object' && cfg.noisePrefix) {
+        const p = cfg.noisePrefix;
+        if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
+          payload['noisegraph:link'] = p + payload['noisegraph:link'];
+        }
+        if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
+          payload['spectro:link'] = p + payload['spectro:link'];
+        }
+        if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
+          payload['mp3:link'] = p + payload['mp3:link'];
+        }
+      }
+
+      addRow(payload);
       added++;
-      if (added % 25 === 0) {
+      if (added % 10 === 0) {
         redraw();
-        prog.textContent = `Loaded ${table.rows().count()}…`;
+        prog.textContent = `Loaded ${rowCount()}…`;
       }
     }
   }
 
   if (buf.trim()) { try { addRow(JSON.parse(buf)); } catch(e){} }
   redraw();
-  if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${table.rows().count()}`;
+  if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
 })();
 
 </script>

@@ -598,7 +598,7 @@ GENERATE_JSON() {
   local re
   local k
   {
-    re='^(HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
+    re='^(LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
@@ -615,47 +615,53 @@ GENERATE_JSON() {
     }
 
     n = split(key, a, ":")
-    if (n < 1 || n > 3) next
-    if (a[1] !~ /^(max.*|HAS.*|[0-9]+([.][0-9]+)?)$/) next
-    if (a[2] !~ /^[A-Za-z0-9_-]+$/) next
-    if (n == 3 && a[3] !~ /^[A-Za-z0-9_-]+$/) next
-
+    
     idx = a[1]
     k = a[2]
-    subkey = ""
-    if (n == 3) subkey = a[3]
+    if (n == 3) { subkey = a[3] } else { subkey = "" }
+    if (idx == "maxindex" || idx ~ /^LAST/ || idx ~ /^HAS/) {
+      # Global keys
+      k = idx
+      idx = -1
+    } else if (idx !~ /^[0-9]+$/) {
+      next
+    }
 
 
     # emit idx\0key\0sub\0value\0
     printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
     count++
   }' | \
-  jq -R -s '
-    split("\u0000")
-    | .[:-1]
-    | [range(0; length; 4) as $i |
-        {i:(.[ $i ]|tonumber),
-        k:.[ $i+1 ],
-        s:(if (.[ $i+2 ]|length)==0 then null else .[ $i+2 ] end),
-        v:.[ $i+3 ] }
-      ]
-    | reduce .[] as $t ({};
-        .[$t.i|tostring] |= (
-          (. // {})
-          | if $t.s == null then
-              # Set scalar; overwrite object—last write wins
-              .[$t.k] = $t.v
-            else
-              # Ensure object before setting subkey
-              .[$t.k] = ((.[$t.k] | if type=="object" then . else {} end) | .[$t.s] = $t.v)
-            end
-        )
-      )
-    | to_entries
-    | sort_by(.key|tonumber)
-    | reverse
-    | map({index:(.key|tonumber)} + .value)
-  '  > "$tmpfile"
+jq -R -s '
+  def set_kvs(obj; k; s; v):
+    if s == null or s == "" then obj + { (k): v }
+    else obj + { (k): ((obj[k] // {}) + { (s): v }) }
+    end;
+
+  ( . // "" )
+  | split("\u0000") | .[:-1]
+  | [ range(0; length; 4) as $i |
+      { i: (.[ $i ] | tonumber),
+        k: .[$i+1],
+        s: (if (.[ $i+2] | length) == 0 then null else .[$i+2] end),
+        v: .[$i+3] }
+    ]
+  | reduce .[] as $t ({ groups: {}, globals: {} };
+      if $t.i == -1 then
+        .globals = set_kvs(.globals; $t.k; $t.s; $t.v)
+      else
+        .groups[($t.i | tostring)] =
+          set_kvs((.groups[($t.i | tostring)] // {}); $t.k; $t.s; $t.v)
+      end
+    )
+  | ( .groups
+      | to_entries
+      | sort_by(.key | tonumber)
+      | reverse
+      | map({ index: (.key | tonumber) } + .value)
+    ) as $items
+  | [ .globals ] + $items
+' > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
   chmod a+r "$JSONOUT"
 }
@@ -989,6 +995,7 @@ if (( ${#socketrecords[@]} > 0 )); then
   if [[ -z "${records[HASROUTE]}" ]]; then records[HASROUTE]=false; fi
   if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
   if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+  records[LASTUPDATE]="$NOWTIME"
 
 
 

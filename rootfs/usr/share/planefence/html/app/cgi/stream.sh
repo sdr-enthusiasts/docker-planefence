@@ -55,6 +55,10 @@ if ! jq -r '
     "sound:color","sound:loudness","sound:peak",
     "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file"
   ];
+  def globals: [
+    "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE"
+  ];
+
   def flat1:
     if type!="object" then {}
     else ( . as $o
@@ -69,18 +73,31 @@ if ! jq -r '
             elif ($v|type)=="array" then .
             else . + { ($k): $v } end))
     end;
+
   def as_str_or_empty($x): if $x==null then "" else ($x|tostring) end;
 
   if type!="array" then {error:"expected array root"} | tojson
   else
-    ({__columns: pri} | tojson),
-    ( .[] | flat1 ) as $r
-    | if ($r|length)==0 then (reduce pri[] as $c ({}; .+{($c):""})) | tojson
-      else (
-        reduce pri[] as $c ({}; .+{($c): as_str_or_empty($r[$c])})
-        + (reduce ((($r|keys)-pri)|sort)[] as $c ({}; .+{($c): as_str_or_empty($r[$c])}))
-      ) | tojson
-      end
+    # Detect globals in first element (must be object and not have "index")
+    ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
+    | ( if $has_globals then .[0] else {} end ) as $globals
+    | ( if $has_globals then .[1:] else . end ) as $rows
+
+    # 1) Emit globals object (always emit, possibly empty {})
+    | ({__globals: $globals} | tojson),
+
+      # 2) Emit schema
+      ({__columns: pri} | tojson),
+
+      # 3) Emit rows
+      ( $rows[]? | flat1 ) as $r
+      | if ($r|length)==0
+        then (reduce pri[] as $c ({}; .+{($c):""})) | tojson
+        else (
+          reduce pri[] as $c ({}; .+{($c): as_str_or_empty($r[$c])})
+          + (reduce ((($r|keys)-pri)|sort)[] as $c ({}; .+{($c): as_str_or_empty($r[$c])}))
+        ) | tojson
+        end
   end
 ' -- "$JSONFILE"; then
   err=$?

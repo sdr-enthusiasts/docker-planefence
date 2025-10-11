@@ -135,7 +135,7 @@ readarray -t index < <(
   ' "$tmpfile"
 )
 
-# Second query: indices where lastseen < CST and screenshot:checked != true
+# Second query: indices where lastseen < CST and checked:screenshot != true
 readarray -t stale_indices < <(
   awk -v CST="$CONTAINERSTARTTIME" -v FS='\037' '
     {
