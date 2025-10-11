@@ -27,6 +27,8 @@
 
     :root {
       color-scheme: light dark;
+      /* height reserved for the top page header; table thead will stick beneath this */
+      --header-height: 3.5rem;
       --bg: #ffffff;
       --fg: #111111;
       --muted: #666;
@@ -64,7 +66,9 @@
       background: var(--bg); color: var(--fg);
       line-height: 1.45;
     }
-    header, footer { padding: .75rem 1rem; background: var(--soft); display: flex; align-items: center; gap: .75rem; }
+  header, footer { padding: .75rem 1rem; background: var(--soft); display: flex; align-items: center; gap: .75rem; }
+  /* Keep header visible while scrolling */
+  header { position: sticky; top: 0; z-index: 50; }
     header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
     header .spacer { flex: 1; }
     button, .btn {
@@ -79,6 +83,13 @@
 
     table.dataTable tbody tr:nth-child(odd) { background: var(--table-stripe); }
     table.dataTable thead th { white-space: nowrap; }
+    /* Keep the table header visible while scrolling; it will sit just below the page header */
+    table.dataTable thead th {
+      position: sticky;
+      top: var(--header-height);
+      z-index: 40;
+      background: var(--soft);
+    }
     th, td { vertical-align: middle; }
     img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
     .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
@@ -88,12 +99,14 @@
   /* Ensure angle image aligns center with the angle text */
   .angle-img { vertical-align: middle; height: 1em; margin-left: .35rem; }
     .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
-    .dot { display:inline-block; width:.6em; height:.6em; border-radius:50%; vertical-align:middle; }
+  .dot { display:none; }
     .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
   /* small SVG icons inside chips — make slightly larger for visibility */
   .chip svg { height: 1.25em; width: 1.25em; vertical-align: -0.15em; }
   .chip.muted { opacity: 0.8; }
   .badge-icon { height: 1.25em; width: 1.25em; object-fit: contain; vertical-align: -0.15em; }
+  /* In dark mode, invert bitmap badges so dark lines become light */
+  html.dark .badge-icon { filter: invert(1) brightness(2) contrast(1.2); }
 
   /* Modal preview for spectro images */
   .pf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999; }
@@ -149,12 +162,10 @@
     // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
     // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
     noisePrefix: 'noise/',
-    // Optional per-badge images (place under ./assets/). Prefer SVG for crisp scaling.
-    noiseIcon: './assets/badge.svg',
-    mp3Icon: './assets/badge.svg',
-    // Dark-mode variants (used when document.documentElement.classList.contains('dark') is true)
-    noiseIconDark: './assets/badge-dark.svg',
-    mp3IconDark: './assets/badge-dark.svg'
+  // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
+  // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
+  noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
+  mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E'
   };
 
   // -------- Theme (dark/light) --------
@@ -285,8 +296,8 @@
     { key:"aircraft", title:"Aircraft", width:"22%" },
   // Route column removed; route will be shown in Aircraft column after callsign
     { key:"position", title:"Position", width:"16%" },
-    { key:"alt", title:"Alt", width:"7%" },
-    { key:"spd", title:"Spd", width:"6%" },
+    // Combined Alt/Spd column: both values shown on separate lines inside the same cell
+    { key:"altspd", title:"Alt / Spd", width:"13%" },
     { key:"trk", title:"Track", width:"7%" },
   { key:"squawk", title:"Squawk", width:"8%" },
   { key:"sound", title:"Sound", width:"10%" },
@@ -393,10 +404,16 @@ function renderRow(r) {
   const positionInner = [coordsHtml ? `<div>${coordsHtml}</div>` : '', angleCombined ? `<div>${angleCombined}</div>` : ''].filter(Boolean).join('');
   const position = positionInner ? `<div class="position-cell">${positionInner}</div>` : "";
 
-  const alt = r["altitude:value"] ? `${safe(r["altitude:value"])} ${safe(r["altitude:unit"] || "ft")}` : "";
+  const altRaw = Number(r["altitude:value"]);
+  const altVal = Number.isFinite(altRaw) ? `${safe(r["altitude:value"])} ${safe(r["altitude:unit"] || "ft")}` : "";
   const spdNum = fmtInt(r["groundspeed:value"]);
   const spdUnit = safe(r["groundspeed:unit"] || "kt");
-  const spd = spdNum != null ? `${spdNum} ${spdUnit}` : "";
+  const spdVal = spdNum != null ? `${spdNum} ${spdUnit}` : "";
+  // Choose numeric ordering priority: altitude (feet) if present, else groundspeed (kt), else 0
+  const numericOrder = Number.isFinite(altRaw) ? altRaw : (spdNum != null ? spdNum : 0);
+  // Combine altitude and speed into a single cell (altitude on first line, speed on second if present)
+  const altspdInner = [altVal ? `<div class="mono">${altVal}</div>` : '', spdVal ? `<div class="mono">${spdVal}</div>` : ''].filter(Boolean).join('');
+  const altspd = `<div data-order="${numericOrder}">${altspdInner}</div>`;
 
   const trackDegRaw = Number(r["track:value"]);
   const trackDegInt = Number.isFinite(trackDegRaw) ? Math.round(trackDegRaw) : null;
@@ -469,17 +486,15 @@ function renderRow(r) {
   // Noisegraph badge
   if (noise) {
     const nUrl = safe(noise);
-    // Use configured image badge when available; switch to dark variant in dark mode
-    const dark = document.documentElement.classList.contains('dark');
-    const nIcon = dark && cfg.noiseIconDark ? cfg.noiseIconDark : cfg.noiseIcon;
+    // Use configured image badge when available; CSS will invert it in dark mode
+    const nIcon = cfg.noiseIcon;
     const nBadge = nIcon ? `<img class="badge-icon" src="${nIcon}" alt="noise">` : iconNoise();
     parts.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener">${nBadge}</a>`);
   }
   // MP3 badge
   if (mp3) {
     const mUrl = safe(mp3);
-    const dark = document.documentElement.classList.contains('dark');
-    const mIcon = dark && cfg.mp3IconDark ? cfg.mp3IconDark : cfg.mp3Icon;
+    const mIcon = cfg.mp3Icon;
     const mBadge = mIcon ? `<img class="badge-icon" src="${mIcon}" alt="mp3">` : iconMp3();
     parts.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener">${mBadge}</a>`);
   }
@@ -497,8 +512,7 @@ function renderRow(r) {
     `${whenHtml}`,
   `${aircraft}`,
   `${position}`,
-    `${alt}`,
-    `${spd}`,
+  `${altspd}`,
     `${trk}`,
     `${squawk}`,
     `${sound}`,

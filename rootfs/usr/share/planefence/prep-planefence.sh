@@ -50,7 +50,8 @@ function configure_both() {
 mkdir -p /usr/share/planefence/persist/.internal
 mkdir -p /usr/share/planefence/persist/planepix/cache
 mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
-mkdir -p /usr/share/planefence/html/scripts
+mkdir -p -m 0777 /usr/share/planefence/html/scripts
+mkdir -p -m 0777 /usr/share/planefence/html/app/assets
 chmod -f a=rwx /usr/share/planefence/persist /usr/share/planefence/persist/planepix
 chmod -fR a+rw /usr/share/planefence/persist/{.[!.]*,*}
 chmod u=rwx,go=rx \
@@ -79,6 +80,7 @@ fi
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
 cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
+cp -f /usr/share/planefence/stage/{*.png,*.svg} /usr/share/planefence/html/app/assets
 cp -n /usr/share/planefence/stage/favicon.ico /usr/share/planefence/html/plane-alert
 mv -f /usr/share/planefence/html/{*.js,*.css} /usr/share/planefence/html/scripts
 mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
