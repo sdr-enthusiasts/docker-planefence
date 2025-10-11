@@ -90,6 +90,16 @@
     .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
     .dot { display:inline-block; width:.6em; height:.6em; border-radius:50%; vertical-align:middle; }
     .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
+  /* small SVG icons inside chips — make slightly larger for visibility */
+  .chip svg { height: 1.25em; width: 1.25em; vertical-align: -0.15em; }
+  .chip.muted { opacity: 0.8; }
+  .badge-icon { height: 1.25em; width: 1.25em; object-fit: contain; vertical-align: -0.15em; }
+
+  /* Modal preview for spectro images */
+  .pf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999; }
+  .pf-modal.open { display: flex; }
+  .pf-modal .box { max-width: 90%; max-height: 90%; border-radius: .5rem; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+  .pf-modal img { display: block; max-width: 100%; max-height: 100%; }
 
     .seen-incomplete { color: var(--row-incomplete); }
 
@@ -138,7 +148,13 @@
     mediaBase: './assets/',
     // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
     // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
-    noisePrefix: 'noise/'
+    noisePrefix: 'noise/',
+    // Optional per-badge images (place under ./assets/). Prefer SVG for crisp scaling.
+    noiseIcon: './assets/badge.svg',
+    mp3Icon: './assets/badge.svg',
+    // Dark-mode variants (used when document.documentElement.classList.contains('dark') is true)
+    noiseIconDark: './assets/badge-dark.svg',
+    mp3IconDark: './assets/badge-dark.svg'
   };
 
   // -------- Theme (dark/light) --------
@@ -226,6 +242,40 @@
   function hasNotifications(r){
     return r['discord:link'] || r['bsky:link'] || r['telegram:link'] || r['mqtt:notified'];
   }
+
+  // Normalize per-row values into typed fields so rendering is consistent
+  function normalizeRow(r) {
+    if (!r || typeof r !== 'object') return r;
+    const out = Object.assign({}, r);
+    // Coerce boolean-like flags
+    const truthy = v => {
+      if (v === true || v === 1) return true;
+      const s = String(v || '').toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    };
+    out.HASNOISE = truthy(out.HASNOISE || out.hasOwnProperty('HASNOISE') && out.HASNOISE);
+    out.HASIMAGES = truthy(out.HASIMAGES || out.hasOwnProperty('HASIMAGES') && out.HASIMAGES);
+    out.HASROUTE = truthy(out.HASROUTE || out.hasOwnProperty('HASROUTE') && out.HASROUTE);
+    out.complete = String(out.complete) === 'true' || out.complete === true;
+    // Coerce notified flags
+    out['discord:notified'] = truthy(out['discord:notified']);
+    out['bsky:notified'] = truthy(out['bsky:notified']);
+    out['telegram:notified'] = truthy(out['telegram:notified']);
+    out['mqtt:notified'] = truthy(out['mqtt:notified']);
+    // Numeric conversions
+    out.index = Number(out.index);
+    out['time:lastseen'] = Number(out['time:lastseen']) || Number(out['time:firstseen']) || 0;
+    out['time:firstseen'] = Number(out['time:firstseen']) || 0;
+    out['time:time_at_mindist'] = Number(out['time:time_at_mindist']) || 0;
+    out['sound:peak'] = out['sound:peak'] !== '' ? out['sound:peak'] : null;
+    out['sound:loudness'] = out['sound:loudness'] !== '' ? out['sound:loudness'] : null;
+    return out;
+  }
+
+  // Small inline SVG icon helpers
+  function iconNoise(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3l3-6v12l-3-6H3z" fill="currentColor"/></svg>` }
+  function iconMp3(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" fill="currentColor"/></svg>` }
+  function iconSpectro(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" fill="none"/><path d="M6 12h1v2H6v-2zm3-2h1v4H9v-4zm3-3h1v7h-1V7zm3 1h1v6h-1V8zm3-2h1v8h-1V6z" fill="currentColor"/></svg>` }
 
   // -------- Columns definition --------
   const viewCols = [
@@ -374,7 +424,8 @@ function renderRow(r) {
   let spectroCell = '';
   if (spectro) {
     const sUrl = safe(spectro);
-    spectroCell = `<a href="${sUrl}" target="_blank" rel="noopener"><img src="${sUrl}" alt="spectro" style="height:56px;width:56px;object-fit:cover;border-radius:.25rem"></a>`;
+    // Thumbnail opens modal preview instead of linking directly
+    spectroCell = `<a href="#" class="spectro-thumb" data-src="${sUrl}" rel="noopener"><img src="${sUrl}" alt="spectro" style="height:56px;width:56px;object-fit:cover;border-radius:.25rem"></a>`;
   }
 
   // Notifications: show link if available, otherwise show a notified badge when the *_notified flag is true
@@ -418,12 +469,19 @@ function renderRow(r) {
   // Noisegraph badge
   if (noise) {
     const nUrl = safe(noise);
-    parts.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener">noise</a>`);
+    // Use configured image badge when available; switch to dark variant in dark mode
+    const dark = document.documentElement.classList.contains('dark');
+    const nIcon = dark && cfg.noiseIconDark ? cfg.noiseIconDark : cfg.noiseIcon;
+    const nBadge = nIcon ? `<img class="badge-icon" src="${nIcon}" alt="noise">` : iconNoise();
+    parts.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener">${nBadge}</a>`);
   }
   // MP3 badge
   if (mp3) {
     const mUrl = safe(mp3);
-    parts.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener">mp3</a>`);
+    const dark = document.documentElement.classList.contains('dark');
+    const mIcon = dark && cfg.mp3IconDark ? cfg.mp3IconDark : cfg.mp3Icon;
+    const mBadge = mIcon ? `<img class="badge-icon" src="${mIcon}" alt="mp3">` : iconMp3();
+    parts.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener">${mBadge}</a>`);
   }
   sound = parts.join(' ');
 
@@ -573,7 +631,9 @@ function addRow(r){
         }
       }
 
-      addRow(payload);
+  // Normalize payload row-level fields
+  const norm = normalizeRow(payload);
+  addRow(norm);
       added++;
       if (added % 10 === 0) {
         redraw();
@@ -587,6 +647,34 @@ function addRow(r){
   if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
 })();
 
+</script>
+
+<!-- Modal for spectro preview -->
+<div id="pf-modal" class="pf-modal" role="dialog" aria-hidden="true">
+  <div class="box"><img id="pf-modal-img" src="" alt="preview"></div>
+</div>
+
+<script>
+// Modal handlers
+const modal = document.getElementById('pf-modal');
+const modalImg = document.getElementById('pf-modal-img');
+document.addEventListener('click', function(ev){
+  const t = ev.target.closest && ev.target.closest('.spectro-thumb');
+  if (t) {
+    ev.preventDefault();
+    const src = t.getAttribute('data-src');
+    if (src) {
+      modalImg.src = src;
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+    }
+  }
+  // close when clicking outside the box
+  if (ev.target === modal) {
+    modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); modalImg.src = '';
+  }
+});
+document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); modalImg.src = ''; } });
 </script>
 
 </body></html>
