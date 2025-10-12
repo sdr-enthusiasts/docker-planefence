@@ -81,31 +81,39 @@ build_index_and_stale() {
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
-        if (key=="time:lastseen")           { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="complete")           complete[id]=val
-        else if (key=="checked:screenshot") schecked[id]=val
+        # Track presence/values per id
+        if (key=="time:lastseen") { lastseen[id]=val+0; seen_last[id]=1 }
+        else if (key=="complete") { complete[id]=val; seen_complete[id]=1 }
+        else if (key=="checked:screenshot") { schecked[id]=val; seen_checked[id]=1 }
       }
-      END {        
+      END {
         CSTN = CST+0
-        # Evaluate only ids that have lastseen
+        # Consider all ids that have either lastseen or complete
+        for (id in seen_last) ids[id]=1
+        for (id in seen_complete) ids[id]=1
+
         for (id in ids) {
-          # should we even look at the record?
-          if (!enabled((id in schecked)? schecked[id] : "")) continue
-          ls = lastseen[id]
-          # stale first
-          if (ls < CSTN) { stale[id]=1; continue }
-          # eligibility checks
-          c  = (id in complete)? complete[id] : ""
-          if (!enabled(c)) continue
-          if (enabled(n)) continue
-          if (n=="error") continue
+          # If checked:screenshot present with any non-empty value, skip the id entirely
+          if (id in seen_checked && (schecked[id] != "")) continue
+
+          # If complete missing or false/empty/0/no, skip
+          if (!(id in seen_complete)) continue
+          if (!is_truthy(complete[id])) continue
+
+          # If lastseen exists and is less than container start, tag stale
+          if ((id in seen_last) && (lastseen[id] < CSTN)) { stale[id]=1; continue }
+
+          # Otherwise include as eligible
           ok[id]=1
         }
+
         # Print lists (tagged), numerically sorted
         ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
         ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
       }
-      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
+
+      # Helper to determine truthy values (non-empty, not 0/false/no)
+      function is_truthy(x, lx) { lx=tolower(x); return (x != "" && x != "0" && lx != "false" && lx != "no") }
     '
   )"
 

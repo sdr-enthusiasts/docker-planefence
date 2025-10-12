@@ -169,7 +169,7 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
-  template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}}" "$template")"
+  template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":link:map]})" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PlaneFence</title>
+  <title>Planefence</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
   <!-- 1) CSS: row dim + small updater + dark zebra fix -->
   <style>
@@ -83,6 +83,10 @@
 
     table.dataTable tbody tr:nth-child(odd) { background: var(--table-stripe); }
     table.dataTable thead th { white-space: nowrap; }
+  /* Left-align all table headers for better readability */
+  table.dataTable thead th, table#t thead th { text-align: left !important; }
+  /* Constrain spectro column to thumbnail width so it doesn't expand */
+  table.dataTable tbody td:nth-child(10), table.dataTable thead th:nth-child(10) { max-width: 56px; width: 56px; }
     /* Keep the table header visible while scrolling; it will sit just below the page header */
     table.dataTable thead th {
       position: sticky;
@@ -108,6 +112,9 @@
   /* In dark mode, invert bitmap badges so dark lines become light */
   html.dark .badge-icon { filter: invert(1) brightness(2) contrast(1.2); }
 
+  /* Chips (small badges) should use the chip background color in dark mode */
+  html.dark .chip { background: var(--chip-bg); color: var(--chip-fg); }
+
   /* Modal preview for spectro images */
   .pf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999; }
   .pf-modal.open { display: flex; }
@@ -122,11 +129,46 @@
   /* Keep Seen column readable but compact: single-line with ellipsis if too long */
   table.dataTable thead th:nth-child(3) { min-width: 8rem; max-width: 12rem; }
   table.dataTable tbody td:nth-child(3) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Highlight freshly-added rows briefly (soft fade-out) */
+  .pf-new-row { animation: pf-fade 2.2s ease-out; background-color: rgba(108,169,255,0.18); }
+  @keyframes pf-fade { 0% { background-color: rgba(108,169,255,0.28); } 100% { background-color: transparent; } }
+  /* Ensure DataTables respects theme colors in dark mode and doesn't leave
+    white cells/stripes. Use !important where DataTables default CSS is stronger. */
+  table.dataTable { background: transparent; }
+  table.dataTable tbody td, table.dataTable tbody tr { background: transparent; }
+  /* Regular stripe rules (light and dark) */
+  table.dataTable.stripe tbody tr.odd,
+  table.dataTable.display tbody tr.odd { background-color: var(--table-stripe) !important; }
+  table.dataTable tbody tr.even { background-color: var(--bg) !important; }
+  /* Dark-mode specific enforcement to override DataTables' defaults */
+  html.dark table.dataTable.stripe tbody tr.odd,
+  html.dark table.dataTable.display tbody tr.odd { background-color: var(--table-stripe) !important; }
+  html.dark table.dataTable tbody tr.even { background-color: var(--bg) !important; }
+  /* Ensure individual cells (including the index cell span) don't show white */
+  html.dark table.dataTable tbody td, html.dark table.dataTable tbody td * { background: transparent !important; color: var(--fg) !important; }
+  /* DataTables sometimes wraps table body for scrolling; ensure those cells are covered */
+  html.dark .dataTables_scrollBody table tbody tr td { background: transparent !important; }
+
+  /* New-updates button default style (light mode) */
+  #newUpdates { background: var(--chip-bg); color: var(--chip-fg); border-color: var(--muted); }
+  /* Dark-mode adjustments for banner/button */
+  html.dark #newUpdates { background: rgba(108,169,255,0.08); color: var(--fg); border-color: rgba(255,255,255,0.06); }
+
+  /* Make the new-row highlight slightly different in dark mode */
+  html.dark .pf-new-row { background-color: rgba(108,169,255,0.12) !important; }
+
+  /* Row hover: ensure hover color is theme-aware (not white in dark mode) */
+  /* Light mode hover: subtle darker tint */
+  table.dataTable tbody tr:hover { background-color: rgba(0,0,0,0.03) !important; }
+  table.dataTable tbody tr:hover td, table.dataTable tbody tr:hover td * { background: transparent !important; }
+  /* Dark mode hover: subtle light tint */
+  html.dark table.dataTable tbody tr:hover { background-color: rgba(255,255,255,0.03) !important; }
+  html.dark table.dataTable tbody tr:hover td, html.dark table.dataTable tbody tr:hover td * { background: transparent !important; }
   </style>
 </head>
 <body>
   <header>
-    <h1>PlaneFence</h1>
+    <h1>Planefence</h1>
     <span class="status mono" id="progress">Loading…</span>
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
@@ -134,6 +176,7 @@
   <button id="themeToggle" title="Toggle dark/light">Dark</button>
   <button id="manualUpdate" title="Update now">Update</button>
   <button id="reload" title="Reload data">Reload</button>
+  <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
   </header>
 
   <main style="padding: 0 1rem 1rem;">
@@ -163,7 +206,7 @@
     mediaBase: './assets/',
     // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
     // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
-    noisePrefix: 'noise/',
+    noisePrefix: './noise/',
   // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
   // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
     noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
@@ -203,6 +246,21 @@
   const reloadBtn = document.getElementById('reload');
   reloadBtn?.addEventListener('click', () => location.reload());
   const manualUpdateBtn = document.getElementById('manualUpdate');
+  // global button reference (element created in the header)
+  const newUpdatesBtn = document.getElementById('newUpdates');
+
+  function updateNewUpdatesBanner(){
+    try {
+      if (!newUpdatesBtn) return;
+      const count = pendingNewIndices.size || 0;
+      if (count > 0) {
+        newUpdatesBtn.textContent = `New updates (${count})`;
+      } else {
+        newUpdatesBtn.textContent = 'New updates available';
+        newUpdatesBtn.style.display = 'none';
+      }
+    } catch (e) { /* ignore */ }
+  }
 
   // Next-poll tracking (timestamp in ms)
   let nextPollAt = null;
@@ -239,7 +297,7 @@
   function rowCount() {
     try {
       if (!table) return 0;
-      return Math.max(0, table.rows().count() - 1);
+      return Math.max(0, table.rows().count());
     } catch (e) { return 0; }
   }
 
@@ -341,16 +399,19 @@
   const viewCols = [
     { key:"idx", title:"#", width:"4%" },
     { key:"thumb", title:"", width:"6%" },
-  { key:"when", title:"Seen" },
+  { key:"when", title:"Time when closest" },
     { key:"aircraft", title:"Aircraft", width:"22%" },
   // Route column removed; route will be shown in Aircraft column after callsign
-    { key:"position", title:"Position", width:"16%" },
+  // Position column slightly narrower (~70% of previous). Previous was 16%.
+  { key:"position", title:"Position", width:"11%" },
     // Combined Alt/Spd column: both values shown on separate lines inside the same cell
-    { key:"altspd", title:"Alt / Spd", width:"13%" },
+  // Make Alt/Spd (speed) about 50% of previous width
+  { key:"altspd", title:"Alt / Spd", width:"7%" },
     { key:"trk", title:"Track", width:"7%" },
   { key:"squawk", title:"Squawk", width:"8%" },
   { key:"sound", title:"Sound", width:"10%" },
-  { key:"spectro", title:"Spectro", width:"10%" },
+  // Spectro column should match the spectro thumbnail size (56px)
+  { key:"spectro", title:"Spectro", width:"56px" },
     { key:"notify", title:"Notifications", width:"12%" }
   ];
 
@@ -359,6 +420,8 @@
   const rowByIndex = new Map();
   // Map of index -> consecutive-miss count used to implement a grace period before purging
   const missingCounts = new Map();
+  // Track indices added since last user-visible redraw. Used to highlight new rows.
+  const pendingNewIndices = new Set();
 
   // 2) DataTables init: numeric sort for idx, keep Seen desc
  function buildHeader(){
@@ -371,14 +434,48 @@
   }
 
   // Create DataTable and capture API
+  // Ordering plugin: read numeric value from an inner element's data-order attribute
+  // and use that as the sort key for the column. This ensures the index column
+  // sorts by the numeric index we embed in the rendered HTML.
+  jQuery.fn.dataTable.ext.order['dom-data-order'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        // If DataTables gives us an Element, query inside it
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order]');
+          if (el) {
+            const v = el.getAttribute('data-order');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        // Sometimes with deferRender DataTables may return a plain string for the cell.
+        // Handle that by parsing the HTML string for data-order instead of using querySelector.
+        if (typeof td === 'string') {
+          const m = td.match(/data-order="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      // fallback: parse numeric from text content (covers both Element and string)
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
   const api = $('#t').DataTable({
-    deferRender: true,
+    // Disable deferRender to ensure cells/nodes exist when we need to parse
+    // data-order attributes and to avoid string-only cell representations.
+    deferRender: false,
     pageLength: 25,
     responsive: true,
-    order: [[2, 'desc']],
+  // Default ordering: newest (highest index) first
+  order: [[0, 'desc']],
     columns: viewCols.map(_ => ({ title: _.title })),
     columnDefs: [
-      { targets: 0, type: 'num' },
+      // Use our dom-data-order plugin for column 0 (index) so sorting honors
+      // the numeric value placed in the cell's data-order attribute.
+      { targets: 0, orderDataType: 'dom-data-order' },
       { targets: "_all", render: (data)=>data }
     ],
     createdRow: function(row, data){
@@ -406,6 +503,67 @@
   // Store globally if you need it
   table = api;
   window.table = api;
+
+  // Preserve top row when the page length changes: capture current display start
+  // and restore it after DataTables applies the new length. This keeps the
+  // same top row visible and lets additional rows appear below it.
+  try {
+    const lenSel = document.querySelector('#t_length select');
+    if (lenSel) {
+      let anchorIdx = null;
+      // On focus store the numeric index value from the first logical row using DOM if available.
+      // Using DOM is more robust now that deferRender is disabled; fallback to column data if needed.
+      lenSel.addEventListener('focus', ()=>{
+        try {
+          const info = table.page ? table.page.info() : null;
+          if (!info) return;
+          const start = info.start || 0;
+          // Prefer reading from the visible DOM row if present
+          const tr = document.querySelector('#t tbody tr');
+          if (tr && tr.dataset && tr.dataset.idx) {
+            anchorIdx = Number(tr.dataset.idx);
+            return;
+          }
+          // Fallback: use column data
+          const colData = table.column(0, {order: 'applied'}).data();
+          if (!colData || colData.length === 0) { anchorIdx = null; return; }
+          const cell = String(colData[start] || '');
+          const m = cell.match(/data-order="(-?\d+)"/);
+          anchorIdx = m ? Number(m[1]) : null;
+        } catch (e) { anchorIdx = null; }
+      });
+
+      lenSel.addEventListener('change', ()=>{
+        try {
+          if (anchorIdx == null) return;
+          // After the change, give DataTables a tick to reflow, then try to locate the
+          // same anchor index in the newly ordered column data. We aggressively
+          // invalidate rows to ensure data() returns DOM/HTML we can parse.
+          setTimeout(()=>{
+            try {
+              try { table.rows().invalidate(); } catch(e) { /* ignore */ }
+              const col = table.column(0, {order: 'applied'});
+              const colDataArr = col.data().toArray ? col.data().toArray() : Array.from(col.data());
+              const ids = colDataArr.map(c => {
+                const s = String(c || '');
+                const m = s.match(/data-order="(-?\d+)"/);
+                return m ? Number(m[1]) : null;
+              });
+              const pos = ids.indexOf(Number(anchorIdx));
+              if (pos >= 0) {
+                const newPage = Math.floor(pos / table.page.len());
+                table.page(newPage).draw(false);
+              } else {
+                // Fallback: go to first page so user sees newest rows
+                table.page('first').draw(false);
+              }
+            } catch (e) { console.warn('anchor restore failed', e); table.page('first').draw(false); }
+            anchorIdx = null;
+          }, 50);
+        } catch (e) { anchorIdx = null; }
+      });
+    }
+  } catch(e) { /* ignore */ }
 
   // Populate rowByIndex for any rows DataTables already created during init
   try {
@@ -460,12 +618,20 @@ function renderRow(r) {
   const faalink = safe(r["link:faa"] || r["link:fa"]);
   const ownerHtml = owner ? (isHttp(faalink) ? `<a href="${faalink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
   const op = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
+  // If a type is present, render it as a Skybrary link (lowercased). Encode the path component to be safe.
+  const typHtml = typ ? (() => {
+    try {
+      const typePath = encodeURIComponent(String(typ).toLowerCase());
+      const url = `https://skybrary.aero/aircraft/${typePath}`;
+      return `<a href="${url}" target="_blank" rel="noopener">${typ}</a>`;
+    } catch (e) { return typ; }
+  })() : '';
   const route = safe(r.route);
   // Show route after callsign in the same Aircraft cell, unless it's 'n/a'
   const routeHtml = (route && route.toLowerCase() !== 'n/a') ? ` · ${route}` : '';
   const aircraft = `
     <div class="mono">${cs || icao}${routeHtml}</div>
-    <div>${tail ? tail+' · ' : ''}${typ}${op? ' · '+op : ''}</div>
+    <div>${tail ? tail+' · ' : ''}${typHtml || typ}${op? ' · '+op : ''}</div>
   `.trim();
 
   // Position: coords link only; angle outside link; add N/E
@@ -675,12 +841,53 @@ function addRow(r){
           for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
         }
 
-        const redraw = ()=> table.order([[0,'asc']]).page('first').draw(true);
+        // Redraw helper: if the user is on the first page, fully redraw so new
+        // records immediately appear at the top. If the user is elsewhere, show
+        // a "New updates available" banner instead and don't change their page.
+        const redraw = (forceFull=false)=> {
+          try {
+            if (!table) return;
+            const info = table.page ? table.page.info() : null;
+            const onFirst = info && info.page === 0;
+            if (forceFull || onFirst) {
+              // Full redraw to ensure rows appear in the expected order and
+              // DataTables re-renders the page 0 contents.
+              table.order([[0,'desc']]).page('first').draw(false);
+              // After drawing, highlight any newly added rows registered in pendingNewIndices
+              highlightPendingNewRows();
+              // hide banner when we show the new rows
+              if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
+            } else {
+              // Not on first page: reveal banner so user can choose to jump.
+              if (newUpdatesBtn) {
+                newUpdatesBtn.style.display = 'inline-block';
+                updateNewUpdatesBanner();
+              }
+              // Still update internal ordering/data so rows are present when the user returns
+              table.order([[0,'desc']]).draw(false);
+            }
+          } catch (e) { console.error('redraw error', e); }
+        };
 
-        function rowCount() {
-          // Subtract 1 to exclude the header row
-          return Math.max(0, table.rows().count() - 1);
+        // When called after a table draw, highlight rows whose numeric idx is in pendingNewIndices
+        function highlightPendingNewRows(){
+          try {
+            if (!table) return;
+            // Look for TRs with dataset.idx matching our pending set
+            pendingNewIndices.forEach(idx => {
+              const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+              if (tr) {
+                tr.classList.add('pf-new-row');
+                // Remove highlight after 2.2s (matches animation duration)
+                setTimeout(()=> tr.classList.remove('pf-new-row'), 2200);
+              }
+            });
+            // Clear pending indices after attempting highlight
+            pendingNewIndices.clear();
+          } catch (e) { /* ignore */ }
         }
+
+        // Use global rowCount() helper; do not shadow it here.
 
         while (true) {
           const {value, done} = await reader.read();
@@ -740,18 +947,26 @@ function addRow(r){
             }
 
         // Normalize payload row-level fields
-        const norm = normalizeRow(payload);
-        addRow(norm);
+            const norm = normalizeRow(payload);
+            // Add the new row and record its numeric index for highlighting.
+            addRow(norm);
+            if (Number.isFinite(Number(norm.index))) {
+              pendingNewIndices.add(Number(norm.index));
+              updateNewUpdatesBanner();
+            }
             added++;
+            // Batch redraw every 10 rows for performance
             if (added % 10 === 0) {
-              redraw();
+              redraw(false);
               prog.textContent = `Loaded ${rowCount()}…`;
             }
           }
         }
 
-        if (buf.trim()) { try { addRow(JSON.parse(buf)); } catch(e){} }
-        redraw();
+  if (buf.trim()) { try { const last = JSON.parse(buf); addRow(last); if (Number.isFinite(Number(last.index))) { pendingNewIndices.add(Number(last.index)); updateNewUpdatesBanner(); } } catch(e){} }
+  // Final redraw after stream completes or when reader is drained. Force a full
+  // redraw so if the user is on the first page the new rows appear.
+  redraw(true);
         if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
       } catch (e) {
         console.error('stream error', e);
@@ -852,6 +1067,8 @@ async function pollAndMerge() {
           const node = apiRow.node();
           if (node) node.dataset.idx = item.idx;
           rowByIndex.set(item.idx, apiRow);
+          // mark as pending so banner/highlight will show
+          pendingNewIndices.add(Number(item.idx));
         } else {
           // Fallback: attempt to parse from the first-cell HTML
           const first = item.row && item.row[0] ? String(item.row[0]) : '';
@@ -861,6 +1078,7 @@ async function pollAndMerge() {
             const node = apiRow.node();
             if (node) node.dataset.idx = id;
             rowByIndex.set(id, apiRow);
+            pendingNewIndices.add(Number(id));
           }
         }
       } catch (e) { /* ignore */ }
@@ -919,7 +1137,9 @@ async function pollAndMerge() {
           } catch (e) { /* ignore per-row */ }
         });
       } catch (e) { console.warn('poll: post-draw registration failed', e); }
-      prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
+  // If new rows were added during the poll, update the banner count.
+  if (toAdd.length) updateNewUpdatesBanner();
+  prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
     }
   } catch (e) {
     console.error('pollAndMerge error', e);
@@ -940,10 +1160,37 @@ if (cfg.enablePoll) {
 
 // Manual Update button: trigger immediate poll
 manualUpdateBtn?.addEventListener('click', async ()=>{
-  // run a poll and reset next schedule
-  await pollAndMerge();
-  scheduleNextPoll(cfg.pollIntervalSec || 60);
+  if (!cfg.enablePoll) return;
+  // Provide immediate feedback: disable button while running
+  try {
+    manualUpdateBtn.disabled = true;
+    const prevText = manualUpdateBtn.textContent;
+    manualUpdateBtn.textContent = 'Updating…';
+    prog.textContent = 'Updating…';
+    await pollAndMerge();
+    scheduleNextPoll(cfg.pollIntervalSec || 60);
+    manualUpdateBtn.textContent = prevText;
+  } catch (e) {
+    console.error('Manual update failed', e);
+    prog.textContent = 'Update failed';
+  } finally {
+    manualUpdateBtn.disabled = false;
+  }
 });
+
+// New-updates banner: when user clicks, jump to first page and show new rows
+if (newUpdatesBtn) {
+  newUpdatesBtn.addEventListener('click', ()=>{
+    try {
+      if (table) {
+        table.page('first').draw(false);
+        // After jumping, highlight pending rows
+        highlightPendingNewRows();
+      }
+      newUpdatesBtn.style.display = 'none';
+    } catch (e) { console.error('newUpdates click', e); }
+  });
+}
 
 </script>
 
