@@ -153,7 +153,7 @@ for idx in "${INDEX[@]}"; do
     log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
     log_print ERR "Telegram notification error details:\n$posturl"
   fi
-  link["$idx"]="$posturl"
+  link[idx]="$posturl"
 done
 
 # read, update, and thensave the records:
@@ -165,9 +165,9 @@ for idx in "${STALE[@]}"; do
   records["$idx":telegram:notified]="stale"
 done
 for idx in "${!link[@]}"; do
-  if [[ "${link["$idx"]:0:4}" == "http" ]]; then
+  if [[ "${link[idx]:0:4}" == "http" ]]; then
     records["$idx":telegram:notified]=true
-    records["$idx":telegram:link]="${link["$idx"]}"
+    records["$idx":telegram:link]="${link[idx]}"
   else
     records["$idx":telegram:notified]="error"
   fi

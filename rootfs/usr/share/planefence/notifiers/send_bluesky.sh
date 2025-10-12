@@ -146,7 +146,7 @@ for idx in "${INDEX[@]}"; do
     log_print ERR "Bluesky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
     log_print ERR "Bluesky notification error details:\n$posturl"
   fi
-  link["$idx"]="$posturl"
+  link[idx]="$posturl"
 done
 
 # read, update, and thensave the records:
@@ -158,9 +158,9 @@ for idx in "${STALE[@]}"; do
   records["$idx":bsky:notified]="stale"
 done
 for idx in "${!link[@]}"; do
-  if [[ "${link["$idx"]:0:4}" == "http" ]]; then
+  if [[ "${link[idx]:0:4}" == "http" ]]; then
     records["$idx":bsky:notified]=true
-    records["$idx":bsky:link]="${link["$idx"]}"
+    records["$idx":bsky:link]="${link[idx]}"
   else
     records["$idx":bsky:notified]="error"
   fi
