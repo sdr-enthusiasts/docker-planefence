@@ -28,82 +28,6 @@ declare -a INDEX STALE
 
 log_print INFO "Hello. Starting Discord notification run"
 
-# ----------------------
-# Functions
-# ----------------------
-
-# Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
-# Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|discord:notified|complete|checked:screenshot"
-#   - CONTAINERSTARTTIME (epoch, integer)
-#   - screenshots (0/1 or truthy string)
-build_index_and_stale() {
-  local -n _INDEX=$1
-  local -n _STALE=$2
-  _INDEX=(); _STALE=()
-
-  # Optional numeric ceiling from records[maxindex]
-  local MAXIDX
-  MAXIDX=${records[maxindex]}
-
-  # Capture gawk output once, then demux without subshells
-  local out
-  out="$(
-    {
-      local k id field
-      for k in "${!records[@]}"; do
-        [[ $k == +([0-9]):* ]] || continue
-        id=${k%%:*}
-        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
-        field=${k#*:}
-        # Only pass fields we care about to reduce awk work
-        case $field in
-          time:lastseen|discord:notified|complete|checked:screenshot)
-            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
-            ;;
-        esac
-      done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
-      BEGIN { FS="\t" }
-      {
-        id=$1; key=$2; val=$3
-        if (key=="time:lastseen")            { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="discord:notified")    notified[id]=val
-        else if (key=="complete")            complete[id]=val
-        else if (key=="checked:screenshot")  schecked[id]=val
-      }
-      END {        
-        CSTN = CST+0
-        # Evaluate only ids that have lastseen
-        for (id in ids) {
-          n  = (id in notified)? notified[id] : ""
-          ls = lastseen[id]
-          # stale first
-          if (ls < CSTN && n == "") { stale[id]=1; continue }
-          # eligibility checks
-          c  = (id in complete)? complete[id] : ""
-          if (!enabled(c)) continue
-          if (enabled(n)) continue
-          if (n=="error") continue
-          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
-          ok[id]=1
-        }
-        # Print lists (tagged), numerically sorted
-        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
-        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
-      }
-      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
-    '
-  )"
-
-  local tag id
-  while IFS=$'\t' read -r tag id; do
-    [[ -z "$tag" ]] && continue
-    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
-  done <<< "$out"
-}
-
-
 # Load a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$PF_DISCORD"; then
@@ -138,7 +62,7 @@ debug_print "Reading records for Discord notification"
 READ_RECORDS
 
 debug_print "Getting indices of records ready for Discord notification and stale records"
-build_index_and_stale INDEX STALE
+build_index_and_stale INDEX STALE discord
 
 if (( ${#INDEX[@]} )); then
   debug_print "Records ready for Discord notification: ${INDEX[*]}"
@@ -264,12 +188,12 @@ for idx in "${INDEX[@]}"; do
     # check if there was an error
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
-      log_print INFO "Discord post for ${records["$idx":tail]} generated successfully for webhook ending in ${url: -8}. Link: ${discord_link}"
+      log_print INFO "Discord notification successful at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): ${discord_link}"
       records["$idx":discord:notified]=true
       records["$idx":discord:link]+="${records["$idx":discord:link]:+,}$discord_link"
       records[HASNOTIFS]=true
     else
-      log_print WARNING "Discord post error for ${records["$idx":tail]}). Discord returned this error: ${response}"
+      log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}). Discord returned this error: ${response}"
       records["$idx":discord:notified]=error
     fi
   done

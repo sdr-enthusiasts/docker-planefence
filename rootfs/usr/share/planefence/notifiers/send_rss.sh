@@ -44,67 +44,106 @@ source /scripts/pf-common
 #      FUNCTIONS
 # -----------------------------------------------------------------------------------
 
-# Function to generate RSS feed for a specific CSV file
+# Faster xml escape using pure-bash (no sed/subshell). Handles & < > " '
+xml_escape() {
+  local s=${1-}
+  # Short-circuit for empty
+  [[ -z "$s" ]] && { printf '%s' "$s"; return 0; }
+  # Use parameter expansion to replace characters
+  s=${s//&/&amp;}
+  s=${s//</&lt;}
+  s=${s//>/&gt;}
+  s=${s//\"/&quot;}
+  s=${s//\'/&apos;}
+  printf '%s' "$s"
+}
+
+# Function to generate RSS feed for a specific CSV file (optimized)
 generate_rss() {
   local rss_file="$OUTFILEDIR/planefence-$TODAY.rss"
   READ_RECORDS
-  # Create RSS header
-  cat > "$rss_file" <<EOF
-    <?xml version="1.0" encoding="UTF-8" ?>
-    <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-    <channel>
-    <title>$(xml_encode "$SITE_TITLE - $TODAY")</title>
-    <description>$(xml_encode "$SITE_DESC")</description>
-    <link>$(xml_encode "${SITE_LINK:-.}")</link>
-    <lastBuildDate>$(date -R)</lastBuildDate>
-    ${SITE_IMAGE:+<image>
-        <url>$(xml_encode "$SITE_IMAGE")</url>
-        <title>$(xml_encode "$SITE_TITLE")</title>
-        <link>$SITE_LINK</link>
-    </image>}
-    <atom:link href="$(xml_encode "${SITE_LINK}${rss_file##*/}")" rel="self" type="application/rss+xml" />
-EOF
 
-  # Now loop through the detected aircraft:
-  for ((idx=0; idx <= records[maxindex]; idx++)); do
+  # Precompute some values to avoid repeated expansions
+  local site_link="${SITE_LINK:-.}"
+  local site_title="${SITE_TITLE:-Planefence Aircraft Detections}"
+  local site_desc="${SITE_DESC:-Recent aircraft detected within range of our ADS-B receiver}"
+  local site_image="$SITE_IMAGE"
+  local last_build_date
+  last_build_date=$(date -R)
 
-  if [[ -z "${records["$idx":icao]}" ]]; then continue; fi
-  
-  # Create title and description
-  TITLE="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} detected"
-  DESC="Aircraft ${records["$idx":callsign]:-${records["$idx":icao]}} was detected within ${records["$idx":distance:value]} ${records["$idx":distance:unit]} of the receiver"
-  DESC="${DESC} at altitude ${records["$idx":altitude:value]} ${ALTUNIT} from $(date -d "@${records["$idx":time:firstseen]}") to $(date -d "@${records["$idx":time:lastseen]}")"
-  
-  # Add noise data if available
-  if [[ -n "${records["$idx":sound:peak]}" ]]; then
-      DESC="${DESC}, with peak noise level of ${records["$idx":sound:peak]} dBFS"
-  fi
-  
-  # Create item link - use the tracking URL if available
-  ITEM_LINK="${records["$idx":link:map]:-$SITE_LINK}"
-  
-  # Calculate pub date from time:lastseen 
-  PUBDATE=$(date -R -d "@${records["$idx":time:lastseen]}")
-  
-  # Write RSS item
-  cat >> "$rss_file" <<EOF
-    <item>
-        <title>$(xml_encode "$TITLE")</title>
-        <description>$(xml_encode "$DESC")</description>
-        <link>$ITEM_LINK</link>
-        <guid isPermaLink="false">${records["$idx":icao]}-${records["$idx":time:firstseen]}</guid>
-        <pubDate>$PUBDATE</pubDate>
-    </item>
-EOF
+  # Write header once using printf to avoid many subshells
+  {
+    printf '%s\n' '<?xml version="1.0" encoding="UTF-8" ?>'
+    printf '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n'
+    printf '<channel>\n'
+    printf '<title>%s</title>\n' "$(xml_escape "$site_title - $TODAY")"
+    printf '<description>%s</description>\n' "$(xml_escape "$site_desc")"
+    printf '<link>%s</link>\n' "$(xml_escape "$site_link")"
+    printf '<lastBuildDate>%s</lastBuildDate>\n' "$last_build_date"
+    if [[ -n "$site_image" ]]; then
+      printf '<image>\n'
+      printf '  <url>%s</url>\n' "$(xml_escape "$site_image")"
+      printf '  <title>%s</title>\n' "$(xml_escape "$site_title")"
+      printf '  <link>%s</link>\n' "$site_link"
+      printf '</image>\n'
+    fi
+    printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "${site_link}${rss_file##*/}")"
+  } > "$rss_file"
+
+  # Cache max index
+  local maxidx
+  maxidx=${records[maxindex]:--1}
+  local idx=0
+
+  # Loop numeric indices; cache commonly used fields into locals once per iteration
+  for (( idx=0; idx<=maxidx; idx++ )); do
+    # Access associative array keys minimally
+    local icao key_callsign callsign distance_value distance_unit alt_val firstseen lastseen sound_peak link_map ITEM_LINK
+
+    icao=${records["$idx":icao]:-}
+    [[ -n "$icao" ]] || continue
+
+    callsign=${records["$idx":callsign]:-}
+    key_callsign=${callsign:-$icao}
+    distance_value=${records["$idx":distance:value]:-}
+    distance_unit=${records["$idx":distance:unit]:-}
+    alt_val=${records["$idx":altitude:value]:-}
+    firstseen=${records["$idx":time:firstseen]:-}
+    lastseen=${records["$idx":time:lastseen]:-}
+    sound_peak=${records["$idx":sound:peak]:-}
+    link_map=${records["$idx":link:map]:-}
+
+    # Build title and description
+    local title desc pubdate guid
+    title="Aircraft $key_callsign detected"
+    desc="Aircraft $key_callsign was detected within $distance_value $distance_unit of the receiver"
+  desc+=" at altitude $alt_val ${ALTUNIT:-m} from $(date -d "@$firstseen" '+%c') to $(date -d "@$lastseen" '+%c')"
+    if [[ -n "$sound_peak" ]]; then
+      desc+=", with peak noise level of $sound_peak dBFS"
+    fi
+
+    pubdate=$(date -R -d "@$lastseen")
+    guid="$icao-$firstseen"
+  ITEM_LINK=${link_map:-$site_link}
+
+    # Append item (escape title and description once)
+    {
+      printf '<item>\n'
+      printf '  <title>%s</title>\n' "$(xml_escape "$title")"
+      printf '  <description>%s</description>\n' "$(xml_escape "$desc")"
+      printf '  <link>%s</link>\n' "$ITEM_LINK"
+      printf '  <guid isPermaLink="false">%s</guid>\n' "$guid"
+      printf '  <pubDate>%s</pubDate>\n' "$pubdate"
+      printf '</item>\n'
+    } >> "$rss_file"
   done
 
-  # Close the RSS feed
-  cat >> "$rss_file" <<EOF
-    </channel>
-  </rss>
-EOF
+  # Close feed
+  {
+    printf '</channel>\n'
+    printf '</rss>\n'
+  } >> "$rss_file"
 
-  # Set proper permissions
   chmod u=rw,go=r "$rss_file"
 }
 

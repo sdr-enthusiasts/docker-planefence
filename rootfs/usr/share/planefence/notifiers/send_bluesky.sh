@@ -34,81 +34,6 @@ SPACE=$'\x1F'   # "special" space
 
 log_print INFO "Hello. Starting Bluesky notification run"
 
-# ----------------------
-# Functions
-# ----------------------
-
-# Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
-# Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|bsky:notified|complete|checked:screenshot"
-#   - CONTAINERSTARTTIME (epoch, integer)
-#   - screenshots (0/1 or truthy string)
-build_index_and_stale() {
-  local -n _INDEX=$1
-  local -n _STALE=$2
-  _INDEX=(); _STALE=()
-
-  # Optional numeric ceiling from records[maxindex]
-  local MAXIDX
-  MAXIDX=${records[maxindex]}
-
-  # Capture gawk output once, then demux without subshells
-  local out
-  out="$(
-    {
-      local k id field
-      for k in "${!records[@]}"; do
-        [[ $k == +([0-9]):* ]] || continue
-        id=${k%%:*}
-        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
-        field=${k#*:}
-        # Only pass fields we care about to reduce awk work
-        case $field in
-          time:lastseen|bsky:notified|complete|checked:screenshot)
-            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
-            ;;
-        esac
-      done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
-      BEGIN { FS="\t" }
-      {
-        id=$1; key=$2; val=$3
-        if (key=="time:lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="bsky:notified")       notified[id]=val
-        else if (key=="complete")            complete[id]=val
-        else if (key=="checked:screenshot")  schecked[id]=val
-      }
-      END {        
-        CSTN = CST+0
-        # Evaluate only ids that have lastseen
-        for (id in ids) {
-          n  = (id in notified)? notified[id] : ""
-          ls = lastseen[id]
-          # stale first
-          if (ls < CSTN && n == "") { stale[id]=1; continue }
-          # eligibility checks
-          c  = (id in complete)? complete[id] : ""
-          if (!enabled(c)) continue
-          if (enabled(n)) continue
-          if (n=="error") continue
-          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
-          ok[id]=1
-        }
-        # Print lists (tagged), numerically sorted
-        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
-        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
-      }
-      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
-    '
-  )"
-
-  local tag id
-  while IFS=$'\t' read -r tag id; do
-    [[ -z "$tag" ]] && continue
-    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
-  done <<< "$out"
-}
-
 
 # Load a bunch of stuff and determine if we should notify
 
@@ -127,6 +52,7 @@ fi
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
 else
+  # shellcheck disable=SC2034
   screenshots=0
 fi
 
@@ -135,7 +61,7 @@ debug_print "Reading records for Bluesky notification"
 READ_RECORDS
 
 debug_print "Getting indices of records ready for Bluesky notification and stale records"
-build_index_and_stale INDEX STALE
+build_index_and_stale INDEX STALE bsky
 
 if (( ${#INDEX[@]} )); then
   debug_print "Records ready for Bluesky notification: ${INDEX[*]}"

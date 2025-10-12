@@ -433,6 +433,69 @@
     theadRow.appendChild(th);
   }
 
+  // Replace Alt / Spd header content with clickable sort controls for numeric sorting
+  try {
+    const altIdx = viewCols.findIndex(v => v.key === 'altspd');
+    if (altIdx >= 0) {
+      const th = theadRow.children[altIdx];
+      if (th) {
+        th.innerHTML = `Alt / Spd <span style="margin-left:.5rem; font-size:0.85em; color:var(--muted);">` +
+          `<a href="#" id="sortAlt" style="margin-right:.4rem;">Alt</a>` +
+          `<a href="#" id="sortSpd">Spd</a></span>`;
+        // Wire click handlers which compute the Alt/Spd column index at runtime,
+        // copy the chosen numeric attribute into data-order, and toggle
+        // ascending/descending on each click.
+        setTimeout(()=>{
+          const aAlt = document.getElementById('sortAlt');
+          const aSpd = document.getElementById('sortSpd');
+          // determine column index dynamically from the header cell position
+          const colIdx = (typeof th?.cellIndex === 'number') ? th.cellIndex : altIdx;
+
+          const copyAttrToDataOrder = (attrName) => {
+            try {
+              const nodes = table.column(colIdx, {order:'applied'}).nodes();
+              const arr = nodes.toArray ? nodes.toArray() : Array.from(nodes);
+              for (const td of arr) {
+                try {
+                  const inner = td.querySelector && (td.querySelector(`[data-${attrName}]`) || td.querySelector('[data-order]')) || td;
+                  if (inner && inner.setAttribute) {
+                    const v = inner.getAttribute && inner.getAttribute(`data-${attrName}`);
+                    if (v != null) inner.setAttribute('data-order', v);
+                  }
+                } catch(e) { /* per-cell ignore */ }
+              }
+            } catch(e) { console.warn('copyAttrToDataOrder failed', e); }
+          };
+
+          if (aAlt) aAlt.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            // Toggle direction state stored on the TH element
+            try {
+              const prev = th.dataset.altDir || 'desc';
+              const dir = prev === 'asc' ? 'desc' : 'asc';
+              th.dataset.altDir = dir;
+              copyAttrToDataOrder('order-alt');
+              table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              table.order([[colIdx, dir]]).draw(false);
+            } catch(e) { console.warn('sortAlt failed', e); }
+          });
+
+          if (aSpd) aSpd.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            try {
+              const prev = th.dataset.spdDir || 'desc';
+              const dir = prev === 'asc' ? 'desc' : 'asc';
+              th.dataset.spdDir = dir;
+              copyAttrToDataOrder('order-spd');
+              table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              table.order([[colIdx, dir]]).draw(false);
+            } catch(e) { console.warn('sortSpd failed', e); }
+          });
+        }, 0);
+      }
+    }
+  } catch (e) { /* ignore header wiring errors */ }
+
   // Create DataTable and capture API
   // Ordering plugin: read numeric value from an inner element's data-order attribute
   // and use that as the sort key for the column. This ensures the index column
@@ -463,6 +526,52 @@
     });
   };
 
+  // Ordering plugin for Altitude (reads numeric value from data-order-alt)
+  jQuery.fn.dataTable.ext.order['dom-data-order-alt'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order-alt]');
+          if (el) {
+            const v = el.getAttribute('data-order-alt');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        if (typeof td === 'string') {
+          const m = td.match(/data-order-alt="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
+  // Ordering plugin for Speed (reads numeric value from data-order-spd)
+  jQuery.fn.dataTable.ext.order['dom-data-order-spd'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order-spd]');
+          if (el) {
+            const v = el.getAttribute('data-order-spd');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        if (typeof td === 'string') {
+          const m = td.match(/data-order-spd="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
   const api = $('#t').DataTable({
     // Disable deferRender to ensure cells/nodes exist when we need to parse
     // data-order attributes and to avoid string-only cell representations.
@@ -476,6 +585,10 @@
       // Use our dom-data-order plugin for column 0 (index) so sorting honors
       // the numeric value placed in the cell's data-order attribute.
       { targets: 0, orderDataType: 'dom-data-order' },
+      // For Alt/Spd column (index 5 in viewCols), allow numeric ordering by
+      // altitude or by speed via our custom orderDataType plugins. We'll
+      // wire header click handlers to call the appropriate ordering.
+      { targets: 5, orderDataType: 'dom-data-order-alt' },
       { targets: "_all", render: (data)=>data }
     ],
     createdRow: function(row, data){
@@ -663,7 +776,11 @@ function renderRow(r) {
   const numericOrder = Number.isFinite(altRaw) ? altRaw : (spdNum != null ? spdNum : 0);
   // Combine altitude and speed into a single cell (altitude on first line, speed on second if present)
   const altspdInner = [altVal ? `<div class="mono">${altVal}</div>` : '', spdVal ? `<div class="mono">${spdVal}</div>` : ''].filter(Boolean).join('');
-  const altspd = `<div data-order="${numericOrder}">${altspdInner}</div>`;
+  // Include separate numeric attributes for altitude and speed to allow
+  // independent numeric sorting when a user clicks Alt or Spd in the header.
+  const altAttr = Number.isFinite(altRaw) ? altRaw : '';
+  const spdAttr = spdNum != null ? spdNum : '';
+  const altspd = `<div data-order-alt="${altAttr}" data-order-spd="${spdAttr}">${altspdInner}</div>`;
 
   const trackDegRaw = Number(r["track:value"]);
   const trackDegInt = Number.isFinite(trackDegRaw) ? Math.round(trackDegRaw) : null;
