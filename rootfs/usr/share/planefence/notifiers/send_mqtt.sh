@@ -19,6 +19,9 @@
 source /scripts/pf-common
 source "/usr/share/planefence/planefence.conf"
 
+# declare arrays to hold index and stale ids
+declare -a INDEX=() STALE=() link=()
+
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
@@ -27,7 +30,6 @@ source "/usr/share/planefence/planefence.conf"
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')
 
-
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS
 # -----------------------------------------------------------------------------------
@@ -35,7 +37,7 @@ TODAY=$(date --date="today" '+%y%m%d')
 generate_mqtt() {
   # Generate a MQTT notification
 
-	local idx="$1" key
+	local idx="$1" key 
 
 	if [[ -n "$MQTT_URL" ]]; then
 		# convert $records[@] into a JSON object; if (PF_)MQTT_FIELDS is defined, then only use those fields. Exclude any internal stuff
@@ -103,8 +105,7 @@ generate_mqtt() {
 
 debug_print "Starting generation of RSS feed"
 
-# declare arrays to hold index and stale ids
-declare -a INDEX=() STALE=()
+
 
 if [[ -z "$MQTT_URL" ]]; then
   debug_print "MQTT notifications are disabled - exiting"
@@ -141,9 +142,26 @@ done
 # Loop through the INDEX array and send MQTT notifications
 
 for idx in "${INDEX[@]}"; do
-  if generate_mqtt "$idx"; then records["$idx":mqtt:notified]=true; else records["$idx":mqtt:notified]=error; fi
+  if generate_mqtt "$idx"; then link[idx]=true; else link[idx]=error; fi
 done
 
-ln -sf "$OUTFILEDIR/planefence-$TODAY.rss" "$OUTFILEDIR/planefence.rss"
+# Save the records again
+log_print DEBUG "Updating records after MQTT notifications"
+
+LOCK_RECORDS
+READ_RECORDS ignore-lock
+
+for idx in "${STALE[@]}"; do
+  records["$idx":mqtt:notified]="stale"
+done
+
+if [[ ${#link[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
+
+for idx in "${!link[@]}"; do
+    records["$idx":mqtt:notified]="${link[idx]}"
+done
+
+# Save the records again
+log_print DEBUG "Saving records..."
 WRITE_RECORDS ignore-lock
-debug_print "Done!"
+log_print INFO "MQTT notifications run completed."

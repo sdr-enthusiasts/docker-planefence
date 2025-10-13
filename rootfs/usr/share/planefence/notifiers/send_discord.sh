@@ -24,7 +24,7 @@ source /usr/share/planefence/planefence.conf
 # shellcheck disable=SC2034
 #DEBUG=true
 
-declare -a INDEX STALE
+declare -a INDEX STALE link
 
 log_print INFO "Hello. Starting Discord notification run"
 
@@ -57,37 +57,32 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Discord notification"
+log_print DEBUG "Reading records for Discord notification"
 
 READ_RECORDS
 
-debug_print "Getting indices of records ready for Discord notification and stale records"
+log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 build_index_and_stale INDEX STALE discord
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Discord notification: ${INDEX[*]}"
+  log_print DEBUG "Records ready for Discord notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Discord notification"
+  log_print DEBUG "No records ready for Discord notification"
 fi
 if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no notification will be sent): ${STALE[*]}"
+  log_print DEBUG "Stale records (no notification will be sent): ${STALE[*]}"
 else
-  debug_print "No stale records"
+  log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for Discord notification. Exiting."
   exit 0
 fi
 
-# deal with stale records first
-for idx in "${STALE[@]}"; do
-  records["$idx":discord:notified]=stale
-done
-
 template_clean="$(</usr/share/planefence/notifiers/discord.template)"
 
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Discord notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -122,7 +117,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   image=""; thumb=""; curlfile=""
-  debug_print "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
+  log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
     "photo")
       image="${records["$idx":image:thumblink]}"
@@ -150,19 +145,19 @@ for idx in "${INDEX[@]}"; do
   esac
 
   if [[ -z "${image}" ]]; then
-    debug_print "No image available for ${records["$idx":tail]}, removing image section from template"
+    log_print DEBUG "No image available for ${records["$idx":tail]}, removing image section from template"
     template="$(sed -z 's/||IMAGE--.*--IMAGE||//g' <<< "$template")"
   else
-    debug_print "Image available for ${records["$idx":tail]}, adding to template"
+    log_print DEBUG "Image available for ${records["$idx":tail]}, adding to template"
     template="$(template_replace "||IMAGE--" "" "$template")"
     template="$(template_replace "--IMAGE||" "" "$template")"
     template="$(template_replace "||IMAGE||" "$image" "$template")"
   fi
   if [[ -z "${thumb}" ]]; then
-    debug_print "No thumbnail available for ${records["$idx":tail]}, removing thumbnail section from template"
+    log_print DEBUG "No thumbnail available for ${records["$idx":tail]}, removing thumbnail section from template"
     template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
   else
-    debug_print "Thumbnail available for ${records["$idx":tail]}, adding to template"
+    log_print DEBUG "Thumbnail available for ${records["$idx":tail]}, adding to template"
     template="$(template_replace "||THUMBNAIL--" "" "$template")"
     template="$(template_replace "--THUMBNAIL||" "" "$template")"
     template="$(template_replace "||THUMBNAIL||" "$thumb" "$template")"
@@ -189,9 +184,8 @@ for idx in "${INDEX[@]}"; do
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
       log_print INFO "Discord notification successful at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): ${discord_link}"
-      records["$idx":discord:notified]=true
-      records["$idx":discord:link]+="${records["$idx":discord:link]:+,}$discord_link"
-      records[HASNOTIFS]=true
+
+      link[idx]+="${link[idx]:+,}$discord_link"
     else
       log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}). Discord returned this error: ${response}"
       records["$idx":discord:notified]=error
@@ -200,6 +194,27 @@ for idx in "${INDEX[@]}"; do
 done
 
 # Save the records again
-debug_print "Saving records after Discord notifications"
-WRITE_RECORDS
+log_print DEBUG "Updating records after Discord notifications"
+
+LOCK_RECORDS
+READ_RECORDS ignore-lock
+
+for idx in "${STALE[@]}"; do
+  records["$idx":discord:notified]="stale"
+done
+
+if [[ ${#link[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
+
+for idx in "${!link[@]}"; do
+  if [[ "${link[idx]:0:4}" == "http" ]]; then
+    records["$idx":discord:notified]=true
+    records["$idx":discord:link]="${link[idx]}"
+  else
+    records["$idx":discord:notified]="error"
+  fi
+done
+
+# Save the records again
+log_print DEBUG "Saving records..."
+WRITE_RECORDS ignore-lock
 log_print INFO "Discord notifications run completed."
