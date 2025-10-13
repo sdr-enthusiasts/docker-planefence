@@ -30,7 +30,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=true
+#DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
