@@ -28,7 +28,7 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 # shellcheck disable=SC2034
 #DEBUG=true
 declare -a INDEX STALE
-declare -A link
+declare -a link
 
 SPACE="_"   # "special" space replacement character for hashtagged items
 
@@ -152,8 +152,23 @@ for idx in "${INDEX[@]}"; do
   else
     log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
     log_print ERR "Telegram notification error details:\n$posturl"
+
+    if [[ "$(jq '.ok' <<< "$posturl")" == "false" && "$(jq -r '.error_code' <<< "$posturl")" == "429" ]]; then
+      retry_after="$(jq -r '.parameters.retry_after' <<< "$posturl")"
+      if [[ $retry_after =~ ^[0-9]+$ ]]; then
+        log_print ERR "Telegram rate limit exceeded. Retrying after $retry_after seconds..."
+        sleep "$((retry_after + 1))"
+        if posturl="$(extract_url "$posturl")"; then
+          log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+        else
+          log_print ERR "Telegram notification failed also the 2nd time for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+          log_print ERR "Telegram notification error details:\n$posturl"
+        fi
+      fi
+    fi
   fi
   link[idx]="$posturl"
+  sleep 3 # be nice to Telegram and space out messages a bit
 done
 
 # read, update, and thensave the records:

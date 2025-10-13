@@ -23,6 +23,9 @@ source /scripts/pf-common
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"
 
+## Debug:
+LOOPTIME=120  # for testing only - set to 120 secs
+
 PLANEFENCEDIR=/usr/share/planefence
 
 log_print INFO "Screenshot started as an s6 service. Waiting for Planefence to finish its initial run..."
