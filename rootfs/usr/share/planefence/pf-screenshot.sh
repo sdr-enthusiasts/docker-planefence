@@ -51,7 +51,7 @@ MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensu
 # Functions
 # ==========================
 
-build_index_and_stale() {
+build_index_and_stale_for_screenshot() {
   local -n _INDEX=$1
   local -n _STALE=$2
   _INDEX=(); _STALE=()
@@ -88,9 +88,10 @@ build_index_and_stale() {
       }
       END {
         CSTN = CST+0
-        # Consider all ids that have either lastseen or complete
+        # Consider all ids that have either lastseen or complete or checked
         for (id in seen_last) ids[id]=1
         for (id in seen_complete) ids[id]=1
+        for (id in seen_checked) ids[id]=1
 
         for (id in ids) {
           # If checked:screenshot present with any non-empty value, skip the id entirely
@@ -172,7 +173,7 @@ READ_RECORDS ignore-lock
 
 # Make an index of records to process
 debug_print "Getting indices ready for new and stale records"
-build_index_and_stale INDEX STALE
+build_index_and_stale_for_screenshot INDEX STALE
 
 # If there's nothing to do, exit
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
