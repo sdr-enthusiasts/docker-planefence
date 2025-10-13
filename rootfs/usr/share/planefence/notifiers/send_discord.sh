@@ -24,7 +24,7 @@ source /usr/share/planefence/planefence.conf
 # shellcheck disable=SC2034
 #DEBUG=true
 
-declare -a INDEX STALE link delivery_errors
+declare -a INDEX STALE link delivery_errors link
 
 log_print INFO "Hello. Starting Discord notification run"
 
@@ -58,9 +58,11 @@ else
 fi
 
 log_print DEBUG "Reading records for Discord notification"
+log_print DEBUG "Reading records for Discord notification"
 
 READ_RECORDS
 
+log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 build_index_and_stale INDEX STALE discord
 
