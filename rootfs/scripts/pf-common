@@ -367,6 +367,7 @@ build_index_and_stale() {
   local -n _STALE=$2
   local notifservice=$3
 
+  log_print DEBUG "build_index_and_stale called with notifservice='$notifservice'"
   if [[ -z "$notifservice" ]]; then
     log_print ERR "build_index_and_stale: notifservice argument missing"
     return 1
@@ -395,14 +396,14 @@ build_index_and_stale() {
             ;;
         esac
       done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" '
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" -v notifservice="$notifservice" '
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
-        if (key=="time:lastseen")            { lastseen[id]=val+0; ids[id]=1 }
-        else if (key=="'"${notifservice}"':notified")    notified[id]=val
-        else if (key=="complete")            complete[id]=val
-        else if (key=="checked:screenshot")  schecked[id]=val
+        if (key=="time:lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
+        else if (key==(notifservice ":notified")) notified[id]=val
+        else if (key=="complete")                 complete[id]=val
+        else if (key=="checked:screenshot")       schecked[id]=val
       }
       END {        
         CSTN = CST+0

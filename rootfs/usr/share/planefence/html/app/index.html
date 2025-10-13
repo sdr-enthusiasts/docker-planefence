@@ -707,6 +707,76 @@
   });
 }
 
+// Helper: expand comma-separated discord links in the Notifications column.
+// If a cell contains a single anchor whose href contains commas (multiple URLs),
+// or if the cell has a data-discord-links attribute with comma-separated URLs,
+// create an anchor for each URL labeled 'Discord'. This runs after table draws
+// so it will affect both streaming and polled updates.
+function expandDiscordLinksInNotifications() {
+  try {
+    if (!table) return;
+    // Find all cells in the Notifications column (last column index)
+    const notifColIdx = viewCols.findIndex(c => c.key === 'notify');
+    if (notifColIdx === -1) return;
+    // For each visible row cell in the column
+    table.column(notifColIdx, {page: 'current'}).nodes().each(function(td){
+      try {
+        const cell = td instanceof Element ? td : (td && td.node) ? td.node : null;
+        if (!cell) return;
+
+        // First, check for a data attribute with comma-separated links
+        const dataVal = cell.getAttribute && cell.getAttribute('data-discord-links');
+        let links = null;
+        if (dataVal) {
+          links = dataVal.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          // Otherwise, if there's exactly one anchor, look at its raw attribute value
+          const anchors = cell.querySelectorAll && cell.querySelectorAll('a');
+          if (anchors && anchors.length === 1) {
+            const a = anchors[0];
+            const rawHref = a.getAttribute && a.getAttribute('href');
+            if (rawHref && rawHref.includes(',')) {
+              links = rawHref.split(',').map(s => s.trim()).filter(Boolean);
+            }
+          }
+          // If no anchors or single-anchor case didn't detect commas, also try plain text (comma-separated URLs)
+          if (!links) {
+            const txt = (cell.textContent || '').trim();
+            if (txt && txt.includes(',')) {
+              // Split and keep probable URLs (simple heuristic: starts with http or /)
+              const candidates = txt.split(',').map(s => s.trim()).filter(Boolean);
+              const probable = candidates.filter(s => /^https?:\/\//i.test(s) || s.startsWith('/'));
+              if (probable.length > 0) links = probable;
+            }
+          }
+        }
+
+        if (!links || links.length <= 1) return; // nothing to do
+
+        // Clear existing content and append an anchor per link, separated by middot
+        cell.innerHTML = '';
+        links.forEach((lnk, i) => {
+          const a = document.createElement('a');
+          a.href = lnk;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = 'Discord';
+          cell.appendChild(a);
+          if (i !== links.length - 1) cell.appendChild(document.createTextNode(' · '));
+        });
+      } catch (e) { /* per-cell ignore */ }
+    });
+  } catch (e) { console.warn('expandDiscordLinksInNotifications failed', e); }
+}
+
+// Hook into DataTables draw event so newly-rendered pages have expanded links
+if (typeof table !== 'undefined' && table) {
+  table.on && table.on('draw', expandDiscordLinksInNotifications);
+}
+
+// Also call once after initial setup if table exists
+setTimeout(()=> expandDiscordLinksInNotifications(), 150);
+
 // 5) Render row with row class + position split link + numeric idx data source
 function renderRow(r) {
   const idx = fmtInt(r.index) ?? safe(r.index);

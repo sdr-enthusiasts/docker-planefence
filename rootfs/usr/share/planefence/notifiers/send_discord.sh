@@ -24,7 +24,7 @@ source /usr/share/planefence/planefence.conf
 # shellcheck disable=SC2034
 #DEBUG=true
 
-declare -a INDEX STALE link
+declare -a INDEX STALE link delivery_errors
 
 log_print INFO "Hello. Starting Discord notification run"
 
@@ -184,11 +184,10 @@ for idx in "${INDEX[@]}"; do
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
       log_print INFO "Discord notification successful at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): ${discord_link}"
-
       link[idx]+="${link[idx]:+,}$discord_link"
     else
       log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}). Discord returned this error: ${response}"
-      records["$idx":discord:notified]=error
+      delivery_errors[idx]=true
     fi
   done
 done
@@ -199,19 +198,20 @@ log_print DEBUG "Updating records after Discord notifications"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 
+if [[ ${#link[@]} -gt 0 || ${#delivery_errors[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
+
 for idx in "${STALE[@]}"; do
   records["$idx":discord:notified]="stale"
 done
 
-if [[ ${#link[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
+for idx in "${!delivery_errors[@]}"; do
+  records["$idx":discord:notified]="error"
+done
 
+# For the ones that were successful, even if they had some errors on other webhooks, mark as notified
 for idx in "${!link[@]}"; do
-  if [[ "${link[idx]:0:4}" == "http" ]]; then
-    records["$idx":discord:notified]=true
-    records["$idx":discord:link]="${link[idx]}"
-  else
-    records["$idx":discord:notified]="error"
-  fi
+  records["$idx":discord:notified]=true
+  records["$idx":discord:link]="${link[idx]}"
 done
 
 # Save the records again
