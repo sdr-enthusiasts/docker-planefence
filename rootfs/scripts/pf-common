@@ -137,6 +137,7 @@ WRITE_RECORDS() {
     sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
     gzip -c > "$tmpfile"
     mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+    chmod a+r "$RECORDSFILE"
   debug_print "Records written by $(basename "$0")"
   if [[ "$1" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
