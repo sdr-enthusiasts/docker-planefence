@@ -58,6 +58,9 @@ wait "$pid" &>/dev/null || true
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
 # ./pf-create-html.sh	&	# create PF HTML page
 
+# Run heatmap script in the background
+./pf-heatmap.sh &
+
 # Run notifiers scripts in the background
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   while read -r script; do

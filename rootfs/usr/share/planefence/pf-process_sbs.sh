@@ -369,7 +369,7 @@ CREATE_NOISEPLOT () {
 		if gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" "$PLANEFENCEDIR/noiseplot.gnuplot"; then
 			# Plotting succeeded
       echo "$NOISEGRAPHFILE"
-      ln -sf "$NOISEGRAPHFILE" "$OUTFILEDIR/noisegraph-latest.png"
+      ln -sf "$NOISEGRAPHFILE" "$OUTFILEDIR/noise/noisegraph-latest.png"
 		fi
 	fi
 }
@@ -454,7 +454,7 @@ LINK_LATEST_SPECTROFILE () {
                   -printf '%f\n' | sort | tail -n 1)"
 
   if [[ -n "$latestfile" ]]; then
-    ln -sf "$OUTFILEDIR/$latestfile" "$OUTFILEDIR/noisecapt-spectro-latest.png"
+    ln -sf "$OUTFILEDIR/noise/$latestfile" "$OUTFILEDIR/noise/noisecapt-spectro-latest.png"
   fi
 
 }
