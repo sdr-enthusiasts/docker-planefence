@@ -27,7 +27,7 @@
 source /scripts/pf-common
 
 PF_PATH="/usr/share/planefence"
-PA_PATH="/usr/share/plane-alert"
+PA_PATH="/usr/share/planefence"
 NOTIFY_PATH="$PF_PATH/notifiers"
 
 # -----------------------------------------------------------------------------------
@@ -45,6 +45,11 @@ shopt -s nullglob
 # -----------------------------------------------------------------------------------
 
 cd "$PF_PATH"
+
+if [[ -f /run/planefence/last-config-change ]] && (( $(</run/planefence/last-config-change) < $(stat -c %Z /usr/share/planefence/persist/planefence.config) )); then
+  log_print INFO "Detected a change in the config file since last run. Applying config changes."
+  /usr/share/planefence/prep-planefence.sh
+fi
 
 ./pf-process_sbs.sh	&	# read and process SBS data
 pid=$!

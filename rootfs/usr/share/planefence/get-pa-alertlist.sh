@@ -77,7 +77,7 @@ if [[ $inhibit_update == "false" ]]; then
 		debug_print "$(( count_start -  count_end )) entries excluded."
 		chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	fi
-	ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/plane-alert/alertlist.txt
+	ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/alertlist.txt
 else
 	"${s6wrap[@]}" echo "At least one http retrieval failed, using old list!"
 fi

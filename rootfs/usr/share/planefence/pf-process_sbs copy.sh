@@ -40,7 +40,7 @@ echo "$" > /run/planefence.pid
 # ==========================
 # Config and initialization
 # ==========================
-RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+#HTMLDIR="/tmp"
 HTMLDIR="${OUTFILEDIR:-/usr/share/planefence/html}"
 mkdir -p "$HTMLDIR"
 
@@ -51,8 +51,8 @@ NOWTIME="$(date +%s)"
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
-RECORDSFILE="$RECORDSDIR/planefence-records-${TODAY}.gz"
-YESTERDAYRECORDSFILE="$RECORDSDIR/planefence-records-${YESTERDAY}.gz"
+RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
+YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}.gz"
 
 CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
@@ -632,36 +632,36 @@ GENERATE_JSON() {
     printf "%s\0%s\0%s\0%s\0", idx, k, subkey, val
     count++
   }' | \
-  jq -R -s '
-    def set_kvs(obj; k; s; v):
-      if s == null or s == "" then obj + { (k): v }
-      else obj + { (k): ((obj[k] // {}) + { (s): v }) }
-      end;
+jq -R -s '
+  def set_kvs(obj; k; s; v):
+    if s == null or s == "" then obj + { (k): v }
+    else obj + { (k): ((obj[k] // {}) + { (s): v }) }
+    end;
 
-    ( . // "" )
-    | split("\u0000") | .[:-1]
-    | [ range(0; length; 4) as $i |
-        { i: (.[ $i ] | tonumber),
-          k: .[$i+1],
-          s: (if (.[ $i+2] | length) == 0 then null else .[$i+2] end),
-          v: .[$i+3] }
-      ]
-    | reduce .[] as $t ({ groups: {}, globals: {} };
-        if $t.i == -1 then
-          .globals = set_kvs(.globals; $t.k; $t.s; $t.v)
-        else
-          .groups[($t.i | tostring)] =
-            set_kvs((.groups[($t.i | tostring)] // {}); $t.k; $t.s; $t.v)
-        end
-      )
-    | ( .groups
-        | to_entries
-        | sort_by(.key | tonumber)
-        | reverse
-        | map({ index: (.key | tonumber) } + .value)
-      ) as $items
-    | [ .globals ] + $items
-  ' > "$tmpfile"
+  ( . // "" )
+  | split("\u0000") | .[:-1]
+  | [ range(0; length; 4) as $i |
+      { i: (.[ $i ] | tonumber),
+        k: .[$i+1],
+        s: (if (.[ $i+2] | length) == 0 then null else .[$i+2] end),
+        v: .[$i+3] }
+    ]
+  | reduce .[] as $t ({ groups: {}, globals: {} };
+      if $t.i == -1 then
+        .globals = set_kvs(.globals; $t.k; $t.s; $t.v)
+      else
+        .groups[($t.i | tostring)] =
+          set_kvs((.groups[($t.i | tostring)] // {}); $t.k; $t.s; $t.v)
+      end
+    )
+  | ( .groups
+      | to_entries
+      | sort_by(.key | tonumber)
+      | reverse
+      | map({ index: (.key | tonumber) } + .value)
+    ) as $items
+  | [ .globals ] + $items
+' > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
   chmod a+r "$JSONOUT"
 }
@@ -699,9 +699,6 @@ fi
 # ==========================
 # Collect new lines
 # ==========================
-
-# First for Planefence:
-
 if [[ -n "$LASTPROCESSEDLINE" ]]; then
   lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
 fi

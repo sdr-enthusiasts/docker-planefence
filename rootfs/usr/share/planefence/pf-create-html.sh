@@ -369,13 +369,13 @@ RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
 log_print INFO "Hello. Starting $0"
 
 # Load the template into a variable that we can manipulate:
-if ! template=$(<"$PLANEFENCEDIR/planefence.html.template"); then
+if ! template=$(<"$PLANEFENCEDIR/planefence.html.pf.template"); then
 	log_print ERR "Failed to load template"
 	exit 1
 fi
 
 # Load the records
-READ_RECORDS
+READ_PF_RECORDS
 
 # Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
 if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( NOWTIME - $(</tmp/add_delete.uuid.used) > 300 )) ); then

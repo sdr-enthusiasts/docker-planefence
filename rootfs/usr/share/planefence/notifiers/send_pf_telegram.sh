@@ -15,14 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <https://www.gnu.org/licenses/>.
 #---------------------------------------------------------------------------------------------
-# This script sends a Blueskynotification
+# This script sends a Telegram notification
 shopt -s extglob
 
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, butspost2telegram is called from another script, and we don't want to polute the returns with info text
 
 
 # shellcheck disable=SC2034
@@ -30,22 +30,25 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 declare -a INDEX STALE
 declare -a link
 
-SPACE=$'\x1F'   # "special" space
+SPACE="_"   # "special" space replacement character for hashtagged items
 
-log_print INFO "Hello. Starting Bluesky notification run"
+log_print INFO "Hello. Starting Telegram notification run"
 
+# Check a bunch of stuff and determine if we should notify
 
-# Load a bunch of stuff and determine if we should notify
+if ! chk_enabled "$TELEGRAM_ENABLED"; then
+  log_print INFO "Telegram is not enabled. Exiting."
+fi
 
-if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
-  log_print INFO "Bluesky notifications not enabled. Exiting."
+if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
+  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
   exit
 fi
 
-if [[ -f "/usr/share/planefence/notifiers/bluesky.template" ]]; then
-  template_clean="$(</usr/share/planefence/notifiers/bluesky.template)"
+if [[ -f "/usr/share/planefence/notifiers/telegram.pf.template" ]]; then
+  template_clean="$(</usr/share/planefence/notifiers/telegram.pf.template)"
 else
-  log_print ERR "No Bluesky template found at /usr/share/planefence/notifiers/bluesky.template. Aborting."
+  log_print ERR "No Telegram template found at /usr/share/planefence/notifiers/telegram.pf.template. Aborting."
   exit 1
 fi
 
@@ -56,30 +59,33 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Bluesky notification"
+log_print DEBUG "Reading records for Telegram notification"
 
-READ_RECORDS
+READ_PF_RECORDS
 
-debug_print "Getting indices of records ready for Bluesky notification and stale records"
-build_index_and_stale INDEX STALE bsky
+log_print DEBUG "Getting indices of records ready for Telegram notification and stale records"
+build_index_and_stale INDEX STALE telegram
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Bluesky notification: ${INDEX[*]}"
+  log_print DEBUG "Records ready for Telegram notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Bluesky notification"
+  log_print DEBUG "No records ready for Telegram notification"
 fi
 if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no notification will be sent): ${STALE[*]}"
+  log_print DEBUG "Stale records (no notification will be sent): ${STALE[*]}"
 else
-  debug_print "No stale records"
+  log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bluesky notification. Exiting."
+  log_print INFO "No records eligible for Telegram notification. Exiting."
   exit 0
 fi
 
+# Fix $ATTRIB so it will show as a shortened URL:
+ATTRIB="$(replace_urls "$ATTRIB")"
+
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Bluesky notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Telegram notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -87,7 +93,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
+    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk${NEWLINE}" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
       template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
     else
@@ -103,11 +109,10 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||OWNER||" "" "$template")"
   fi
   template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]//-/}" "$template")"
   template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]}" || true)" "$template")"
-  template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
   if [[ "${records["$idx":route]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
+    template="$(template_replace "||ROUTE||" "#${records["$idx":route]//-/-#}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
@@ -121,9 +126,10 @@ for idx in "${INDEX[@]}"; do
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
-  links="${records["$idx":link:map]}${records["$idx":link:map]:+ }"
-  links+="${records["$idx":link:fa]}${records["$idx":link:fa]:+ }"
-  links+="${records["$idx":link:faa]}"
+  links=""
+  if [[ -n "${records["$idx":link:map]}" ]]; then links+="•<a href=\"${records["$idx":link:map]}\">$(extract_base "${records["$idx":link:map]}")</a>"; fi
+  if [[ -n "${records["$idx":link:fa]}" ]]; then links+="•<a href=\"${records["$idx":link:fa]}\">$(extract_base "${records["$idx":link:fa]}")</a>"; fi
+  if [[ -n "${records["$idx":link:faa]}" ]]; then links+="•<a href=\"${records["$idx":link:faa]}\">$(extract_base "${records["$idx":link:faa]}")</a>"; fi
   template="$(template_replace "||LINKS||" "$links" "$template")"
 
   # Handle images
@@ -135,38 +141,53 @@ for idx in "${INDEX[@]}"; do
     img_array+=("${records["$idx":screenshot:file]}")
   fi
 
-  # Post to Bsky
-  debug_print "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
+  # Post to Telegram
+  log_print DEBUG "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true
+  posturl="$(/scripts/post2telegram.sh PF "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Bluesky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+    log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
   else
-    log_print ERR "Bluesky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
-    log_print ERR "Bluesky notification error details:\n$posturl"
+    log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+    log_print ERR "Telegram notification error details:\n$posturl"
+
+    if [[ "$(jq '.ok' <<< "$posturl")" == "false" && "$(jq -r '.error_code' <<< "$posturl")" == "429" ]]; then
+      retry_after="$(jq -r '.parameters.retry_after' <<< "$posturl")"
+      if [[ $retry_after =~ ^[0-9]+$ ]]; then
+        log_print ERR "Telegram rate limit exceeded. Retrying after $retry_after seconds..."
+        sleep "$((retry_after + 1))"
+        if posturl="$(extract_url "$posturl")"; then
+          log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+        else
+          log_print ERR "Telegram notification failed also the 2nd time for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+          log_print ERR "Telegram notification error details:\n$posturl"
+        fi
+      fi
+    fi
   fi
   link[idx]="$posturl"
+  sleep 3 # be nice to Telegram and space out messages a bit
 done
 
 # read, update, and thensave the records:
-log_print DEBUG "Updating records after Bluesky notifications"
-LOCK_RECORDS
-READ_RECORDS ignore-lock
+log_print DEBUG "Updating records after Telegram notifications"
+LOCK_PF_RECORDS
+READ_PF_RECORDS ignore-lock
 
 for idx in "${STALE[@]}"; do
-  records["$idx":bsky:notified]="stale"
+  records["$idx":telegram:notified]="stale"
 done
 for idx in "${!link[@]}"; do
   if [[ "${link[idx]:0:4}" == "http" ]]; then
-    records["$idx":bsky:notified]=true
-    records["$idx":bsky:link]="${link[idx]}"
+    records["$idx":telegram:notified]=true
+    records["$idx":telegram:link]="${link[idx]}"
   else
-    records["$idx":bsky:notified]="error"
+    records["$idx":telegram:notified]="error"
   fi
 done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_RECORDS ignore-lock
-log_print INFO "Bluesky notifications run completed."
+WRITE_PF_RECORDS ignore-lock
+log_print INFO "Telegram notifications run completed."

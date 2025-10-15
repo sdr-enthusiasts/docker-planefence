@@ -113,7 +113,7 @@ if [[ -z "$MQTT_URL" ]]; then
 fi
 
 # read the records file
-READ_RECORDS
+READ_PF_RECORDS
 
 # build index and stale arrays
 build_index_and_stale INDEX STALE mqtt
@@ -148,8 +148,8 @@ done
 # Save the records again
 log_print DEBUG "Updating records after MQTT notifications"
 
-LOCK_RECORDS
-READ_RECORDS ignore-lock
+LOCK_PF_RECORDS
+READ_PF_RECORDS ignore-lock
 
 for idx in "${STALE[@]}"; do
   records["$idx":mqtt:notified]="stale"
@@ -163,5 +163,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_RECORDS ignore-lock
+WRITE_PF_RECORDS ignore-lock
 log_print INFO "MQTT notifications run completed."

@@ -44,10 +44,10 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
   exit 1
 fi
 
-if [[ -f "/usr/share/planefence/notifiers/discord.template" ]]; then
-  template="$(</usr/share/planefence/notifiers/discord.template)"
+if [[ -f "/usr/share/planefence/notifiers/discord.pf.template" ]]; then
+  template="$(</usr/share/planefence/notifiers/discord.pf.template)"
 else
-  log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.template. Aborting."
+  log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.pf.template. Aborting."
   exit 1
 fi
 
@@ -60,7 +60,7 @@ fi
 log_print DEBUG "Reading records for Discord notification"
 log_print DEBUG "Reading records for Discord notification"
 
-READ_RECORDS
+READ_PF_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
@@ -81,7 +81,7 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   exit 0
 fi
 
-template_clean="$(</usr/share/planefence/notifiers/discord.template)"
+template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
@@ -197,8 +197,8 @@ done
 # Save the records again
 log_print DEBUG "Updating records after Discord notifications"
 
-LOCK_RECORDS
-READ_RECORDS ignore-lock
+LOCK_PF_RECORDS
+READ_PF_RECORDS ignore-lock
 
 if [[ ${#link[@]} -gt 0 || ${#delivery_errors[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
 
@@ -218,5 +218,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_RECORDS ignore-lock
+WRITE_PF_RECORDS ignore-lock
 log_print INFO "Discord notifications run completed."

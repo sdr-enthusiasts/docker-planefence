@@ -169,7 +169,7 @@ if ! CHK_SCREENSHOT_ENABLED; then
 fi
 
 log_print DEBUG "Getting RECORDSFILE"
-READ_RECORDS ignore-lock
+READ_PF_RECORDS ignore-lock
 
 # Make an index of records to process
 debug_print "Getting indices ready for new and stale records"
@@ -217,8 +217,8 @@ done
 
 # Read records again, lock them, update them, and write them back
 log_print DEBUG "Saving records after screenshot attempts"
-LOCK_RECORDS
-READ_RECORDS ignore-lock
+LOCK_PF_RECORDS
+READ_PF_RECORDS ignore-lock
 for idx in "${!screenshot_file[@]}"; do
     records["$idx":screenshot:file]="${screenshot_file["$idx"]}"
 done
@@ -227,7 +227,7 @@ for idx in "${!screenshot_checked[@]}"; do
 done
 log_print DEBUG "Wrote screenshot files to indices: ${!screenshot_file[*]}"
 log_print DEBUG "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
-WRITE_RECORDS ignore-lock
+WRITE_PF_RECORDS ignore-lock
 
 # Cleanup old screenshots
 find "$SCREENFILEDIR" -type f -name 'screenshot-*.png' -mmin +180 -exec rm -f {} \;

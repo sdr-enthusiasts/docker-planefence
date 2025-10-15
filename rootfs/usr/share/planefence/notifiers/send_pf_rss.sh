@@ -61,7 +61,7 @@ xml_escape() {
 # Function to generate RSS feed for a specific CSV file (optimized)
 generate_rss() {
   local rss_file="$OUTFILEDIR/planefence-$TODAY.rss"
-  READ_RECORDS
+  READ_PF_RECORDS
 
   # Precompute some values to avoid repeated expansions
   local site_link="${SITE_LINK:-.}"
