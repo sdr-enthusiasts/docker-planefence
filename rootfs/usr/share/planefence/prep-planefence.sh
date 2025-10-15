@@ -13,8 +13,6 @@
 #
 source /scripts/pf-common
 
-REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
-
 shopt -s nullglob
 
 function configure_planefence() {
@@ -71,8 +69,8 @@ fi
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -Rf --update=all /usr/share/planefence/stage/html /usr/share/planefence/html	# always update to latest version
-cp --update=none /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
+cp -Rf /usr/share/planefence/stage/html /usr/share/planefence/html	# always update to latest version
+cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 mv -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip
 
 #--------------------------------------------------------------------------------
