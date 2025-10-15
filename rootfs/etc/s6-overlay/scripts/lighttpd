@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2154
 
-source /scripts/common
+source /scripts/pf-common
 APPPATH="/usr/sbin/lighttpd"
 CONFIGPATH="/etc/lighttpd/lighttpd.conf"
 OWNER=root
@@ -39,17 +39,17 @@ sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 #
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Starting FastCGI"; fi
+log_print INFO "Starting FastCGI"
 lighttpd-enable-mod fastcgi fastcgi-php mod_alias mod_cgi extforward >/dev/null 2>&1 || true
 #
 # -----------------------------------------------------------------------------------
 # Check if lighttpd is OK:
 #
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Checking Lighttpd configuration"; fi
+log_print INFO "Checking Lighttpd configuration"
 $APPPATH -tt -f $CONFIGPATH || exit $?
 #
 # -----------------------------------------------------------------------------------
 # Now run ligghttpd for real
 #
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Bringing Lighttpd Up"; fi
+log_print INFO "Bringing Lighttpd Up"
 $APPPATH -f $CONFIGPATH -D

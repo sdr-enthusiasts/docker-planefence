@@ -50,6 +50,7 @@ mkdir -p -m 0777 /usr/share/planefence/persist/.internal
 mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
 mkdir -p -m 0777 /usr/share/planefence/html/plane-alert/silhouettes
 mkdir -p -m 0777 /usr/share/planefence/html/assets/images
+mkdir -p -m 0777 /usr/share/planefence/html/noise
 chmod -f a=rwx /usr/share/planefence/persist
 chmod -fR u=rwx,go=rx \
 	/usr/share/planefence/persist/.internal \
@@ -69,7 +70,7 @@ fi
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -Rf /usr/share/planefence/stage/html /usr/share/planefence/html	# always update to latest version
+cp -Rf /usr/share/planefence/stage/html/* /usr/share/planefence/html/	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 mv -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip
 

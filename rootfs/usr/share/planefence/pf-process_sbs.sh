@@ -349,7 +349,7 @@ CREATE_NOISEPLOT () {
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2")"
-	local NOISEGRAPHFILE="$OUTFILEDIR/noisegraph-$STARTTIME-$4.png"
+	local NOISEGRAPHFILE="$OUTFILEDIR/noise/noisegraph-$STARTTIME-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
     if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then

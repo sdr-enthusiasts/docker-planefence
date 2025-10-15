@@ -998,7 +998,7 @@ function addRow(r){
   if (cfg.enableStream) {
     (async function(){
       try {
-        const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
+        const resp = await fetch('./cgi/pf-stream.sh', { cache: 'no-store' });
         if (!resp.ok || !resp.body) { prog.textContent = 'Stream failed'; return; }
 
         const reader = resp.body.getReader();
