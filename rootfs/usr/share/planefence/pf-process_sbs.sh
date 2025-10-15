@@ -424,21 +424,21 @@ CREATE_SPECTROGRAM () {
   fi
 
 
-	if [[ ! -s "$OUTFILEDIR/$spectrofile" ]]; then
+	if [[ ! -s "$OUTFILEDIR/noise/$spectrofile" ]]; then
 		# we don't have $spectrofile locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
 
       debug_print "Getting spectrogram $spectrofile from $REMOTENOISE"
-      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/$spectrofile" || \
-        { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
+      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/noise/$spectrofile" || \
+        { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/noise/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
           debug_print "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
-          rm -f "$OUTFILEDIR/$spectrofile"
+          rm -f "$OUTFILEDIR/noise/$spectrofile"
           return
       fi
 
 	fi
-  debug_print "Spectrogram file: $OUTFILEDIR/$spectrofile"
-  echo "$OUTFILEDIR/$spectrofile"
+  debug_print "Spectrogram file: $OUTFILEDIR/noise/$spectrofile"
+  echo "$OUTFILEDIR/noise/$spectrofile"
 }
 
 LINK_LATEST_SPECTROFILE () {
@@ -484,16 +484,16 @@ CREATE_MP3 () {
 	mp3f="noisecapt-recording-${mp3time}.mp3"
 
 	# shellcheck disable=SC2076
-	if [[ ! -s "$OUTFILEDIR/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
+	if [[ ! -s "$OUTFILEDIR/noise/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
-		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f" 2>/dev/null
+		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/noise/$mp3f" 2>/dev/null
 	fi 
 	# shellcheck disable=SC2012
-	if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 4 )); then
+	if [[ ! -s "$OUTFILEDIR/noise/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/noise/$mp3f" | awk '{print $1}') < 4 )); then
 		# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
-		rm -f "$OUTFILEDIR/$mp3f"
+		rm -f "$OUTFILEDIR/noise/$mp3f"
 	else
-		echo "$OUTFILEDIR/$mp3f"
+		echo "$OUTFILEDIR/noise/$mp3f"
 	fi
 }
 
@@ -968,15 +968,15 @@ if (( ${#socketrecords[@]} > 0 )); then
        [[ -n "${records["$idx":icao]}" ]]; then
           records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}" "${records["$idx":icao]}")"
           if [[ -n "${records["$idx":noisegraph:file]}" ]]; then
-            records["$idx":noisegraph:link]="$(basename "${records["$idx":noisegraph:file]}")"
+            records["$idx":noisegraph:link]="noise/$(basename "${records["$idx":noisegraph:file]}")"
           fi
           records["$idx":spectro:file]="$(CREATE_SPECTROGRAM "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":spectro:file]}" ]]; then
-            records["$idx":spectro:link]="$(basename "${records["$idx":spectro:file]}")"
+            records["$idx":spectro:link]="noise/$(basename "${records["$idx":spectro:file]}")"
           fi
           records["$idx":mp3:file]="$(CREATE_MP3 "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":mp3:file]}" ]]; then
-            records["$idx":mp3:link]="$(basename "${records["$idx":mp3:file]}")"
+            records["$idx":mp3:link]="noise/$(basename "${records["$idx":mp3:file]}")"
           fi
           records["$idx":checked:noisegraph]=true
     fi
