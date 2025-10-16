@@ -63,6 +63,86 @@ log_print() {
 }
 
 # shellcheck disable=SC2120
+LOCK_PA_RECORDS() {
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
+    # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    while :; do
+      starttime="$(date +%s)"
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+    done
+  fi
+  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.records.lock"
+  debug_print "Records locked by $(</tmp/.records.lock)"
+}
+
+UNLOCK_PA_RECORDS() {
+  if [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Unlocking records locked by $(</tmp/.records.lock)"
+    rm -f "/tmp/.records.lock"
+  else
+    debug_print "Unlocking records (they were already unlocked)"
+  fi
+}
+
+READ_PA_RECORDS() {
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
+  if [[ ! -f "$RECORDSFILE" ]]; then 
+    debug_print "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
+    declare -gA records=()
+    declare -gA heatmap=()
+    declare -gA last_idx_for_icao=()
+    declare -gA lastseen_for_icao=()
+    records[maxindex]=-1
+    LASTPROCESSEDLINE=""
+    return
+  fi
+
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    starttime="$(date +%s)"
+    debug_print "Waiting for records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    while :; do
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+    done
+    debug_print "Records.lock unlocked. Continuing..."
+  fi
+  debug_print "Records read by $(basename "$0")"
+  # shellcheck disable=SC1090
+  source <(gzip -cd "$RECORDSFILE")
+
+}
+
+WRITE_PA_RECORDS() {
+
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local tmpfile
+  tmpfile="$(mktemp)"
+
+  LOCK_PF_RECORDS "$1"
+  #declare -A records last_idx_for_icao lastseen_for_icao  # declare them just in case they don't exist yet
+  { declare -p records
+    declare -p heatmap
+    declare -p last_idx_for_icao
+    declare -p lastseen_for_icao
+    echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
+  } | \
+    sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
+    gzip -c > "$tmpfile"
+    mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+    chmod a+r "$RECORDSFILE"
+  debug_print "Records written by $(basename "$0")"
+  if [[ "$1" != "stay-locked" ]]; then UNLOCK_PF_RECORDS; fi
+}
+
+# shellcheck disable=SC2120
 LOCK_PF_RECORDS() {
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
     debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"

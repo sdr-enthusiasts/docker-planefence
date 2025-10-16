@@ -66,8 +66,9 @@ yesterday_epoch=$(date -d yesterday +%s)
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
-declare -A heatmap            # lat,lon -> count
-declare -a updatedrecords newrecords processed_indices
+declare -A heatmap             # lat,lon -> count
+declare -A PA_DICT             # icao -> plane-alert db line
+declare -a updatedrecords newrecords processed_indices pa_socketrecords
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -78,6 +79,9 @@ elif [[ -n "$TRACKSERVICE" ]]; then
 else
   TRACKURL="globe.adsbexchange.com"
 fi
+
+PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
 # ==========================
 # Functions
@@ -419,7 +423,7 @@ CREATE_SPECTROGRAM () {
 
 
 	if [[ -z "$spectrofile" ]]; then 
-    # debug_print "There's no noise data between $(date -d "@$STARTTIME") and $(date -d "@$ENDTIME")."
+    # log_print DEBUG "There's no noise data between $(date -d "@$STARTTIME") and $(date -d "@$ENDTIME")."
     return
   fi
 
@@ -428,16 +432,16 @@ CREATE_SPECTROGRAM () {
 		# we don't have $spectrofile locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
 
-      debug_print "Getting spectrogram $spectrofile from $REMOTENOISE"
+      log_print DEBUG "Getting spectrogram $spectrofile from $REMOTENOISE"
       if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/noise/$spectrofile" || \
         { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/noise/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
-          debug_print "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
+          log_print DEBUG "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
           rm -f "$OUTFILEDIR/noise/$spectrofile"
           return
       fi
 
 	fi
-  debug_print "Spectrogram file: $OUTFILEDIR/noise/$spectrofile"
+  log_print DEBUG "Spectrogram file: $OUTFILEDIR/noise/$spectrofile"
   echo "$OUTFILEDIR/noise/$spectrofile"
 }
 
@@ -680,21 +684,25 @@ if [[ "$1" == "reset" ]]; then
   records[maxindex]="-1"
 fi
 
-debug_print "Getting $RECORDSFILE"
+log_print DEBUG "Getting $RECORDSFILE"
 LOCK_PF_RECORDS
 READ_PF_RECORDS ignore-lock
 
-debug_print "Got $RECORDSFILE. Getting ignorelist"
+log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
     sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
 else
     touch "$IGNORELIST"
 fi
 
-debug_print "Got ignorelist. Getting noiselist in the background as this may take a while"
+log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
   curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
 fi
+
+while IFS="" read -r line; do
+  [[ -n "${line%%,*}" ]] && PA_DICT["${line%%,*}"]="$line" || true
+done < "$PA_FILE"
 
 # ==========================
 # Collect new lines
@@ -721,38 +729,47 @@ fi
 
 currentrecords=$(( records[maxindex] + 1 ))
 
-readarray -t socketrecords <<< "$(
-    { if [[ -n "$LASTPROCESSEDLINE" ]]; then
+# Create temporary file for all filtered records
+{ if [[ -n "$LASTPROCESSEDLINE" ]]; then
       # Check if last run was yesterday
       if [[ "$(date -d "$lastdate" +%y%m%d)" == "$YESTERDAY" ]]; then
           # Grab remainder of yesterday + all of today
-          { debug_print "Last processed line was from yesterday ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of yesterday's file and all of today's file"
+          { log_print DEBUG "Last processed line was from yesterday ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of yesterday's file and all of today's file"
             grep -A9999999 -F "$LASTPROCESSEDLINE" "$YESTERDAYFILE" 2>/dev/null || true
             cat "$TODAYFILE"
           }
       elif [[ "$(date -d "$lastdate" +%y%m%d)" == "$TODAY" ]]; then # Just grab remainder of today
-        debug_print "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
+        log_print DEBUG "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
         grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
       else
-        debug_print "Last processed line was from before today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing all of today's file"
+        log_print DEBUG "Last processed line was from before today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing all of today's file"
         cat "$TODAYFILE"
       fi
     else
       # First run: all of today’s file
-      debug_print "No last processed line found, so grabbing all of today's file"
+      log_print DEBUG "No last processed line found, so grabbing all of today's file"
         cat "$TODAYFILE"
-    fi; } \
-      | tac \
-      | grep -v -i -f "$IGNORELIST" 2>/dev/null \
-      | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }'
-  )"
-log_print INFO "Collected $nowlines new SBS records from your ADSB data feed, of which ${#socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
+  fi; } | tac > /tmp/filtered_records_$$
+
+# Create pf_socketrecords array
+readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }')
+
+# Create pa_socketrecords array
+if [[ ${#PA_DICT[@]} -gt 0 ]]; then
+    printf '%s\n' "${!PA_DICT[@]}" > /tmp/pa_keys_$$
+    readarray -t pa_socketrecords < <(grep -F -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
+    rm -f /tmp/pa_keys_$$
+fi
+rm -f /tmp/filtered_records_$$
+
+log_print INFO "Planefence: found $nowlines new SBS records from your ADSB data feed, of which ${#pf_socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
+log_print INFO "Plane-Alert: found ${#pa_socketrecords[@]} new SBS records matching the plane-alert-db list."
 
 # ==========================
 # Process lines
 # ==========================
-if (( ${#socketrecords[@]} > 0 )); then
-  for line in "${socketrecords[@]}"; do
+if (( ${#pf_socketrecords[@]} > 0 )); then
+  for line in "${pf_socketrecords[@]}"; do
 
     [[ -z $line ]] && continue
     IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
@@ -1007,9 +1024,9 @@ if (( ${#socketrecords[@]} > 0 )); then
   # ==========================
   # Save state
   # ==========================
-  LASTPROCESSEDLINE="${socketrecords[0]}"
+  LASTPROCESSEDLINE="${pf_socketrecords[0]}"
   WRITE_PF_RECORDS ignore-lock
-  debug_print "Wrote $RECORDSFILE"
+  log_print DEBUG "Wrote $RECORDSFILE"
 
   # # ==========================
   # # Emit CSV snapshot
@@ -1017,10 +1034,10 @@ if (( ${#socketrecords[@]} > 0 )); then
 
 
   GENERATE_CSV
-  debug_print "Wrote CSV object to $CSVOUT"
+  log_print DEBUG "Wrote CSV object to $CSVOUT"
 
   GENERATE_JSON
-  debug_print "Wrote JSON object to $JSONOUT"
+  log_print DEBUG "Wrote JSON object to $JSONOUT"
 
 fi
 log_print INFO "Done."
