@@ -101,7 +101,6 @@ CREATEHEATMAP () {
 	template="$(template_replace "||HEATMAPWIDTH||" "$HEATMAPWIDTH" "$template")"
 	template="$(template_replace "||HEATMAPHEIGHT||" "$HEATMAPHEIGHT" "$template")"
 	template="$(template_replace "||DISTMTS||" "$DISTMTS" "$template")"
-	template
 
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
@@ -142,15 +141,14 @@ DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 #      MODIFY THE TEMPLATE
 # -----------------------------------------------------------------------------------
 
-debug_print "Adding heatmap (if enabled)"
+log_print DEBUG "Adding heatmap (if enabled)"
 CREATEHEATMAP
-debug_print "Done updating the template"
+log_print DEBUG "Done updating the template"
 
 # ---------------------------------------------------------------------------
 #      FINALIZE AND WRITE THE FILES
 # ---------------------------------------------------------------------------
 log_print INFO "Writing HTML file"
-echo "$template" > "$OUTFILEDIR/planefence-$TODAY.html"
-ln -sf "$OUTFILEDIR/planefence-$TODAY.html" "$OUTFILEDIR/index.html"
+echo "$template" > "$OUTFILEDIR/heatmap-$TODAY.html"
 
-log_print INFO "Done - Wrote HTML file to $OUTFILEDIR/planefence-$TODAY.html"
+log_print INFO "Done - Wrote HTML file to $OUTFILEDIR/heatmap-$TODAY.html"

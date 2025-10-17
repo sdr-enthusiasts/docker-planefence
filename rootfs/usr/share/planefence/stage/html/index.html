@@ -1163,11 +1163,11 @@ function addRow(r){
   }
 
 // -------- Polling snapshot every 60s and apply incremental updates --------
-// Uses same endpoint (`./cgi/stream.sh`) which emits NDJSON (globals, schema, rows)
+// Uses same endpoint (`./cgi/pfstream.sh`) which emits NDJSON (globals, schema, rows)
 // and updates existing rows (by index) or appends new rows. Does a single draw at end.
 async function pollAndMerge() {
   try {
-    const resp = await fetch('./cgi/stream.sh', { cache: 'no-store' });
+    const resp = await fetch('./cgi/pf-stream.sh', { cache: 'no-store' });
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
     const txt = await resp.text();
     if (!txt) return;

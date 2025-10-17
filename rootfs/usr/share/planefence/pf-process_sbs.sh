@@ -68,7 +68,7 @@ declare -A last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao   # icao -> lastseen epoch
 declare -A heatmap             # lat,lon -> count
 declare -A PA_DICT             # icao -> plane-alert db line
-declare -a updatedrecords newrecords processed_indices pa_socketrecords
+declare -a updatedrecords newrecords processed_indices pa_socketrecords pf_socketrecords
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -717,7 +717,7 @@ fi
 log_print INFO "Collecting new records. Last processed date is $lastdate"
 
 if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
-  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
+  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || nowlines="$(cat "$TODAYFILE" | wc -l)" || nowlines=0
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then 
   records[totallines]="$(cat "$TODAYFILE" | wc -l)"
@@ -740,7 +740,7 @@ currentrecords=$(( records[maxindex] + 1 ))
           }
       elif [[ "$(date -d "$lastdate" +%y%m%d)" == "$TODAY" ]]; then # Just grab remainder of today
         log_print DEBUG "Last processed line was from today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing remainder of today's file"
-        grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || true
+        grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" 2>/dev/null || cat "$TODAYFILE" || true
       else
         log_print DEBUG "Last processed line was from before today ($(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")), so grabbing all of today's file"
         cat "$TODAYFILE"

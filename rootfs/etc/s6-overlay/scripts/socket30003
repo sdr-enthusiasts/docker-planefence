@@ -48,9 +48,9 @@ fi
 LOOPTIME=15
 #
 # RESTARTTIME - time between socket30003/cleanup cycles
-RESTARTTIME=3h
+RESTARTTIME=1h
 # MAXLOGTIME - only keep log lines younger than this in socket30003 logs
-MAXLOGTIME="3 hours"
+MAXLOGTIME="1 hour"
 #
 # set params in socket30003.conf
 sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
