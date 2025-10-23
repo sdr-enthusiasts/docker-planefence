@@ -679,8 +679,8 @@ fi
 log_print DEBUG "Getting $RECORDSFILE"
 LOCK_PF_RECORDS
 READ_PF_RECORDS ignore-lock
-LOCK_PA_RECORDS
-READ_PA_RECORDS ignore-lock
+# LOCK_PA_RECORDS
+# READ_PA_RECORDS ignore-lock
 
 log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -759,12 +759,13 @@ if (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
 fi
 rm -f /tmp/filtered_records_$$
 
-log_print INFO "Planefence: found $nowlines new SBS records from your ADSB data feed, of which ${#pf_socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
-log_print INFO "Plane-Alert: found ${#pa_socketrecords[@]} new SBS records matching the plane-alert-db list."
-
 # read the unique icao's into arrays:
 readarray -t pf_unique_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
 readarray -t pa_unique_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
+
+log_print INFO "Planefence: found $nowlines new SBS records from your ADSB data feed, of which ${#pf_socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
+log_print INFO "Plane-Alert: found ${#pa_socketrecords[@]} new SBS records matching the plane-alert-db list."
+
 
 # ==========================
 # Process PF/PA lines

@@ -177,7 +177,7 @@ build_index_and_stale_for_screenshot INDEX STALE
 
 # If there's nothing to do, exit
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bluesky notification. Exiting."
+  log_print INFO "No records eligible for screenshotting. Exiting."
   exit 0
 else debug_print "Records to process: ${#INDEX[@]} new, ${#STALE[@]} stale"
 fi

@@ -95,7 +95,7 @@ while true; do
 		timeout "$RESTARTTIME" /usr/share/socket30003/socket30003.pl &>/dev/null || true
 		exitcode="$?"
 		rm -f /run/socket30003.up
-		if (( exitcode != 124 )); then
+		if (( exitcode != 124 && exitcode != 0)); then
 			"${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with error code $exitcode. Restarting in $LOOPTIME"
 			sleep $LOOPTIME & wait 
 		fi

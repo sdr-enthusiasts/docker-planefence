@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 DOCROOT="/usr/share/planefence/html"
 
@@ -32,6 +32,17 @@ choose_json() {
 
   printf ''  # none
 }
+
+# get env var from http GET
+method="${REQUEST_METHOD:-GET}"
+
+if [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=planefence" ]]; then
+  FILTER_MODE="planefence"
+elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=plane-alert" ]]; then
+  FILTER_MODE="plane-alert"
+else
+  FILTER_MODE="planefence"
+fi
 
 JSONFILE="$(choose_json || true)"
 if [[ -z "${JSONFILE:-}" ]]; then
