@@ -64,8 +64,8 @@ yesterday_epoch=$(date -d yesterday +%s)
 
 # constants
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
-declare -A last_idx_for_icao   # icao -> most recent idx within window
-declare -A lastseen_for_icao   # icao -> lastseen epoch
+declare -A pf_last_idx_for_icao   # icao -> most recent idx within window
+declare -A pf_lastseen_for_icao   # icao -> lastseen epoch
 declare -A heatmap             # lat,lon -> count
 declare -A PA_DICT             # icao -> plane-alert db line
 declare -a updatedrecords newrecords processed_indices pa_socketrecords pf_socketrecords
@@ -82,6 +82,8 @@ fi
 
 PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
+
+PA_ENABLED="$(sed -n 's/\(^\s*PF_PLANEALERT=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 
 # ==========================
 # Functions
@@ -501,16 +503,6 @@ CREATE_MP3 () {
 	fi
 }
 
-to_epoch() {
-  # Fast YYYY/MM/DD HH:MM:SS -> epoch (no subsecond needed)
-  local d="$1" t="$2"
-  # split date
-  local Y=${d:0:4} M=${d:5:2} D=${d:8:2}
-  local h=${t:0:2} m=${t:3:2} s=${t:6:2}
-  # GNU date can parse RFC-3339 fastest if given numeric; but to avoid invoking per-line,
-  # compute offset using seconds since epoch at midnight plus H:M:S. Precompute midnight once:
-}
-
 GENERATE_CSV() {
   # This looks complex but is highly opimized for speed by using awk for the heavy lifting.
   local tmpfile="$(mktemp)"
@@ -687,6 +679,8 @@ fi
 log_print DEBUG "Getting $RECORDSFILE"
 LOCK_PF_RECORDS
 READ_PF_RECORDS ignore-lock
+LOCK_PA_RECORDS
+READ_PA_RECORDS ignore-lock
 
 log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -703,6 +697,9 @@ fi
 while IFS="" read -r line; do
   [[ -n "${line%%,*}" ]] && PA_DICT["${line%%,*}"]="$line" || true
 done < "$PA_FILE"
+
+awk -F',' '{print $1}' "$PA_FILE" > /tmp/pa_keys_$$
+
 
 # ==========================
 # Collect new lines
@@ -749,14 +746,14 @@ currentrecords=$(( records[maxindex] + 1 ))
       # First run: all of today’s file
       log_print DEBUG "No last processed line found, so grabbing all of today's file"
         cat "$TODAYFILE"
-  fi; } | tac > /tmp/filtered_records_$$
+  fi; } | tac > /tmp/filtered_records_$$ \
+    || { pkill socket30003.pl 2>/dev/null; exit 1; }  # if tac fails, it's likely disk full; so kill socket30003.pl to trigger a log file cleanup and exit with error
 
 # Create pf_socketrecords array
 readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }')
 
 # Create pa_socketrecords array
-if [[ ${#PA_DICT[@]} -gt 0 ]]; then
-    printf '%s\n' "${!PA_DICT[@]}" > /tmp/pa_keys_$$
+if (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
     readarray -t pa_socketrecords < <(grep -F -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
     rm -f /tmp/pa_keys_$$
 fi
@@ -765,11 +762,16 @@ rm -f /tmp/filtered_records_$$
 log_print INFO "Planefence: found $nowlines new SBS records from your ADSB data feed, of which ${#pf_socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
 log_print INFO "Plane-Alert: found ${#pa_socketrecords[@]} new SBS records matching the plane-alert-db list."
 
+# read the unique icao's into arrays:
+readarray -t pf_unique_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
+readarray -t pa_unique_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
+
 # ==========================
-# Process lines
+# Process PF/PA lines
 # ==========================
-if (( ${#pf_socketrecords[@]} > 0 )); then
-  for line in "${pf_socketrecords[@]}"; do
+if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
+  socketrecords=("${pf_socketrecords[@]}" "${pa_socketrecords[@]}")
+  for line in "${socketrecords[@]}"; do
 
     [[ -z $line ]] && continue
     IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
@@ -789,11 +791,11 @@ if (( ${#pf_socketrecords[@]} > 0 )); then
 
     # Collapse window lookup (O(1))
     idx=""
-    ls="${lastseen_for_icao[$icao]}"
+    ls="${pf_lastseen_for_icao[$icao]}"
     if [[ -n $ls ]]; then
       dt=$(( ls - seentime ))
       if (( ${dt//-/} <= COLLAPSEWITHIN )); then
-        idx="${last_idx_for_icao[$icao]}"
+        idx="${pf_last_idx_for_icao[$icao]}"
       else
         if chk_enabled "$IGNOREDUPES"; then
           continue  # ignore this dupe
@@ -812,12 +814,13 @@ if (( ${#pf_socketrecords[@]} > 0 )); then
     fi
 
     # Update fast ICAO index maps
-    last_idx_for_icao[$icao]=$idx
-    lastseen_for_icao[$icao]=$seentime
+    pf_last_idx_for_icao[$icao]=$idx
+    pf_lastseen_for_icao[$icao]=$seentime
 
     # Initialize once-per-record fields
     if [[ -z ${records["$idx":icao]} ]]; then
       records["$idx":icao]="$icao"
+
       # map link at first touch
       if [[ -n $lat && -n $lon ]]; then
         records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
@@ -921,7 +924,7 @@ if (( ${#pf_socketrecords[@]} > 0 )); then
     # get the owner's name
     # namestart=$(date +%s.%3N)
     if [[ "${records["$idx":checked:owner]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
-      records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null)"
+      records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null || true)"
       records["$idx":checked:owner]=true
     fi
     # nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
@@ -1019,7 +1022,38 @@ if (( ${#pf_socketrecords[@]} > 0 )); then
 
 
 
-  log_print INFO "Processing complete. Now writing results to disk..."
+  log_print INFO "Planefence processing complete."
+  if ! chk_disabled "$PA_ENABLED"; then
+    log_print INFO "Processing Plane-Alert records (${#pa_socketrecords[@]} found)."
+    # ==========================
+    # Process PA lines
+    # ==========================
+    for line in "${pa_socketrecords[@]}"; do
+
+      [[ -z $line ]] && continue
+      IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
+      [[ $icao == "hex_ident" || -z "$time" ]] && continue # skip header or incomplete lines
+
+      # Find matching record by icao
+      pa_idx=""
+      for ((idx=0; idx<=records[maxindex]; idx++)); do
+        if [[ "${records["$idx":icao]}" == "$icao" ]]; then
+          pa_idx="$idx"
+          break
+        fi
+      done
+      [[ -z $pa_idx ]] && continue  # no matching record found
+
+      # Add Plane-Alert data
+      pa_data="${PA_DICT[$icao]}"
+      records["$pa_idx":pa:data]="$pa_data"
+      records[HASPA]=true
+
+    done
+    log_print INFO "Plane-Alert processing complete."
+    if [[ -z "${records[HASPA]}" ]]; then records[HASPA]=false; fi
+  fi
+
 
   # ==========================
   # Save state

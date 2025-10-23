@@ -74,6 +74,11 @@
     button, .btn {
       background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
     }
+    /* Force the theme toggle to inherit and display the foreground color explicitly */
+    #themeToggle { color: var(--fg) !important; }
+    #themeToggle svg { color: currentColor; }
+    /* Ensure theme toggle SVG is visible in both themes */
+    #themeToggle svg { width: 1.1em; height: 1.1em; display: inline-block; vertical-align: middle; }
     button:hover { border-color: var(--fg); }
     a { color: var(--link); text-decoration: none; }
     a:visited { color: var(--link-visited); }
@@ -85,8 +90,7 @@
     table.dataTable thead th { white-space: nowrap; }
   /* Left-align all table headers for better readability */
   table.dataTable thead th, table#t thead th { text-align: left !important; }
-  /* Constrain spectro column to thumbnail width so it doesn't expand */
-  table.dataTable tbody td:nth-child(10), table.dataTable thead th:nth-child(10) { max-width: 56px; width: 56px; }
+  /* Removed Spectro column; kept layout flexible */
     /* Keep the table header visible while scrolling; it will sit just below the page header */
     table.dataTable thead th {
       position: sticky;
@@ -95,7 +99,9 @@
       background: var(--soft);
     }
     th, td { vertical-align: middle; }
-    img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
+  img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
+  /* Silhouette thumbnails: keep width same as thumb, preserve aspect ratio */
+  img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
     .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
   /* Position cell: give a little gap between coords and angle line */
   td.position-cell div { line-height: 1.2; }
@@ -109,6 +115,24 @@
   .chip svg { height: 1.25em; width: 1.25em; vertical-align: -0.15em; }
   .chip.muted { opacity: 0.8; }
   .badge-icon { height: 1.25em; width: 1.25em; object-fit: contain; vertical-align: -0.15em; }
+  /* Slightly increase chip padding for better tap targets and add spacing between chips */
+  .chip { padding: 0.15rem 0.5rem; }
+  .chip + .chip { margin-left: 0.35rem; }
+  /* Tooltip hint for non-link notifications: underline only the label, not the chip outline */
+  .chip.has-tooltip { cursor: help; }
+  .chip.has-tooltip .label { border-bottom: 1px dotted currentColor; }
+  /* Keep notifier icons at or below line height and align nicely */
+  .ico { height: 1em; width: 1em; vertical-align: text-bottom; }
+  .chip .ico { margin-right: .3rem; }
+  /* For notifier links that are not chips (Notifications column), add spacing */
+  td:nth-child(11) a .ico { margin-right: .3rem; }
+  /* Center the empty state message nicely */
+  td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
+  /* Improve spacing for notification chips inside the Notifications cell */
+  td:nth-child(10) a.chip { margin-right: .25rem; }
+
+  /* Visually hidden text for accessibility */
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
   /* In dark mode, invert bitmap badges so dark lines become light */
   html.dark .badge-icon { filter: invert(1) brightness(2) contrast(1.2); }
 
@@ -173,7 +197,7 @@
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
     <div class="spacer"></div>
-  <button id="themeToggle" title="Toggle dark/light">Dark</button>
+  <button id="themeToggle" title="Toggle dark/light" aria-pressed="false" aria-label="Toggle theme"></button>
   <button id="manualUpdate" title="Update now">Update</button>
   <button id="reload" title="Reload data">Reload</button>
   <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
@@ -206,11 +230,14 @@
     mediaBase: './assets/',
     // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
     // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
-    noisePrefix: './noise/',
+    // noisePrefix: './noise/',
+  noisePrefix: './',
+  // Directory for aircraft silhouettes (configurable). Ensure trailing slash.
+  silhouetteDir: './assets/silhouettes/',
   // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
   // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
     noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
-  mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E',
+    mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E',
     // Enable or disable the live stream reader and/or periodic polling. Set one or both to true as needed.
     enableStream: true,
     enablePoll: true,
@@ -220,12 +247,21 @@
 
   // -------- Theme (dark/light) --------
   const THEME_KEY = 'pf-theme';
+  function iconSun(){ return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10-9h-2v3h2V4zm7.45 1.66l-1.41-1.41-1.8 1.79 1.41 1.42 1.8-1.8zM17 13h3v-2h-3v2zm-5 7h2v-3h-2v3zm-6.66-1.45l1.41 1.41 1.8-1.79-1.41-1.42-1.8 1.8zM20.49 17l1.41-1.41-1.79-1.8-1.42 1.41 1.8 1.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>`; }
+  function iconMoon(){ return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.752 15.002A9 9 0 119 2.248 7 7 0 0021.752 15z"/></svg>`; }
   function applyTheme(theme){
     const dark = theme === 'dark';
     document.documentElement.classList.toggle('dark', dark);
     const btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = dark ? 'Light' : 'Dark';
+    if (btn) {
+      btn.setAttribute('aria-pressed', String(dark));
+      const label = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = `${dark ? iconSun() : iconMoon()}<span class="sr-only">${label}</span>`;
+    }
     localStorage.setItem(THEME_KEY, theme);
+    // After theme flip, update arrow images to day/night variants without full re-render
+    try { updateAngleImagesForTheme(dark); } catch(e) { /* ignore */ }
   }
   function currentTheme(){
     const saved = localStorage.getItem(THEME_KEY);
@@ -233,9 +269,11 @@
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   applyTheme(currentTheme());
+  // On initial apply, ensure arrow images reflect theme
+  try { updateAngleImagesForTheme(document.documentElement.classList.contains('dark')); } catch(e){}
   document.getElementById('themeToggle')?.addEventListener('click', () => {
     applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
-    if (window.table) window.table.rows().invalidate().draw(false); // refresh arrow assets
+    // No need to invalidate rows just to swap arrow icons; we directly update sources.
   });
 
   // -------- Helpers --------
@@ -320,6 +358,19 @@
     return `arrow${b}_${dark? 'night':'day'}.png`;
   }
 
+  // Swap existing angle image sources to match theme without re-rendering rows
+  function updateAngleImagesForTheme(dark){
+    const imgs = document.querySelectorAll('img.angle-img');
+    imgs.forEach(img => {
+      try {
+        const src = img.getAttribute('src') || '';
+        // Replace day/night suffix if present
+        const newSrc = src.replace(/arrow(\d{1,3})_(day|night)\.png$/i, (m, num) => `arrow${num}_${dark ? 'night':'day'}.png`);
+        if (newSrc !== src) img.setAttribute('src', newSrc);
+      } catch(e) { /* per-image ignore */ }
+    });
+  }
+
   // 3) Seen rendering: two lines, small “still updating”, no “at”
   function formatSeen(secStr, completeFlag, preferTs){
     const s = Number(preferTs ?? secStr);
@@ -391,9 +442,26 @@
   }
 
   // Small inline SVG icon helpers
-  function iconNoise(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3l3-6v12l-3-6H3z" fill="currentColor"/></svg>` }
-  function iconMp3(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" fill="currentColor"/></svg>` }
-  function iconSpectro(){ return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" fill="none"/><path d="M6 12h1v2H6v-2zm3-2h1v4H9v-4zm3-3h1v7h-1V7zm3 1h1v6h-1V8zm3-2h1v8h-1V6z" fill="currentColor"/></svg>` }
+  // Graph icon for noisegraph PNG link
+  function iconNoise(){
+    return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M3 19h18v2H3z" opacity=".25"/><path d="M7 15h2v4H7v-4zm4-6h2v10h-2V9zm4 3h2v7h-2v-7zM3 12h2v10H3V12z"/></svg>`;
+  }
+  // Music/note icon for mp3 link
+  function iconMp3(){
+    return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`;
+  }
+  function iconSpectro(){ return `<svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M5 15h2V9H5v6zm3 3h2V6H8v12zm3-1h2V7h-2v10zm3-3h2V9h-2v5zm3 4h2V6h-2v12z"/></svg>` }
+  // Notifier icons (simple inline SVGs for Discord, Telegram, Bluesky)
+  function iconDiscord(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4a16 16 0 0 0-4-.9l-.2.3c1.6.4 2.8 1 3.7 1.7-1.6-.8-3.2-1.3-4.9-1.6a16.2 16.2 0 0 0-5 0C7 3.7 5.4 4.2 3.8 5c.9-.7 2.1-1.3 3.7-1.7L7.3 3A16 16 0 0 0 3 4.1C1 7 0 10 0 13.1c2.1 2.2 4.8 3.8 7.9 4.4l.6-.9c-1.7-.5-3.2-1.3-4.5-2.4 1.6 1.2 3.6 2.1 5.8 2.5a17.3 17.3 0 0 0 6.5-.1c2.2-.4 4.2-1.3 5.8-2.5-1.3 1.1-2.8 1.9-4.5 2.4l.6.9a16.8 16.8 0 0 0 7.9-4.4C24 10 23 7 21 4.1zM8.7 14.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>` }
+  function iconTelegram(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.036 15.803l-.376 5.3c.539 0 .771-.231 1.048-.508l2.515-2.41 5.213 3.81c.957.528 1.64.252 1.9-.887l3.447-16.128h.001c.306-1.424-.514-1.979-1.449-1.63L1.4 9.79c-1.371.532-1.35 1.297-.233 1.64l5.8 1.811 13.476-8.51c.635-.387 1.217-.173.74.214L9.036 15.803z"/></svg>` }
+  function iconBluesky(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 6c1.2-2 3.2-4 5.2-4 1.8 0 2.6 1.3 2.6 2.7 0 2.2-1.5 4.3-3.3 6 2.1-.5 4.5-1.7 5.5-3.4.6 3-2.2 5.4-5.5 6.7 2.8.7 5.1 2.1 5.1 4.2 0 1.4-1 2.2-2.4 2.2-2 0-4.2-1.9-6.2-4.2-2 2.4-4.2 4.2-6.2 4.2-1.4 0-2.4-.8-2.4-2.2 0-2.1 2.3-3.5 5.1-4.2-3.3-1.3-6.1-3.7-5.5-6.7 1 1.7 3.4 2.9 5.5 3.4-1.8-1.7-3.3-3.8-3.3-6C6.2 3.3 7 2 8.8 2 10.8 2 12.8 4 14 6h-2z"/></svg>` }
+  function iconMQTT(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v6h-2V7zm1 10a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>` }
+
+  // Helper to render notifier link with icon
+  function notifierLink(href, label, iconHtml){
+    const safeHref = String(href || '').replace(/"/g, '&quot;');
+    return `<a class="chip" href="${safeHref}" target="_blank" rel="noopener">${iconHtml || ''}${label}</a>`;
+  }
 
   // -------- Columns definition --------
   const viewCols = [
@@ -409,9 +477,7 @@
   { key:"altspd", title:"Alt / Spd", width:"7%" },
     { key:"trk", title:"Track", width:"7%" },
   { key:"squawk", title:"Squawk", width:"8%" },
-  { key:"sound", title:"Sound", width:"10%" },
-  // Spectro column should match the spectro thumbnail size (56px)
-  { key:"spectro", title:"Spectro", width:"56px" },
+  { key:"sound", title:"Sound" },
     { key:"notify", title:"Notifications", width:"12%" }
   ];
 
@@ -440,8 +506,10 @@
       const th = theadRow.children[altIdx];
       if (th) {
         th.innerHTML = `Alt / Spd <span style="margin-left:.5rem; font-size:0.85em; color:var(--muted);">` +
-          `<a href="#" id="sortAlt" style="margin-right:.4rem;">Alt</a>` +
-          `<a href="#" id="sortSpd">Spd</a></span>`;
+          `<a href="#" id="sortAlt" title="Sort by altitude (toggle asc/desc)" style="margin-right:.4rem;">Alt</a>` +
+          `<a href="#" id="sortSpd" title="Sort by speed (toggle asc/desc)">Spd</a>` +
+          ` <span id="sortDir" class="mono" aria-hidden="true" style="margin-left:.25rem;"></span>`+
+          `</span>`;
         // Wire click handlers which compute the Alt/Spd column index at runtime,
         // copy the chosen numeric attribute into data-order, and toggle
         // ascending/descending on each click.
@@ -476,6 +544,8 @@
               th.dataset.altDir = dir;
               copyAttrToDataOrder('order-alt');
               table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              const dirSpan = document.getElementById('sortDir');
+              if (dirSpan) dirSpan.textContent = dir === 'asc' ? '▲' : '▼';
               table.order([[colIdx, dir]]).draw(false);
             } catch(e) { console.warn('sortAlt failed', e); }
           });
@@ -488,6 +558,8 @@
               th.dataset.spdDir = dir;
               copyAttrToDataOrder('order-spd');
               table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              const dirSpan = document.getElementById('sortDir');
+              if (dirSpan) dirSpan.textContent = dir === 'asc' ? '▲' : '▼';
               table.order([[colIdx, dir]]).draw(false);
             } catch(e) { console.warn('sortSpd failed', e); }
           });
@@ -573,13 +645,13 @@
   };
 
   const api = $('#t').DataTable({
-    // Disable deferRender to ensure cells/nodes exist when we need to parse
-    // data-order attributes and to avoid string-only cell representations.
-    deferRender: false,
+    // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
+    deferRender: true,
     pageLength: 25,
     responsive: true,
   // Default ordering: newest (highest index) first
   order: [[0, 'desc']],
+    language: { emptyTable: 'Waiting for aircraft… Data will appear as it arrives.' },
     columns: viewCols.map(_ => ({ title: _.title })),
     columnDefs: [
       // Use our dom-data-order plugin for column 0 (index) so sorting honors
@@ -755,12 +827,13 @@ function expandDiscordLinksInNotifications() {
 
         // Clear existing content and append an anchor per link, separated by middot
         cell.innerHTML = '';
+        const multi = links.length > 1;
         links.forEach((lnk, i) => {
           const a = document.createElement('a');
           a.href = lnk;
           a.target = '_blank';
           a.rel = 'noopener';
-          a.textContent = 'Discord';
+          a.textContent = multi ? `Discord (${i+1})` : 'Discord';
           cell.appendChild(a);
           if (i !== links.length - 1) cell.appendChild(document.createTextNode(' · '));
         });
@@ -812,8 +885,12 @@ function renderRow(r) {
   const route = safe(r.route);
   // Show route after callsign in the same Aircraft cell, unless it's 'n/a'
   const routeHtml = (route && route.toLowerCase() !== 'n/a') ? ` · ${route}` : '';
+  // Right after the callsign, add the ICAO value when both exist
+  const csIcaoLine = cs
+    ? `${cs}${icao ? ' · ' + icao : ''}`
+    : `${icao}`;
   const aircraft = `
-    <div class="mono">${cs || icao}${routeHtml}</div>
+    <div class="mono">${csIcaoLine}${routeHtml}</div>
     <div>${tail ? tail+' · ' : ''}${typHtml || typ}${op? ' · '+op : ''}</div>
   `.trim();
 
@@ -863,7 +940,20 @@ function renderRow(r) {
   const trk = trkStr ? `${trkStr}${trkImg}` : "";
 
   const thumbUrl = r["image:thumblink"];
-  const thumbEl = isHttp(thumbUrl) ? `<img class="thumb" src="${thumbUrl.replace(/"/g,'&quot;')}" alt="thumb">` : "";
+  let thumbEl = "";
+  if (isHttp(thumbUrl)) {
+    thumbEl = `<img class="thumb" loading="lazy" data-src="${thumbUrl.replace(/"/g,'&quot;')}" alt="thumb">`;
+  } else {
+    // Fallback: show silhouette based on aircraft type code (e.g., PC21.bmp) if available
+    const typCodeRaw = safe(r.type || '');
+    const code = typCodeRaw.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    if (code) {
+      const base = cfg.silhouetteDir || (cfg.mediaBase + 'silhouettes/');
+      const silSrc = `${base}${code}.bmp`;
+      // Hide the image if the silhouette is not found
+  thumbEl = `<img class="thumb thumb-sil" loading="lazy" data-src="${silSrc.replace(/"/g,'&quot;')}" alt="silhouette ${code}" onerror="this.style.display='none'">`;
+    }
+  }
 
   const links = [];
   const photo = safe(r["image:link"]);
@@ -873,16 +963,10 @@ function renderRow(r) {
   // Photo is shown as thumbnail; remove it from Links list to avoid duplication
   // We'll render spectro as a thumbnail in the Spectro column and noise/mp3 as badges in the Sound column.
 
-  // Spectro cell: if a spectro link exists, show it as a small thumbnail (same height as main thumb)
-  // Note: the link may be relative (we applied cfg.noisePrefix earlier), so allow non-http URLs
-  let spectroCell = '';
-  if (spectro) {
-    const sUrl = safe(spectro);
-    // Thumbnail opens modal preview instead of linking directly
-    spectroCell = `<a href="#" class="spectro-thumb" data-src="${sUrl}" rel="noopener"><img src="${sUrl}" alt="spectro" style="height:56px;width:56px;object-fit:cover;border-radius:.25rem"></a>`;
-  }
+  // Spectrogram: now presented as an icon chip in the Sound column, not its own column.
+  // We'll use a waveform icon distinct from the bar chart used for noisegraph.
 
-  // Notifications: show link if available, otherwise show a notified badge when the *_notified flag is true
+  // Notifications: show link(s) if available, otherwise show a notified badge when the *_notified flag is true
   const notifyLinks = [];
   const discordLink = r["discord:link"];
   const bskyLink = r["bsky:link"];
@@ -899,16 +983,29 @@ function renderRow(r) {
   const telegramNotified = truthy(r["telegram:notified"]);
   const mqttNotified = truthy(mqttFlag);
 
-  if (discordLink) notifyLinks.push(`<a href="${safe(discordLink)}" target="_blank" rel="noopener">Discord</a>`);
-  else if (discordNotified) notifyLinks.push(`<span class="chip muted">Discord</span>`);
+  if (discordLink) {
+    // discord:link may be a comma-separated list of URLs; render each as its own anchor
+    const links = String(discordLink)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const multi = links.length > 1;
+    for (let i = 0; i < links.length; i++) {
+      const lnk = links[i];
+      const label = multi ? `Discord (${i+1})` : 'Discord';
+      notifyLinks.push(notifierLink(lnk, label, iconDiscord()));
+    }
+  } else if (discordNotified) {
+    notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconDiscord()}<span class="label">Discord</span></span>`);
+  }
 
-  if (bskyLink) notifyLinks.push(`<a href="${safe(bskyLink)}" target="_blank" rel="noopener">Bluesky</a>`);
-  else if (bskyNotified) notifyLinks.push(`<span class="chip muted">Bluesky</span>`);
+  if (bskyLink) notifyLinks.push(notifierLink(bskyLink, 'Bluesky', iconBluesky()));
+  else if (bskyNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconBluesky()}<span class="label">Bluesky</span></span>`);
 
-  if (telegramLink) notifyLinks.push(`<a href="${safe(telegramLink)}" target="_blank" rel="noopener">Telegram</a>`);
-  else if (telegramNotified) notifyLinks.push(`<span class="chip muted">Telegram</span>`);
+  if (telegramLink) notifyLinks.push(notifierLink(telegramLink, 'Telegram', iconTelegram()));
+  else if (telegramNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconTelegram()}<span class="label">Telegram</span></span>`);
 
-  if (mqttNotified) notifyLinks.push(`<span class="chip muted">MQTT</span>`);
+  if (mqttNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconMQTT()}<span class="label">MQTT</span></span>`);
 
   // Sound column: show a small chip with peak/loud info, and separate small clickable badges for noisegraph and mp3 if present.
   let sound = "";
@@ -920,22 +1017,36 @@ function renderRow(r) {
     const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
     parts.push(inner);
   }
+  // Build Sound column in two lines: first Peak/Loudness, then the chip links below
+  let measurementChip = '';
+  if (hasSound(r)) {
+    const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"]) } dbFS` : "";
+    const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"]) } dB` : "";
+    const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
+    measurementChip = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
+  }
+  const linkChips = [];
   // Noisegraph badge
   if (noise) {
     const nUrl = safe(noise);
-    // Use configured image badge when available; CSS will invert it in dark mode
-    const nIcon = cfg.noiseIcon;
-    const nBadge = nIcon ? `<img class="badge-icon" src="${nIcon}" alt="noise">` : iconNoise();
-    parts.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener">${nBadge}</a>`);
+    const nBadge = iconNoise();
+    linkChips.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener" title="Show noisegraph" aria-label="Show noisegraph">${nBadge}</a>`);
+  }
+  // Spectrogram badge (distinct icon)
+  if (spectro) {
+    const sUrl = safe(spectro);
+    const sBadge = iconSpectro();
+    linkChips.push(`<a class="chip" href="${sUrl}" target="_blank" rel="noopener" title="Show spectrogram" aria-label="Show spectrogram">${sBadge}</a>`);
   }
   // MP3 badge
   if (mp3) {
     const mUrl = safe(mp3);
-    const mIcon = cfg.mp3Icon;
-    const mBadge = mIcon ? `<img class="badge-icon" src="${mIcon}" alt="mp3">` : iconMp3();
-    parts.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener">${mBadge}</a>`);
+    const mBadge = iconMp3();
+    linkChips.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener" title="Play audio" aria-label="Play audio">${mBadge}</a>`);
   }
-  sound = parts.join(' ');
+  if (measurementChip && linkChips.length) sound = `<div>${measurementChip}</div><div>${linkChips.join(' ')}</div>`;
+  else if (measurementChip) sound = measurementChip;
+  else if (linkChips.length) sound = `<div>${linkChips.join(' ')}</div>`;
 
   const squawkVal = safe(r["squawk:value"]);
   const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
@@ -953,8 +1064,7 @@ function renderRow(r) {
     `${trk}`,
     `${squawk}`,
     `${sound}`,
-  `${spectroCell}`,
-    `${notifyLinks.join(' · ')}`
+    `${notifyLinks.join(' ')}`
   ],
     incomplete: String(r.complete) !== 'true'
   };
@@ -1135,6 +1245,10 @@ function addRow(r){
 
         // Normalize payload row-level fields
             const norm = normalizeRow(payload);
+            // Ignore records without an ICAO value
+            if (!norm || !norm.icao || String(norm.icao).trim() === '') {
+              continue;
+            }
             // Add the new row and record its numeric index for highlighting.
             addRow(norm);
             if (Number.isFinite(Number(norm.index))) {
@@ -1210,7 +1324,9 @@ async function pollAndMerge() {
         }
       }
 
-      const norm = normalizeRow(payload);
+  const norm = normalizeRow(payload);
+  // Ignore records without an ICAO value
+  if (!norm || !norm.icao || String(norm.icao).trim() === '') continue;
       const rendered = renderRow(norm);
 
       // Fast lookup: use rowByIndex map to find existing row by numeric index
@@ -1381,32 +1497,38 @@ if (newUpdatesBtn) {
 
 </script>
 
-<!-- Modal for spectro preview -->
-<div id="pf-modal" class="pf-modal" role="dialog" aria-hidden="true">
-  <div class="box"><img id="pf-modal-img" src="" alt="preview"></div>
-</div>
-
 <script>
-// Modal handlers
-const modal = document.getElementById('pf-modal');
-const modalImg = document.getElementById('pf-modal-img');
-document.addEventListener('click', function(ev){
-  const t = ev.target.closest && ev.target.closest('.spectro-thumb');
-  if (t) {
-    ev.preventDefault();
-    const src = t.getAttribute('data-src');
-    if (src) {
-      modalImg.src = src;
-      modal.classList.add('open');
-      modal.setAttribute('aria-hidden','false');
+// Lazy-load images using IntersectionObserver (thumb and spectro)
+function lazyLoadImagesIn(container){
+  try {
+    const root = container || document;
+    const imgs = root.querySelectorAll('img[data-src]');
+    if (!imgs || imgs.length === 0) return;
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries, obs)=>{
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            const img = e.target;
+            const src = img.getAttribute('data-src');
+            if (src) { img.src = src; img.removeAttribute('data-src'); }
+            obs.unobserve(img);
+          }
+        }
+      }, { root: null, rootMargin: '100px', threshold: 0.01 });
+      imgs.forEach(img => io.observe(img));
+    } else {
+      imgs.forEach(img => { const src = img.getAttribute('data-src'); if (src) { img.src = src; img.removeAttribute('data-src'); } });
     }
-  }
-  // close when clicking outside the box
-  if (ev.target === modal) {
-    modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); modalImg.src = '';
-  }
+  } catch (e) { /* ignore */ }
+}
+
+// Observe DataTables draws to (re)apply lazy loading
+document.addEventListener('DOMContentLoaded', ()=>{
+  try { lazyLoadImagesIn(document); } catch(e){}
+  try { if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document)); } catch(e){}
 });
-document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); modalImg.src = ''; } });
 </script>
+
+<!-- Spectrogram modal removed: spectrogram is now an icon chip in Sound column -->
 
 </body></html>

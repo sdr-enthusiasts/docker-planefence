@@ -42,7 +42,7 @@ if [[ -z "${JSONFILE:-}" ]]; then
 fi
 
 # Stream schema then rows
-if ! jq -r '
+if ! jq -r --arg mode "$FILTER_MODE" '
   def pri: [
     "index","icao","tail","callsign","type","owner","route","nominatim",
     "time:firstseen","time:time_at_mindist","time:lastseen","distance:value","distance:unit","complete",
@@ -81,7 +81,9 @@ if ! jq -r '
     # Detect globals in first element (must be object and not have "index")
     ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
     | ( if $has_globals then .[0] else {} end ) as $globals
-    | ( if $has_globals then .[1:] else . end ) as $rows
+  | ( if $has_globals then .[1:] else . end ) as $rows
+  # Keep only records for requested mode ($mode); default missing mode to "planefence"
+  | ( [ $rows[]? | select((.mode? // "planefence") == $mode) ] ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})
     | ({__globals: $globals} | tojson),
@@ -90,7 +92,7 @@ if ! jq -r '
       ({__columns: pri} | tojson),
 
       # 3) Emit rows
-      ( $rows[]? | flat1 ) as $r
+  ( $rows[]? | flat1 ) as $r
       | if ($r|length)==0
         then (reduce pri[] as $c ({}; .+{($c):""})) | tojson
         else (

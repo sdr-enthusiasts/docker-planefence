@@ -1,0 +1,172 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2154,SC2015
+
+source /scripts/common
+
+[[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleanup started as an s6 service" || true
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/sdr-enthusiasts/docker-planefence
+#
+# -----------------------------------------------------------------------------------
+# Feel free to make changes to the variables between these two lines. However, it is
+# STRONGLY RECOMMENDED to RTFM! See README.md for explanation of what these do.
+#
+# LOOPTIME is the time between two runs cleanup. In our case, every 3 hours.
+LOOPTIME="3h"
+#
+# OLDERTHAN indicates which age files can be deleted. This is in DAYS.
+# It specifically applies to files in the HTML directory.
+# If $PF_DELETEAFTER is set to "0" then we never delete.
+# Note - files in /tmp will get deleted if they are older than 2 days.
+# -----------------------------------------------------------------------
+# CACHETIME is the time that the planespotters photo cache expires. By TOC of the planespotters site, 
+# we may not keep cached thumbnails for more than 24 hours.
+CACHETIME="${LOOPTIME//h/ hours}"
+CACHETIME="${CACHETIME//m/ minutes}"
+CACHETIME="${CACHETIME//s/ seconds}"
+
+if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
+  source /usr/share/planefence/persist/planefence.config
+else
+  "${s6wrap[@]}" echo "[ERROR] - Can't find /usr/share/planefence/persist/planefence.config which is needed for this app to run"
+  exit 1
+fi
+
+OLDERTHAN=${PF_DELETEAFTER:-14}
+#
+# MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
+MAXLOGLINES=500
+#
+# this function cleans out stuff. Make additions to it as needed.
+CLEANUP ()
+{
+  if (( OLDERTHAN > 0 ))
+  then
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleaning up web files older than $OLDERTHAN days" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleaning up logs and tmp files older than 1 day" || true
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
+
+    #these are temp actions to facilitate the transition to the new directory structure:
+    mkdir -p /usr/share/planefence/persist/.internal
+    mv -f /usr/share/planefence/persist/*.tmp /usr/share/planefence/persist/.internal 2>/dev/null
+    mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
+    mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
+
+    touch -d "yesterday 00:00:00" /tmp/timestamp
+    touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
+    touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
+    touch -d "3 hours ago" /tmp/timestamp.screenshotcache
+    find /usr/share/planefence/html/plane*{.html,.js,.csv,.json,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    rm -f /run/socket30003/*.log
+    find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/planepix/cache/screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null
+    rm -f /tmp/heatmap-*.log
+    find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    find /usr/share/planefence/persist/.internal/routecache* -type f ! -newer /tmp/timestamp.routecache -delete 2>/dev/null
+    rm -f /tmp/timestamp*
+    shopt -s nullglob && for f in /run/socket30003/*.txt
+    do
+        [[ "$f" == "" ]] && continue || true
+        fdate=${f: -10:6}   # get the date component from the file name
+
+        # remove anything older than yesterday:
+        (( fdate < $(date -d yesterday +%y%m%d) )) && rm -v -f "$f" && continue
+    done
+
+
+    if [[ -f /tmp/planefence.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
+      mv -f /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
+    fi
+    if [[ -f /tmp/noise2fence.log ]]
+    then
+      tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
+      mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
+    fi
+    # remove empty lines from ignore file
+    sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
+
+  else
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "$LOOPTIME set to 0 - cleanup skipped" || true
+  fi
+}
+
+# GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.
+# If the existing file is older than last Monday's (or if none exists), then get a new one
+GET_ICAO_DB ()
+{
+    if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
+    then
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
+        # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
+        if ! curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php; then
+            "${s6wrap[@]}" echo "Retrieving ICAO to TAIL database from https://www.mictronics.de FAILED!"
+            return 1
+        fi
+
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "unzipping ... " || true
+        # unzipping *will* fail when the retrieved file is not a valid ZIP file
+        if ! unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null; then
+            "${s6wrap[@]}" echo "Unzipping ICAO to TAIL database from https://www.mictronics.de FAILED!"
+            return 1
+        fi
+
+        rm -f /tmp/icao24plus.zip
+        # now convert the text based file into a CSV file
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "converting ... " || true
+        if ! sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt; then
+            "${s6wrap[@]}" echo "Converting ICAO to TAIL database from https://www.mictronics.de FAILED!"
+            return 1
+        fi
+
+        mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "done!" || true
+    else
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "ICAO to TAIL database is up to date" || true
+    fi
+}
+#
+# GET_AIRLINE_DB retrieves the list of airline names from 2 sources:
+# - https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt
+# - (removed - repo is gone) https://raw.githubusercontent.com/jbroutier/whatisflying-db/master/data/airlines.csv
+# ad merges these with the preloaded list.
+GET_AIRLINE_DB ()
+{
+    if [[ -f /usr/share/planefence/airlinecodes.txt ]] && [[ $(find /usr/share/planefence/airlinecodes.txt -mtime -7 | wc -l) == 1 ]]; then
+        # file exists and is less than 7 days old
+        [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Airlinecodes database is up to date" || true
+        return 0
+    fi
+
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Updating airline names database..." || true
+    rm -f /tmp/airlinecodes.txt /tmp/airlines.csv /tmp/airlinecodes.txt.tmp
+    if curl --compressed -s -L -f https://raw.githubusercontent.com/kx1t/planefence-airlinecodes/main/airlinecodes.txt -o /tmp/airlinecodes.txt; then
+      if  [[ "${LOGLEVEL,,}" != "error" ]]; then "${s6wrap[@]}" echo "Got kx1t/planefence-airlinecodes"; fi
+      mv -f /tmp/airlinecodes.txt /usr/share/planefence/airlinecodes.txt
+    fi
+    rm -f /tmp/airlines.csv /tmp/airlinecodes.txt.tmp /tmp/airlinecodes.txt /usr/share/planefence/persist/airlinecodes.txt
+    [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Airlinecodes database update complete" || true
+}
+
+#Now loop forevah:
+while true
+do
+  [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Performing a cleanup run..." || true
+  CLEANUP
+  GET_ICAO_DB
+  GET_AIRLINE_DB
+  if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then 
+    /scripts/masto_expire.sh delete || true
+  fi
+  [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleanup done. Sleeping for $LOOPTIME" || true
+  sleep $LOOPTIME
+done
