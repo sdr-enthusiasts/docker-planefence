@@ -18,7 +18,7 @@ if [[ -z $lat || -z $lon ]]; then
 fi
 
 
-ROUND=3
+ROUND=2
 CACHE_DIR=${NOMI_CACHE_DIR:-/tmp/nominatim-cache}
 mkdir -p "$CACHE_DIR"
 

@@ -62,94 +62,44 @@ log_print() {
   "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
 }
 
-# shellcheck disable=SC2120
-LOCK_PA_RECORDS() {
-  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.pa.records.lock" ]]; then
-    debug_print "Waiting for pa records.lock ($(</tmp/.pa.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
+
+WAIT_PF_LOCK() {
+  if [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
     # wait until the lock is gone, or 120 seconds (whichever is shorter)
-    while :; do
-      starttime="$(date +%s)"
-      sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.pa.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
-    done
-  fi
-  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.pa.records.lock"
-  debug_print "PA Records locked by $(</tmp/.pa.records.lock)"
-}
-
-UNLOCK_PA_RECORDS() {
-  if [[ -f "/tmp/.pa.records.lock" ]]; then
-    debug_print "Unlocking pa records locked by $(</tmp/.pa.records.lock)"
-    rm -f "/tmp/.pa.records.lock"
-  else
-    debug_print "Unlocking pa records (they were already unlocked)"
-  fi
-}
-
-READ_PA_RECORDS() {
-  local TODAY="${TODAY:-$(date +%y%m%d)}"
-  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
-  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planealert-records-${TODAY}.gz}"
-
-  if [[ ! -f "$RECORDSFILE" ]]; then 
-    debug_print "PA RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
-    declare -gA pa_records=()
-    pa_records[maxindex]=-1
-    return
-  fi
-
-  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.pa.records.lock" ]]; then
-  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    local starttime
     starttime="$(date +%s)"
-    debug_print "Waiting for pa.records.lock ($(</tmp/.pa.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
     while :; do
       sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.pa.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
-    debug_print "PA Records.lock unlocked. Continuing..."
   fi
-  debug_print "PA Records read by $(basename "$0")"
-  # shellcheck disable=SC1090
-  source <(gzip -cd "$RECORDSFILE")
-
+  if [[ "${1,,}" == "ignore-lock" ]]; then
+    if [[ -f "/tmp/.records.lock" ]]; then
+      debug_print "PF Records lock time expired, lock left in place"
+    else
+      debug_print "PF Records lock ignored but not present, continuing..."
+    fi
+  else
+    debug_print "PF Records lock released and removed, continuing..."
+    rm -f "/tmp/.records.lock"
+  fi
 }
 
-WRITE_PA_RECORDS() {
-  local TODAY="${TODAY:-$(date +%y%m%d)}"
-  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
-  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planealert-records-${TODAY}.gz}"
-  local tmpfile
-  tmpfile="$(mktemp)"
-
-  LOCK_PA_RECORDS "$1"
-  declare -p pa_records | \
-    sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
-    gzip -c > "$tmpfile"
-    mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
-    chmod a+r "$RECORDSFILE"
-  debug_print "PA Records written by $(basename "$0")"
-  if [[ "$1" != "stay-locked" ]]; then UNLOCK_PA_RECORDS; fi
-}
 
 # shellcheck disable=SC2120
 LOCK_PF_RECORDS() {
-  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.pf.records.lock" ]]; then
-    debug_print "Waiting for .records.lock ($(</tmp/.pf.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
-    # wait until the lock is gone, or 120 seconds (whichever is shorter)
-    while :; do
-      starttime="$(date +%s)"
-      sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.pf.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
-    done
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+    WAIT_PF_LOCK ""
   fi
-  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.pf.records.lock"
-  debug_print "Records locked by $(</tmp/.pf.records.lock)"
+  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.records.lock"
+  debug_print "Records locked by $(</tmp/.records.lock)"
 }
 
 UNLOCK_PF_RECORDS() {
-  if [[ -f "/tmp/.pf.records.lock" ]]; then
-    debug_print "Unlocking records locked by $(</tmp/.pf.records.lock)"
-    rm -f "/tmp/.pf.records.lock"
+  if [[ -f "/tmp/.records.lock" ]]; then
+    debug_print "Unlocking records locked by $(</tmp/.records.lock)"
+    rm -f "/tmp/.records.lock"
   else
     debug_print "Unlocking records (they were already unlocked)"
   fi
@@ -171,13 +121,13 @@ READ_PF_RECORDS() {
     return
   fi
 
-  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.pf.records.lock" ]]; then
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
     starttime="$(date +%s)"
-    debug_print "Waiting for pf.records.lock ($(</tmp/.pf.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    debug_print "Waiting for pf.records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
     while :; do
       sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.pf.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
     debug_print "PF.Records.lock unlocked. Continuing..."
   fi
@@ -208,7 +158,7 @@ WRITE_PF_RECORDS() {
     mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
     chmod a+r "$RECORDSFILE"
   debug_print "PF Records written by $(basename "$0")"
-  if [[ "$1" != "stay-locked" ]]; then UNLOCK_PF_RECORDS; fi
+  if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_PF_RECORDS; fi
 }
 
 # Function to encode special characters for XML

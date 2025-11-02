@@ -30,17 +30,17 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=true
+# DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
-echo "$$" > /run/planefence.pid
+echo "$" > /run/planefence.pid
 
 # ==========================
 # Config and initialization
 # ==========================
-#HTMLDIR="/tmp"
+RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
 HTMLDIR="${OUTFILEDIR:-/usr/share/planefence/html}"
 mkdir -p "$HTMLDIR"
 
@@ -51,8 +51,8 @@ NOWTIME="$(date +%s)"
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
-RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
-YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}.gz"
+RECORDSFILE="$RECORDSDIR/planefence-records-${TODAY}.gz"
+YESTERDAYRECORDSFILE="$RECORDSDIR/planefence-records-${YESTERDAY}.gz"
 
 CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
@@ -64,10 +64,11 @@ yesterday_epoch=$(date -d yesterday +%s)
 
 # constants
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
-declare -A last_idx_for_icao   # icao -> most recent idx within window
-declare -A lastseen_for_icao   # icao -> lastseen epoch
-declare -A heatmap            # lat,lon -> count
-declare -a updatedrecords newrecords processed_indices
+declare -A pf_last_idx_for_icao   # icao -> most recent idx within window
+declare -A pf_lastseen_for_icao   # icao -> lastseen epoch
+declare -A heatmap             # lat,lon -> count
+declare -A PA_DICT             # icao -> plane-alert db line
+declare -a updatedrecords newrecords processed_indices pa_socketrecords pf_socketrecords
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -83,7 +84,6 @@ PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
 PA_ENABLED="$(sed -n 's/\(^\s*PF_PLANEALERT=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
-
 
 # ==========================
 # Functions
@@ -129,9 +129,7 @@ GET_CALLSIGN() {
   local tail=""
 
 	# See if we have it somewhere in the socket30003 file:
-  if [[ -f "$TODAYFILE" ]]; then
-    tail="$(tac "$TODAYFILE" | awk -F "," -v icao="$icao" '($1 == icao && $12 != "") {print $12;exit;}' 2>/dev/null)"
-  fi
+  tail="$(tac "$RECORDSFILE" | awk -F "," -v icao="$icao" '($1 == icao && $12 != "") {print $12;exit;}' 2>/dev/null)"
 	if [[ -n "$tail" ]]; then echo "${tail// /}"; return; fi
 
   # If it's not there, then use GET_TAIL to replace the callsign with the tail number
@@ -306,37 +304,21 @@ GET_NOISEDATA () {
   lastseen="$2"
   if [[ -z "$lastseen" ]] || (( lastseen - firstseen < 15 )); then lastseen="$(( firstseen + 15 ))"; fi
 
-  # Build candidate list limited to TODAY and YESTERDAY only, and only if window intersects the day
+  # get the noisecapt log - download them all in case there's a date discrepancy
+  # Extract matching filenames, sorted
   readarray -t files < <(
-    for d in "$TODAY" "$YESTERDAY"; do
-      ds=$(date -d "20${d:0:2}-${d:2:2}-${d:4:2} 00:00:00" +%s)
-      de=$(( ds + 86400 - 1 ))
-      if (( lastseen >= ds && firstseen <= de )); then
-        printf 'noisecapt-%s.log\n' "$d"
-      fi
-    done | sort -u
+    printf '%s\n' "$noiselist" |
+      sed -En 's/.*\b(noisecapt-[0-9]{6}\.log)\b.*/\1/p' |
+      sort -u
   )
 
-  # Prepare a per-run cache directory so multiple calls reuse the same downloads
-  if [[ -z "${NOISECACHE_DIR:-}" ]]; then
-    NOISECACHE_DIR="/tmp/.pf-noisecache-$$"
-    mkdir -p "$NOISECACHE_DIR" 2>/dev/null || :
-  fi
-
-  # Ensure each needed file is cached locally for this process
-  for f in "${files[@]}"; do
-    if [[ ! -s "$NOISECACHE_DIR/$f" ]]; then
-      curl -fsSL "$REMOTENOISE/$f" -o "$NOISECACHE_DIR/$f" 2>/dev/null || :
-    fi
-  done
-
-  # Read cached content and filter rows in the time window
+  # Fetch in order, filter by first field (epoch seconds), collect into Bash array
   noiserecords=()
   while IFS= read -r line; do
     noiserecords+=("$line")
   done < <(
     for f in "${files[@]}"; do
-      [[ -s "$NOISECACHE_DIR/$f" ]] && cat "$NOISECACHE_DIR/$f"
+      curl -fsSL "$REMOTENOISE/$f"
     done | awk -F',' -v s="$firstseen" -v e="$lastseen" '{ t=$1+0; if (t>=s && t<=e) print }'
   )
 
@@ -373,7 +355,7 @@ CREATE_NOISEPLOT () {
   local STARTTIME="$2"
 	local ENDTIME="$3"
 	local TITLE="Noise plot for $1 at $(date -d "@$2")"
-	local NOISEGRAPHFILE="$OUTFILEDIR/noisegraph-$STARTTIME-$4.png"
+	local NOISEGRAPHFILE="$OUTFILEDIR/noise/noisegraph-$STARTTIME-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
     if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
@@ -393,7 +375,7 @@ CREATE_NOISEPLOT () {
 		if gnuplot -e "offset=$(echo "$(date +%z) * 36" | sed 's/+[0]\?//g' | bc); start=$STARTTIME; end=$ENDTIME; infile='/tmp/noisecapt.log'; outfile='$NOISEGRAPHFILE'; plottitle='$TITLE'; margin=60" "$PLANEFENCEDIR/noiseplot.gnuplot"; then
 			# Plotting succeeded
       echo "$NOISEGRAPHFILE"
-      ln -sf "$NOISEGRAPHFILE" "$OUTFILEDIR/noisegraph-latest.png"
+      ln -sf "$NOISEGRAPHFILE" "$OUTFILEDIR/noise/noisegraph-latest.png"
 		fi
 	fi
 }
@@ -448,21 +430,21 @@ CREATE_SPECTROGRAM () {
   fi
 
 
-	if [[ ! -s "$OUTFILEDIR/$spectrofile" ]]; then
+	if [[ ! -s "$OUTFILEDIR/noise/$spectrofile" ]]; then
 		# we don't have $spectrofile locally, or if it's an empty file, we get it:
 		# shellcheck disable=SC2076
 
       log_print DEBUG "Getting spectrogram $spectrofile from $REMOTENOISE"
-      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/$spectrofile" 2>/dev/null || \
-        { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
+      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/noise/$spectrofile" || \
+        { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/noise/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
           log_print DEBUG "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
-          rm -f "$OUTFILEDIR/$spectrofile"
+          rm -f "$OUTFILEDIR/noise/$spectrofile"
           return
       fi
 
 	fi
-  log_print DEBUG "Spectrogram file: $OUTFILEDIR/$spectrofile"
-  echo "$OUTFILEDIR/$spectrofile"
+  log_print DEBUG "Spectrogram file: $OUTFILEDIR/noise/$spectrofile"
+  echo "$OUTFILEDIR/noise/$spectrofile"
 }
 
 LINK_LATEST_SPECTROFILE () {
@@ -478,7 +460,7 @@ LINK_LATEST_SPECTROFILE () {
                   -printf '%f\n' | sort | tail -n 1)"
 
   if [[ -n "$latestfile" ]]; then
-    ln -sf "$OUTFILEDIR/$latestfile" "$OUTFILEDIR/noisecapt-spectro-latest.png"
+    ln -sf "$OUTFILEDIR/noise/$latestfile" "$OUTFILEDIR/noise/noisecapt-spectro-latest.png"
   fi
 
 }
@@ -508,27 +490,17 @@ CREATE_MP3 () {
 	mp3f="noisecapt-recording-${mp3time}.mp3"
 
 	# shellcheck disable=SC2076
-	if [[ ! -s "$OUTFILEDIR/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
+	if [[ ! -s "$OUTFILEDIR/noise/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
-		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f" 2>/dev/null
+		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/noise/$mp3f" 2>/dev/null
 	fi 
 	# shellcheck disable=SC2012
-	if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 4 )); then
+	if [[ ! -s "$OUTFILEDIR/noise/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/noise/$mp3f" | awk '{print $1}') < 4 )); then
 		# we don't have $mp3f (or it's an empty file) and we can't get it; so let's erase it in case it's an empty file:
-		rm -f "$OUTFILEDIR/$mp3f"
+		rm -f "$OUTFILEDIR/noise/$mp3f"
 	else
-		echo "$OUTFILEDIR/$mp3f"
+		echo "$OUTFILEDIR/noise/$mp3f"
 	fi
-}
-
-to_epoch() {
-  # Fast YYYY/MM/DD HH:MM:SS -> epoch (no subsecond needed)
-  local d="$1" t="$2"
-  # split date
-  local Y=${d:0:4} M=${d:5:2} D=${d:8:2}
-  local h=${t:0:2} m=${t:3:2} s=${t:6:2}
-  # GNU date can parse RFC-3339 fastest if given numeric; but to avoid invoking per-line,
-  # compute offset using seconds since epoch at midnight plus H:M:S. Precompute midnight once:
 }
 
 GENERATE_CSV() {
@@ -707,6 +679,8 @@ fi
 log_print DEBUG "Getting $RECORDSFILE"
 LOCK_PF_RECORDS
 READ_PF_RECORDS ignore-lock
+# LOCK_PA_RECORDS
+# READ_PA_RECORDS ignore-lock
 
 log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -720,17 +694,19 @@ if [[ -n $REMOTENOISE ]]; then
   curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
-# I don't think we need this anymore:
-# while IFS="" read -r line; do
-#   icao="${line%%,*}"
-#   [[ -n "$icao" ]] && [[ "${icao:0:1]}" != "#" ]] && (( ${#icao} == 6 )) && PA_DICT["$icao"]="$line" || true
-# done < "$PA_FILE"
+while IFS="" read -r line; do
+  [[ -n "${line%%,*}" ]] && PA_DICT["${line%%,*}"]="$line" || true
+done < "$PA_FILE"
 
-awk -F',' '{print "^" $1 "," }' "$PA_FILE" > /tmp/pa_keys_$$
+awk -F',' '{print $1}' "$PA_FILE" > /tmp/pa_keys_$$
+
 
 # ==========================
 # Collect new lines
 # ==========================
+
+# First for Planefence:
+
 if [[ -n "$LASTPROCESSEDLINE" ]]; then
   lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
 fi
@@ -738,7 +714,7 @@ fi
 log_print INFO "Collecting new records. Last processed date is $lastdate"
 
 if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
-  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
+  nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || nowlines="$(cat "$TODAYFILE" | wc -l)" || nowlines=0
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then 
   records[totallines]="$(cat "$TODAYFILE" | wc -l)"
@@ -750,6 +726,7 @@ fi
 
 currentrecords=$(( records[maxindex] + 1 ))
 
+# Create temporary file for all filtered records
 { if [[ -n "$LASTPROCESSEDLINE" ]]; then
       # Check if last run was yesterday
       if [[ "$(date -d "$lastdate" +%y%m%d)" == "$YESTERDAY" ]]; then
@@ -769,42 +746,32 @@ currentrecords=$(( records[maxindex] + 1 ))
       # First run: all of today’s file
       log_print DEBUG "No last processed line found, so grabbing all of today's file"
         cat "$TODAYFILE"
-  fi
-} | tac > /tmp/filtered_records_$$ \
-|| { pkill socket30003.pl 2>/dev/null; exit 1; }  # if tac fails, it's likely disk full; so kill socket30003.pl to trigger a log file cleanup and exit with error
-log_print DEBUG "Collected new records into /tmp/filtered_records_$$"
+  fi; } | tac > /tmp/filtered_records_$$ \
+    || { pkill socket30003.pl 2>/dev/null; exit 1; }  # if tac fails, it's likely disk full; so kill socket30003.pl to trigger a log file cleanup and exit with error
 
 # Create pf_socketrecords array
 readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }')
-log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
 
 # Create pa_socketrecords array
 if (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
     readarray -t pa_socketrecords < <(grep -F -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
     rm -f /tmp/pa_keys_$$
 fi
-log_print DEBUG "Created pa_socketrecords array with ${#pa_socketrecords[@]} entries"
 rm -f /tmp/filtered_records_$$
 
 # read the unique icao's into arrays:
-readarray -t pf_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
-readarray -t pa_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
-log_print DEBUG "Created index array with ${#pf_icaos[@]} unique planefence entries"
-log_print DEBUG "Created index array with ${#pa_icaos[@]} unique plane-alert entries"
+readarray -t pf_unique_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
+readarray -t pa_unique_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | awk -F, '{print $1}' | sort -u)
+
+log_print INFO "Planefence: found $nowlines new SBS records from your ADSB data feed, of which ${#pf_socketrecords[@]} are within $DIST $DISTUNIT distance and $MAXALT $ALTUNIT altitude."
+log_print INFO "Plane-Alert: found ${#pa_socketrecords[@]} new SBS records matching the plane-alert-db list."
+
 
 # ==========================
-# Process lines
+# Process PF/PA lines
 # ==========================
 if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
-  # Build a de-duplicated combined list efficiently (preserves first-seen order)
-  orig_count=$(( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} ))
-  readarray -t socketrecords < <(
-    {
-      printf '%s\n' "${pf_socketrecords[@]}"
-      printf '%s\n' "${pa_socketrecords[@]}"
-    } | awk 'BEGIN{FS="\n"} !seen[$0]++'
-  )
-  log_print DEBUG "Created socketrecords array with ${#socketrecords[@]} entries (deduped from ${orig_count})."
+  socketrecords=("${pf_socketrecords[@]}" "${pa_socketrecords[@]}")
   for line in "${socketrecords[@]}"; do
 
     [[ -z $line ]] && continue
@@ -825,11 +792,11 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
 
     # Collapse window lookup (O(1))
     idx=""
-    ls="${lastseen_for_icao[$icao]}"
+    ls="${pf_lastseen_for_icao[$icao]}"
     if [[ -n $ls ]]; then
       dt=$(( ls - seentime ))
       if (( ${dt//-/} <= COLLAPSEWITHIN )); then
-        idx="${last_idx_for_icao[$icao]}"
+        idx="${pf_last_idx_for_icao[$icao]}"
       else
         if chk_enabled "$IGNOREDUPES"; then
           continue  # ignore this dupe
@@ -848,12 +815,13 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
     fi
 
     # Update fast ICAO index maps
-    last_idx_for_icao[$icao]=$idx
-    lastseen_for_icao[$icao]=$seentime
+    pf_last_idx_for_icao[$icao]=$idx
+    pf_lastseen_for_icao[$icao]=$seentime
 
     # Initialize once-per-record fields
     if [[ -z ${records["$idx":icao]} ]]; then
       records["$idx":icao]="$icao"
+
       # map link at first touch
       if [[ -n $lat && -n $lon ]]; then
         records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
@@ -938,66 +906,52 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
     fi
   done
 
-  log_print INFO "Initial processing complete. New/Updated: ${#newrecords[@]}/${#updatedrecords[@]}.Total number of records is now $((records[maxindex] + 1)). Continue adding more info for records ${!processed_indices[*]}"
+  log_print INFO "Initial processing complete. New/Updated: ${#newrecords[@]}/${#updatedrecords[@]}.Total number of records is now ${records[maxindex]}. Continue adding more info for records ${!processed_indices[*]}"
 
   # try to pre-seed the noisecapt log:
   if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
     noiselog="$(</tmp/noisecapt.log)"
   fi
+
+#  lc=0
+#  timingstart=$(date +%s.%3N)
   
   # Now try to add callsigns and owners for those that don't already have them:
   for idx in "${!processed_indices[@]}"; do
 
-    icao="${records["$idx":icao]}"
-    callsign="${records["$idx":callsign]}"
-    mode="${records["$idx":mode]}"
-
     # ------------------------------------------------------------------------------------
     # The first portion of this loop can be done regardless of completeness of the record
     # ------------------------------------------------------------------------------------
-    if [[ "${records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then
-      log_print DEBUG "Getting owner data for record $idx"
-      records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null)"
+    # get the owner's name
+    # namestart=$(date +%s.%3N)
+    if [[ "${records["$idx":checked:owner]}" != "true" && -n "${records["$idx":callsign]}" ]]; then
+      records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "${records["$idx":callsign]}" "${records["$idx":icao]}" 2>/dev/null || true)"
       records["$idx":checked:owner]=true
     fi
+    # nametiming=$(bc -l <<< "${nametiming:-0} + $(date +%s.%3N) - $namestart")
 
     # get images
+    # imgstart=$(date +%s.%3N)
     if chk_enabled "$SHOWIMAGES" && \
        [[ "${records["$idx":checked:image]}" != "true" ]] && \
        [[ -z "${records["$idx":image:thumblink]}" ]] && \
-       [[ -n "$icao" ]]; then
-          log_print DEBUG "Getting image data for record $idx"
-          records["$idx":image:thumblink]="$(GET_PS_PHOTO "$icao" "thumblink")"
-          records["$idx":image:link]="$(GET_PS_PHOTO "$icao" "link")"
-          records["$idx":image:file]="$(GET_PS_PHOTO "$icao" "image")"
+       [[ -n "${records["$idx":icao]}" ]]; then
+          records["$idx":image:thumblink]="$(GET_PS_PHOTO "${records["$idx":icao]}" "thumblink")"
+          records["$idx":image:link]="$(GET_PS_PHOTO "${records["$idx":icao]}" "link")"
+          records["$idx":image:file]="$(GET_PS_PHOTO "${records["$idx":icao]}" "image")"
           records["$idx":checked:image]=true
           records[HASIMAGES]=true
     fi
+    # imgtiming=$(bc -l <<< "${imgtiming:-0} + $(date +%s.%3N) - $imgstart")
 
+    # callstart=$(date +%s.%3N)
     # Add a callsign if there isn't any
-    if [[ -z "$callsign" ]]; then
-      log_print DEBUG "Getting callsign data for record $idx"
-      callsign="$(GET_CALLSIGN "$icao")"
+    if [[ -z "${records["$idx":callsign]}" ]]; then
+      callsign="$(GET_CALLSIGN "${records["$idx":icao]}")"
       records["$idx":callsign]="${callsign//[[:space:]]/}"
       records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
     fi
-
-    # Set mode
-    if [[ -z "$mode" ]]; then
-      if [[ " ${pf_icaos[*]} " == *" $icao "* && " ${pa_icaos[*]} " != *" $icao "* ]]; then
-        records["$idx":mode]="planefence"
-      elif [[ " ${pa_icaos[*]} " == *" $icao "* && " ${pf_icaos[*]} " != *" $icao "* ]]; then
-        records["$idx":mode]="plane-alert"
-      else
-        records["$idx":mode]="both"
-      fi
-    elif [[ "$mode" != "both" ]]; then
-      if [[ "$mode" == "planefence" && " ${pa_icaos[*]} " == *" $icao "* ]] || \
-         [[ "$mode" == "plane-alert" && " ${pf_icaos[*]} " == *" $icao "* ]]; then
-        records["$idx":mode]="both"
-      fi
-    fi
-    mode="${records["$idx":mode]}"
+    # calltiming=$(bc -l <<< "${calltiming:-0} + $(date +%s.%3N) - $callstart")
 
     # ------------------------------------------------------------------------------------
     # The remainder of this loop only makes sense for complete records. It also only needs to be done once.
@@ -1012,15 +966,16 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
     fi
 
     # Add noisecapt stuff
+    # noisestart=$(date +%s.%3N)
     if [[ -n "$REMOTENOISE" ]] && \
        [[ "${records["$idx":checked:noisedata]}" != "true" ]] && \
        [[ -z "${records["$idx":sound:peak]}" ]]; then
-          log_print DEBUG "Getting noise data for record $idx"
           # Make sure we have the noiselist
           if [[ -z "$noiselist" ]]; then
             wait $!
             noiselist="$(</tmp/.allnoise)"
             rm -f /tmp/.allnoise
+            # noisestart=$(date +%s.%3N)
           fi
           noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
           noisedate="${noisedate:-$TODAY}"
@@ -1029,49 +984,77 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
           records[HASNOISE]=true
     fi
     if [[ -n "$REMOTENOISE" ]] && \
-       [[ "${records["$idx":checked:noisegraph]}" != "true" ]] && \
+       [[ "${records["$idx":checked:noisegraph]}" != "true" ]] && \chk_enabled "${records["$idx":complete]}" && \
        [[ -z "${records["$idx":noisegraph:file]}" ]] && \
        [[ -n "${records["$idx":icao]}" ]]; then
-          log_print DEBUG "Getting noisegraph for record $idx"
           records["$idx":noisegraph:file]="$(CREATE_NOISEPLOT "${records["$idx":callsign]:-${records["$idx":icao]}}" "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}" "${records["$idx":icao]}")"
           if [[ -n "${records["$idx":noisegraph:file]}" ]]; then
-            records["$idx":noisegraph:link]="$(basename "${records["$idx":noisegraph:file]}")"
+            records["$idx":noisegraph:link]="noise/$(basename "${records["$idx":noisegraph:file]}")"
           fi
-          log_print DEBUG "Getting spectrogram for record $idx"
           records["$idx":spectro:file]="$(CREATE_SPECTROGRAM "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":spectro:file]}" ]]; then
-            records["$idx":spectro:link]="$(basename "${records["$idx":spectro:file]}")"
+            records["$idx":spectro:link]="noise/$(basename "${records["$idx":spectro:file]}")"
           fi
-          log_print DEBUG "Getting mp3 for record $idx"
           records["$idx":mp3:file]="$(CREATE_MP3 "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           if [[ -n "${records["$idx":mp3:file]}" ]]; then
-            records["$idx":mp3:link]="$(basename "${records["$idx":mp3:file]}")"
+            records["$idx":mp3:link]="noise/$(basename "${records["$idx":mp3:file]}")"
           fi
           records["$idx":checked:noisegraph]=true
     fi
+    # noisetiming=$(bc -l <<< "${noisetiming:-0} + $(date +%s.%3N) - $noisestart")
 
     # get Nominating location. Note - this is slow because we need to do an API call for each lookup
+    # nomstart=$(date +%s.%3N)
     if [[ "${records["$idx":checked:nominatim]}" != "true" ]] && \
        [[ -n "${records["$idx":lat]}" ]] && \
        [[ -n "${records["$idx":lon]}" ]]; then
-      log_print DEBUG "Getting nominatim data for record $idx"
-      records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}" 2>/dev/null || true)"
+      records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${records["$idx":lat]}" --lon="${records["$idx":lon]}")"
       records["$idx":checked:nominatim]=true
     fi
   done
 
   # get route information in bulk (single API call)
-  if ! chk_disabled "$CHECKROUTE"; then
-    log_print DEBUG "Getting route data for record $idx"
-    GET_ROUTE_BULK
-  fi
+  if ! chk_disabled "$CHECKROUTE"; then GET_ROUTE_BULK; fi
 
   if [[ -z "${records[HASROUTE]}" ]]; then records[HASROUTE]=false; fi
   if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
   if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
   records[LASTUPDATE]="$NOWTIME"
 
-  log_print INFO "Processing complete. Now writing results to disk..."
+
+
+  log_print INFO "Planefence processing complete."
+  if ! chk_disabled "$PA_ENABLED"; then
+    log_print INFO "Processing Plane-Alert records (${#pa_socketrecords[@]} found)."
+    # ==========================
+    # Process PA lines
+    # ==========================
+    for line in "${pa_socketrecords[@]}"; do
+
+      [[ -z $line ]] && continue
+      IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
+      [[ $icao == "hex_ident" || -z "$time" ]] && continue # skip header or incomplete lines
+
+      # Find matching record by icao
+      pa_idx=""
+      for ((idx=0; idx<=records[maxindex]; idx++)); do
+        if [[ "${records["$idx":icao]}" == "$icao" ]]; then
+          pa_idx="$idx"
+          break
+        fi
+      done
+      [[ -z $pa_idx ]] && continue  # no matching record found
+
+      # Add Plane-Alert data
+      pa_data="${PA_DICT[$icao]}"
+      records["$pa_idx":pa:data]="$pa_data"
+      records[HASPA]=true
+
+    done
+    log_print INFO "Plane-Alert processing complete."
+    if [[ -z "${records[HASPA]}" ]]; then records[HASPA]=false; fi
+  fi
+
 
   # ==========================
   # Save state
@@ -1092,9 +1075,4 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
   log_print DEBUG "Wrote JSON object to $JSONOUT"
 
 fi
-# Cleanup the per-run noise cache so it doesn't outlive this execution
-if [[ -n "${NOISECACHE_DIR:-}" && -d "$NOISECACHE_DIR" ]]; then
-  rm -rf "$NOISECACHE_DIR"
-fi
-
 log_print INFO "Done."

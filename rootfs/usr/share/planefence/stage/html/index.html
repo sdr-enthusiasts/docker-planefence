@@ -656,7 +656,25 @@
     columnDefs: [
       // Use our dom-data-order plugin for column 0 (index) so sorting honors
       // the numeric value placed in the cell's data-order attribute.
-      { targets: 0, orderDataType: 'dom-data-order' },
+      {
+        targets: 0,
+        orderDataType: 'dom-data-order',
+        type: 'num',
+        // Ensure numeric sort even if the order plugin isn't engaged by parsing
+        // the data-order attribute or falling back to numeric text extraction.
+        render: {
+          _: function(data) { return data; },
+          sort: function(data) {
+            try {
+              const s = String(data || '');
+              const m = s.match(/data-order="(-?\d+)"/);
+              if (m) return Number(m[1]);
+              const n = Number(s.replace(/[^0-9.\-]/g, ''));
+              return Number.isFinite(n) ? n : 0;
+            } catch (e) { return 0; }
+          }
+        }
+      },
       // For Alt/Spd column (index 5 in viewCols), allow numeric ordering by
       // altitude or by speed via our custom orderDataType plugins. We'll
       // wire header click handlers to call the appropriate ordering.

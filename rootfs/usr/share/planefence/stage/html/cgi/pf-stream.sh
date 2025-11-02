@@ -40,6 +40,8 @@ if [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=planefence" ]]; then
   FILTER_MODE="planefence"
 elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
+elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=both" ]]; then
+  FILTER_MODE="both"
 else
   FILTER_MODE="planefence"
 fi
@@ -64,7 +66,8 @@ if ! jq -r --arg mode "$FILTER_MODE" '
     "link:fa","link:faa",
     "discord:link","discord:notified","bsky:link","bsky:notified","telegram:link","telegram:notified","mqtt:notified",
     "sound:color","sound:loudness","sound:peak",
-    "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file"
+    "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file",
+    "mode"
   ];
   def globals: [
     "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE"
@@ -93,8 +96,16 @@ if ! jq -r --arg mode "$FILTER_MODE" '
     ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
     | ( if $has_globals then .[0] else {} end ) as $globals
   | ( if $has_globals then .[1:] else . end ) as $rows
-  # Keep only records for requested mode ($mode); default missing mode to "planefence"
-  | ( [ $rows[]? | select((.mode? // "planefence") == $mode) ] ) as $rows
+  # Keep only records for requested mode ($mode) with shared semantics:
+  # - If $mode == "planefence": include rows with mode=="planefence" or mode=="both"
+  # - If $mode == "plane-alert": include rows with mode=="plane-alert" or mode=="both"
+  # - If $mode == "both": include rows with mode in ["planefence","plane-alert","both"]
+  # Also default missing per-row mode to "planefence".
+  | (
+      $mode as $mWanted
+      | (if $mWanted=="both" then ["planefence","plane-alert","both"] else [$mWanted, "both"] end) as $wanted
+      | ( [ $rows[]? | ( .mode? // "planefence") as $m | select( $wanted | index($m) ) ] )
+    ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})
     | ({__globals: $globals} | tojson),
