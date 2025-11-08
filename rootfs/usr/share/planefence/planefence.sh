@@ -965,7 +965,7 @@ if chk_enabled "$PLANETWEET" \
    || chk_enabled "$PF_MASTODON" \
    || [[ -n "$BLUESKY_HANDLE" ]] \
    || [[ -n "$RSS_SITELINK" ]] \
-	 || chk_enabled "$PF_TELEGRAM_ENABLED" \
+	 || chk_enabled "$TELEGRAM_ENABLED" \
    || [[ -n "$MQTT_URL" ]]; then
 	LOG "Invoking planefence_notify.sh for notifications"
 	$PLANEFENCEDIR/planefence_notify.sh today "$DISTUNIT" "$ALTUNIT"
