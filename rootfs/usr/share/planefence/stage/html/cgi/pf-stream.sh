@@ -40,8 +40,6 @@ if [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=planefence" ]]; then
   FILTER_MODE="planefence"
 elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
-elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=both" ]]; then
-  FILTER_MODE="both"
 else
   FILTER_MODE="planefence"
 fi

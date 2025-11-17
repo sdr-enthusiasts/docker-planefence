@@ -173,6 +173,10 @@ PF_NOISECAPT=
 PF_PLANEALERT=ON
 #
 # ---------------------------------------------------------------------
+# GENERATE_CSV indicates if a daily CSV file is generated for Planefence and Plane-Alert
+# Default value if omitted is OFF
+GENERATE_CSV=ON
+# ---------------------------------------------------------------------
 # PF_PARANGE indicates the range for PlaneAlert. If empty or omitted, it will
 # take any plane reported by your feeder station.
 # If there is a value, it will take this distance in the unit determined by $PF_DISTUNIT

@@ -402,7 +402,7 @@ DISTMTS="$(awk "BEGIN{print int($DIST * $TO_METER)}")"
 # -----------------------------------------------------------------------------------
 
 # replace the template values:
-debug_print "Setting AutoRefresh, if enabled"
+log_print DEBUG "Setting AutoRefresh, if enabled"
 # ||AUTOREFRESH||
 if chk_enabled "${AUTOREFRESH}"; then
 	REFRESH_INT="$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
@@ -411,7 +411,7 @@ else
 	template="$(template_replace "||AUTOREFRESH||" "" "$template")"
 fi
 
-debug_print "Setting other template values"
+log_print DEBUG "Setting other template values"
 # a bunch of simple replacements:
 template="$(template_replace "||MY||" "$MY" "$template")"
 template="$(template_replace "||MYURL||" "$MYURL" "$template")"
@@ -433,7 +433,7 @@ template="$(template_replace "||MOTD||" "$PF_MOTD" "$template")"
 
 # Altitude correction
 if [[ -n "$ALTCORR" ]]; then
-	debug_print "Setting altitude correction values"
+	log_print DEBUG "Setting altitude correction values"
 	template="$(template_replace "||ALTCORR||" "$ALTCORR" "$template")"
 	template="$(template_replace "||ALTUNIT||" "$ALTUNIT" "$template")"
 	template="$(template_replace "||ALTREF||" "$ALTREF" "$template")"
@@ -455,7 +455,7 @@ fi
 
 # Noise data section
 # Set PlaneAlert link if PA is enabled
-debug_print "Setting noise data section, if applicable"
+log_print DEBUG "Setting noise data section, if applicable"
 if chk_enabled "${records[HASNOISE]}"; then
 	template="$(template_replace "<!--NOISEDATA||>" "" "$template")"
 	template="$(template_replace "<||NOISEDATA-->" "" "$template")"
@@ -464,7 +464,7 @@ else
 fi
 
 # Set PlaneAlert link if PA is enabled
-debug_print "Setting PlaneAlert link, if applicable"
+log_print DEBUG "Setting PlaneAlert link, if applicable"
 if chk_enabled "$PLANEALERT"; then
 	template="$(template_replace "||PALINK||" "$PALINK" "$template")"
 	template="$(template_replace "<!--PA||>" "" "$template")"
@@ -474,7 +474,7 @@ else
 fi
 
 # Day vs Night mode
-debug_print "Setting Day/Night mode"
+log_print DEBUG "Setting Day/Night mode"
 if chk_enabled "$DARKMODE"; then
 	template="$(template_replace "||FGCOLOR||" "white" "$template")"
 	template="$(template_replace "||BGCOLOR||" "black" "$template")"
@@ -483,17 +483,17 @@ else
 	template="$(template_replace "||BGCOLOR||" "#f0f6f6" "$template")"
 fi
 
-debug_print "Adding history links"
+log_print DEBUG "Adding history links"
 CREATEHTMLHISTORY
-debug_print "Adding heatmap (if enabled)"
+log_print DEBUG "Adding heatmap (if enabled)"
 CREATEHEATMAP
-debug_print "Adding notifications"
+log_print DEBUG "Adding notifications"
 CREATENOTIFICATIONS
 # CREATEHTMLTABLE  must be the last substitution; anything being this will be very slow
 # due to the large increase of size of the template
-debug_print "Adding HTML table"
+log_print DEBUG "Adding HTML table"
 CREATEHTMLTABLE
-debug_print "Done updating the template"
+log_print DEBUG "Done updating the template"
 
 # ---------------------------------------------------------------------------
 #      FINALIZE AND WRITE THE FILES

@@ -56,22 +56,22 @@ else
   screenshots=0
 fi
 
-debug_print "Reading records for Bluesky notification"
+log_print DEBUG "Reading records for Bluesky notification"
 
 READ_PF_RECORDS
 
-debug_print "Getting indices of records ready for Bluesky notification and stale records"
+log_print DEBUG "Getting indices of records ready for Bluesky notification and stale records"
 build_index_and_stale INDEX STALE bsky
 
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for Bluesky notification: ${INDEX[*]}"
+  log_print DEBUG "Records ready for Bluesky notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for Bluesky notification"
+  log_print DEBUG "No records ready for Bluesky notification"
 fi
 if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no notification will be sent): ${STALE[*]}"
+  log_print DEBUG "Stale records (no notification will be sent): ${STALE[*]}"
 else
-  debug_print "No stale records"
+  log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for Bluesky notification. Exiting."
@@ -79,7 +79,7 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
 fi
 
 for idx in "${INDEX[@]}"; do
-  debug_print "Preparing Bluesky notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Bluesky notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
@@ -136,7 +136,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   # Post to Bsky
-  debug_print "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
+  log_print DEBUG "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
   posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true

@@ -57,24 +57,24 @@ if [[ $inhibit_update == "false" ]]; then
 	do
 		if (("${#TYPE} >= 3")) && (("${#TYPE} <= 4"))
 		then
-			debug_print "\"$TYPE\" appears to be an ICAO type and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			log_print DEBUG "\"$TYPE\" appears to be an ICAO type and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			sed -i "/,$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		elif [[ "$TYPE" =~ ^[0-9a-fA-F]{6}$ ]]
 		then
-			debug_print "\"$TYPE\" appears to be an ICAO hex and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			log_print DEBUG "\"$TYPE\" appears to be an ICAO hex and is valid, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			sed -r -i "/^$TYPE,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		elif [[ -n "$TYPE" ]]
 		then
-			debug_print "\"$TYPE\" appears to be a freeform search pattern, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
+			log_print DEBUG "\"$TYPE\" appears to be a freeform search pattern, entries excluded: $(grep -ci "$TYPE" /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 			# shellcheck disable=SC1087
 			sed -r -i "/,[A-Za-z0-9\-\.\+ ]*$TYPE[A-Za-z0-9\-\.\+ ]*,/Id" /usr/share/planefence/persist/.internal/plane-alert-db.txt
 		else
-			debug_print "\"$TYPE\" is invalid, skipping!"
+			log_print DEBUG "\"$TYPE\" is invalid, skipping!"
 		fi
 	done
 	count_end="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
 	if (( count_start - count_end > 0 )); then  
-		debug_print "$(( count_start -  count_end )) entries excluded."
+		log_print DEBUG "$(( count_start -  count_end )) entries excluded."
 		chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	fi
 	ln -sf /usr/share/planefence/persist/.internal/plane-alert-db.txt /usr/share/planefence/html/alertlist.txt

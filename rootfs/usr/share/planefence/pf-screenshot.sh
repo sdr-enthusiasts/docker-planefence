@@ -172,14 +172,14 @@ log_print DEBUG "Getting RECORDSFILE"
 READ_PF_RECORDS ignore-lock
 
 # Make an index of records to process
-debug_print "Getting indices ready for new and stale records"
+log_print DEBUG "Getting indices ready for new and stale records"
 build_index_and_stale_for_screenshot INDEX STALE
 
 # If there's nothing to do, exit
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for screenshotting. Exiting."
   exit 0
-else debug_print "Records to process: ${#INDEX[@]} new, ${#STALE[@]} stale"
+else log_print DEBUG "Records to process: ${#INDEX[@]} new, ${#STALE[@]} stale"
 fi
 
 counter=0

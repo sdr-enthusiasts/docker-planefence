@@ -70,15 +70,15 @@ generate_mqtt() {
 		MQTT_HOST="${MQTT_HOST%:*}" # finally strip the host so there's only a hostname or ip address
 
 		# log the message we are going to send:
-		debug_print "Attempting to send a MQTT notification for index $idx"
-		debug_print "MQTT Host: $MQTT_HOST"
-		debug_print "MQTT Port: ${MQTT_PORT:-1883}"
-		debug_print "MQTT Topic: $MQTT_TOPIC"
-		debug_print "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
-		if [[ -n "$MQTT_USERNAME" ]]; then debug_print "MQTT Username: $MQTT_USERNAME"; fi
-		if [[ -n "$MQTT_PASSWORD" ]]; then debug_print "MQTT Password: $MQTT_PASSWORD"; fi
-		if [[ -n "$MQTT_QOS" ]]; then debug_print "MQTT QOS: $MQTT_QOS"; fi
-		debug_print "MQTT Payload JSON Object: $MQTT_JSON"
+		log_print DEBUG "Attempting to send a MQTT notification for index $idx"
+		log_print DEBUG "MQTT Host: $MQTT_HOST"
+		log_print DEBUG "MQTT Port: ${MQTT_PORT:-1883}"
+		log_print DEBUG "MQTT Topic: $MQTT_TOPIC"
+		log_print DEBUG "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
+		if [[ -n "$MQTT_USERNAME" ]]; then log_print DEBUG "MQTT Username: $MQTT_USERNAME"; fi
+		if [[ -n "$MQTT_PASSWORD" ]]; then log_print DEBUG "MQTT Password: $MQTT_PASSWORD"; fi
+		if [[ -n "$MQTT_QOS" ]]; then log_print DEBUG "MQTT QOS: $MQTT_QOS"; fi
+		log_print DEBUG "MQTT Payload JSON Object: $MQTT_JSON"
 
 		# send the MQTT message:
 		mqtt_string=(--broker "$MQTT_HOST")
@@ -94,21 +94,21 @@ generate_mqtt() {
 		outputmsg="$(echo ${mqtt_string[@]} | xargs mqtt)"
 
 		if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]]; then
-			debug_print "MQTT Delivery Error: ${outputmsg//$'\n'/ }"
+			log_print DEBUG "MQTT Delivery Error: ${outputmsg//$'\n'/ }"
 			return 1
 		else
-			debug_print "MQTT Delivery successful!"
-			debug_print "Results string: ${outputmsg//$'\n'/ }"
+			log_print DEBUG "MQTT Delivery successful!"
+			log_print DEBUG "Results string: ${outputmsg//$'\n'/ }"
 		fi
 	fi
 }
 
-debug_print "Starting generation of RSS feed"
+log_print DEBUG "Starting generation of RSS feed"
 
 
 
 if [[ -z "$MQTT_URL" ]]; then
-  debug_print "MQTT notifications are disabled - exiting"
+  log_print DEBUG "MQTT notifications are disabled - exiting"
   exit 0
 fi
 
@@ -120,14 +120,14 @@ build_index_and_stale INDEX STALE mqtt
 
 # check if there's anything to do
 if (( ${#INDEX[@]} )); then
-  debug_print "Records ready for MQTT notification: ${INDEX[*]}"
+  log_print DEBUG "Records ready for MQTT notification: ${INDEX[*]}"
 else
-  debug_print "No records ready for MQTT notification"
+  log_print DEBUG "No records ready for MQTT notification"
 fi
 if (( ${#STALE[@]} )); then
-  debug_print "Stale records (no MQTT notification will be sent): ${STALE[*]}"
+  log_print DEBUG "Stale records (no MQTT notification will be sent): ${STALE[*]}"
 else
-  debug_print "No stale records for MQTT notification"
+  log_print DEBUG "No stale records for MQTT notification"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for MQTT notification. Exiting."
