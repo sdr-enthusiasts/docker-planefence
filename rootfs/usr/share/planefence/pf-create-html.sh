@@ -375,7 +375,7 @@ if ! template=$(<"$PLANEFENCEDIR/planefence.html.pf.template"); then
 fi
 
 # Load the records
-READ_PF_RECORDS
+READ_RECORDS
 
 # Ensure that there's an '/tmp/add_delete.uuid' file, or update it if needed
 if [[ ! -f /tmp/add_delete.uuid ]] || ( [[ -f /tmp/add_delete.uuid.used ]] && (( NOWTIME - $(</tmp/add_delete.uuid.used) > 300 )) ); then

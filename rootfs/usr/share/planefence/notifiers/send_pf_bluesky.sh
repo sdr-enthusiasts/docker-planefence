@@ -58,7 +58,7 @@ fi
 
 log_print DEBUG "Reading records for Bluesky notification"
 
-READ_PF_RECORDS
+READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Bluesky notification and stale records"
 build_index_and_stale INDEX STALE bsky
@@ -151,8 +151,8 @@ done
 
 # read, update, and thensave the records:
 log_print DEBUG "Updating records after Bluesky notifications"
-LOCK_PF_RECORDS
-READ_PF_RECORDS ignore-lock
+LOCK_RECORDS
+READ_RECORDS ignore-lock
 
 for idx in "${STALE[@]}"; do
   records["$idx":bsky:notified]="stale"
@@ -168,5 +168,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_PF_RECORDS ignore-lock
+WRITE_RECORDS ignore-lock
 log_print INFO "Bluesky notifications run completed."

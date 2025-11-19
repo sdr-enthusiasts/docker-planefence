@@ -689,8 +689,8 @@ if [[ "$1" == "reset" ]]; then
 fi
 
 log_print DEBUG "Getting $RECORDSFILE"
-LOCK_PF_RECORDS
-READ_PF_RECORDS ignore-lock
+LOCK_RECORDS
+READ_RECORDS ignore-lock
 
 log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
@@ -1060,7 +1060,7 @@ if (( ${#pf_socketrecords[@]} + ${#pa_socketrecords[@]} > 0 )); then
   # Save state
   # ==========================
   LASTPROCESSEDLINE="${pf_socketrecords[0]}"
-  WRITE_PF_RECORDS ignore-lock
+  WRITE_RECORDS ignore-lock
   log_print DEBUG "Wrote $RECORDSFILE"
 
   # # ==========================

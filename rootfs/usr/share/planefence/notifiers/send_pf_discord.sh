@@ -60,7 +60,7 @@ fi
 log_print DEBUG "Reading records for Discord notification"
 log_print DEBUG "Reading records for Discord notification"
 
-READ_PF_RECORDS
+READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
@@ -197,8 +197,8 @@ done
 # Save the records again
 log_print DEBUG "Updating records after Discord notifications"
 
-LOCK_PF_RECORDS
-READ_PF_RECORDS ignore-lock
+LOCK_RECORDS
+READ_RECORDS ignore-lock
 
 if [[ ${#link[@]} -gt 0 || ${#delivery_errors[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
 
@@ -218,5 +218,5 @@ done
 
 # Save the records again
 log_print DEBUG "Saving records..."
-WRITE_PF_RECORDS ignore-lock
+WRITE_RECORDS ignore-lock
 log_print INFO "Discord notifications run completed."

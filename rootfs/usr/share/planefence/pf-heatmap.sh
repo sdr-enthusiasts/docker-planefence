@@ -124,7 +124,7 @@ if ! template=$(<"$PLANEFENCEDIR/pf-heatmap.template"); then
 fi
 
 # Load the records
-READ_PF_RECORDS
+READ_RECORDS
 if (( records[maxindex] < 0 )); then
 	log_print WARN "No records found. Exiting"
 	exit 0
