@@ -461,7 +461,7 @@ build_index_and_stale() {
 
 # Default units
 if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
-	case "$(awk -F= -v var="distunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
+	case "$(awk -F= -v var="distanceunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
 		nauticalmile)
 		DISTUNIT="nm"
     TO_METER=1852

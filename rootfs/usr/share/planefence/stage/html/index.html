@@ -188,6 +188,19 @@
   /* Dark mode hover: subtle light tint */
   html.dark table.dataTable tbody tr:hover { background-color: rgba(255,255,255,0.03) !important; }
   html.dark table.dataTable tbody tr:hover td, html.dark table.dataTable tbody tr:hover td * { background: transparent !important; }
+
+  /* Toggle switch for theme */
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--muted); transition: .2s ease; border-radius: 999px; }
+  .switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; top: 3px; background: var(--bg); transition: .2s ease; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+  .switch .switch-ico { position: absolute; top: 50%; transform: translateY(-50%); line-height: 0; pointer-events: none; opacity: .9; color: var(--fg); z-index: 1; }
+  .switch .switch-ico.sun { left: 6px; }
+  .switch .switch-ico.moon { right: 6px; }
+  /* When dark mode is on (checked), make icons contrast with the accent */
+  .switch input:checked ~ .switch-ico { color: var(--bg); }
   </style>
 </head>
 <body>
@@ -197,7 +210,16 @@
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
     <div class="spacer"></div>
-  <button id="themeToggle" title="Toggle dark/light" aria-pressed="false" aria-label="Toggle theme"></button>
+  <label class="switch" title="Toggle dark/light">
+    <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+    <span class="slider" aria-hidden="true"></span>
+    <span class="switch-ico sun" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10-9h-2v3h2V4zm7.45 1.66l-1.41-1.41-1.8 1.79 1.41 1.42 1.8-1.8zM17 13h3v-2h-3v2zm-5 7h2v-3h-2v3zm-6.66-1.45l1.41 1.41 1.8-1.79-1.41-1.42-1.8 1.8zM20.49 17l1.41-1.41-1.79-1.8-1.42 1.41 1.8 1.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+    </span>
+    <span class="switch-ico moon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21.752 15.002A9 9 0 119 2.248 7 7 0 0021.752 15z"/></svg>
+    </span>
+  </label>
   <button id="manualUpdate" title="Update now">Update</button>
   <button id="reload" title="Reload data">Reload</button>
   <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
@@ -252,12 +274,11 @@
   function applyTheme(theme){
     const dark = theme === 'dark';
     document.documentElement.classList.toggle('dark', dark);
-    const btn = document.getElementById('themeToggle');
-    if (btn) {
-      btn.setAttribute('aria-pressed', String(dark));
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) {
       const label = dark ? 'Switch to light theme' : 'Switch to dark theme';
-      btn.setAttribute('aria-label', label);
-      btn.innerHTML = `${dark ? iconSun() : iconMoon()}<span class="sr-only">${label}</span>`;
+      toggle.setAttribute('aria-label', label);
+      try { toggle.checked = dark; } catch(e) { /* ignore */ }
     }
     localStorage.setItem(THEME_KEY, theme);
     // After theme flip, update arrow images to day/night variants without full re-render
@@ -271,10 +292,17 @@
   applyTheme(currentTheme());
   // On initial apply, ensure arrow images reflect theme
   try { updateAngleImagesForTheme(document.documentElement.classList.contains('dark')); } catch(e){}
-  document.getElementById('themeToggle')?.addEventListener('click', () => {
-    applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
-    // No need to invalidate rows just to swap arrow icons; we directly update sources.
-  });
+  (function(){
+    const t = document.getElementById('themeToggle');
+    if (!t) return;
+    // Ensure initial checked reflects current theme
+    try { t.checked = document.documentElement.classList.contains('dark'); } catch(e){}
+    t.addEventListener('change', () => {
+      const useDark = !!t.checked;
+      applyTheme(useDark ? 'dark' : 'light');
+      // No need to invalidate rows just to swap arrow icons; we directly update sources.
+    });
+  })();
 
   // -------- Helpers --------
   const prog = document.getElementById('progress');
@@ -927,9 +955,23 @@ function renderRow(r) {
   const coordsHtml = coordText
     ? (map ? `<a href="${map}" target="_blank" rel="noopener">${coordText}</a>` : coordText)
     : "";
-  // Put coords on first line and angle (text + image) on a separate second line within the same cell.
+  // Put coords on first line and angle (text + image) plus distance on the second line within the same cell.
   const angleCombined = [angleStr, angleImg].filter(Boolean).join('');
-  const positionInner = [coordsHtml ? `<div>${coordsHtml}</div>` : '', angleCombined ? `<div>${angleCombined}</div>` : ''].filter(Boolean).join('');
+  // Distance + unit appended inline with the angle, separated by a middot
+  const distNum = Number(r["distance:value"]);
+  const distUnit = safe(r["distance:unit"] || "");
+  let distStr = "";
+  if (Number.isFinite(distNum)) {
+    const formatted = distNum < 10 ? distNum.toFixed(1) : Math.round(distNum).toString();
+    distStr = `${formatted} ${distUnit}`.trim();
+  } else if (r["distance:value"]) {
+    distStr = `${safe(r["distance:value"]) } ${distUnit}`.trim();
+  }
+  const angleLine = [angleCombined, distStr].filter(Boolean).join(' · ');
+  const positionInner = [
+    coordsHtml ? `<div>${coordsHtml}</div>` : '',
+    angleLine ? `<div>${angleLine}</div>` : ''
+  ].filter(Boolean).join('');
   const position = positionInner ? `<div class="position-cell">${positionInner}</div>` : "";
 
   const altRaw = Number(r["altitude:value"]);

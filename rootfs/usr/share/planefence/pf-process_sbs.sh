@@ -185,10 +185,10 @@ GET_ROUTE_BULK () {
   if (( ${#pf_indexarray[@]} + ${#pa_indexarray[@]} > 0 )); then
 
     json='{ "planes": [ '
-    for idx in "${pf_indexarray[@]}"; do
+    for idx in "${!pf_indexarray[@]}"; do
       json+="{ \"callsign\":\"${routesarray["$idx":callsign]}\", \"lat\": ${routesarray["$idx":lat]}, \"lng\": ${routesarray["$idx":lon]} },"
     done
-    for idx in "${pa_indexarray[@]}"; do
+    for idx in "${!pa_indexarray[@]}"; do
       json+="{ \"callsign\":\"${routesarray["$idx":callsign]}\", \"lat\": ${routesarray["$idx":lat]}, \"lng\": ${routesarray["$idx":lon]} },"
     done
     json="${json:0:-1}" # strip the final comma
@@ -1416,7 +1416,7 @@ if chk_enabled "$GENERATE_CSV"; then
   GENERATE_PF_CSV
   log_print DEBUG "Wrote PF CSV object to $CSVOUT"
 fi
-  GENERATE_JSON
+  GENERATE_PF_JSON
   log_print DEBUG "Wrote PF JSON object to $JSONOUT"
 
 if chk_enabled "$PLANEALERT"; then
@@ -1428,8 +1428,6 @@ if chk_enabled "$PLANEALERT"; then
   log_print DEBUG "Wrote PA JSON object to ${PA_JSONOUT}"
 fi
 # Cleanup the per-run noise cache so it doesn't outlive this execution
-if [[ -n "${NOISECACHE_DIR:-}" && -d "$NOISECACHE_DIR" ]]; then
-  rm -rf "$NOISECACHE_DIR"
-fi
+rm -rf "$NOISECACHE_DIR"
 
 log_print INFO "Done."
