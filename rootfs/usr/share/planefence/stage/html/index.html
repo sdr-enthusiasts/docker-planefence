@@ -917,9 +917,11 @@ function renderRow(r) {
   const cs = safe(r.callsign);
   const typ = safe(r.type);
   const owner = safe(r.owner);
-  const faalink = safe(r["link:faa"] || r["link:fa"]);
-  const ownerHtml = owner ? (isHttp(faalink) ? `<a href="${faalink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
-  const op = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
+  const tailFaaLink = safe(r["link:faa"]);
+  const ownerFaLink = safe(r["link:fa"]);
+  const tailHtml = tail ? (isHttp(tailFaaLink) ? `<a href="${tailFaaLink}" target="_blank" rel="noopener">${tail}</a>` : tail) : "";
+  const ownerHtml = owner ? (isHttp(ownerFaLink) ? `<a href="${ownerFaLink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
+  const ownerLine = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
   // If a type is present, render it as a Skybrary link (lowercased). Encode the path component to be safe.
   const typHtml = typ ? (() => {
     try {
@@ -937,7 +939,7 @@ function renderRow(r) {
     : `${icao}`;
   const aircraft = `
     <div class="mono">${csIcaoLine}${routeHtml}</div>
-    <div>${tail ? tail+' · ' : ''}${typHtml || typ}${op? ' · '+op : ''}</div>
+    <div>${tailHtml ? tailHtml+' · ' : ''}${typHtml || typ}${ownerLine ? ' · ' + ownerLine : ''}</div>
   `.trim();
 
   // Position: coords link only; angle outside link; add N/E

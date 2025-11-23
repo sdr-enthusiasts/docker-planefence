@@ -12,6 +12,9 @@
 source /scripts/pf-common
 source /usr/share/planefence/persist/planefence.config
 
+# shellcheck disable=SC2034
+DEBUG=true
+
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
 
 
@@ -106,30 +109,36 @@ for image in "${IMAGES[@]}"; do
 
     # Send the photo with the message
     if (( image_counter == 1 )); then
-      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-          -F "chat_id=${TELEGRAM_CHAT_ID}" \
-          -F "photo=@${image}" \
-          -F "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
-          -F "parse_mode=HTML")"
+      printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
+        "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+        "chat_id=${TELEGRAM_CHAT_ID}" \
+        "photo=@${image}" \
+        "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
+        "parse_mode=HTML"
+      # shellcheck disable=SC2090
+      response="$(eval "$curlcmd")"
       message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     else
-      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-          -F "chat_id=${TELEGRAM_CHAT_ID}" \
-          -F "photo=@${image}" \
-          -F "caption=${image_text}" \
-          -F "parse_mode=HTML")"
+      printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
+        "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+        "chat_id=${TELEGRAM_CHAT_ID}" \
+        "photo=@${image}" \
+        "caption=${image_text}" \
+        "parse_mode=HTML"
+      # shellcheck disable=SC2090
+      response="$(eval "$curlcmd")"
     fi
 
     if (( image_counter == 1)); then
       if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
         log_print ERR "Error sending photo message to Telegram: (original had http instead of hxttp):
         ${response//http/hxttp}
-        Original JSON posted:
-        $image_text"
+        Original command posted:
+        ${curlcmd//http/hxttp}"
         exit 1
       else
         echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" 
-        log_print DEBUG "Photo message sent successfully to Telegram"
+        log_print DEBUG "Photo message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
       fi
     fi
 
@@ -138,21 +147,23 @@ done
 
 # If no images or image sending failed, send text only
 if (( image_count == 0 )); then
-    response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -F "chat_id=${TELEGRAM_CHAT_ID}" \
-        -F "text=${TEXT}" \
-        -F "parse_mode=HTML")"
-    
+    printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q' \
+      "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      "chat_id=${TELEGRAM_CHAT_ID}" \
+      "text=${TEXT}" \
+      "parse_mode=HTML"
+    # shellcheck disable=SC2090
+    response="$(eval "$curlcmd")"
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
       log_print ERR "Error sending text-only message to Telegram: (original had http instead of hxttp):
         ${response//http/hxttp}
-        Original JSON posted:
-        $image_text"
+        Original command posted:
+        ${curlcmd//http/hxttp}"
         exit 1
     else
       echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}"
-      log_print INFO "Text message sent successfully to Telegram"
+      log_print INFO "Text message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
     fi
 fi

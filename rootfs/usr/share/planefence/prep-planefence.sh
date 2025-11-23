@@ -72,7 +72,7 @@ fi
 # overwritten by the host at start of runtime
 cp -Rf /usr/share/planefence/stage/html/* /usr/share/planefence/html/	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
-mv -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip
+if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
 #--------------------------------------------------------------------------------
 #

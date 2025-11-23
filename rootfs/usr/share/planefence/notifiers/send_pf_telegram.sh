@@ -145,8 +145,8 @@ for idx in "${INDEX[@]}"; do
   log_print DEBUG "Posting to Telegram: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2telegram.sh PF "$template" ${img_array[@]})" || true
-  if posturl="$(extract_url "$posturl")"; then
+  if ! posturl="$(/scripts/post2telegram.sh PF "$template" ${img_array[@]})"; then result=false; else result=true; fi
+  if $result; then
     log_print INFO "Telegram notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
   else
     log_print ERR "Telegram notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"

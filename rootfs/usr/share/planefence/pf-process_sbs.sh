@@ -91,6 +91,23 @@ PA_ENABLED="$(sed -n 's/\(^\s*PF_PLANEALERT=\)\(.*\)/\2/p' /usr/share/planefence
 # Functions
 # ==========================
 
+CLEANUP() {
+  # CLEANUP
+  # Remove matching transient files/dirs in /tmp if older than DELETEAFTER minutes.
+  # Local configurable threshold (minutes), defaults to 10.
+  # Remove transient Planefence artifacts in /tmp created during runtime.
+  # Patterns removed (if present):
+  #   /tmp/.pf-noisecache-*   (noise data cache dirs/files)
+  #   /tmp/tmp.*              (generic temp files matching tmp.<something>)
+  #   /tmp/pa_key_*           (plane-alert temporary key files)
+  local DELETEAFTER="10"
+  # Limit depth to prevent descending into other directories.
+  find /tmp -maxdepth 1 -mindepth 1 \
+    \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
+    -mmin +"${DELETEAFTER}" \
+    -exec rm -rf -- {} + 2>/dev/null || :
+}
+
 GET_TAIL() {
   # Usage: GET_TAIL "$icao"
   local icao=${1^^}

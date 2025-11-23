@@ -29,6 +29,7 @@ source /scripts/pf-common
 PF_PATH="/usr/share/planefence"
 PA_PATH="/usr/share/planefence"
 NOTIFY_PATH="$PF_PATH/notifiers"
+DELETEAFTER="10"  # minutes
 
 # -----------------------------------------------------------------------------------
 #       SETTINGS STUFF
@@ -56,6 +57,12 @@ pid=$!
 echo "$pid" > /run/pf-process_sbs.pid
 wait "$pid" &>/dev/null || true
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
+DELETEAFTER="10"
+  # Limit depth to prevent descending into other directories.
+  find /tmp -maxdepth 1 -mindepth 1 \
+    \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
+    -mmin +"${DELETEAFTER}" \
+    -exec rm -rf -- {} + 2>/dev/null || :
 # ./pf-create-html.sh	&	# create PF HTML page
 
 # Run heatmap script in the background
