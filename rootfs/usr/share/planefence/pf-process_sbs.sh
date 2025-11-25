@@ -51,8 +51,8 @@ NOWTIME="$(date +%s)"
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
-RECORDSFILE="$HTMLDIR/.planefence-records-${TODAY}.gz"
-YESTERDAYRECORDSFILE="$HTMLDIR/.planefence-records-${YESTERDAY}.gz"
+RECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${TODAY}.gz"
+YESTERDAYRECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${YESTERDAY}.gz"
 
 CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
 PA_CSVOUT="$HTMLDIR/plane-alert-${TODAY}.csv"
@@ -100,12 +100,16 @@ CLEANUP() {
   #   /tmp/.pf-noisecache-*   (noise data cache dirs/files)
   #   /tmp/tmp.*              (generic temp files matching tmp.<something>)
   #   /tmp/pa_key_*           (plane-alert temporary key files)
-  local DELETEAFTER="10"
+  local TMPDELETEAFTER="10" # minutes
+  local RAWRECSDELETEAFTER="14" # days
   # Limit depth to prevent descending into other directories.
   find /tmp -maxdepth 1 -mindepth 1 \
     \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
-    -mmin +"${DELETEAFTER}" \
+    -mmin +"${TMPDELETEAFTER}" \
     -exec rm -rf -- {} + 2>/dev/null || :
+  find /usr/share/planefence/persist/records -type f -name 'planefence-records-*.gz' \
+    -mtime +"${RAWRECSDELETEAFTER}" \
+    -exec rm -f -- {} + 2>/dev/null || :
 }
 
 GET_TAIL() {
@@ -985,10 +989,13 @@ log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} ent
 
 # Create pa_socketrecords array
 if chk_enabled "$PLANEALERT" && (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
-    readarray -t pa_socketrecords < <(grep -F -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
-    rm -f /tmp/pa_keys_$$
+  # Patterns in /tmp/pa_keys_$$ are regular expressions anchored with ^, so use regex grep
+  readarray -t pa_socketrecords < <(grep -E -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
+  rm -f /tmp/pa_keys_$$
+  log_print DEBUG "Created pa_socketrecords array with ${#pa_socketrecords[@]} entries"
+else
+  log_print DEBUG "Note - PlaneAlert not enabled or no PA keys found, so skipping PA records"
 fi
-log_print DEBUG "Created pa_socketrecords array with ${#pa_socketrecords[@]} entries"
 rm -f /tmp/filtered_records_$$
 
 # read the unique icao's into arrays:

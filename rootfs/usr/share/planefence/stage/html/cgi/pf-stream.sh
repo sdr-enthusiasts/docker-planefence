@@ -18,10 +18,10 @@ printf '\r\n'
 choose_json() {
   local cand
 
-  cand="${DOCROOT}/planefence-${utc_today}.json"
+  cand="${DOCROOT}/${FILTERMODE:-planefence}-${utc_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
-  cand="${DOCROOT}/planefence-${utc_yday}.json"
+  cand="${DOCROOT}/${FILTERMODE:-planefence}-${utc_yday}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
   # latest rolling backup
