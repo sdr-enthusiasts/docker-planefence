@@ -42,9 +42,6 @@ log_print() {
     logmsg="$2"
   fi
 
-  # Make sure any stderr redirection is undone for the duration of this function
-  exec 3>&2 2>&-
-
   if [[ "$loglevel" == "DEBUG" ]]; then
     local currenttime
     if [[ -z "$execstarttime" ]]; then
@@ -58,8 +55,6 @@ log_print() {
     "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
   fi
 
-  # Restore stderr redirection
-  exec 2>&3 3>&-
 }
 
 
