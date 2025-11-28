@@ -16,18 +16,19 @@ printf 'X-Content-Type-Options: nosniff\r\n'
 printf '\r\n'
 
 choose_json() {
+  local mode="${1:-planefence}"
   local cand
 
-  cand="${DOCROOT}/${FILTERMODE:-planefence}-${utc_today}.json"
+  cand="${DOCROOT}/${mode}-${utc_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
-  cand="${DOCROOT}/${FILTERMODE:-planefence}-${utc_yday}.json"
+  cand="${DOCROOT}/${mode}-${utc_yday}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
-  # latest rolling backup
+  # latest rolling backup for the selected mode
   local alt
   # shellcheck disable=SC2012
-  alt="$(ls -1t "${DOCROOT}"/.planefence-records*.json 2>/dev/null | head -1 || true)"
+  alt="$(ls -1t "${DOCROOT}"/."${mode}"-records*.json 2>/dev/null | head -1 || true)"
   [[ -n "${alt:-}" && -r "$alt" && -s "$alt" ]] && { printf '%s' "$alt"; return; }
 
   printf ''  # none
@@ -40,20 +41,22 @@ if [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=planefence" ]]; then
   FILTER_MODE="planefence"
 elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
+elif [[ "$1" == "mode=plane-alert" ]]; then
+  FILTER_MODE="plane-alert"
 else
   FILTER_MODE="planefence"
 fi
 
-JSONFILE="$(choose_json || true)"
+JSONFILE="$(choose_json "$FILTER_MODE" || true)"
 if [[ -z "${JSONFILE:-}" ]]; then
   printf '{"error":"missing or unreadable: %s and %s"}\n' \
-    "$(printf '%s' "${DOCROOT}/planefence-${utc_today}.json" | sed 's/"/\\"/g')" \
-    "$(printf '%s' "${DOCROOT}/planefence-${utc_yday}.json" | sed 's/"/\\"/g')"
+    "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_today}.json" | sed 's/"/\\"/g')" \
+    "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_yday}.json" | sed 's/"/\\"/g')"
   exit 0
 fi
 
 # Stream schema then rows
-if ! jq -r --arg mode "$FILTER_MODE" '
+if ! jq -r '
   def pri: [
     "index","icao","tail","callsign","type","owner","route","nominatim",
     "time:firstseen","time:time_at_mindist","time:lastseen","distance:value","distance:unit","complete",
@@ -94,16 +97,6 @@ if ! jq -r --arg mode "$FILTER_MODE" '
     ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
     | ( if $has_globals then .[0] else {} end ) as $globals
   | ( if $has_globals then .[1:] else . end ) as $rows
-  # Keep only records for requested mode ($mode) with shared semantics:
-  # - If $mode == "planefence": include rows with mode=="planefence" or mode=="both"
-  # - If $mode == "plane-alert": include rows with mode=="plane-alert" or mode=="both"
-  # - If $mode == "both": include rows with mode in ["planefence","plane-alert","both"]
-  # Also default missing per-row mode to "planefence".
-  | (
-      $mode as $mWanted
-      | (if $mWanted=="both" then ["planefence","plane-alert","both"] else [$mWanted, "both"] end) as $wanted
-      | ( [ $rows[]? | ( .mode? // "planefence") as $m | select( $wanted | index($m) ) ] )
-    ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})
     | ({__globals: $globals} | tojson),

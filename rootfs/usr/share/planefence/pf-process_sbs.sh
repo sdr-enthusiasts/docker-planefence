@@ -926,7 +926,7 @@ fi
 
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
-  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/null &
+  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/nul &
 fi
 
 if chk_enabled "$PLANEALERT"; then
@@ -1080,9 +1080,9 @@ for line in "${socketrecords[@]}"; do
       pa_newrecords["$pa_idx"]=1
     else
       pa_updatedrecords["$pa_idx"]=1
-      pa_last_idx_for_icao["$icao"]="$pa_idx"
     fi
     # Update fast ICAO index maps
+    pa_last_idx_for_icao["$icao"]="$pa_idx"
     mode_pa=true
   else
     mode_pa=false
@@ -1322,14 +1322,16 @@ for idx in "${!processed_indices[@]}"; do
         # Make sure we have the noiselist
         if [[ -z "$noiselist" ]]; then
           wait $!
-          noiselist="$(</tmp/.allnoise)"
+          noiselist="$(</tmp/.allnoise)" || REMOTENOISE=""
           rm -f /tmp/.allnoise
         fi
-        noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
-        noisedate="${noisedate:-$TODAY}"
-        read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
-        records["$idx":checked:noisedata]=true
-        records[HASNOISE]=true
+        if [[ -n "$REMOTENOISE" ]]; then 
+          noisedate="$(awk -F'[.-]' '($1=="noisecapt" && $2 ~ /^[0-9]{6}$/ && $2>m){m=$2} END{if(m!="")print m}' <<< "$noiselist")"
+          noisedate="${noisedate:-$TODAY}"
+          read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
+          records["$idx":checked:noisedata]=true
+          records[HASNOISE]=true
+        fi
   fi
   if [[ -n "$REMOTENOISE" ]] && \
       [[ "${records["$idx":checked:noisegraph]}" != "true" ]] && \

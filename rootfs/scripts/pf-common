@@ -118,7 +118,6 @@ READ_RECORDS() {
     declare -gA last_idx_for_icao=()
     declare -gA lastseen_for_icao=()
     declare -gA pa_last_idx_for_icao=()
-    declare -gA pa_lastseen_for_icao=()
     records[maxindex]=-1
     pa_records[maxindex]=-1
     LASTPROCESSEDLINE=""
@@ -157,12 +156,11 @@ WRITE_RECORDS() {
     declare -p lastseen_for_icao
     declare -p pa_records
     declare -p pa_last_idx_for_icao
-    declare -p pa_lastseen_for_icao
     echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
   } | \
     sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
     gzip -c > "$tmpfile"
-  mv "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+  mv -f "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
   chmod a+r "$RECORDSFILE"
   log_print DEBUG "Records written by $(basename "$0")"
   if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_RECORDS; fi

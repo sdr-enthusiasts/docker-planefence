@@ -201,6 +201,11 @@
   .switch .switch-ico.moon { right: 6px; }
   /* When dark mode is on (checked), make icons contrast with the accent */
   .switch input:checked ~ .switch-ico { color: var(--bg); }
+  .mode-toggle { display: flex; align-items: center; gap: .35rem; font-size: .85rem; }
+  .mode-toggle .mode-label { font-weight: 600; }
+  .switch.switch-mode { width: 56px; height: 26px; }
+  .switch.switch-mode .slider:before { width: 20px; height: 20px; top: 3px; }
+  .switch.switch-mode input:checked + .slider:before { transform: translateX(28px); }
   </style>
 </head>
 <body>
@@ -210,6 +215,14 @@
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
     <div class="spacer"></div>
+    <div class="mode-toggle" role="group" aria-label="Choose data source">
+      <span class="mode-label">Planefence</span>
+      <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
+        <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+      <span class="mode-label">Plane-Alert</span>
+    </div>
   <label class="switch" title="Toggle dark/light">
     <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
     <span class="slider" aria-hidden="true"></span>
@@ -267,6 +280,58 @@
     pollIntervalSec: 60
   };
 
+    // -------- Data mode (Planefence vs Plane-Alert) --------
+    const DATA_MODE_KEY = 'pf-data-mode';
+    const DATA_MODES = {
+      PLANEFENCE: 'planefence',
+      PLANE_ALERT: 'plane-alert'
+    };
+    function currentDataMode(){
+      try {
+        const saved = localStorage.getItem(DATA_MODE_KEY);
+        return saved === DATA_MODES.PLANE_ALERT ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+      } catch (e) {
+        return DATA_MODES.PLANEFENCE;
+      }
+    }
+    let dataMode = currentDataMode();
+    function isPlaneAlertMode(){
+      return dataMode === DATA_MODES.PLANE_ALERT;
+    }
+    function applyDataModeUI(){
+      const toggle = document.getElementById('dataModeToggle');
+      if (toggle) {
+        try { toggle.checked = isPlaneAlertMode(); } catch (e) { /* ignore */ }
+        const label = isPlaneAlertMode() ? 'Switch to Planefence data' : 'Switch to Plane-Alert data';
+        toggle.setAttribute('aria-label', label);
+      }
+      const heading = document.querySelector('header h1');
+      if (heading) heading.textContent = isPlaneAlertMode() ? 'Plane-Alert' : 'Planefence';
+    }
+    applyDataModeUI();
+    let modeGeneration = 0;
+    let streamAbortController = null;
+    let pollIntervalHandle = null;
+    function buildStreamUrl(mode){
+      const base = './cgi/stream.sh';
+      return mode === DATA_MODES.PLANE_ALERT ? `${base}?mode=plane-alert` : base;
+    }
+    function currentStreamUrl(){
+      return buildStreamUrl(dataMode);
+    }
+    (function(){
+      const toggle = document.getElementById('dataModeToggle');
+      if (!toggle) return;
+      toggle.addEventListener('change', ()=>{
+        const newMode = toggle.checked ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+        if (newMode === dataMode) return;
+        try { localStorage.setItem(DATA_MODE_KEY, newMode); } catch (e) { /* ignore */ }
+        dataMode = newMode;
+        applyDataModeUI();
+        restartDataPipelines();
+      });
+    })();
+
   // -------- Theme (dark/light) --------
   const THEME_KEY = 'pf-theme';
   function iconSun(){ return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10-9h-2v3h2V4zm7.45 1.66l-1.41-1.41-1.8 1.79 1.41 1.42 1.8-1.8zM17 13h3v-2h-3v2zm-5 7h2v-3h-2v3zm-6.66-1.45l1.41 1.41 1.8-1.79-1.41-1.42-1.8 1.8zM20.49 17l1.41-1.41-1.79-1.8-1.42 1.41 1.8 1.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>`; }
@@ -306,6 +371,7 @@
 
   // -------- Helpers --------
   const prog = document.getElementById('progress');
+  if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
   const lastUpdateEl = document.getElementById('lastupdate');
   const nextUpdateEl = document.getElementById('nextupdate');
   const theadRow = document.querySelector('#thead tr');
@@ -516,6 +582,51 @@
   const missingCounts = new Map();
   // Track indices added since last user-visible redraw. Used to highlight new rows.
   const pendingNewIndices = new Set();
+
+  function resetTableState(){
+    try {
+      if (table) table.clear().draw(false);
+    } catch (e) { /* ignore */ }
+    rowByIndex.clear();
+    missingCounts.clear();
+    pendingNewIndices.clear();
+    updateNewUpdatesBanner();
+    if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
+    if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
+  }
+
+  function highlightPendingNewRows(){
+    try {
+      if (!table) return;
+      pendingNewIndices.forEach(idx => {
+        const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+        if (tr) {
+          tr.classList.add('pf-new-row');
+          setTimeout(()=> tr.classList.remove('pf-new-row'), 2200);
+        }
+      });
+      pendingNewIndices.clear();
+    } catch (e) { /* ignore */ }
+  }
+
+  function redrawTable(forceFull=false){
+    try {
+      if (!table) return;
+      const info = table.page ? table.page.info() : null;
+      const onFirst = info && info.page === 0;
+      if (forceFull || onFirst) {
+        table.order([[0,'desc']]).page('first').draw(false);
+        highlightPendingNewRows();
+        if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
+      } else {
+        if (newUpdatesBtn) {
+          newUpdatesBtn.style.display = 'inline-block';
+          updateNewUpdatesBanner();
+        }
+        table.order([[0,'desc']]).draw(false);
+      }
+    } catch (e) { console.error('redraw error', e); }
+  }
 
   // 2) DataTables init: numeric sort for idx, keep Seen desc
  function buildHeader(){
@@ -1134,24 +1245,33 @@ function renderRow(r) {
 
 
 // 6) Prepend newest-first during streaming and apply row class
-function addRow(r){
+function addOrUpdateRow(r){
   const rendered = renderRow(r);
-  // Use row.add() + draw order OR unshift: DataTables APIs don’t support unshift directly,
-  // but we can insert at top by drawing with order and using row.add, then re-order.
-  // Simpler: add, then immediately order by Seen desc (already set) and draw.
+  const idxVal = fmtInt(r.index);
+  if (Number.isFinite(idxVal) && rowByIndex.has(idxVal)) {
+    try {
+      const apiRow = rowByIndex.get(idxVal);
+      apiRow.data(rendered.row);
+      return { api: apiRow, created: false, idx: idxVal };
+    } catch (e) {
+      console.warn('row update failed, falling back to add', e);
+      rowByIndex.delete(idxVal);
+    }
+  }
+
   const apiRow = table.row.add(rendered.row);
-  // Try to extract the index from the rendered HTML and register it in our map.
   try {
     const first = rendered.row && rendered.row[0] ? String(rendered.row[0]) : '';
     const m = first.match(/data-order="(-?\d+)"/);
-    if (m) {
-      const id = Number(m[1]);
+    const id = Number.isFinite(idxVal) ? idxVal : (m ? Number(m[1]) : null);
+    if (Number.isFinite(id)) {
       const node = apiRow.node();
       if (node) node.dataset.idx = id;
       rowByIndex.set(id, apiRow);
+      return { api: apiRow, created: true, idx: id };
     }
   } catch (e) { /* ignore */ }
-  return apiRow;
+  return { api: apiRow, created: true, idx: idxVal };
 }
 
   // 4) Position: link only coords, add N/E; angle outside link
@@ -1162,190 +1282,154 @@ function addRow(r){
     return `${toFixed4(latNum)}&deg; N, ${toFixed4(lonNum)}&deg; E`;
   }
 
-
-  // Build header immediately (schema not needed since columns are curated)
   if (!table) buildHeader();
+  restartDataPipelines();
 
-  // If enabled, run the streaming reader (ReadableStream) to ingest rows as they arrive
-  if (cfg.enableStream) {
-    (async function(){
-      try {
-        const resp = await fetch('./cgi/pf-stream.sh', { cache: 'no-store' });
-        if (!resp.ok || !resp.body) { prog.textContent = 'Stream failed'; return; }
 
-        const reader = resp.body.getReader();
-        const dec = new TextDecoder();
-        let buf = '';
-        let added = 0;
-        let seenHeader = false;
-        let streamGlobals = {};
+  async function startStreamReader(generation){
+    if (!cfg.enableStream) return;
+    stopStreamReader();
+    const controller = new AbortController();
+    streamAbortController = controller;
+    const modeForRun = dataMode;
+    try {
+      const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store', signal: controller.signal });
+      if (!resp.ok || !resp.body) { if (prog) prog.textContent = 'Stream failed'; return; }
 
-        // Normalize/coerce globals into useful JS types
-        function setStreamGlobals(g) {
-          streamGlobals = {};
-          if (!g || typeof g !== 'object') return;
-          // Booleans stored as strings "true"/"1"/"yes"
-          const truthy = v => {
-            if (v === true || v === 1) return true;
-            if (typeof v !== 'string') return false;
-            const s = v.toLowerCase();
-            return s === 'true' || s === '1' || s === 'yes';
-          };
-          streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
-          streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
-          streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
-          streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
-          streamGlobals.maxindex = Number(g.maxindex) || 0;
-          // Preserve any other keys as-is
-          for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
-        }
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      let added = 0;
+      let seenHeader = false;
+      let streamGlobals = {};
 
-        // Redraw helper: if the user is on the first page, fully redraw so new
-        // records immediately appear at the top. If the user is elsewhere, show
-        // a "New updates available" banner instead and don't change their page.
-        const redraw = (forceFull=false)=> {
-          try {
-            if (!table) return;
-            const info = table.page ? table.page.info() : null;
-            const onFirst = info && info.page === 0;
-            if (forceFull || onFirst) {
-              // Full redraw to ensure rows appear in the expected order and
-              // DataTables re-renders the page 0 contents.
-              table.order([[0,'desc']]).page('first').draw(false);
-              // After drawing, highlight any newly added rows registered in pendingNewIndices
-              highlightPendingNewRows();
-              // hide banner when we show the new rows
-              if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
-            } else {
-              // Not on first page: reveal banner so user can choose to jump.
-              if (newUpdatesBtn) {
-                newUpdatesBtn.style.display = 'inline-block';
-                updateNewUpdatesBanner();
-              }
-              // Still update internal ordering/data so rows are present when the user returns
-              table.order([[0,'desc']]).draw(false);
-            }
-          } catch (e) { console.error('redraw error', e); }
+      function setStreamGlobals(g) {
+        streamGlobals = {};
+        if (!g || typeof g !== 'object') return;
+        const truthy = v => {
+          if (v === true || v === 1) return true;
+          if (typeof v !== 'string') return false;
+          const s = v.toLowerCase();
+          return s === 'true' || s === '1' || s === 'yes';
         };
+        streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
+        streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
+        streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
+        streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
+        streamGlobals.maxindex = Number(g.maxindex) || 0;
+        for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+      }
 
-        // When called after a table draw, highlight rows whose numeric idx is in pendingNewIndices
-        function highlightPendingNewRows(){
-          try {
-            if (!table) return;
-            // Look for TRs with dataset.idx matching our pending set
-            pendingNewIndices.forEach(idx => {
-              const tr = document.querySelector(`tr[data-idx="${idx}"]`);
-              if (tr) {
-                tr.classList.add('pf-new-row');
-                // Remove highlight after 2.2s (matches animation duration)
-                setTimeout(()=> tr.classList.remove('pf-new-row'), 2200);
-              }
-            });
-            // Clear pending indices after attempting highlight
-            pendingNewIndices.clear();
-          } catch (e) { /* ignore */ }
-        }
+      while (true) {
+        if (generation !== modeGeneration || controller.signal.aborted) return;
+        const {value, done} = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, {stream:true});
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          if (generation !== modeGeneration || controller.signal.aborted) return;
+          const line = buf.slice(0, nl); buf = buf.slice(nl+1);
+          if (!line.trim()) continue;
+          let obj;
+          try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
+          if (obj && obj.__globals) {
+            setStreamGlobals(obj.__globals || {});
+            if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
+              const dt = new Date(streamGlobals.LASTUPDATE * 1000);
+              const hh = String(dt.getHours()).padStart(2,'0');
+              const mm = String(dt.getMinutes()).padStart(2,'0');
+              lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
+            }
+            if (streamGlobals.maxindex && streamGlobals.maxindex > 0 && prog) {
+              prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
+            }
+            continue;
+          }
 
-        // Use global rowCount() helper; do not shadow it here.
+          if (!seenHeader && obj && obj.__columns) {
+            seenHeader = true;
+            continue;
+          }
+          if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
+            if (prog) prog.textContent = `Error: ${obj.error}`;
+            continue;
+          }
+          const payload = (obj && typeof obj === 'object')
+            ? Object.assign({}, streamGlobals, obj)
+            : obj;
 
-        while (true) {
-          const {value, done} = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, {stream:true});
-          let nl;
-          while ((nl = buf.indexOf('\n')) >= 0) {
-            const line = buf.slice(0, nl); buf = buf.slice(nl+1);
-            if (!line.trim()) continue;
-            let obj;
-            try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
-            // The stream may emit a globals object first, then a schema (__columns), then rows.
-            if (obj && obj.__globals) {
-              // Store and coerce globals
-              setStreamGlobals(obj.__globals || {});
-              // Update LASTUPDATE in header if present in globals (coerced)
-              if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
-                const dt = new Date(streamGlobals.LASTUPDATE * 1000);
-                const hh = String(dt.getHours()).padStart(2,'0');
-                const mm = String(dt.getMinutes()).padStart(2,'0');
-                lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
-              }
-              // Show maxindex in progress element if available
-              if (streamGlobals.maxindex && streamGlobals.maxindex > 0) {
-                prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
-              }
-              continue; // consumed globals
+          if (payload && typeof payload === 'object' && cfg.noisePrefix) {
+            const p = cfg.noisePrefix;
+            if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
+              payload['noisegraph:link'] = p + payload['noisegraph:link'];
             }
-
-            // The first object is likely the schema with __columns; subsequent objects are rows.
-            if (!seenHeader && obj && obj.__columns) {
-              seenHeader = true;
-              continue; // skip schema object
+            if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
+              payload['spectro:link'] = p + payload['spectro:link'];
             }
-            if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
-              prog.textContent = `Error: ${obj.error}`;
-              continue;
-            }
-            // If the object is a normal row, merge in globals so renderRow can read flags
-            // (e.g., HASNOISE, HASIMAGES, LASTUPDATE)
-            const payload = (obj && typeof obj === 'object')
-              ? Object.assign({}, streamGlobals, obj)
-              : obj;
-
-            // Apply temporary noise prefix if configured and links exist
-            if (payload && typeof payload === 'object' && cfg.noisePrefix) {
-              const p = cfg.noisePrefix;
-              if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
-                payload['noisegraph:link'] = p + payload['noisegraph:link'];
-              }
-              if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
-                payload['spectro:link'] = p + payload['spectro:link'];
-              }
-              if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
-                payload['mp3:link'] = p + payload['mp3:link'];
-              }
-            }
-
-        // Normalize payload row-level fields
-            const norm = normalizeRow(payload);
-            // Ignore records without an ICAO value
-            if (!norm || !norm.icao || String(norm.icao).trim() === '') {
-              continue;
-            }
-            // Add the new row and record its numeric index for highlighting.
-            addRow(norm);
-            if (Number.isFinite(Number(norm.index))) {
-              pendingNewIndices.add(Number(norm.index));
-              updateNewUpdatesBanner();
-            }
-            added++;
-            // Batch redraw every 10 rows for performance
-            if (added % 10 === 0) {
-              redraw(false);
-              prog.textContent = `Loaded ${rowCount()}…`;
+            if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
+              payload['mp3:link'] = p + payload['mp3:link'];
             }
           }
-        }
 
-  if (buf.trim()) { try { const last = JSON.parse(buf); addRow(last); if (Number.isFinite(Number(last.index))) { pendingNewIndices.add(Number(last.index)); updateNewUpdatesBanner(); } } catch(e){} }
-  // Final redraw after stream completes or when reader is drained. Force a full
-  // redraw so if the user is on the first page the new rows appear.
-  redraw(true);
-        if (!prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
-      } catch (e) {
-        console.error('stream error', e);
-        prog.textContent = 'Stream error';
+          const norm = normalizeRow(payload);
+          if (!norm || !norm.icao || String(norm.icao).trim() === '') {
+            continue;
+          }
+          const res = addOrUpdateRow(norm);
+          if (res.created && Number.isFinite(Number(res.idx))) {
+            pendingNewIndices.add(Number(res.idx));
+            updateNewUpdatesBanner();
+          }
+          added++;
+          if (added % 10 === 0) {
+            if (generation !== modeGeneration || controller.signal.aborted) return;
+            redrawTable(false);
+            if (prog) prog.textContent = `Loaded ${rowCount()}…`;
+          }
+        }
       }
-    })();
+
+      if (buf.trim()) {
+        try {
+          const last = JSON.parse(buf);
+          if (generation !== modeGeneration || controller.signal.aborted) return;
+          const res = addOrUpdateRow(last);
+          if (res.created && Number.isFinite(Number(res.idx))) {
+            pendingNewIndices.add(Number(res.idx));
+            updateNewUpdatesBanner();
+          }
+        } catch(e) { /* ignore parse */ }
+      }
+      if (generation !== modeGeneration || controller.signal.aborted) return;
+      redrawTable(true);
+      if (prog && !prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
+    } catch (e) {
+      if (controller.signal.aborted || generation !== modeGeneration) return;
+      console.error('stream error', e);
+      if (prog) prog.textContent = 'Stream error';
+    } finally {
+      if (streamAbortController === controller) streamAbortController = null;
+    }
+  }
+
+  function stopStreamReader(){
+    if (streamAbortController) {
+      try { streamAbortController.abort(); } catch (e) { /* ignore */ }
+      streamAbortController = null;
+    }
   }
 
 // -------- Polling snapshot every 60s and apply incremental updates --------
 // Uses same endpoint (`./cgi/pfstream.sh`) which emits NDJSON (globals, schema, rows)
 // and updates existing rows (by index) or appends new rows. Does a single draw at end.
-async function pollAndMerge() {
+async function pollAndMerge(modeForRun, generation) {
   try {
-    const resp = await fetch('./cgi/pf-stream.sh', { cache: 'no-store' });
+    if (generation !== modeGeneration) return;
+    const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store' });
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
+    if (generation !== modeGeneration) return;
     const txt = await resp.text();
+    if (generation !== modeGeneration) return;
     if (!txt) return;
 
     const lines = txt.split('\n');
@@ -1406,6 +1490,8 @@ async function pollAndMerge() {
       }
     }
 
+    if (generation !== modeGeneration) return;
+
     // Apply updates
     for (const u of toUpdate) {
       try {
@@ -1458,6 +1544,8 @@ async function pollAndMerge() {
         if (seenIndices.has(nidx)) continue; // present in this snapshot
 
         // Increment miss counter
+  if (generation !== modeGeneration) return;
+
         const prev = missingCounts.get(nidx) || 0;
         const now = prev + 1;
         missingCounts.set(nidx, now);
@@ -1477,7 +1565,7 @@ async function pollAndMerge() {
 
     // Single redraw to refresh display (preserve paging)
     if (toUpdate.length || toAdd.length || purged) {
-      table.draw(false);
+      redrawTable(false);
       // After the draw, ensure any newly-created row nodes are registered in rowByIndex.
       try {
         table.rows().every(function(){
@@ -1504,24 +1592,43 @@ async function pollAndMerge() {
       } catch (e) { console.warn('poll: post-draw registration failed', e); }
   // If new rows were added during the poll, update the banner count.
   if (toAdd.length) updateNewUpdatesBanner();
-  prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
+  if (prog) prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
     }
   } catch (e) {
     console.error('pollAndMerge error', e);
   }
 }
 
-// Start polling if enabled. Run an immediate poll once and then schedule repeated polls.
-if (cfg.enablePoll) {
-  // Run immediately
-  (async ()=>{
-    await pollAndMerge();
-    // schedule next
-    scheduleNextPoll(cfg.pollIntervalSec || 60);
-  })();
-  // Schedule subsequent polls
-  setInterval(async ()=>{ await pollAndMerge(); scheduleNextPoll(cfg.pollIntervalSec || 60); }, (cfg.pollIntervalSec || 60) * 1000);
-}
+  function stopPollingLoop(){
+    if (pollIntervalHandle) {
+      clearInterval(pollIntervalHandle);
+      pollIntervalHandle = null;
+    }
+    nextPollAt = null;
+    startCountdown();
+  }
+
+  function startPollingLoop(generation){
+    if (!cfg.enablePoll) return;
+    stopPollingLoop();
+    const intervalMs = (cfg.pollIntervalSec || 60) * 1000;
+    const runOnce = async ()=>{
+      const modeForRun = dataMode;
+      await pollAndMerge(modeForRun, generation);
+      if (generation === modeGeneration) scheduleNextPoll(cfg.pollIntervalSec || 60);
+    };
+    runOnce().catch(e => console.error('poll loop run', e));
+    pollIntervalHandle = setInterval(()=> runOnce().catch(e => console.error('poll loop run', e)), intervalMs);
+  }
+
+  function restartDataPipelines(){
+    modeGeneration++;
+    resetTableState();
+    stopStreamReader();
+    stopPollingLoop();
+    if (cfg.enableStream) startStreamReader(modeGeneration);
+    if (cfg.enablePoll) startPollingLoop(modeGeneration);
+  }
 
 // Manual Update button: trigger immediate poll
 manualUpdateBtn?.addEventListener('click', async ()=>{
@@ -1531,13 +1638,15 @@ manualUpdateBtn?.addEventListener('click', async ()=>{
     manualUpdateBtn.disabled = true;
     const prevText = manualUpdateBtn.textContent;
     manualUpdateBtn.textContent = 'Updating…';
-    prog.textContent = 'Updating…';
-    await pollAndMerge();
-    scheduleNextPoll(cfg.pollIntervalSec || 60);
+    if (prog) prog.textContent = 'Updating…';
+    const gen = modeGeneration;
+    const modeForRun = dataMode;
+    await pollAndMerge(modeForRun, gen);
+    if (gen === modeGeneration) scheduleNextPoll(cfg.pollIntervalSec || 60);
     manualUpdateBtn.textContent = prevText;
   } catch (e) {
     console.error('Manual update failed', e);
-    prog.textContent = 'Update failed';
+    if (prog) prog.textContent = 'Update failed';
   } finally {
     manualUpdateBtn.disabled = false;
   }
