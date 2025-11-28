@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
   <!-- 1) CSS: row dim + small updater + dark zebra fix -->
   <style>
-    /* ... keep your existing styles ... */
 
     /* Dim entire row while incomplete */
     tr.row-incomplete { color: var(--row-incomplete); }
@@ -97,6 +96,10 @@
       top: var(--header-height);
       z-index: 40;
       background: var(--soft);
+    }
+    /* Give the first data row extra padding so it clears the sticky header */
+    table.dataTable tbody tr:first-of-type > * {
+      padding-top: 1.5rem;
     }
     th, td { vertical-align: middle; }
   img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
@@ -196,16 +199,24 @@
   .switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; top: 3px; background: var(--bg); transition: .2s ease; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
   .switch input:checked + .slider { background: var(--accent); }
   .switch input:checked + .slider:before { transform: translateX(20px); }
-  .switch .switch-ico { position: absolute; top: 50%; transform: translateY(-50%); line-height: 0; pointer-events: none; opacity: .9; color: var(--fg); z-index: 1; }
-  .switch .switch-ico.sun { left: 6px; }
-  .switch .switch-ico.moon { right: 6px; }
-  /* When dark mode is on (checked), make icons contrast with the accent */
-  .switch input:checked ~ .switch-ico { color: var(--bg); }
+  .theme-toggle { display: flex; align-items: center; gap: .4rem; }
+  .theme-toggle .theme-ico { display: inline-flex; color: var(--muted); opacity: .8; transition: color .2s ease, opacity .2s ease; font-size: 1.15rem; line-height: 1; }
+  html.dark .theme-toggle .theme-ico.moon,
+  html:not(.dark) .theme-toggle .theme-ico.sun { color: var(--accent); opacity: 1; }
+  .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
+  html.dark .header-divider { opacity: .35; }
   .mode-toggle { display: flex; align-items: center; gap: .35rem; font-size: .85rem; }
   .mode-toggle .mode-label { font-weight: 600; }
   .switch.switch-mode { width: 56px; height: 26px; }
   .switch.switch-mode .slider:before { width: 20px; height: 20px; top: 3px; }
   .switch.switch-mode input:checked + .slider:before { transform: translateX(28px); }
+  .pf-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
+  .pf-controls .pf-left { display: flex; align-items: center; }
+  .pf-controls .pf-right { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; }
+  .pf-controls .pf-right .dataTables_filter { margin: 0; }
+  .pf-controls .pf-right .dataTables_filter label { display: flex; align-items: center; gap: .35rem; margin: 0; }
+  .pf-controls .pf-right .dataTables_info { margin: 0; white-space: nowrap; }
+  .pf-controls .pf-right .dataTables_paginate { margin: 0; }
   </style>
 </head>
 <body>
@@ -223,16 +234,17 @@
       </label>
       <span class="mode-label">Plane-Alert</span>
     </div>
-  <label class="switch" title="Toggle dark/light">
-    <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
-    <span class="slider" aria-hidden="true"></span>
-    <span class="switch-ico sun" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10-9h-2v3h2V4zm7.45 1.66l-1.41-1.41-1.8 1.79 1.41 1.42 1.8-1.8zM17 13h3v-2h-3v2zm-5 7h2v-3h-2v3zm-6.66-1.45l1.41 1.41 1.8-1.79-1.41-1.42-1.8 1.8zM20.49 17l1.41-1.41-1.79-1.8-1.42 1.41 1.8 1.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
-    </span>
-    <span class="switch-ico moon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21.752 15.002A9 9 0 119 2.248 7 7 0 0021.752 15z"/></svg>
-    </span>
-  </label>
+    <div class="header-divider" aria-hidden="true"></div>
+    <div class="theme-toggle">
+      <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
+      <div class="theme-switch-wrap">
+        <label class="switch" title="Toggle dark/light">
+          <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+          <span class="slider" aria-hidden="true"></span>
+        </label>
+      </div>
+      <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
+    </div>
   <button id="manualUpdate" title="Update now">Update</button>
   <button id="reload" title="Reload data">Reload</button>
   <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
@@ -250,7 +262,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; 2025</small>
+    <small class="muted">&copy; 2025 Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence">Github repo</a>.</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -278,6 +290,15 @@
     enablePoll: true,
     // Poll interval in seconds (used when enablePoll is true)
     pollIntervalSec: 60
+  };
+
+  const truthy = (v) => {
+    if (v === true || v === 1) return true;
+    if (typeof v === 'string') {
+      const s = v.toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    }
+    return false;
   };
 
     // -------- Data mode (Planefence vs Plane-Alert) --------
@@ -352,8 +373,6 @@
 
   // -------- Theme (dark/light) --------
   const THEME_KEY = 'pf-theme';
-  function iconSun(){ return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10-9h-2v3h2V4zm7.45 1.66l-1.41-1.41-1.8 1.79 1.41 1.42 1.8-1.8zM17 13h3v-2h-3v2zm-5 7h2v-3h-2v3zm-6.66-1.45l1.41 1.41 1.8-1.79-1.41-1.42-1.8 1.8zM20.49 17l1.41-1.41-1.79-1.8-1.42 1.41 1.8 1.8zM12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>`; }
-  function iconMoon(){ return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.752 15.002A9 9 0 119 2.248 7 7 0 0021.752 15z"/></svg>`; }
   function applyTheme(theme){
     const dark = theme === 'dark';
     document.documentElement.classList.toggle('dark', dark);
@@ -528,12 +547,6 @@
   function normalizeRow(r) {
     if (!r || typeof r !== 'object') return r;
     const out = Object.assign({}, r);
-    // Coerce boolean-like flags
-    const truthy = v => {
-      if (v === true || v === 1) return true;
-      const s = String(v || '').toLowerCase();
-      return s === 'true' || s === '1' || s === 'yes';
-    };
     out.HASNOISE = truthy(out.HASNOISE || out.hasOwnProperty('HASNOISE') && out.HASNOISE);
     out.HASIMAGES = truthy(out.HASIMAGES || out.hasOwnProperty('HASIMAGES') && out.HASIMAGES);
     out.HASROUTE = truthy(out.HASROUTE || out.hasOwnProperty('HASROUTE') && out.HASROUTE);
@@ -802,6 +815,7 @@
   };
 
   const api = $('#t').DataTable({
+    dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
     // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
     deferRender: true,
     pageLength: 25,
@@ -1146,29 +1160,15 @@ function renderRow(r) {
     }
   }
 
-  const links = [];
-  const photo = safe(r["image:link"]);
   const spectro = safe(r["spectro:link"]);
   const noise = safe(r["noisegraph:link"]);
   const mp3 = safe(r["mp3:link"]);
-  // Photo is shown as thumbnail; remove it from Links list to avoid duplication
-  // We'll render spectro as a thumbnail in the Spectro column and noise/mp3 as badges in the Sound column.
 
-  // Spectrogram: now presented as an icon chip in the Sound column, not its own column.
-  // We'll use a waveform icon distinct from the bar chart used for noisegraph.
-
-  // Notifications: show link(s) if available, otherwise show a notified badge when the *_notified flag is true
   const notifyLinks = [];
   const discordLink = r["discord:link"];
   const bskyLink = r["bsky:link"];
   const telegramLink = r["telegram:link"];
   const mqttFlag = r["mqtt:notified"];
-  // Treat several textual representations as truthy
-  const truthy = v => {
-    if (v === true || v === 1) return true;
-    const s = String(v || '').toLowerCase();
-    return s === 'true' || s === '1' || s === 'yes';
-  };
   const discordNotified = truthy(r["discord:notified"]);
   const bskyNotified = truthy(r["bsky:notified"]);
   const telegramNotified = truthy(r["telegram:notified"]);
@@ -1300,6 +1300,18 @@ function addOrUpdateRow(r){
     return `${toFixed4(latNum)}&deg; N, ${toFixed4(lonNum)}&deg; E`;
   }
 
+  function applyMediaPrefixes(row){
+    if (!cfg.noisePrefix || !row || typeof row !== 'object') return;
+    const keys = ['noisegraph:link','spectro:link','mp3:link'];
+    const prefix = cfg.noisePrefix;
+    keys.forEach(key => {
+      const val = row[key];
+      if (val && !val.startsWith('http') && !val.startsWith(prefix)) {
+        row[key] = prefix + val;
+      }
+    });
+  }
+
   if (!table) buildHeader();
   restartDataPipelines();
 
@@ -1324,12 +1336,6 @@ function addOrUpdateRow(r){
       function setStreamGlobals(g) {
         streamGlobals = {};
         if (!g || typeof g !== 'object') return;
-        const truthy = v => {
-          if (v === true || v === 1) return true;
-          if (typeof v !== 'string') return false;
-          const s = v.toLowerCase();
-          return s === 'true' || s === '1' || s === 'yes';
-        };
         streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
         streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
         streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
@@ -1376,18 +1382,7 @@ function addOrUpdateRow(r){
             ? Object.assign({}, streamGlobals, obj)
             : obj;
 
-          if (payload && typeof payload === 'object' && cfg.noisePrefix) {
-            const p = cfg.noisePrefix;
-            if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
-              payload['noisegraph:link'] = p + payload['noisegraph:link'];
-            }
-            if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
-              payload['spectro:link'] = p + payload['spectro:link'];
-            }
-            if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
-              payload['mp3:link'] = p + payload['mp3:link'];
-            }
-          }
+          applyMediaPrefixes(payload);
 
           const norm = normalizeRow(payload);
           if (!norm || !norm.icao || String(norm.icao).trim() === '') {
@@ -1474,19 +1469,7 @@ async function pollAndMerge(modeForRun, generation) {
       if (!obj || typeof obj !== 'object') continue;
 
       const payload = Object.assign({}, localGlobals, obj);
-      // Same noise prefix handling as stream
-      if (payload && typeof payload === 'object' && cfg.noisePrefix) {
-        const p = cfg.noisePrefix;
-        if (payload['noisegraph:link'] && !payload['noisegraph:link'].startsWith('http') && !payload['noisegraph:link'].startsWith(p)) {
-          payload['noisegraph:link'] = p + payload['noisegraph:link'];
-        }
-        if (payload['spectro:link'] && !payload['spectro:link'].startsWith('http') && !payload['spectro:link'].startsWith(p)) {
-          payload['spectro:link'] = p + payload['spectro:link'];
-        }
-        if (payload['mp3:link'] && !payload['mp3:link'].startsWith('http') && !payload['mp3:link'].startsWith(p)) {
-          payload['mp3:link'] = p + payload['mp3:link'];
-        }
-      }
+      applyMediaPrefixes(payload);
 
   const norm = normalizeRow(payload);
   // Ignore records without an ICAO value
