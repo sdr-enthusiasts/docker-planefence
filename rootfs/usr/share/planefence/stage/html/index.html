@@ -286,6 +286,20 @@
       PLANEFENCE: 'planefence',
       PLANE_ALERT: 'plane-alert'
     };
+    function modeFromQuery(){
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const raw = params.get('mode');
+        if (!raw) return null;
+        const normalized = raw.trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === 'pf' || normalized === DATA_MODES.PLANEFENCE) return DATA_MODES.PLANEFENCE;
+        if (normalized === 'pa' || normalized === DATA_MODES.PLANE_ALERT || normalized === 'planealert') return DATA_MODES.PLANE_ALERT;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
     function currentDataMode(){
       try {
         const saved = localStorage.getItem(DATA_MODE_KEY);
@@ -294,7 +308,11 @@
         return DATA_MODES.PLANEFENCE;
       }
     }
-    let dataMode = currentDataMode();
+    const presetMode = modeFromQuery();
+    if (presetMode) {
+      try { localStorage.setItem(DATA_MODE_KEY, presetMode); } catch (e) { /* ignore */ }
+    }
+    let dataMode = presetMode || currentDataMode();
     function isPlaneAlertMode(){
       return dataMode === DATA_MODES.PLANE_ALERT;
     }
