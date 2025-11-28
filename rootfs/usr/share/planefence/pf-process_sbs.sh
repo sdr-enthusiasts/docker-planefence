@@ -59,6 +59,12 @@ PA_CSVOUT="$HTMLDIR/plane-alert-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
 PA_JSONOUT="$HTMLDIR/plane-alert-${TODAY}.json"
 
+if [[ -f /.VERSION ]]; then
+    VERSION="$(</.VERSION)"
+else
+    VERSION="unknown"
+fi
+
 # Precompute midnight of today only once:
 midnight_epoch=$(date -d "$(date +%F) 00:00:00" +%s)
 today_ymd=$(date +%Y/%m/%d)
@@ -760,6 +766,7 @@ GENERATE_PF_JSON() {
     for k in "${!records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
+    printf '%s\0%s\0' "version" "$VERSION"
   } \
   | gawk -v RS='\0' -v ORS='\0' '
   BEGIN { count = 0 }
@@ -777,7 +784,7 @@ GENERATE_PF_JSON() {
     idx = a[1]
     k = a[2]
     if (n == 3) { subkey = a[3] } else { subkey = "" }
-    if (idx == "maxindex" || idx ~ /^LAST/ || idx ~ /^HAS/) {
+    if (idx == "maxindex" || idx == "version" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
       idx = -1
@@ -835,6 +842,7 @@ GENERATE_PA_JSON() {
     for k in "${!pa_records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${pa_records[$k]}"; fi
     done
+    printf '%s\0%s\0' "version" "$VERSION"
   } \
   | gawk -v RS='\0' -v ORS='\0' '
   BEGIN { count = 0 }
@@ -852,7 +860,7 @@ GENERATE_PA_JSON() {
     idx = a[1]
     k = a[2]
     if (n == 3) { subkey = a[3] } else { subkey = "" }
-    if (idx == "maxindex" || idx ~ /^LAST/ || idx ~ /^HAS/) {
+    if (idx == "maxindex" || idx == "version" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
       idx = -1
