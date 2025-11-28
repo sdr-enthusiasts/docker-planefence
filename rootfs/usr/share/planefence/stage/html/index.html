@@ -262,7 +262,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; 2025 Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank">Github repo</a>. <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">Attributions</a>. Version <span id="pfVersion" aria-live="polite">--</span></small>
+    <small class="muted">&copy; 2025 Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank">Github repo</a>. <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">Attributions</a>. Version ##VERSION##</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -411,7 +411,6 @@
   if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
   const lastUpdateEl = document.getElementById('lastupdate');
   const nextUpdateEl = document.getElementById('nextupdate');
-  const versionEl = document.getElementById('pfVersion');
   const theadRow = document.querySelector('#thead tr');
   const reloadBtn = document.getElementById('reload');
   reloadBtn?.addEventListener('click', () => location.reload());
@@ -469,12 +468,6 @@
       if (!table) return 0;
       return Math.max(0, table.rows().count());
     } catch (e) { return 0; }
-  }
-
-  function updateVersionDisplay(rawVersion) {
-    if (!versionEl || rawVersion === undefined || rawVersion === null) return;
-    const text = String(rawVersion).trim();
-    if (text) versionEl.textContent = text;
   }
 
   function fmtInt(s){ const n = Number(s); return Number.isFinite(n)? n : null; }
@@ -1348,8 +1341,6 @@ function addOrUpdateRow(r){
         streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
         streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
         streamGlobals.maxindex = Number(g.maxindex) || 0;
-        const versionValue = g.version || g.VERSION || g.Version;
-        updateVersionDisplay(versionValue);
         for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
       }
 
@@ -1467,8 +1458,6 @@ async function pollAndMerge(modeForRun, generation) {
       let obj;
       try { obj = JSON.parse(line); } catch (e) { console.warn('poll: bad json', e, line); continue; }
       if (obj && obj.__globals) { localGlobals = obj.__globals || {};
-        const versionValue = localGlobals.version || localGlobals.VERSION || localGlobals.Version;
-        updateVersionDisplay(versionValue);
         if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
           const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');

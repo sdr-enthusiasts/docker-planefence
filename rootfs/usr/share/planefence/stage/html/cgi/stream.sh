@@ -67,10 +67,11 @@ if ! jq -r '
     "link:fa","link:faa",
     "discord:link","discord:notified","bsky:link","bsky:notified","telegram:link","telegram:notified","mqtt:notified",
     "sound:color","sound:loudness","sound:peak",
-    "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file"
+    "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file",
+    "mode"
   ];
   def globals: [
-    "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE","version"
+    "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE"
   ];
 
   def flat1:
