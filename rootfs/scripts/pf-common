@@ -104,6 +104,9 @@ READ_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
   local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local YESTERDAY="${YESTERDAY:-$(date -d 'yesterday' +%y%m%d)}"
+  local YESTERDAYRECORDSFILE="${YESTERDAYRECORDSFILE:-$RECORDSDIR/planefence-records-${YESTERDAY}.gz}"
+  local plane_alert_conf="/usr/share/planefence/plane-alert.conf"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
     log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
@@ -116,9 +119,87 @@ READ_RECORDS() {
     records[maxindex]=-1
     pa_records[maxindex]=-1
     LASTPROCESSEDLINE=""
+
+    if [[ -f "$YESTERDAYRECORDSFILE" ]]; then
+      log_print DEBUG "Loading Plane-Alert history from $YESTERDAYRECORDSFILE"
+      local extracted
+      extracted="$(gzip -cd "$YESTERDAYRECORDSFILE" | grep -E '^declare -[^ ]+ pa_(records|last_idx_for_icao)=' 2>/dev/null)" || true
+      if [[ -n $extracted ]]; then
+        eval "$extracted"
+      fi
+      [[ -z ${pa_records[maxindex]+x} ]] && pa_records[maxindex]=-1
+
+      # Now prune old Plane-Alert records according to HISTTIME setting
+      local hist_days hist_seconds now_epoch cutoff
+      hist_days="$(sed -n 's/^\s*HISTTIME\s*=\s*\(.*\)$/\1/p' "$plane_alert_conf" | head -n1)"
+      hist_days="${hist_days%%#*}"
+      hist_days="${hist_days//\"/}"
+      hist_days="${hist_days//\'/}"
+      hist_days="${hist_days//[[:space:]]/}"
+      [[ $hist_days =~ ^[0-9]+$ ]] || hist_days=14
+      log_print DEBUG "Rebuilding Plane-Alert records to remove obsolete (older than $hist_days days) entries"
+      hist_seconds=$(( hist_days * 86400 ))
+      now_epoch=$(date +%s)
+      cutoff=$(( now_epoch - hist_seconds ))
+
+      if (( ${pa_records[maxindex]:--1} >= 0 )); then
+        local -A keep_idx=()
+        local -A new_idx_map=()
+        local next_idx=0
+        local idx
+        for (( idx=0; idx<=pa_records[maxindex]; idx++ )); do
+          local lastseen_ts="${pa_records["$idx":time:lastseen]}"
+          local keep=true
+          if [[ -n $lastseen_ts && $lastseen_ts =~ ^[0-9]+$ ]]; then
+            if (( lastseen_ts < cutoff )); then
+              keep=false
+            fi
+          fi
+          if $keep; then
+            keep_idx[$idx]=1
+            new_idx_map[$idx]=$next_idx
+            (( next_idx++ )) || true
+          fi
+        done
+        local -A rebuilt_pa_records=()
+        local key old_idx suffix new_idx
+        for key in "${!pa_records[@]}"; do
+          if [[ $key == maxindex ]]; then
+            continue
+          elif [[ $key =~ ^([0-9]+):(.*)$ ]]; then
+            old_idx="${BASH_REMATCH[1]}"
+            suffix="${BASH_REMATCH[2]}"
+            if [[ -n ${keep_idx[$old_idx]} ]]; then
+              new_idx=${new_idx_map[$old_idx]}
+              rebuilt_pa_records["$new_idx":$suffix]="${pa_records[$key]}"
+            fi
+          else
+            rebuilt_pa_records["$key"]="${pa_records[$key]}"
+          fi
+        done
+
+        local final_max=$(( next_idx - 1 ))
+        rebuilt_pa_records[maxindex]=$final_max
+        unset pa_records
+        declare -gA pa_records=()
+        for key in "${!rebuilt_pa_records[@]}"; do
+          pa_records["$key"]="${rebuilt_pa_records[$key]}"
+        done
+
+        unset pa_last_idx_for_icao
+        declare -gA pa_last_idx_for_icao=()
+        if (( final_max >= 0 )); then
+          for (( idx=0; idx<=final_max; idx++ )); do
+            local icao_value="${pa_records["$idx":icao]}"
+            if [[ -n $icao_value ]]; then
+              pa_last_idx_for_icao["$icao_value"]="$idx"
+            fi
+          done
+        fi
+      fi
+    fi
     return
   fi
-
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
     starttime="$(date +%s)"
