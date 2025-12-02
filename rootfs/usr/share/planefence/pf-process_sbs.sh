@@ -279,23 +279,24 @@ GET_ROUTE_INDIVIDUAL () {
 GET_PA_INFO () {
   local lookup="$1"
   if ! chk_enabled "$PA_ENABLED" || [[ -z $lookup ]] || [[ ! -s $PA_FILE ]]; then
+    log_print DEBUG "Plane-Alert: No PA data available for $lookup"
     return
   fi
 
   local header_line
-  header_line="$(head -n1 "$PA_FILE" 2>/dev/null)"
-  [[ -n $header_line ]] || return
+  header_line="$(sed -En '/^\s*ALERTHEADER=/ { s/^\s*ALERTHEADER='\''?([^'\'']*)'\''?/\1/; p; q }' /usr/share/planefence/plane-alert.conf)"
+  header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
+  header_line="${header_line//[#$]/}"
+  if [[ -z "$header_line" ]]; then
+    log_print DEBUG "Plane-Alert: No PA header line found in config or PA file for $lookup"
+    return
+  fi
 
   IFS=',' read -r -a __pa_header <<< "$header_line"
   declare -A __pa_cols=()
   local idx name
   for idx in "${!__pa_header[@]}"; do
     name="${__pa_header[$idx]}"
-    name="${name#\"}"
-    name="${name%\"}"
-    while [[ $name == [#\$]* ]]; do name="${name:1}"; done
-    name="${name#"${name%%[![:space:]]*}"}"
-    name="${name%"${name##*[![:space:]]}"}"
     __pa_cols["$name"]=$idx
   done
 
@@ -305,10 +306,15 @@ GET_PA_INFO () {
 
   IFS=',' read -r -a __pa_fields <<< "$record"
   local first_field=""
-  if [[ -n ${__pa_cols[Registration]+x} ]]; then
+
+  if [[ -n ${__pa_cols[Registration]} ]]; then
     first_field="${__pa_fields[${__pa_cols[Registration]}]:-}"
-  elif [[ -n ${__pa_cols[Tail]+x} ]]; then
+  elif [[ -n ${__pa_cols[Tail]} ]]; then
     first_field="${__pa_fields[${__pa_cols[Tail]}]:-}"
+  elif [[ -n ${__pa_cols[Ident]} ]]; then
+    first_field="${__pa_fields[${__pa_cols[Ident]}]:-}"
+  else
+    first_field="$lookup"
   fi
   first_field="${first_field#\"}"
   first_field="${first_field%\"}"
@@ -318,7 +324,7 @@ GET_PA_INFO () {
   out+=("$first_field")
   local col value
   for col in "${desired[@]}"; do
-    if [[ -n ${__pa_cols[$col]+x} ]]; then
+    if [[ -n ${__pa_cols[$col]} ]]; then
       value="${__pa_fields[${__pa_cols[$col]}]:-}"
       value="${value#\"}"
       value="${value%\"}"
@@ -1263,6 +1269,7 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":db:imagelink3]="${pa_records["$pa_idx":db:imagelink3]:-$ImageLink3}"
       pa_records["$pa_idx":checked:db]=true
       if [[ -n "${pa_records["$pa_idx":tail]}" ]]; then pa_records["$pa_idx":checked:tail]=true; fi
+      log_print DEBUG "Plane-Alert: Retrieved DB info for $icao: $Registration / $CPMG / $Tag1,$Tag2,$Tag3 / $Category / $Link / $ImageLink1,$ImageLink2,$ImageLink3"
     fi
 
     # add a tail if there still isn't any

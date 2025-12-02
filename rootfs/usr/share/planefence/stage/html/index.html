@@ -132,7 +132,7 @@
   /* Center the empty state message nicely */
   td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
   /* Improve spacing for notification chips inside the Notifications cell */
-  td:nth-child(10) a.chip { margin-right: .25rem; }
+  td:nth-child(11) a.chip { margin-right: .25rem; }
 
   /* Visually hidden text for accessibility */
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
@@ -346,6 +346,11 @@
       }
       const heading = document.querySelector('header h1');
       if (heading) heading.textContent = isPlaneAlertMode() ? 'Plane-Alert' : 'Planefence';
+      const body = document.body;
+      if (body) {
+        body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
+        body.classList.toggle('mode-planefence', !isPlaneAlertMode());
+      }
     }
     applyDataModeUI();
     let modeGeneration = 0;
@@ -367,6 +372,7 @@
         try { localStorage.setItem(DATA_MODE_KEY, newMode); } catch (e) { /* ignore */ }
         dataMode = newMode;
         applyDataModeUI();
+        applyPlaneAlertColumnVisibility();
         restartDataPipelines();
       });
     })();
@@ -589,6 +595,7 @@
   }
 
   // -------- Columns definition --------
+  const PLANE_ALERT_COL_KEY = 'planealert';
   const viewCols = [
     { key:"idx", title:"#", width:"4%" },
     { key:"thumb", title:"", width:"6%" },
@@ -603,8 +610,28 @@
     { key:"trk", title:"Track", width:"7%" },
   { key:"squawk", title:"Squawk", width:"8%" },
   { key:"sound", title:"Sound" },
+    { key: PLANE_ALERT_COL_KEY, title:"Plane-Alert Tags", width:"12%" },
     { key:"notify", title:"Notifications", width:"12%" }
   ];
+
+  function planeAlertColumnIndex(){
+    return viewCols.findIndex(c => c.key === PLANE_ALERT_COL_KEY);
+  }
+
+  function applyPlaneAlertColumnVisibility(){
+    try {
+      if (!table) return;
+      const idx = planeAlertColumnIndex();
+      if (idx === -1) return;
+      const visible = isPlaneAlertMode();
+      const col = table.column(idx);
+      if (!col) return;
+      if (col.visible() === visible) return;
+      col.visible(visible, false);
+      table.columns().adjust();
+      table.draw(false);
+    } catch (e) { /* ignore visibility issues */ }
+  }
 
   let table = null;
   // Map of index -> DataTables row API for fast incremental updates
@@ -877,6 +904,8 @@
   // Store globally if you need it
   table = api;
   window.table = api;
+
+  applyPlaneAlertColumnVisibility();
 
   // Preserve top row when the page length changes: capture current display start
   // and restore it after DataTables applies the new length. This keeps the
@@ -1239,6 +1268,8 @@ function renderRow(r) {
   else if (measurementChip) sound = measurementChip;
   else if (linkChips.length) sound = `<div>${linkChips.join(' ')}</div>`;
 
+  const planeAlertCell = renderPlaneAlertCell(r);
+
   const squawkVal = safe(r["squawk:value"]);
   const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
   const isEmerg = squawkVal === "7500" || squawkVal === "7600" || squawkVal === "7700";
@@ -1255,10 +1286,26 @@ function renderRow(r) {
     `${trk}`,
     `${squawk}`,
     `${sound}`,
+    `${planeAlertCell}`,
     `${notifyLinks.join(' ')}`
   ],
     incomplete: String(r.complete) !== 'true'
   };
+}
+
+function renderPlaneAlertCell(r){
+  if (!r || typeof r !== 'object') return '';
+  const pieces = [];
+  ['db:tag1','db:tag2','db:tag3'].forEach(key => {
+    const val = safe(r[key]).trim();
+    if (val) pieces.push(`<span class="mono">${val}</span>`);
+  });
+  const linkVal = safe(r['db:link']).trim();
+  if (linkVal) {
+    const href = linkVal.replace(/"/g, '&quot;');
+    pieces.push(`<a href="${href}" target="_blank" rel="noopener">Link</a>`);
+  }
+  return pieces.length ? `<div class="plane-alert-cell">${pieces.join(' · ')}</div>` : '';
 }
 
 
