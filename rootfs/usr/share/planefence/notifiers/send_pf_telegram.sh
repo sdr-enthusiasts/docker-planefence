@@ -131,6 +131,7 @@ for idx in "${INDEX[@]}"; do
   if [[ -n "${records["$idx":link:fa]}" ]]; then links+="•<a href=\"${records["$idx":link:fa]}\">$(extract_base "${records["$idx":link:fa]}")</a>"; fi
   if [[ -n "${records["$idx":link:faa]}" ]]; then links+="•<a href=\"${records["$idx":link:faa]}\">$(extract_base "${records["$idx":link:faa]}")</a>"; fi
   template="$(template_replace "||LINKS||" "$links" "$template")"
+  template="$(template_replace "||TYPE||" "${records["$idx":type]:+#}${records["$idx":type]}" "$template")"
 
   # Handle images
   img_array=()

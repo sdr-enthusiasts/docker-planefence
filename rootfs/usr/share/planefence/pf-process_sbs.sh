@@ -276,6 +276,61 @@ GET_ROUTE_INDIVIDUAL () {
 		fi
 }
 
+GET_PA_INFO () {
+  local lookup="$1"
+  if ! chk_enabled "$PA_ENABLED" || [[ -z $lookup ]] || [[ ! -s $PA_FILE ]]; then
+    return
+  fi
+
+  local header_line
+  header_line="$(head -n1 "$PA_FILE" 2>/dev/null)"
+  [[ -n $header_line ]] || return
+
+  IFS=',' read -r -a __pa_header <<< "$header_line"
+  declare -A __pa_cols=()
+  local idx name
+  for idx in "${!__pa_header[@]}"; do
+    name="${__pa_header[$idx]}"
+    name="${name#\"}"
+    name="${name%\"}"
+    while [[ $name == [#\$]* ]]; do name="${name:1}"; done
+    name="${name#"${name%%[![:space:]]*}"}"
+    name="${name%"${name##*[![:space:]]}"}"
+    __pa_cols["$name"]=$idx
+  done
+
+  local record
+  record="$(awk -F',' -v key="$lookup" 'NR>1 && $1==key { print; exit }' "$PA_FILE")"
+  [[ -n $record ]] || return
+
+  IFS=',' read -r -a __pa_fields <<< "$record"
+  local first_field=""
+  if [[ -n ${__pa_cols[Registration]+x} ]]; then
+    first_field="${__pa_fields[${__pa_cols[Registration]}]:-}"
+  elif [[ -n ${__pa_cols[Tail]+x} ]]; then
+    first_field="${__pa_fields[${__pa_cols[Tail]}]:-}"
+  fi
+  first_field="${first_field#\"}"
+  first_field="${first_field%\"}"
+
+  local -a desired=(CPMG "Tag 1" "Tag 2" "Tag 3" Category Link ImageLink ImageLink2 ImageLink3)
+  local out=()
+  out+=("$first_field")
+  local col value
+  for col in "${desired[@]}"; do
+    if [[ -n ${__pa_cols[$col]+x} ]]; then
+      value="${__pa_fields[${__pa_cols[$col]}]:-}"
+      value="${value#\"}"
+      value="${value%\"}"
+    else
+      value=""
+    fi
+    out+=("$value")
+  done
+
+  (IFS=','; printf '%s\n' "${out[*]}")
+}
+
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
   local icao="$1" returntype json link thumb CACHETIME
@@ -1168,6 +1223,8 @@ for line in "${socketrecords[@]}"; do
     # last - make sure we're storing the idx in the list of processed indices:
     processed_indices["$idx"]=true
   fi
+
+  # ------------------------------------------------
   # Update plane-alert record if in plane-alert mode
   if $mode_pa; then
     # Initialize once-per-record fields
@@ -1180,19 +1237,47 @@ for line in "${socketrecords[@]}"; do
         pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
       fi
     fi
+    
+    # get info from the plane-alert-db file:
+    if [[ "${pa_records["$pa_idx":checked:db]}" != "true" ]]; then
+      IFS=',' read -r \
+        Registration \
+        CPMG \
+        Tag1 \
+        Tag2 \
+        Tag3 \
+        Category \
+        Link \
+        ImageLink1 \
+        ImageLink2 \
+        ImageLink3 <<< "$(GET_PA_INFO "$icao")"
+      pa_records["$pa_idx":tail]="${pa_records["$pa_idx":tail]:-$Registration}"
+      pa_records["$pa_idx":db:cpmg]="${pa_records["$pa_idx":db:cpmg]:-$CPMG}"
+      pa_records["$pa_idx":db:tag1]="${pa_records["$pa_idx":db:tag1]:-$Tag1}"
+      pa_records["$pa_idx":db:tag2]="${pa_records["$pa_idx":db:tag2]:-$Tag2}"
+      pa_records["$pa_idx":db:tag3]="${pa_records["$pa_idx":db:tag3]:-$Tag3}"
+      pa_records["$pa_idx":db:category]="${pa_records["$pa_idx":db:category]:-$Category}"
+      pa_records["$pa_idx":db:link]="${pa_records["$pa_idx":db:link]:-$Link}"
+      pa_records["$pa_idx":db:imagelink1]="${pa_records["$pa_idx":db:imagelink1]:-$ImageLink1}"
+      pa_records["$pa_idx":db:imagelink2]="${pa_records["$pa_idx":db:imagelink2]:-$ImageLink2}"
+      pa_records["$pa_idx":db:imagelink3]="${pa_records["$pa_idx":db:imagelink3]:-$ImageLink3}"
+      pa_records["$pa_idx":checked:db]=true
+      if [[ -n "${pa_records["$pa_idx":tail]}" ]]; then pa_records["$pa_idx":checked:tail]=true; fi
+    fi
 
-    # add a tail if there isn't any
+    # add a tail if there still isn't any
     if [[ "${pa_records["$pa_idx":checked:tail]}" != "true" && -z "${pa_records["$pa_idx":tail]}" ]]; then
       pa_records["$pa_idx":tail]="$(GET_TAIL "$icao")"
-      if [[ -n "${pa_records["$pa_idx":tail]}" ]]; then
-        if [[ ${icao:0:1} =~ [aA] ]]; then
-          pa_records["$pa_idx":link:faa]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${pa_records["$pa_idx":tail]}"
-        elif [[ ${icao:0:1} =~ [cC] ]]; then
-          t="${pa_records["$pa_idx":tail]:1}"  # remove leading C
-          pa_records["$pa_idx":link:faa]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
-        fi
-      fi
       pa_records["$pa_idx":checked:tail]=true
+    fi
+    if [[ "${pa_records["$pa_idx":checked:faa]}" != "true" && -n "${pa_records["$pa_idx":tail]}" && -z "${pa_records["$pa_idx":link:faa]}" ]]; then
+      if [[ ${icao:0:1} =~ [aA] ]]; then
+        pa_records["$pa_idx":link:faa]="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${pa_records["$pa_idx":tail]}"
+      elif [[ ${icao:0:1} =~ [cC] ]]; then
+        t="${pa_records["$pa_idx":tail]:1}"  # remove leading C
+        pa_records["$pa_idx":link:faa]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
+      fi
+      pa_records["$pa_idx":checked:faa]=true
     fi
 
     # get type
