@@ -1128,11 +1128,11 @@ for line in "${socketrecords[@]}"; do
     mode_pf=false
   fi
 
-  # For plane-alert, always collapse into an existing record if any
+  # For plane-alert, always collapse into an existing record if any was available today
   if [[ " ${pa_icaos[*]} " == *" $icao "* ]]; then
     pa_idx="${pa_last_idx_for_icao["$icao"]}"
-    # Create new idx if needed
-    if [[ -z "$pa_idx" ]]; then
+    # Create new idx if none found or if last seen was before today
+    if [[ -z "$pa_idx" || ${pa_records["$pa_idx":time:lastseen]:-0} -lt $midnight_epoch ]]; then
       pa_idx=$(( pa_records[maxindex] + 1 ))
       pa_records[maxindex]="$pa_idx"
       pa_records["$pa_idx":complete]=false

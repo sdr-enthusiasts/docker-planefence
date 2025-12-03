@@ -19,6 +19,7 @@
 shopt -s extglob
 
 source /scripts/pf-common
+source /usr/share/planefence/persist/planefence.config
 source /usr/share/planefence/planefence.conf
 
 # shellcheck disable=SC2034
@@ -92,7 +93,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":link:map]})" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base ${records["$idx":link:map]})](${records["$idx":link:map]})" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
@@ -103,6 +104,8 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ROUTE||" "${records["$idx:route"]:-n/a}" "$template")"
   template="$(template_replace "||TRACK||" "${records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
+  template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
+
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
     template="$(template_replace "||AVATAR||" "${DISCORD_AVATAR_URL}" "$template")"
   else

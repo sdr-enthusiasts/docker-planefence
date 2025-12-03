@@ -193,12 +193,14 @@ post_text="${post_text//${SPACE}/ }"
 # Iterate through hashtags to get their position and length and remove the "#" symbol
 for tag in "${hashtags[@]}"; do
   tag="${tag//${SPACE}/ }"
-  if [[ -z "${tagstart[${tag:1}]}" ]]; then
+  tag_key="${tag:1}"
+  [[ -z "$tag_key" ]] && continue
+  if [[ -z "${tagstart[$tag_key]+x}" ]]; then
     # first occurrence of the tag in the string
-    tagstart[${tag:1}]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
-    tagend[${tag:1}]="$((${tagstart[${tag:1}]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
+    tagstart[$tag_key]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
+    tagend[$tag_key]="$((${tagstart[$tag_key]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
   fi
-  post_text="$(sed "0,/${tag}/s//${tag:1}/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
+  post_text="$(sed "0,/${tag}/s//$tag_key/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
 done
 
 

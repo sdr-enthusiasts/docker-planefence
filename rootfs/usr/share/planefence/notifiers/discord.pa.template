@@ -51,12 +51,7 @@
             "name": "Route",
             "value": "||ROUTE||",
             "inline": true
-          }||NOISE--,
-          {
-            "name": "Loudness",
-            "value": "||LOUDNESS|| ",
-            "inline": true
-          }--NOISE||
+          }
         ],
         "timestamp": "||TIMESTAMP||",
         ||THUMBNAIL--"thumbnail":
@@ -65,7 +60,7 @@
         },--THUMBNAIL||
         "footer":
         {
-          "text": "Planefence © 2025 by kx1t"
+          "text": "Plane-Alert © ||YEAR|| by kx1t"
         }||IMAGE--,
         "image":
         {
@@ -73,7 +68,7 @@
         }--IMAGE||,
         "author":
         {
-          "name": "Planefence",
+          "name": "Plane-Alert",
           "url": "https://sdr-e.com/docker-planefence"
         }
       }

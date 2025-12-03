@@ -163,7 +163,7 @@ if (( image_count == 0 )); then
         ${curlcmd//http/hxttp}"
         exit 1
     else
-      echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}"
-      log_print INFO "Text message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
+      echo "https://t.me/c/${TELEGRAM_CHAT_ID//-100/}/${message_id}"
+      # log_print INFO "Text message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
     fi
 fi

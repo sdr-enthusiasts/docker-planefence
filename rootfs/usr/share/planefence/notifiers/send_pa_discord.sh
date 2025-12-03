@@ -19,10 +19,10 @@
 shopt -s extglob
 
 source /scripts/pf-common
-source /usr/share/planefence/planefence.conf
+source /usr/share/planefence/persist/planefence.config
 
 # shellcheck disable=SC2034
-#DEBUG=true
+DEBUG=false
 
 declare -a INDEX STALE link delivery_errors link
 
@@ -30,11 +30,11 @@ log_print INFO "Hello. Starting Discord notification run"
 
 # Load a bunch of stuff and determine if we should notify
 
-if ! chk_enabled "$PF_DISCORD"; then
+if ! chk_enabled "$PA_DISCORD"; then
   log_print INFO "Discord notifications not enabled. Exiting."
   exit
 fi
-if [[ -z "$PF_DISCORD_WEBHOOKS" ]]; then
+if [[ -z "$PA_DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."
   exit 1
 fi
@@ -44,10 +44,10 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
   exit 1
 fi
 
-if [[ -f "/usr/share/planefence/notifiers/discord.pf.template" ]]; then
-  template="$(</usr/share/planefence/notifiers/discord.pf.template)"
+if [[ -f "/usr/share/planefence/notifiers/discord.pa.template" ]]; then
+  template="$(</usr/share/planefence/notifiers/discord.pa.template)"
 else
-  log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.pf.template. Aborting."
+  log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.pa.template. Aborting."
   exit 1
 fi
 
@@ -64,7 +64,7 @@ READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
-build_index_and_stale INDEX STALE discord
+build_index_and_stale INDEX STALE discord pa
 
 if (( ${#INDEX[@]} )); then
   log_print DEBUG "Records ready for Discord notification: ${INDEX[*]}"
@@ -81,28 +81,30 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   exit 0
 fi
 
-template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
+template_clean="$(</usr/share/planefence/notifiers/discord.pa.template)"
 
 for idx in "${INDEX[@]}"; do
-  log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Discord notification for ${pa_records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
 
   # Set strings:
-  template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}" "$template")"
+  template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $TRACKSERVICE](${records["$idx":link:map]})" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
-  template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
-  template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
-  template="$(template_replace "||DISTANCE||" "${records["$idx:distance:value"]} $DISTUNIT (${records["$idx":angle:value]}°)" "$template")"
-  template="$(template_replace "||ALTITUDE||" "${records["$idx:altitude:value"]} $ALTUNIT" "$template")"
-  template="$(template_replace "||GROUNDSPEED||" "${records["$idx:groundspeed:value"]} $SPEEDUNIT" "$template")"
-  template="$(template_replace "||TAIL||" "${records["$idx:tail"]}" "$template")"
-  template="$(template_replace "||ROUTE||" "${records["$idx:route"]:-n/a}" "$template")"
-  template="$(template_replace "||TRACK||" "${records["$idx:track:value"]}°" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base ${pa_records["$idx":link:map]})](${pa_records["$idx":link:map]})" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
+  template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
+  template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
+  template="$(template_replace "||DISTANCE||" "${pa_records["$idx:distance:value"]} $DISTUNIT (${pa_records["$idx":angle:value]}°)" "$template")"
+  template="$(template_replace "||ALTITUDE||" "${pa_records["$idx:altitude:value"]} $ALTUNIT" "$template")"
+  template="$(template_replace "||GROUNDSPEED||" "${pa_records["$idx:groundspeed:value"]} $SPEEDUNIT" "$template")"
+  template="$(template_replace "||TAIL||" "${pa_records["$idx:tail"]}" "$template")"
+  template="$(template_replace "||ROUTE||" "${pa_records["$idx:route"]:-n/a}" "$template")"
+  template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
+  template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
+  
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
     template="$(template_replace "||AVATAR||" "${DISCORD_AVATAR_URL}" "$template")"
   else
@@ -110,10 +112,10 @@ for idx in "${INDEX[@]}"; do
   fi
 
   #Do a few more complex replacements:
-  if [[ -n ${records["$idx":sound:loudness]} ]]; then
+  if [[ -n ${pa_records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||NOISE--" "" "$template")"
     template="$(template_replace "--NOISE||" "" "$template")"
-    template="$(template_replace "||LOUDNESS||" "${records["$idx":sound:loudness]} dB" "$template")"
+    template="$(template_replace "||LOUDNESS||" "${pa_records["$idx":sound:loudness]} dB" "$template")"
   else
     template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
@@ -122,44 +124,44 @@ for idx in "${INDEX[@]}"; do
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
     "photo")
-      image="${records["$idx":image:thumblink]}"
+      image="${pa_records["$idx":image:thumblink]}"
       ;;
     "photo+screenshot")
-      image="${records["$idx":image:thumblink]}"
-      if chk_enabled $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
-          thumb="attachment://$(basename "${records["$idx":screenshot:file]}")"
-          curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      image="${pa_records["$idx":image:thumblink]}"
+      if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
+          thumb="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
+          curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot+photo")
-      thumb="${records["$idx":image:thumblink]}"
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
-        image="attachment://$(basename "${records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      thumb="${pa_records["$idx":image:thumblink]}"
+      if chk_enabled$screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
+        image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
+        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot")
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
-        image="attachment://$(basename "${records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${records["$idx":screenshot:file]}"
+      if chk_enabled$screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
+        image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
+        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
       fi
       ;;
   esac
 
   if [[ -z "${image}" ]]; then
-    log_print DEBUG "No image available for ${records["$idx":tail]}, removing image section from template"
+    log_print DEBUG "No image available for ${pa_records["$idx":tail]}, removing image section from template"
     template="$(sed -z 's/||IMAGE--.*--IMAGE||//g' <<< "$template")"
   else
-    log_print DEBUG "Image available for ${records["$idx":tail]}, adding to template"
+    log_print DEBUG "Image available for ${pa_records["$idx":tail]}, adding to template"
     template="$(template_replace "||IMAGE--" "" "$template")"
     template="$(template_replace "--IMAGE||" "" "$template")"
     template="$(template_replace "||IMAGE||" "$image" "$template")"
   fi
   if [[ -z "${thumb}" ]]; then
-    log_print DEBUG "No thumbnail available for ${records["$idx":tail]}, removing thumbnail section from template"
+    log_print DEBUG "No thumbnail available for ${pa_records["$idx":tail]}, removing thumbnail section from template"
     template="$(sed -z 's/||THUMBNAIL--.*--THUMBNAIL||//g' <<< "$template")"
   else
-    log_print DEBUG "Thumbnail available for ${records["$idx":tail]}, adding to template"
+    log_print DEBUG "Thumbnail available for ${pa_records["$idx":tail]}, adding to template"
     template="$(template_replace "||THUMBNAIL--" "" "$template")"
     template="$(template_replace "--THUMBNAIL||" "" "$template")"
     template="$(template_replace "||THUMBNAIL||" "$thumb" "$template")"
@@ -172,7 +174,7 @@ for idx in "${INDEX[@]}"; do
   # make the JSON object into a single line:
   template_org="$template"
   if ! template="$(jq -c . <<< "${template}")"; then
-    log_print ERR "JSON error for ${records["$idx":tail]}. JSON is invalid: <!-->${template_org}<-->"
+    log_print ERR "JSON error for ${pa_records["$idx":tail]}. JSON is invalid: <!-->${template_org}<-->"
   fi
 
   # Now send the notification to Discord
@@ -185,10 +187,10 @@ for idx in "${INDEX[@]}"; do
     # check if there was an error
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"
-      log_print INFO "Discord notification successful at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): ${discord_link}"
+      log_print INFO "Discord notification successful at Webhook ending in ${url: -8} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}): ${discord_link}"
       link[idx]+="${link[idx]:+,}$discord_link"
     else
-      log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${records["$idx":tail]} (${records["$idx":icao]}). Discord returned this error: ${response}"
+      log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). Discord returned this error: ${response}"
       delivery_errors[idx]=true
     fi
   done
@@ -200,20 +202,20 @@ log_print DEBUG "Updating records after Discord notifications"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 
-if [[ ${#link[@]} -gt 0 || ${#delivery_errors[@]} -gt 0 ]]; then records[HASNOTIFS]=true; fi
+if [[ ${#link[@]} -gt 0 || ${#delivery_errors[@]} -gt 0 ]]; then pa_records[HASNOTIFS]=true; fi
 
 for idx in "${STALE[@]}"; do
-  records["$idx":discord:notified]="stale"
+  pa_records["$idx":discord:notified]="stale"
 done
 
 for idx in "${!delivery_errors[@]}"; do
-  records["$idx":discord:notified]="error"
+  pa_records["$idx":discord:notified]="error"
 done
 
 # For the ones that were successful, even if they had some errors on other webhooks, mark as notified
 for idx in "${!link[@]}"; do
-  records["$idx":discord:notified]=true
-  records["$idx":discord:link]="${link[idx]}"
+  pa_records["$idx":discord:notified]=true
+  pa_records["$idx":discord:link]="${link[idx]}"
 done
 
 # Save the records again

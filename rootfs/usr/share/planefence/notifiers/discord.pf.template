@@ -65,7 +65,7 @@
         },--THUMBNAIL||
         "footer":
         {
-          "text": "Planefence © 2025 by kx1t"
+          "text": "Planefence © ||YEAR|| by kx1t"
         }||IMAGE--,
         "image":
         {

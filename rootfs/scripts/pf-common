@@ -455,10 +455,10 @@ extract_url() {
 # Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
 # Use:
 # declare -a INDEX STALE
-# build_index_and_stale INDEX STALE <notifservice>
+# build_index_and_stale INDEX STALE <notifservice> [<mode>]
 #
 # Assumes:
-#   - records[...] assoc with keys: "<id>:lastseen|$notifservice:notified|complete|checked:screenshot"
+#   - records[...] (Planefence) or pa_records[...] (Plane-Alert) assoc with keys: "<id>:lastseen|$notifservice:notified|complete|checked:screenshot"
 #   - CONTAINERSTARTTIME (epoch, integer)
 #   - screenshots (0/1 or truthy string)
 # $notifservice is one of: discord, telegram, mqtt, bsky, mastodon
@@ -467,6 +467,8 @@ build_index_and_stale() {
   local -n _INDEX=$1
   local -n _STALE=$2
   local notifservice=$3
+  local data_mode="${4:-pf}"
+  data_mode="${data_mode,,}"
 
   log_print DEBUG "build_index_and_stale called with notifservice='$notifservice'"
   if [[ -z "$notifservice" ]]; then
@@ -476,16 +478,20 @@ build_index_and_stale() {
    
   _INDEX=(); _STALE=()
 
-  # Optional numeric ceiling from records[maxindex]
+  local record_array="records"
+  if [[ "$data_mode" == "pa" ]]; then record_array="pa_records"; fi
+  local -n _RECORDS="$record_array"
+
+  # Optional numeric ceiling from the selected records array
   local MAXIDX
-  MAXIDX=${records[maxindex]}
+  MAXIDX=${_RECORDS[maxindex]}
 
   # Capture gawk output once, then demux without subshells
   local out
   out="$(
     {
       local k id field
-      for k in "${!records[@]}"; do
+      for k in "${!_RECORDS[@]}"; do
         [[ $k == +([0-9]):* ]] || continue
         id=${k%%:*}
         [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
@@ -493,7 +499,7 @@ build_index_and_stale() {
         # Only pass fields we care about to reduce awk work
         case $field in
           time:lastseen|"${notifservice}:notified"|complete|checked:screenshot)
-            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
+            printf '%s\t%s\t%s\n' "$id" "$field" "${_RECORDS[$k]}"
             ;;
         esac
       done
