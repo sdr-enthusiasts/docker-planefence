@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Planefence</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css">
   <!-- 1) CSS: row dim + small updater + dark zebra fix -->
   <style>
 
@@ -135,6 +136,20 @@
   td:nth-child(11) a.chip { margin-right: .25rem; }
   .plane-alert-cell a { display: inline-flex; align-items: center; gap: .3rem; line-height: inherit; font-size: inherit; }
   .plane-alert-favicon { width: 1em; height: 1em; object-fit: contain; border-radius: 2px; }
+  .aircraft-main { display: block; }
+  .aircraft-flag-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-right: .35rem;
+    vertical-align: middle;
+  }
+  .aircraft-flag-icon img {
+    height: 1em;
+    width: calc(4/3 * 1em);
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
+  }
 
   /* Visually hidden text for accessibility */
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
@@ -156,8 +171,15 @@
   /* Prevent Seen column from collapsing too narrow */
   /* DataTables places columns in the table header; target the third th (index starts at 1) */
   /* Keep Seen column readable but compact: single-line with ellipsis if too long */
-  table.dataTable thead th:nth-child(3) { min-width: 8rem; max-width: 12rem; }
-  table.dataTable tbody td:nth-child(3) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.dataTable thead th:nth-child(3),
+  table.dataTable tbody td:nth-child(3) {
+    width: 1%;
+    white-space: nowrap;
+  }
+  table.dataTable tbody td:nth-child(3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   /* Highlight freshly-added rows briefly (soft fade-out) */
   .pf-new-row { animation: pf-fade 2.2s ease-out; background-color: rgba(108,169,255,0.18); }
   @keyframes pf-fade { 0% { background-color: rgba(108,169,255,0.28); } 100% { background-color: transparent; } }
@@ -269,6 +291,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/datatables.net@2/js/dataTables.min.js"></script>
+  <script src="./js/flags.js"></script>
 
   <script>
   // -------- Config --------
@@ -293,6 +316,9 @@
     // Poll interval in seconds (used when enablePoll is true)
     pollIntervalSec: 60
   };
+
+  const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
+
 
   const truthy = (v) => {
     if (v === true || v === 1) return true;
@@ -594,6 +620,30 @@
   function notifierLink(href, label, iconHtml){
     const safeHref = String(href || '').replace(/"/g, '&quot;');
     return `<a class="chip" href="${safeHref}" target="_blank" rel="noopener">${iconHtml || ''}${label}</a>`;
+  }
+
+  function flagInfoForIcao(icao){
+    try {
+      if (!icao || typeof findICAORange !== 'function') return null;
+      const clean = String(icao).trim();
+      if (!clean) return null;
+      const range = findICAORange(clean.toLowerCase());
+      if (!range || !range.country_code) return null;
+      return {
+        code: String(range.country_code).toLowerCase(),
+        name: range.country || ''
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderFlagIconForIcao(icao){
+    const info = flagInfoForIcao(icao);
+    if (!info) return '';
+    const title = info.name ? info.name.replace(/"/g, '&quot;') : '';
+    const src = `${FLAG_ICON_SRC_BASE}${info.code}.svg`;
+    return `<span class="aircraft-flag-icon" title="${title}" aria-label="${title}"><img src="${src}" alt="${title}"></span>`;
   }
 
   function hostnameFromUrl(urlValue){
@@ -1136,8 +1186,9 @@ function renderRow(r) {
   const csIcaoLine = cs
     ? `${cs}${icao ? ' · ' + icao : ''}`
     : `${icao}`;
+  const flagIcon = renderFlagIconForIcao(icao);
   const aircraft = `
-    <div class="mono">${csIcaoLine}${routeHtml}</div>
+    <div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}${routeHtml}</span></div>
     <div>${tailHtml ? tailHtml+' · ' : ''}${typHtml || typ}${ownerLine ? ' · ' + ownerLine : ''}</div>
   `.trim();
 
