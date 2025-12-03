@@ -845,7 +845,8 @@
     dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
     // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
     deferRender: true,
-    pageLength: 25,
+    pageLength: 100,
+    lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', 'All']],
     responsive: true,
   // Default ordering: newest (highest index) first
   order: [[0, 'desc']],

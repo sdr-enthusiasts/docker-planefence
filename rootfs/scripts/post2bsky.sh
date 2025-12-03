@@ -82,7 +82,7 @@ function bsky_auth() {
     exit 1
   fi
 
-  log_print INFO "BlueSky authentication OK. Welcome, $handle! Your $ratelimit_str";
+  log_print DEBUG "BlueSky authentication OK. Welcome, $handle! Your $ratelimit_str";
 
   # write back the token info to the authentication file
   cat >/tmp/bsky.auth <<EOF
@@ -145,7 +145,7 @@ for image in "${IMAGES[@]}"; do
       continue # skip if it's not JPG or PNG
     fi
     touch -d "$modtime_org" "$image"    # restore original modification date of the image (for cache management purposes)
-    log_print INFO "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
+    log_print DEBUG "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
   fi
   if (( $(stat -c%s "$image") >= 950000 )); then
     log_print WARN "Omitting image $image as the size reduction was insufficient: before: $imgsize_org; now: $(stat -c%s "$image")"
@@ -171,7 +171,7 @@ for image in "${IMAGES[@]}"; do
     cid+=("$cid_local")
     size["$cid_local"]="$size_local"
     mimetype["$cid_local"]="$mimetype_local"
-    log_print INFO "$image uploaded succesfully to BlueSky. $ratelimit_str"
+    log_print DEBUG "$image uploaded succesfully to BlueSky. $ratelimit_str"
   fi
 done
 
@@ -358,7 +358,7 @@ else
 fi
 
 # Send the post to Bluesky
-response=$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
+response=$(curl -sSL -X POST "$BLUESKY_API/com.atproto.repo.createRecord" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $access_jwt" \
   -d "$post_data")
