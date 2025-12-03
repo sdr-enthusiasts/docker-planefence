@@ -84,7 +84,6 @@ fi
 PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
-PA_ENABLED="$(sed -n 's/\(^\s*PF_PLANEALERT=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 
 
 # ==========================
@@ -278,11 +277,10 @@ GET_ROUTE_INDIVIDUAL () {
 
 GET_PA_INFO () {
   local lookup="$1"
-  if ! chk_enabled "$PA_ENABLED" || [[ -z $lookup ]] || [[ ! -s $PA_FILE ]]; then
-    log_print DEBUG "Plane-Alert: No PA data available for $lookup"
+  if ! chk_enabled "$PLANEALERT" || [[ -z $lookup ]] || [[ ! -f $PA_FILE ]]; then
+    log_print DEBUG "Plane-Alert: No PA data available for $lookup (PLANEALERT=$PLANEALERT, PA_FILE=$PA_FILE)" 
     return
   fi
-
   local header_line
   header_line="$(sed -En '/^\s*ALERTHEADER=/ { s/^\s*ALERTHEADER='\''?([^'\'']*)'\''?/\1/; p; q }' /usr/share/planefence/plane-alert.conf)"
   header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
@@ -1246,17 +1244,7 @@ for line in "${socketrecords[@]}"; do
     
     # get info from the plane-alert-db file:
     if [[ "${pa_records["$pa_idx":checked:db]}" != "true" ]]; then
-      IFS=',' read -r \
-        Registration \
-        CPMG \
-        Tag1 \
-        Tag2 \
-        Tag3 \
-        Category \
-        Link \
-        ImageLink1 \
-        ImageLink2 \
-        ImageLink3 <<< "$(GET_PA_INFO "$icao")"
+      IFS=',' read -r Registration CPMG Tag1 Tag2 Tag3 Category Link ImageLink1 ImageLink2 ImageLink3 <<< "$(GET_PA_INFO "$icao")"
       pa_records["$pa_idx":tail]="${pa_records["$pa_idx":tail]:-$Registration}"
       pa_records["$pa_idx":db:cpmg]="${pa_records["$pa_idx":db:cpmg]:-$CPMG}"
       pa_records["$pa_idx":db:tag1]="${pa_records["$pa_idx":db:tag1]:-$Tag1}"
@@ -1269,7 +1257,7 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":db:imagelink3]="${pa_records["$pa_idx":db:imagelink3]:-$ImageLink3}"
       pa_records["$pa_idx":checked:db]=true
       if [[ -n "${pa_records["$pa_idx":tail]}" ]]; then pa_records["$pa_idx":checked:tail]=true; fi
-      log_print DEBUG "Plane-Alert: Retrieved DB info for $icao: $Registration / $CPMG / $Tag1,$Tag2,$Tag3 / $Category / $Link / $ImageLink1,$ImageLink2,$ImageLink3"
+      # log_print DEBUG "Plane-Alert: Retrieved DB info for $icao: $Registration / $CPMG / $Tag1,$Tag2,$Tag3 / $Category / $Link / $ImageLink1,$ImageLink2,$ImageLink3"
     fi
 
     # add a tail if there still isn't any

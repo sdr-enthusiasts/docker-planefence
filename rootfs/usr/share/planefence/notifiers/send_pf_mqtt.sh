@@ -25,7 +25,7 @@ declare -a INDEX=() STALE=() link=()
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
-# DEBUG=true
+DEBUG=false
 
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')
