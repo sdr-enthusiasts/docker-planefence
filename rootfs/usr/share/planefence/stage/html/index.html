@@ -133,6 +133,8 @@
   td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
   /* Improve spacing for notification chips inside the Notifications cell */
   td:nth-child(11) a.chip { margin-right: .25rem; }
+  .plane-alert-cell a { display: inline-flex; align-items: center; gap: .3rem; line-height: inherit; font-size: inherit; }
+  .plane-alert-favicon { width: 1em; height: 1em; object-fit: contain; border-radius: 2px; }
 
   /* Visually hidden text for accessibility */
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
@@ -594,6 +596,24 @@
     return `<a class="chip" href="${safeHref}" target="_blank" rel="noopener">${iconHtml || ''}${label}</a>`;
   }
 
+  function hostnameFromUrl(urlValue){
+    try {
+      if (!urlValue) return "";
+      const parsed = new URL(urlValue, location.href);
+      return parsed.hostname || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function planeAlertFaviconUrl(href){
+    const host = hostnameFromUrl(href);
+    if (!host) return null;
+    const lower = host.toLowerCase();
+    const faviconHost = lower === 'w.wiki' ? 'en.wikipedia.org' : host;
+    return `https://${faviconHost}/favicon.ico`;
+  }
+
   // -------- Columns definition --------
   const PLANE_ALERT_COL_KEY = 'planealert';
   const viewCols = [
@@ -614,20 +634,26 @@
     { key:"notify", title:"Notifications", width:"12%" }
   ];
 
-  function planeAlertColumnIndex(){
-    return viewCols.findIndex(c => c.key === PLANE_ALERT_COL_KEY);
+  function columnIndexByKey(key){
+    return viewCols.findIndex(c => c.key === key);
   }
 
   function applyPlaneAlertColumnVisibility(){
     try {
       if (!table) return;
-      const idx = planeAlertColumnIndex();
-      if (idx === -1) return;
-      const visible = isPlaneAlertMode();
-      const col = table.column(idx);
-      if (!col) return;
-      if (col.visible() === visible) return;
-      col.visible(visible, false);
+      const planeAlertIdx = columnIndexByKey(PLANE_ALERT_COL_KEY);
+      const soundIdx = columnIndexByKey('sound');
+      const planeAlertVisible = isPlaneAlertMode();
+      const soundVisible = !isPlaneAlertMode();
+
+      if (planeAlertIdx !== -1) {
+        const col = table.column(planeAlertIdx);
+        if (col && col.visible() !== planeAlertVisible) col.visible(planeAlertVisible, false);
+      }
+      if (soundIdx !== -1) {
+        const colSound = table.column(soundIdx);
+        if (colSound && colSound.visible() !== soundVisible) colSound.visible(soundVisible, false);
+      }
       table.columns().adjust();
       table.draw(false);
     } catch (e) { /* ignore visibility issues */ }
@@ -1304,7 +1330,9 @@ function renderPlaneAlertCell(r){
   const linkVal = safe(r['db:link']).trim();
   if (linkVal) {
     const href = linkVal.replace(/"/g, '&quot;');
-    pieces.push(`<a href="${href}" target="_blank" rel="noopener">Link</a>`);
+    const favicon = planeAlertFaviconUrl(linkVal);
+    const faviconImg = favicon ? `<img class="plane-alert-favicon" src="${favicon}" alt="">` : '';
+    pieces.push(`<a href="${href}" target="_blank" rel="noopener">${faviconImg}<span>Link</span></a>`);
   }
   return pieces.length ? `<div class="plane-alert-cell">${pieces.join(' · ')}</div>` : '';
 }

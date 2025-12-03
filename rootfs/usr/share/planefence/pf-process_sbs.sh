@@ -1135,7 +1135,7 @@ for line in "${socketrecords[@]}"; do
     if [[ -z "$pa_idx" || ${pa_records["$pa_idx":time:lastseen]:-0} -lt $midnight_epoch ]]; then
       pa_idx=$(( pa_records[maxindex] + 1 ))
       pa_records[maxindex]="$pa_idx"
-      pa_records["$pa_idx":complete]=false
+      pa_records["$pa_idx":complete]=true # always complete for PA records
       pa_newrecords["$pa_idx"]=1
     else
       pa_updatedrecords["$pa_idx"]=1

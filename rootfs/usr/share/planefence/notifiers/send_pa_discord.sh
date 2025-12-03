@@ -22,7 +22,7 @@ source /scripts/pf-common
 source /usr/share/planefence/persist/planefence.config
 
 # shellcheck disable=SC2034
-DEBUG=false
+DEBUG=true
 
 declare -a INDEX STALE link delivery_errors link
 
@@ -58,11 +58,9 @@ else
 fi
 
 log_print DEBUG "Reading records for Discord notification"
-log_print DEBUG "Reading records for Discord notification"
 
 READ_RECORDS
 
-log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"
 build_index_and_stale INDEX STALE discord pa
 
@@ -92,7 +90,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base ${pa_records["$idx":link:map]})](${pa_records["$idx":link:map]})" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
@@ -178,7 +176,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   # Now send the notification to Discord
-  readarray -td, webhooks <<<"${PF_DISCORD_WEBHOOKS}"
+  readarray -td, webhooks <<<"${PA_DISCORD_WEBHOOKS}"
 
   #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do

@@ -470,7 +470,7 @@ build_index_and_stale() {
   local data_mode="${4:-pf}"
   data_mode="${data_mode,,}"
 
-  log_print DEBUG "build_index_and_stale called with notifservice='$notifservice'"
+  log_print DEBUG "build_index_and_stale called for mode $data_mode with notifservice='$notifservice'"
   if [[ -z "$notifservice" ]]; then
     log_print ERR "build_index_and_stale: notifservice argument missing"
     return 1
