@@ -2,9 +2,9 @@
 
 <div id="map" style="width: ||HEATMAPWIDTH||; height: ||HEATMAPHEIGHT||"></div>
 
-<script src="scripts/HeatLayer.js"></script>
-<script src="scripts/leaflet-heat.js"></script>
-<script src="js/planeheatdata-||TODAY||.js"></script>
+<script src="./js/heatlayer.js"></script>
+<script src="./js/leaflet-heat.js"></script>
+<script src="./js/planeheatdata-||TODAY||.js"></script>
 <script>
 	var map = L.map('map').setView([parseFloat("||LATFUDGED||"), parseFloat("||LONFUDGED||")], parseInt("||HEATMAPZOOM||"));
 	var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {

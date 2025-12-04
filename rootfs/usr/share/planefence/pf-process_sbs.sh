@@ -881,6 +881,7 @@ GENERATE_PF_JSON() {
   ' > "$tmpfile"
   mv -f "$tmpfile" "$JSONOUT"
   chmod a+r "$JSONOUT"
+  ln -sf "$JSONOUT" "$HTMLDIR/planefence.json"
 }
 
 GENERATE_PA_JSON() {
@@ -956,6 +957,7 @@ GENERATE_PA_JSON() {
   ' > "$tmpfile"
   mv -f "$tmpfile" "$PA_JSONOUT"
   chmod a+r "$PA_JSONOUT"
+  ln -sf "$PA_JSONOUT" "$HTMLDIR/plane-alert.json"
 }
 
 log_print INFO "Hello. Starting $0"
@@ -985,7 +987,7 @@ fi
 
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
-  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" | zcat > /tmp/.allnoise 2>/dev/nul &
+  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" 2>/dev/null | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
 if chk_enabled "$PLANEALERT"; then
@@ -1402,7 +1404,7 @@ for idx in "${!processed_indices[@]}"; do
         # Make sure we have the noiselist
         if [[ -z "$noiselist" ]]; then
           wait $!
-          noiselist="$(</tmp/.allnoise)" || REMOTENOISE=""
+          if [[ -s /tmp/.allnoise ]]; then noiselist="$(</tmp/.allnoise)"; else REMOTENOISE=""; fi
           rm -f /tmp/.allnoise
         fi
         if [[ -n "$REMOTENOISE" ]]; then 

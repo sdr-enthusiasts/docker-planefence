@@ -102,6 +102,8 @@ CREATEHEATMAP () {
 	template="$(template_replace "||HEATMAPHEIGHT||" "$HEATMAPHEIGHT" "$template")"
 	template="$(template_replace "||DISTMTS||" "$DISTMTS" "$template")"
 
+	template="$(template_replace "||TODAY||" "$TODAY" "$template")"
+
 	# Create the heatmap data
 	{ printf "var addressPoints = [\n"
 		for i in "${!heatmap[@]}"; do
@@ -150,5 +152,6 @@ log_print DEBUG "Done updating the template"
 # ---------------------------------------------------------------------------
 log_print INFO "Writing HTML file"
 echo "$template" > "$OUTFILEDIR/heatmap-$TODAY.html"
+ln -sf "$OUTFILEDIR/heatmap-$TODAY.html" "$OUTFILEDIR/heatmap.html"
 
 log_print INFO "Done - Wrote HTML file to $OUTFILEDIR/heatmap-$TODAY.html"
