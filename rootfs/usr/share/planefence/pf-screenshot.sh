@@ -36,16 +36,17 @@
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
-declare -A screenshot_file=()
-declare -A screenshot_checked=()
-declare -a INDEX STALE
+declare -A screenshot_file_map=()
+declare -A screenshot_checked_map=()
+any_candidates=0
 
-
+DEBUG=false
 # ==========================
 # Constants
 # ==========================
 SCREENFILEDIR="/usr/share/planefence/persist/planepix/cache"
 MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensure we can batch-process them
+SCREENSHOT_TIMEOUT=60  # max seconds to wait for screenshot retrieval
 
 # ==========================
 # Functions
@@ -54,18 +55,20 @@ MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensu
 build_index_and_stale_for_screenshot() {
   local -n _INDEX=$1
   local -n _STALE=$2
+  local dataset_name=${3:-records}
+  local -n _DATASET="$dataset_name"
   _INDEX=(); _STALE=()
 
-  # Optional numeric ceiling from records[maxindex]
+  # Optional numeric ceiling from dataset[maxindex]
   local MAXIDX
-  MAXIDX=${records[maxindex]}
+  MAXIDX=${_DATASET[maxindex]}
 
   # Capture gawk output once, then demux without subshells
   local out
   out="$(
     {
       local k id field
-      for k in "${!records[@]}"; do
+      for k in "${!_DATASET[@]}"; do
         [[ $k == +([0-9]):* ]] || continue
         id=${k%%:*}
         [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
@@ -73,7 +76,7 @@ build_index_and_stale_for_screenshot() {
         # Only pass fields we care about to reduce awk work
         case $field in
             complete|time:lastseen|checked:screenshot)
-            printf '%s\t%s\t%s\n' "$id" "$field" "${records[$k]}"
+        printf '%s\t%s\t%s\n' "$id" "$field" "${_DATASET[$k]}"
             ;;
         esac
       done
@@ -128,16 +131,29 @@ build_index_and_stale_for_screenshot() {
 
 GET_SCREENSHOT () {
 	# Function to get a screenshot
-	# Usage: GET_SCREENSHOT index 
+	# Usage: GET_SCREENSHOT index dataset_name dataset_label
   # returns file path to screenshot if successful, or empty if no screenshot was captured
   
   local idx="$1"
-  local screenfile="$SCREENFILEDIR/screenshot-${records["$idx":icao]}-${records["$idx":time:lastseen]}.png"
-  local image
+  local dataset_name="$2"
+  local dataset_label="$3"
+  local -n dataset_ref="$dataset_name"
+  local icao="${dataset_ref["$idx":icao]}"
+  local last_seen="${dataset_ref["$idx":time:lastseen]}"
+  local safe_label=${dataset_label//[^A-Za-z0-9_-]/_}
+  local screenfile="$SCREENFILEDIR/${safe_label,,}-screenshot-${icao}-${last_seen}.png"
+  local image curl_error curl_status err_msg
   if [[ -z "$idx" ]]; then return; fi
+  if [[ -z "$icao" ]]; then return; fi
+
+  curl_error=$(mktemp)
+  if [[ -z "$curl_error" ]]; then
+    log_print ERR "${dataset_label}: Unable to create temp file for curl stderr"
+    return
+  fi
   
   # get new screenshot
-  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${records["$idx":icao]}" --clobber > "$screenfile"; then
+  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
     image=$(mktemp)
     # pngquant will reduce the image to about 1/3 of its original size
     # drawback: it takes about a second or so to run
@@ -145,12 +161,162 @@ GET_SCREENSHOT () {
       mv -f "$image" "$screenfile"
     fi
     echo "$screenfile"
+    rm -f "$curl_error"
+    return
+  else
+    curl_status=$?
+    err_msg=$(<"$curl_error")
+    rm -f "$curl_error"
+    # if retrieving the screenshot failed, remove any leftovers and return nothing
+    rm -f "$screenfile"
+    log_print ERR "${dataset_label}: Failed to get screenshot for #$idx ${icao} (${dataset_ref["$idx":tail]}): ${err_msg:-curl exited with status $curl_status}"
     return
   fi
+}
 
-  # if retrieving the screenshot failed, remove any leftovers and return nothing
-  rm -f "$screenfile"
-  return
+process_dataset_for_screenshots() {
+  local dataset_name="$1"
+  local dataset_label="$2"
+  local per_dataset_limit=${3:-$MAXSCREENSHOTSPERRUN}
+  local -n dataset_ref="$dataset_name"
+  local -a INDEX=()
+  local -a STALE=()
+  local -a rev_index=()
+  local idx shot_path attempts max_to_process shots_remaining
+
+  shots_remaining=$per_dataset_limit
+
+  build_index_and_stale_for_screenshot INDEX STALE "$dataset_name"
+
+  if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
+    log_print INFO "${dataset_label}: no records eligible for screenshotting."
+    return 0
+  fi
+
+  any_candidates=1
+  log_print DEBUG "${dataset_label}: ${#INDEX[@]} new, ${#STALE[@]} stale"
+
+  if (( ${#STALE[@]} > 0 )); then
+    for idx in "${STALE[@]}"; do
+      screenshot_checked_map["$dataset_name|$idx"]="stale"
+      log_print DEBUG "${dataset_label}: marking stale record #$idx ${dataset_ref["$idx":icao]} (${dataset_ref["$idx":tail]}) as checked"
+    done
+  fi
+
+  if (( shots_remaining <= 0 )); then
+    log_print DEBUG "${dataset_label}: no screenshot slots remaining."
+    return 0
+  fi
+
+  max_to_process=$shots_remaining
+  if (( ${#INDEX[@]} < max_to_process )); then
+    max_to_process=${#INDEX[@]}
+  fi
+  if (( max_to_process == 0 )); then
+    return 0
+  fi
+
+  readarray -t rev_index < <(printf '%s\n' "${INDEX[@]}" | sort -nr)
+
+  attempts=0
+  for idx in "${rev_index[@]}"; do
+    if (( attempts >= max_to_process || shots_remaining <= 0 )); then break; fi
+    attempts=$((attempts + 1))
+    shots_remaining=$((shots_remaining - 1))
+
+    log_print DEBUG "${dataset_label}: attempting screenshot (${attempts}/${max_to_process}) for #$idx ${dataset_ref["$idx":icao]} (${dataset_ref["$idx":tail]})"
+    shot_path="$(GET_SCREENSHOT "$idx" "$dataset_name" "$dataset_label")"
+    if [[ -n "$shot_path" ]]; then
+      screenshot_file_map["$dataset_name|$idx"]="$shot_path"
+      log_print INFO "${dataset_label}: screenshot (${attempts}/${max_to_process}) successful for #$idx ${dataset_ref["$idx":icao]} (${dataset_ref["$idx":tail]}) -> $shot_path"
+    else
+      unset "screenshot_file_map[$dataset_name|$idx]"
+      log_print DEBUG "${dataset_label}: screenshot failed for #$idx"
+    fi
+    screenshot_checked_map["$dataset_name|$idx"]="true"
+  done
+}
+
+dataset_has_pending_updates() {
+  local dataset_name="$1"
+  local map_key current
+
+  for map_key in "${!screenshot_file_map[@]}"; do
+    current=${map_key%%|*}
+    [[ "$current" == "$dataset_name" ]] && return 0
+  done
+  for map_key in "${!screenshot_checked_map[@]}"; do
+    current=${map_key%%|*}
+    [[ "$current" == "$dataset_name" ]] && return 0
+  done
+  return 1
+}
+
+persist_screenshot_updates() {
+  local dataset_name="$1"
+  local dataset_label="$2"
+  local map_key idx status handled=1
+
+  handled=1
+
+  for map_key in "${!screenshot_file_map[@]}"; do
+    local key_dataset=${map_key%%|*}
+    [[ "$key_dataset" == "$dataset_name" ]] || continue
+    idx=${map_key#*|}
+    if [[ -z "$idx" ]]; then
+      unset "screenshot_file_map[$map_key]"
+      continue
+    fi
+    case "$dataset_name" in
+      pa_records)
+        if declare -p pa_records &>/dev/null; then
+          pa_records["$idx":screenshot:file]="${screenshot_file_map[$map_key]}"
+        else
+          log_print WARN "${dataset_label}: dataset array missing when writing screenshot for #$idx"
+        fi
+        ;;
+      records)
+        records["$idx":screenshot:file]="${screenshot_file_map[$map_key]}"
+        ;;
+      *)
+        log_print WARN "${dataset_label}: unknown dataset '$dataset_name' when writing screenshot"
+        ;;
+    esac
+    log_print DEBUG "${dataset_label}: saved screenshot path for #$idx"
+    unset "screenshot_file_map[$map_key]"
+    handled=0
+  done
+
+  for map_key in "${!screenshot_checked_map[@]}"; do
+    local key_dataset=${map_key%%|*}
+    [[ "$key_dataset" == "$dataset_name" ]] || continue
+    idx=${map_key#*|}
+    status=${screenshot_checked_map[$map_key]:-true}
+    if [[ -z "$idx" ]]; then
+      unset "screenshot_checked_map[$map_key]"
+      continue
+    fi
+    case "$dataset_name" in
+      pa_records)
+        if declare -p pa_records &>/dev/null; then
+          pa_records["$idx":checked:screenshot]="$status"
+        else
+          log_print WARN "${dataset_label}: dataset array missing when writing status for #$idx"
+        fi
+        ;;
+      records)
+        records["$idx":checked:screenshot]="$status"
+        ;;
+      *)
+        log_print WARN "${dataset_label}: unknown dataset '$dataset_name' when writing status"
+        ;;
+    esac
+    log_print DEBUG "${dataset_label}: marked #$idx screenshot status '$status'"
+    unset "screenshot_checked_map[$map_key]"
+    handled=0
+  done
+
+  return $handled
 }
 
 # ==========================
@@ -171,64 +337,39 @@ fi
 log_print DEBUG "Getting RECORDSFILE"
 READ_RECORDS ignore-lock
 
-# Make an index of records to process
-log_print DEBUG "Getting indices ready for new and stale records"
-build_index_and_stale_for_screenshot INDEX STALE
+any_candidates=0
 
-# If there's nothing to do, exit
-if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for screenshotting. Exiting."
-  exit 0
-else log_print DEBUG "Records to process: ${#INDEX[@]} new, ${#STALE[@]} stale"
+process_dataset_for_screenshots records "Planefence" "$MAXSCREENSHOTSPERRUN"
+if dataset_has_pending_updates records; then
+  log_print DEBUG "Planefence: saving records after screenshot attempts"
+  LOCK_RECORDS
+  READ_RECORDS ignore-lock
+  persist_screenshot_updates records "Planefence"
+  WRITE_RECORDS ignore-lock
+else
+  log_print DEBUG "Planefence: no updates to persist"
 fi
 
-counter=0
-if (( ${#INDEX[@]} < MAXSCREENSHOTSPERRUN )); then MAXSCREENSHOTSPERRUN=${#INDEX[@]}; fi
-
-# Go through the indices in reverse order. That way, the newest/latest are processed first
-
-readarray -t rev_index < <(printf '%s\n' "${INDEX[@]}" | sort -nr)
-
-for idx in "${rev_index[@]}"; do
-  # Process each record in the records array
-  counter=$((++counter))
-  if (( counter > MAXSCREENSHOTSPERRUN )); then
-    log_print DEBUG "Reached max screenshots per run ($MAXSCREENSHOTSPERRUN), stopping here"
-    break
-  fi
-
-  log_print DEBUG "Attempting screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
-  screenshot_file["$idx"]="$(GET_SCREENSHOT "$idx")"
-
-  if [[ -n "${screenshot_file["$idx"]}" ]]; then
-    log_print DEBUG "Got screenshot ($counter/$MAXSCREENSHOTSPERRUN) for #$idx ${records["$idx":icao]} (${records["$idx":tail]}): ${screenshot_file["$idx"]}"
+if declare -p pa_records &>/dev/null; then
+  process_dataset_for_screenshots pa_records "Plane-Alert" "$MAXSCREENSHOTSPERRUN"
+  if dataset_has_pending_updates pa_records; then
+    log_print DEBUG "Plane-Alert: saving records after screenshot attempts"
+    LOCK_RECORDS
+    READ_RECORDS ignore-lock
+    persist_screenshot_updates pa_records "Plane-Alert"
+    WRITE_RECORDS ignore-lock
   else
-    unset "${screenshot_file["$idx"]}"
-    log_print DEBUG "Screenshot ($counter/$MAXSCREENSHOTSPERRUN) failed for #$idx ${records["$idx":icao]} (${records["$idx":tail]})"
+    log_print DEBUG "Plane-Alert: no updates to persist"
   fi
-  screenshot_checked["$idx"]=true
-done
+else
+  log_print DEBUG "Plane-Alert dataset not found; skipping"
+fi
 
-for idx in "${stale_indices[@]}"; do
-  # Mark stale records as checked, so we don't try again
-  screenshot_checked["$idx"]=true
-  log_print DEBUG "Marking stale record #$idx ${records["$idx":icao]} (${records["$idx":tail]}) as checked"
-done
-
-# Read records again, lock them, update them, and write them back
-log_print DEBUG "Saving records after screenshot attempts"
-LOCK_RECORDS
-READ_RECORDS ignore-lock
-for idx in "${!screenshot_file[@]}"; do
-    records["$idx":screenshot:file]="${screenshot_file["$idx"]}"
-done
-for idx in "${!screenshot_checked[@]}"; do
-    records["$idx":checked:screenshot]=true
-done
-log_print DEBUG "Wrote screenshot files to indices: ${!screenshot_file[*]}"
-log_print DEBUG "Wrote screenshot checked to indices: ${!screenshot_checked[*]}"
-WRITE_RECORDS ignore-lock
+if (( any_candidates == 0 )); then
+  log_print INFO "No records eligible for screenshotting. Exiting."
+  exit 0
+fi
 
 # Cleanup old screenshots
-find "$SCREENFILEDIR" -type f -name 'screenshot-*.png' -mmin +180 -exec rm -f {} \;
+find "$SCREENFILEDIR" -type f -name '*-screenshot-*.png' -mmin +180 -exec rm -f {} \;
 log_print INFO "Screenshot run completed."
