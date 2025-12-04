@@ -72,7 +72,7 @@ if ! jq -r '
     "mode"
   ];
   def globals: [
-    "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE"
+    "HASIMAGES","HASNOISE","LASTUPDATE","maxindex","HASROUTE","totallines"
   ];
 
   def flat1:

@@ -815,7 +815,7 @@ GENERATE_PF_JSON() {
   local re
   local k
   {
-    re='^(LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
+    re='^(totallines|LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
@@ -836,7 +836,7 @@ GENERATE_PF_JSON() {
     idx = a[1]
     k = a[2]
     if (n == 3) { subkey = a[3] } else { subkey = "" }
-    if (idx == "maxindex" || idx ~ /^LAST/ || idx ~ /^HAS/) {
+    if (idx == "maxindex" || idx == "totallines" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
       idx = -1
@@ -891,7 +891,7 @@ GENERATE_PA_JSON() {
   local re
   local k
   {
-    re='^(LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
+    re='^(totallines|LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!pa_records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${pa_records[$k]}"; fi
     done
@@ -912,7 +912,7 @@ GENERATE_PA_JSON() {
     idx = a[1]
     k = a[2]
     if (n == 3) { subkey = a[3] } else { subkey = "" }
-    if (idx == "maxindex" || idx ~ /^LAST/ || idx ~ /^HAS/) {
+    if (idx == "maxindex" || idx == "totallines" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
       idx = -1
@@ -1014,6 +1014,7 @@ else
   nowlines=0
 fi
 
+pa_records[totallines]="${records[totallines]}"
 currentrecords=$(( records[maxindex] + 1 ))
 
 { if [[ -n "$LASTPROCESSEDLINE" ]]; then
