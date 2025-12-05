@@ -59,6 +59,13 @@ PA_CSVOUT="$HTMLDIR/plane-alert-${TODAY}.csv"
 JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
 PA_JSONOUT="$HTMLDIR/plane-alert-${TODAY}.json"
 
+VERSION="${VERSION}${VERSION:+-}"
+if [[ -s "/.VERSION" ]]; then
+  VERSION+="$(</.VERSION)"
+else
+  VERSION+="build_unknown"
+fi
+
 # Precompute midnight of today only once:
 midnight_epoch=$(date -d "$(date +%F) 00:00:00" +%s)
 today_ymd=$(date +%Y/%m/%d)
@@ -815,7 +822,7 @@ GENERATE_PF_JSON() {
   local re
   local k
   {
-    re='^(totallines|LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
+    re='^(totallines|LAST.*|HAS.*|max.*|station.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${records[$k]}"; fi
     done
@@ -839,6 +846,11 @@ GENERATE_PF_JSON() {
     if (idx == "maxindex" || idx == "totallines" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
+      idx = -1
+    } else if (idx == "station") {
+      # Preserve full key (e.g., "station:dist:value") as a single global entry
+      k = key
+      subkey = ""
       idx = -1
     } else if (idx !~ /^[0-9]+$/) {
       next
@@ -891,7 +903,7 @@ GENERATE_PA_JSON() {
   local re
   local k
   {
-    re='^(totallines|LAST.*|HAS.*|max.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
+    re='^(totallines|LAST.*|HAS.*|max.*|station.*|([0-9]+):([A-Za-z0-9_-]+)(:([A-Za-z0-9_-]+))?)$'
     for k in "${!pa_records[@]}"; do
       if [[ $k =~ $re && $k != "checked:"* ]]; then printf '%s\0%s\0' "$k" "${pa_records[$k]}"; fi
     done
@@ -915,6 +927,11 @@ GENERATE_PA_JSON() {
     if (idx == "maxindex" || idx == "totallines" || idx ~ /^LAST/ || idx ~ /^HAS/) {
       # Global keys
       k = idx
+      idx = -1
+    } else if (idx == "station") {
+      # Preserve full key (e.g., "station:dist:value") as a single global entry
+      k = key
+      subkey = ""
       idx = -1
     } else if (idx !~ /^[0-9]+$/) {
       next
@@ -1506,6 +1523,22 @@ if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
 if [[ -z "${pa_records[HASROUTE]}" ]]; then pa_records[HASROUTE]=false; fi
 if [[ -z "${pa_records[HASIMAGES]}" ]]; then pa_records[HASIMAGES]=false; fi
 if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+# Provide station metadata for front-end summaries
+records["station:dist:value"]="${DIST:-}"
+records["station:dist:unit"]="${DISTUNIT:-}"
+records["station:altitude:value"]="${MAXALT:-}"
+records["station:altitude:unit"]="${ALTUNIT:-}"
+records["station:lat"]="${LAT:-}"
+records["station:lon"]="${LON:-}"
+records["station:version"]="$VERSION"
+
+pa_records["station:dist:value"]="${DIST:-}"
+pa_records["station:dist:unit"]="${DISTUNIT:-}"
+pa_records["station:altitude:value"]="${MAXALT:-}"
+pa_records["station:altitude:unit"]="${ALTUNIT:-}"
+pa_records["station:lat"]="${LAT:-}"
+pa_records["station:lon"]="${LON:-}"
+pa_records["station:version"]="$VERSION"
 records[LASTUPDATE]="$NOWTIME"
 pa_records[LASTUPDATE]="$NOWTIME"
 

@@ -80,6 +80,17 @@
     /* Ensure theme toggle SVG is visible in both themes */
     #themeToggle svg { width: 1.1em; height: 1.1em; display: inline-block; vertical-align: middle; }
     button:hover { border-color: var(--fg); }
+    body.modal-open { overflow: hidden; }
+    .station-info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+    .station-info-modal.open { display: flex; }
+    .station-info-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; max-width: 640px; width: min(640px, 100%); max-height: 90vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border: 1px solid rgba(0,0,0,0.08); }
+    html.dark .station-info-card { border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+    .station-info-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: .5rem; right: 1rem; cursor: pointer; padding: .25rem; line-height: 1; }
+    .station-info-card h1 { margin-top: 1.25rem; font-size: 1.2rem; }
+    .station-info-card h1:first-of-type { margin-top: 0; }
+    .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
+    html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
+    .station-info-card p { margin: .35rem 0; }
     a { color: var(--link); text-decoration: none; }
     a:visited { color: var(--link-visited); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
@@ -269,10 +280,17 @@
       </div>
       <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
     </div>
-  <button id="manualUpdate" title="Update now">Update</button>
-  <button id="reload" title="Reload data">Reload</button>
+  <button id="stationInfoBtn" title="Show station information">Station Info</button>
+  <button id="reload" title="Update data">Update</button>
   <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
   </header>
+
+  <div id="stationInfoModal" class="station-info-modal" role="dialog" aria-modal="true" aria-labelledby="stationInfoTitle" aria-hidden="true">
+    <div class="station-info-card">
+      <button type="button" id="stationInfoClose" class="station-info-close" aria-label="Close station information">&times;</button>
+      <div id="stationInfoContent" class="station-info-content"></div>
+    </div>
+  </div>
 
   <main style="padding: 0 1rem 1rem;">
     <div style="overflow:auto;">
@@ -286,7 +304,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; 2025 Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank">Github repo</a>. <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank">Attributions</a>. Version ##VERSION##</small>
+    <small class="muted">&copy; <span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">Attributions</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -318,6 +336,18 @@
   };
 
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
+
+  const STATION_INFO_TEMPLATE = `
+<h1 id="stationInfoTitle">Planefence</h1>
+Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <a href="{{latLonUrl}}" target="_blank" rel="noreferrer noopener">{{lat}},{{lon}}</a>.
+<h1>Plane-Alert</h1>
+Plane-Alert shows those aircraft in range of the station that are part of the station's <a href="alertlist.txt" target="_blank" rel="noreferrer noopener">watchlist</a>.
+<h1>Messages</h1>
+Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight
+<footer>
+<p>Planefence is &copy; {{year}} by Ram&oacute;n F. Kolb, kx1t and is available as source code or as a Docker container. See the <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Github repository</a> for more information. Version: {{version}}</p>
+<p>Planefence is made possible thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>.</p>
+</footer>`;
 
 
   const truthy = (v) => {
@@ -448,9 +478,192 @@
   const theadRow = document.querySelector('#thead tr');
   const reloadBtn = document.getElementById('reload');
   reloadBtn?.addEventListener('click', () => location.reload());
-  const manualUpdateBtn = document.getElementById('manualUpdate');
   // global button reference (element created in the header)
   const newUpdatesBtn = document.getElementById('newUpdates');
+  const stationInfoBtn = document.getElementById('stationInfoBtn');
+  const stationInfoModal = document.getElementById('stationInfoModal');
+  const stationInfoContentEl = document.getElementById('stationInfoContent');
+  const stationInfoCloseBtn = document.getElementById('stationInfoClose');
+  const appVersionEl = document.getElementById('appVersionText');
+  const footerYearEl = document.getElementById('footerYear');
+  if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
+
+  const stationInfoState = {
+    dist: null,
+    distUnit: '',
+    altitude: null,
+    altUnit: '',
+    lat: null,
+    lon: null,
+    totalLines: null,
+    version: ''
+  };
+  let stationInfoLastFocus = null;
+
+  function updateFooterVersionText(value) {
+    if (!appVersionEl) return;
+    const label = value ? `Version ${value}` : 'Version --';
+    appVersionEl.textContent = label;
+  }
+  updateFooterVersionText('');
+
+  const numberFmt0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const numberFmt1 = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  const coordFmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function replaceTemplatePlaceholders(template, replacements) {
+    return Object.entries(replacements).reduce((acc, [token, rawValue]) => {
+      const safeVal = rawValue ?? '--';
+      const pattern = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return acc.replace(new RegExp(pattern, 'g'), safeVal);
+    }, template);
+  }
+
+  function formatStationDistance(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      return (num < 10 ? numberFmt1.format(num) : numberFmt0.format(Math.round(num)));
+    }
+    if (value != null && value !== '') return escapeHtml(value);
+    return '--';
+  }
+
+  function formatStationAltitude(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return numberFmt0.format(num);
+    if (value != null && value !== '') return escapeHtml(value);
+    return '--';
+  }
+
+  function truncateCoord(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    return Math.trunc(num * 100) / 100;
+  }
+
+  function formatStationCoord(value) {
+    const truncated = truncateCoord(value);
+    if (truncated != null) return coordFmt.format(truncated);
+    if (value != null && value !== '') return escapeHtml(value);
+    return '--';
+  }
+
+  function formatStationTotal(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return numberFmt0.format(num);
+    if (value != null && value !== '') return escapeHtml(value);
+    return '--';
+  }
+
+  function buildStationCoordUrl() {
+    const lat = truncateCoord(stationInfoState.lat);
+    const lon = truncateCoord(stationInfoState.lon);
+    if (lat == null || lon == null) return '';
+    const zoom = 11;
+    const latStr = lat.toFixed(2);
+    const lonStr = lon.toFixed(2);
+    return `https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lonStr}#map=${zoom}/${latStr}/${lonStr}`;
+  }
+
+  function buildStationInfoHtml() {
+    const replacements = {
+      '{{dist}}': formatStationDistance(stationInfoState.dist),
+      '{{distUnit}}': escapeHtml(stationInfoState.distUnit || '--'),
+      '{{altitude}}': formatStationAltitude(stationInfoState.altitude),
+      '{{altUnit}}': escapeHtml(stationInfoState.altUnit || '--'),
+      '{{lat}}': formatStationCoord(stationInfoState.lat),
+      '{{lon}}': formatStationCoord(stationInfoState.lon),
+      '{{latLonUrl}}': escapeHtml(buildStationCoordUrl() || 'https://www.openstreetmap.org/'),
+      '{{totalLines}}': formatStationTotal(stationInfoState.totalLines),
+      '{{year}}': String(new Date().getFullYear()),
+      '{{version}}': escapeHtml(stationInfoState.version || '--')
+    };
+    return replaceTemplatePlaceholders(STATION_INFO_TEMPLATE, replacements);
+  }
+
+  function refreshStationInfoContent() {
+    if (!stationInfoContentEl) return;
+    stationInfoContentEl.innerHTML = buildStationInfoHtml();
+  }
+
+  function openStationInfoModal() {
+    if (!stationInfoModal) return;
+    refreshStationInfoContent();
+    stationInfoLastFocus = document.activeElement;
+    stationInfoModal.classList.add('open');
+    stationInfoModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    stationInfoCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeStationInfoModal() {
+    if (!stationInfoModal) return;
+    stationInfoModal.classList.remove('open');
+    stationInfoModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (stationInfoLastFocus && typeof stationInfoLastFocus.focus === 'function') {
+      stationInfoLastFocus.focus({ preventScroll: true });
+    }
+    stationInfoLastFocus = null;
+  }
+
+  function updateStationInfoFromGlobals(globals) {
+    if (!globals || typeof globals !== 'object') return;
+    let changed = false;
+    const mapping = [
+      ['dist', 'station:dist:value'],
+      ['distUnit', 'station:dist:unit'],
+      ['altitude', 'station:altitude:value'],
+      ['altUnit', 'station:altitude:unit'],
+      ['lat', 'station:lat'],
+      ['lon', 'station:lon'],
+      ['version', 'station:version']
+    ];
+    for (const [stateKey, globalKey] of mapping) {
+      if (!(globalKey in globals)) continue;
+      const raw = globals[globalKey];
+      if (raw === '' || raw == null) continue;
+      const numeric = Number(raw);
+      const nextVal = Number.isFinite(numeric) ? numeric : String(raw);
+      if (stationInfoState[stateKey] === nextVal) continue;
+      stationInfoState[stateKey] = nextVal;
+      if (stateKey === 'version') {
+        updateFooterVersionText(nextVal);
+      }
+      changed = true;
+    }
+    if ('totallines' in globals) {
+      const tot = Number(globals.totallines);
+      if (Number.isFinite(tot) && stationInfoState.totalLines !== tot) {
+        stationInfoState.totalLines = tot;
+        changed = true;
+      }
+    }
+    if (changed) refreshStationInfoContent();
+  }
+
+  stationInfoBtn?.addEventListener('click', openStationInfoModal);
+  stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
+  stationInfoModal?.addEventListener('click', (ev) => {
+    if (ev.target === stationInfoModal) closeStationInfoModal();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeStationInfoModal();
+    }
+  });
+
+  refreshStationInfoContent();
 
   function updateNewUpdatesBanner(){
     try {
@@ -487,12 +700,6 @@
   // Toggle countdown and manual update UI depending on polling configuration
   if (!cfg.enablePoll) {
     if (nextUpdateEl) nextUpdateEl.style.display = 'none';
-    if (manualUpdateBtn) {
-      manualUpdateBtn.disabled = true;
-      manualUpdateBtn.title = 'Polling disabled';
-    }
-  } else {
-    if (manualUpdateBtn) manualUpdateBtn.title = 'Trigger immediate update';
   }
 
   // Expose a global rowCount helper so non-streaming code (poller, UI) can query
@@ -1469,6 +1676,7 @@ function addOrUpdateRow(r){
         streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
         streamGlobals.maxindex = Number(g.maxindex) || 0;
         for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+        updateStationInfoFromGlobals(streamGlobals);
       }
 
       while (true) {
@@ -1585,6 +1793,7 @@ async function pollAndMerge(modeForRun, generation) {
       let obj;
       try { obj = JSON.parse(line); } catch (e) { console.warn('poll: bad json', e, line); continue; }
       if (obj && obj.__globals) { localGlobals = obj.__globals || {};
+        updateStationInfoFromGlobals(localGlobals);
         if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
           const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');
@@ -1757,28 +1966,6 @@ async function pollAndMerge(modeForRun, generation) {
     if (cfg.enableStream) startStreamReader(modeGeneration);
     if (cfg.enablePoll) startPollingLoop(modeGeneration);
   }
-
-// Manual Update button: trigger immediate poll
-manualUpdateBtn?.addEventListener('click', async ()=>{
-  if (!cfg.enablePoll) return;
-  // Provide immediate feedback: disable button while running
-  try {
-    manualUpdateBtn.disabled = true;
-    const prevText = manualUpdateBtn.textContent;
-    manualUpdateBtn.textContent = 'Updating…';
-    if (prog) prog.textContent = 'Updating…';
-    const gen = modeGeneration;
-    const modeForRun = dataMode;
-    await pollAndMerge(modeForRun, gen);
-    if (gen === modeGeneration) scheduleNextPoll(cfg.pollIntervalSec || 60);
-    manualUpdateBtn.textContent = prevText;
-  } catch (e) {
-    console.error('Manual update failed', e);
-    if (prog) prog.textContent = 'Update failed';
-  } finally {
-    manualUpdateBtn.disabled = false;
-  }
-});
 
 // New-updates banner: when user clicks, jump to first page and show new rows
 if (newUpdatesBtn) {
