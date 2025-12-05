@@ -170,7 +170,7 @@ GET_CALLSIGN() {
 
 GET_TYPE () {
   local apiUrl="https://api.adsb.lol/v2/hex"
-  curl -sSL "$apiUrl/$1" | jq -r '.ac[] .t' 2>/dev/null
+  curl -m 30 -sSL "$apiUrl/$1" | jq -r '.ac[] .t' 2>/dev/null
 }
 
 GET_ROUTE_BULK () {
@@ -248,7 +248,7 @@ GET_ROUTE_BULK () {
           pa_records["$idx":checked:route]=true
         fi
       done
-    done <<< "$(curl -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
+    done <<< "$(curl -m 30 -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
   fi
 }
 
@@ -268,7 +268,7 @@ GET_ROUTE_INDIVIDUAL () {
 			fi
 		fi
 
-		if route="$(curl -fsSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
+    if route="$(curl -m 30 -fsSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
 		                      -H 'accept: application/json' \
 													-H 'Content-Type: application/json' \
 													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
@@ -375,12 +375,12 @@ GET_PS_PHOTO () {
   esac
 
   # fetch
-  if json="$(curl -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+  if json="$(curl -m 30 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
      link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
      thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
      [[ -n $link && -n $thumb ]]; then
 
-    curl -fsSL --fail "$thumb" > "$jpg" || :
+    curl -m 30 -fsSL --fail "$thumb" > "$jpg" || :
     printf '%s\n' "$link"  >"$lnk"
     printf '%s\n' "$thumb" >"$tlnk"
 
@@ -442,7 +442,7 @@ GET_NOISEDATA () {
   # Ensure each needed file is cached locally for this process
   for f in "${files[@]}"; do
     if [[ ! -s "$NOISECACHE_DIR/$f" ]]; then
-      curl -fsSL "$REMOTENOISE/$f" -o "$NOISECACHE_DIR/$f" 2>/dev/null || :
+      curl -m 30 -fsSL "$REMOTENOISE/$f" -o "$NOISECACHE_DIR/$f" 2>/dev/null || :
     fi
   done
 
@@ -492,7 +492,7 @@ CREATE_NOISEPLOT () {
 	local NOISEGRAPHFILE="$OUTFILEDIR/noisegraph-$STARTTIME-$4.png"
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
-    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+    if ! curl -m 30 -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$STARTTIME" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
       return
     fi
     noiselog="$(</tmp/noisecapt.log)"
@@ -569,7 +569,7 @@ CREATE_SPECTROGRAM () {
 		# shellcheck disable=SC2076
 
       log_print DEBUG "Getting spectrogram $spectrofile from $REMOTENOISE"
-      if ! curl -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/$spectrofile" 2>/dev/null || \
+      if ! curl -m 30 -fsSL "$REMOTENOISE/$spectrofile" > "$OUTFILEDIR/$spectrofile" 2>/dev/null || \
         { [[ -f "$spectrofile" ]] && (( $(stat -c '%s' "$OUTFILEDIR/x${spectrofile:---}" 2>/dev/null || echo 0) < 10 ));}; then
           log_print DEBUG "Curling spectrogram $spectrofile from $REMOTENOISE failed!"
           rm -f "$OUTFILEDIR/$spectrofile"
@@ -612,7 +612,7 @@ CREATE_MP3 () {
 
   # check if we can get the noisecapt log:
   if [[ -z "$noiselog" ]]; then
-    if ! curl -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
+    if ! curl -m 30 -fsSL "$REMOTENOISE/noisecapt-$(date -d "@$1" +%y%m%d).log" >/tmp/noisecapt.log 2>/dev/null; then
       return
     fi
     noiselog="$(</tmp/noisecapt.log)"
@@ -626,7 +626,7 @@ CREATE_MP3 () {
 	# shellcheck disable=SC2076
 	if [[ ! -s "$OUTFILEDIR/$mp3f" && $noiselist =~ "$mp3f" ]] ; then
 		# we don't have $sf locally, or if it's an empty file, we get it:
-		curl -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f" 2>/dev/null
+    curl -m 30 -fsSL "$REMOTENOISE/$mp3f" > "$OUTFILEDIR/$mp3f" 2>/dev/null
 	fi
 	# shellcheck disable=SC2012
 	if [[ ! -s "$OUTFILEDIR/$mp3f" ]] || (( $(ls -s1 "$OUTFILEDIR/$mp3f" | awk '{print $1}') < 4 )); then
@@ -1016,7 +1016,7 @@ fi
 
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
-  curl -fsSL "$REMOTENOISE/noisecapt-dir.gz" 2>/dev/null | zcat > /tmp/.allnoise 2>/dev/null &
+  curl -m 30 -fsSL "$REMOTENOISE/noisecapt-dir.gz" 2>/dev/null | zcat > /tmp/.allnoise 2>/dev/null &
 fi
 
 if chk_enabled "$PLANEALERT"; then
@@ -1373,7 +1373,7 @@ done
 log_print INFO "Initial processing complete. New/Updated: ${#newrecords[@]}/${#updatedrecords[@]} (PF); ${#pa_newrecords[@]}/${#pa_updatedrecords[@]} (PA). Total number of records is now $((records[maxindex] + 1)) (PF); $((pa_records[maxindex] + 1)) (PA) . Continue adding more info for records ${!processed_indices[*]} (PF) and ${!pa_processed_indices[*]} (PA)."
 
 # try to pre-seed the noisecapt log:
-if [[ -n "$REMOTENOISE" ]] && curl -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
+if [[ -n "$REMOTENOISE" ]] && curl -m 30 -fsSL "$REMOTENOISE/noisecapt-$TODAY.log" >/tmp/noisecapt.log 2>/dev/null; then
   noiselog="$(</tmp/noisecapt.log)"
 fi
 

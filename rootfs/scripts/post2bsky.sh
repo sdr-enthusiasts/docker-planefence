@@ -100,9 +100,9 @@ if [[ -z "$TEXT" ]]; then
 fi
 
 if [[ ${mode,,} == "pf" ]]; then
-  source /usr/share/planefence/persist/planefence.config
+  source /usr/share/planefence/planefence.conf
 elif [[ ${mode,,} == "pa" ]]; then
-  source /usr/share/planefence/persist/plane-alert.config
+  source /usr/share/planefence/plane-alert.conf
 else
   log_print ERR "First argument must be either 'pf' (PlaneFence) or 'pa' (Plane Alert)"
   log_print ERR "You provided: '${args[*]}'"

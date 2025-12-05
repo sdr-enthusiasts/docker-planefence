@@ -1005,37 +1005,63 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     });
   }
 
-  // 3) Seen rendering: two lines, small “still updating”, no “at”
-  function formatSeen(secStr, completeFlag, preferTs){
-    const s = Number(preferTs ?? secStr);
-    if (!Number.isFinite(s)) return "";
+  const tzAbbrev = (() => {
+    try {
+      const fmt = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' });
+      const parts = fmt.formatToParts(new Date());
+      const tzPart = parts.find(p => p.type === 'timeZoneName');
+      return tzPart ? tzPart.value : '';
+    } catch (e) {
+      return '';
+    }
+  })();
+
+  // 3) Seen rendering helpers
+  function formatRelativeOrDate(ts){
+    const num = Number(ts);
+    if (!Number.isFinite(num) || num <= 0) return '';
     const nowMs = Date.now();
-    const tsMs = s * 1000;
-    const diffSec = Math.max(0, Math.floor((nowMs - tsMs)/1000));
-    const rel = diffSec < 60 ? `${diffSec}s ago`
-          : diffSec < 3600 ? `${Math.floor(diffSec/60)}m ago`
-          : `${Math.floor(diffSec/3600)}h ago`;
+    const tsMs = num * 1000;
+    const diffSec = Math.max(0, Math.floor((nowMs - tsMs) / 1000));
+    if (diffSec < 60) return `${diffSec}s ago`;
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(tsMs));
+  }
 
-    const dt = new Date(tsMs);
-    // Use 24-hour clock (hour12: false) with two-digit hour for consistency
-    const timeFmt = new Intl.DateTimeFormat(undefined, {
-      hour: '2-digit', minute: '2-digit', timeZoneName: 'short', hour12: false
-    });
-    const timeStr = timeFmt.format(dt);
+  function formatClockOrDate(ts){
+    const num = Number(ts);
+    if (!Number.isFinite(num) || num <= 0) return { text: '--', isTime: false };
+    const dt = new Date(num * 1000);
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dt >= todayStart) {
+      return {
+        text: new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(dt),
+        isTime: true
+      };
+    }
+    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(dt);
+    const day = String(dt.getDate()).padStart(2, '0');
+    return { text: `${month}-${day}`, isTime: false };
+  }
 
-    const today = new Date();
-    const sameDay = dt.getFullYear()===today.getFullYear()
-                && dt.getMonth()===today.getMonth()
-                && dt.getDate()===today.getDate();
-    const dateStr = sameDay ? "" : new Intl.DateTimeFormat(undefined, {
-      year:'numeric', month:'short', day:'numeric'
-    }).format(dt);
-
+  function formatSeen(firstTs, closestTs, lastTs, completeFlag){
+    const firstStr = formatRelativeOrDate(firstTs);
+    const closestStr = formatRelativeOrDate(closestTs);
+    const lastStr = formatRelativeOrDate(lastTs || closestTs || firstTs);
+    if (!firstStr && !closestStr && !lastStr) return '';
+    const closestPrimary = closestStr || lastStr || firstStr || '--';
+    const primary = `closest ${closestPrimary}`;
+    const firstLine = formatClockOrDate(firstTs);
+    const closestLine = formatClockOrDate(closestTs);
+    const lastLine = formatClockOrDate(lastTs || closestTs || firstTs);
+    const timelineCore = [firstLine.text, closestLine.text, lastLine.text].join(' / ');
+    const hasTimeValue = firstLine.isTime || closestLine.isTime || lastLine.isTime;
+    const timeline = (tzAbbrev && hasTimeValue) ? `${timelineCore} ${tzAbbrev}` : timelineCore;
     const updating = (String(completeFlag) !== 'true')
-      ? `<div class="still-updating">· still updating</div>` : "";
-
-    // Line 1: relative; Line 2: time (+ date if not today)
-    return `<div class="mono">${rel}</div><div class="mono">${timeStr}${dateStr ? ' · ' + dateStr : ''}</div>${updating}`;
+      ? `<div class="still-updating">· still updating</div>` : '';
+    return `<div class="mono">${primary}</div><div class="mono">${timeline}</div>${updating}`;
   }
 
 
@@ -1138,7 +1164,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   const viewCols = [
     { key:"idx", title:"#", width:"4%" },
     { key:"thumb", title:"", width:"6%" },
-  { key:"when", title:"Time when closest" },
+  { key:"when", title:"Time (first / closest / last)" },
     { key:"aircraft", title:"Aircraft", width:"22%" },
   // Route column removed; route will be shown in Aircraft column after callsign
   // Position column slightly narrower (~70% of previous). Previous was 16%.
@@ -1238,7 +1264,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   theadRow.innerHTML = "";
   for (const c of viewCols){
     const th = document.createElement('th');
-    th.textContent = c.title;
+    const headerHtml = c.titleHtml ?? c.title ?? '';
+    if (c.titleHtml) th.innerHTML = headerHtml;
+    else th.textContent = headerHtml;
     if (c.width) th.style.width = c.width;
     theadRow.appendChild(th);
   }
@@ -1625,11 +1653,12 @@ function renderRow(r) {
     : `<span class="mono">${safe(r.index)}</span>`;
 
   // Seen
-  const lastSeen = r["time:lastseen"] || "";
   const firstSeen = r["time:firstseen"] || "";
+  const lastSeen = r["time:lastseen"] || "";
   const atMindist = r["time:time_at_mindist"] || "";
-  const whenHtml = (atMindist || lastSeen || firstSeen)
-    ? formatSeen(lastSeen || firstSeen, r.complete, atMindist || lastSeen || firstSeen)
+  const closestTs = atMindist || lastSeen || firstSeen;
+  const whenHtml = (closestTs || firstSeen || lastSeen)
+    ? formatSeen(firstSeen, closestTs, lastSeen, r.complete)
     : "";
 
   const icao = safe(r.icao);

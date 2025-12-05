@@ -139,7 +139,7 @@ for idx in "${INDEX[@]}"; do
   log_print DEBUG "Posting to Bsky: ${pa_records["$idx":tail]} (${pa_records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true
+  posturl="$(/scripts/post2bsky.sh pa "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
     log_print INFO "Bluesky notification successful for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}): $posturl"
   else
