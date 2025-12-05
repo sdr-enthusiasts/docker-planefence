@@ -1535,6 +1535,7 @@ if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
 if [[ -z "${pa_records[HASROUTE]}" ]]; then pa_records[HASROUTE]=false; fi
 if [[ -z "${pa_records[HASIMAGES]}" ]]; then pa_records[HASIMAGES]=false; fi
 if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+
 # Provide station metadata for front-end summaries
 records["station:dist:value"]="${DIST:-}"
 records["station:dist:unit"]="${DISTUNIT:-}"
@@ -1544,6 +1545,9 @@ records["station:lat"]="${LAT:-}"
 records["station:lon"]="${LON:-}"
 records["station:version"]="$VERSION"
 records["station:heatmapzoom"]="$HEATMAPZOOM"
+records["station:me"]="$MY"
+records["station:myurl"]="$MYURL"
+records["LASTUPDATE"]="$NOWTIME"
 
 pa_records["station:dist:value"]="${DIST:-}"
 pa_records["station:dist:unit"]="${DISTUNIT:-}"
@@ -1552,8 +1556,11 @@ pa_records["station:altitude:unit"]="${ALTUNIT:-}"
 pa_records["station:lat"]="${LAT:-}"
 pa_records["station:lon"]="${LON:-}"
 pa_records["station:version"]="$VERSION"
-records[LASTUPDATE]="$NOWTIME"
-pa_records[LASTUPDATE]="$NOWTIME"
+records["station:me"]="$MY"
+records["station:myurl"]="$MYURL"
+pa_records["station:me"]="$MY"
+pa_records["station:myurl"]="$MYURL"
+pa_records["LASTUPDATE"]="$NOWTIME"
 
 log_print INFO "Processing complete. Now writing results to disk..."
 

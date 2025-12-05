@@ -70,6 +70,10 @@
   /* Keep header visible while scrolling */
   header { position: sticky; top: 0; z-index: 50; }
     header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+    .station-headline { display: flex; align-items: baseline; margin-left: .75rem; font-size: 1rem; color: var(--muted); }
+    .station-headline.station-headline-empty { display: none; }
+    .station-headline a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .station-headline a:hover, .station-headline a:focus-visible { text-decoration: underline; }
     header .spacer { flex: 1; }
     button, .btn {
       background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
@@ -265,6 +269,9 @@
 <body>
   <header>
     <h1>Planefence</h1>
+    <div id="stationHeadline" class="station-headline station-headline-empty">
+      <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
+    </div>
     <span class="status mono" id="progress">Loading…</span>
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
@@ -355,6 +362,7 @@
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
 
   const STATION_INFO_TEMPLATE = `
+<h1 class="station-welcome-title">Welcome to <a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a> Planefence and Plane-Alert Station</h1>
 <h1 id="stationInfoTitle">Planefence</h1>
 Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <a href="{{latLonUrl}}" target="_blank" rel="noreferrer noopener">{{lat}},{{lon}}</a>.
 <h1>Plane-Alert</h1>
@@ -366,12 +374,11 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 <p>Planefence is made possible thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>.</p>
 </footer>`;
 
-
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
+  let stationHeadlineEl, stationHeadlineLink;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let appVersionEl, footerYearEl;
-
 
   const truthy = (v) => {
     if (v === true || v === 1) return true;
@@ -505,6 +512,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     reloadBtn?.addEventListener('click', () => location.reload());
     newUpdatesBtn = document.getElementById('newUpdates');
     heatmapBtn = document.getElementById('heatmapBtn');
+    stationHeadlineEl = document.getElementById('stationHeadline');
+    stationHeadlineLink = document.getElementById('stationHeadlineLink');
     stationInfoBtn = document.getElementById('stationInfoBtn');
     stationInfoModal = document.getElementById('stationInfoModal');
     stationInfoContentEl = document.getElementById('stationInfoContent');
@@ -518,6 +527,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
     updateFooterVersionText('');
     refreshStationInfoContent();
+    updateStationHeadline();
     updateHeatmapButtonState();
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
@@ -544,7 +554,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     lon: null,
     totalLines: null,
     version: '',
-    heatmapZoom: null
+    heatmapZoom: null,
+    stationName: '',
+    stationUrl: ''
   };
   let stationInfoLastFocus = null;
   let heatmapLastFocus = null;
@@ -790,6 +802,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 
   function buildStationInfoHtml() {
     const replacements = {
+      '{{stationName}}': escapeHtml(stationInfoState.stationName || 'this'),
+      '{{stationUrl}}': escapeHtml(stationInfoState.stationUrl || 'https://sdr-e.com/docker-planefence'),
       '{{dist}}': formatStationDistance(stationInfoState.dist),
       '{{distUnit}}': escapeHtml(stationInfoState.distUnit || '--'),
       '{{altitude}}': formatStationAltitude(stationInfoState.altitude),
@@ -807,6 +821,27 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   function refreshStationInfoContent() {
     if (!stationInfoContentEl) return;
     stationInfoContentEl.innerHTML = buildStationInfoHtml();
+  }
+
+  function updateStationHeadline() {
+    if (!stationHeadlineEl || !stationHeadlineLink) return;
+    const rawName = stationInfoState.stationName;
+    const name = typeof rawName === 'string' ? rawName.trim() : '';
+    const rawUrl = stationInfoState.stationUrl;
+    const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (name && url) {
+      stationHeadlineLink.textContent = name;
+      stationHeadlineLink.setAttribute('href', url);
+      stationHeadlineLink.setAttribute('target', '_blank');
+      stationHeadlineLink.setAttribute('rel', 'noreferrer noopener');
+      stationHeadlineEl.classList.remove('station-headline-empty');
+    } else {
+      stationHeadlineLink.textContent = '';
+      stationHeadlineLink.removeAttribute('href');
+      stationHeadlineLink.removeAttribute('target');
+      stationHeadlineLink.removeAttribute('rel');
+      stationHeadlineEl.classList.add('station-headline-empty');
+    }
   }
 
   function openStationInfoModal() {
@@ -851,7 +886,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       ['lat', 'station:lat'],
       ['lon', 'station:lon'],
       ['version', 'station:version'],
-      ['heatmapZoom', 'station:heatmapzoom']
+      ['heatmapZoom', 'station:heatmapzoom'],
+      ['stationName', 'station:me'],
+      ['stationUrl', 'station:myurl']
     ];
     for (const [stateKey, globalKey] of mapping) {
       const raw = getGlobalValue(globals, globalKey);
@@ -873,7 +910,10 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       }
     }
     updateHeatmapState(globals);
-    if (changed) refreshStationInfoContent();
+    if (changed) {
+      refreshStationInfoContent();
+      updateStationHeadline();
+    }
   }
 
   document.addEventListener('keydown', (ev) => {
