@@ -19,7 +19,7 @@
 shopt -s extglob
 
 source /scripts/pf-common
-source /usr/share/planefence/planefence.conf
+source /usr/share/planefence/plane-alert.conf
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
                     # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
@@ -42,10 +42,10 @@ if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
   exit
 fi
 
-if [[ -f "/usr/share/planefence/notifiers/bluesky.pf.template" ]]; then
-  template_clean="$(</usr/share/planefence/notifiers/bluesky.pf.template)"
+if [[ -f "/usr/share/planefence/notifiers/bluesky.pa.template" ]]; then
+  template_clean="$(</usr/share/planefence/notifiers/bluesky.pa.template)"
 else
-  log_print ERR "No Bluesky template found at /usr/share/planefence/notifiers/bluesky.pf.template. Aborting."
+  log_print ERR "No Bluesky template found at /usr/share/planefence/notifiers/bluesky.pa.template. Aborting."
   exit 1
 fi
 
@@ -61,7 +61,7 @@ log_print DEBUG "Reading records for Bluesky notification"
 READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Bluesky notification and stale records"
-build_index_and_stale INDEX STALE bsky
+build_index_and_stale INDEX STALE bsky pa
 
 if (( ${#INDEX[@]} )); then
   log_print DEBUG "Records ready for Bluesky notification: ${INDEX[*]}"
@@ -79,17 +79,17 @@ if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
 fi
 
 for idx in "${INDEX[@]}"; do
-  log_print DEBUG "Preparing Bluesky notification for ${records["$idx":tail]}"
+  log_print DEBUG "Preparing Bluesky notification for ${pa_records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
 
   # Set strings:
-  squawk="${records["$idx":squawk:value]}"
+  squawk="${pa_records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
     template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
-      template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
+      template="$(template_replace "||EMERGENCY||" "#Emergency: #${pa_records["$idx":squawk:description]// /${SPACE}} " "$template")"
     else
       template="$(template_replace "||EMERGENCY||" "" "$template")"
     fi
@@ -97,53 +97,53 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||SQUAWK||" "" "$template")"
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
-  if [[ -n "${records["$idx":owner]}" ]]; then
-    template="$(template_replace "||OWNER||" "Owner: #${records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
+  if [[ -n "${pa_records["$idx":owner]}" ]]; then
+    template="$(template_replace "||OWNER||" "Owner: #${pa_records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
   else
     template="$(template_replace "||OWNER||" "" "$template")"
   fi
-  template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]}" || true)" "$template")"
-  template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
-  if [[ "${records["$idx":route]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
+  template="$(template_replace "||ICAO||" "${pa_records["$idx":icao]}" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${pa_records["$idx":callsign]}" "$template")"
+  template="$(template_replace "||TAIL||" "$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]}" || true)" "$template")"
+  template="$(template_replace "||TYPE||" "${pa_records["$idx":type]}" "$template")"
+  if [[ "${pa_records["$idx":route]}" != "n/a" ]]; then 
+    template="$(template_replace "||ROUTE||" "#${pa_records["$idx":route]}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
-  template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
-  if [[ -n ${records["$idx":sound:loudness]} ]]; then
-    template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
+  template="$(template_replace "||TIME||" "$(date -d "@${pa_records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
+  template="$(template_replace "||ALT||" "${pa_records["$idx":altitude:value]} $ALTUNIT" "$template")"
+  template="$(template_replace "||DIST||" "${pa_records["$idx":distance:value]} $DISTUNIT (${pa_records["$idx":angle:value]}° ${pa_records["$idx":angle:name]})" "$template")"
+  if [[ -n ${pa_records["$idx":sound:loudness]} ]]; then
+    template="$(template_replace "||LOUDNESS||" "Loudness: ${pa_records["$idx":sound:loudness]} dB" "$template")"
   else
     template="$(template_replace "||LOUDNESS||" "" "$template")"
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
-  links="${records["$idx":link:map]}${records["$idx":link:map]:+ }"
-  links+="${records["$idx":link:fa]}${records["$idx":link:fa]:+ }"
-  links+="${records["$idx":link:faa]}"
+  links="${pa_records["$idx":link:map]}${pa_records["$idx":link:map]:+ }"
+  links+="${pa_records["$idx":link:fa]}${pa_records["$idx":link:fa]:+ }"
+  links+="${pa_records["$idx":link:faa]}"
   template="$(template_replace "||LINKS||" "$links" "$template")"
 
   # Handle images
   img_array=()
-  if [[ -n "${records["$idx":image:file]}" && -f "${records["$idx":image:file]}" ]]; then
-    img_array+=("${records["$idx":image:file]}")
+  if [[ -n "${pa_records["$idx":image:file]}" && -f "${pa_records["$idx":image:file]}" ]]; then
+    img_array+=("${pa_records["$idx":image:file]}")
   fi
-  if [[ -n "${records["$idx":screenshot:file]}" && -f "${records["$idx":screenshot:file]}" ]]; then
-    img_array+=("${records["$idx":screenshot:file]}")
+  if [[ -n "${pa_records["$idx":screenshot:file]}" && -f "${pa_records["$idx":screenshot:file]}" ]]; then
+    img_array+=("${pa_records["$idx":screenshot:file]}")
   fi
 
   # Post to Bsky
-  log_print DEBUG "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
+  log_print DEBUG "Posting to Bsky: ${pa_records["$idx":tail]} (${pa_records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh pf "$template" ${img_array[@]})" || true
+  posturl="$(/scripts/post2bsky.sh "$template" ${img_array[@]})" || true
   if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Bluesky notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+    log_print INFO "Bluesky notification successful for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}): $posturl"
   else
-    log_print ERR "Bluesky notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
+    log_print ERR "Bluesky notification failed for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]})"
     log_print ERR "Bluesky notification error details:\n$posturl"
   fi
   link[idx]="$posturl"
@@ -155,14 +155,14 @@ LOCK_RECORDS
 READ_RECORDS ignore-lock
 
 for idx in "${STALE[@]}"; do
-  records["$idx":bsky:notified]="stale"
+  pa_records["$idx":bsky:notified]="stale"
 done
 for idx in "${!link[@]}"; do
   if [[ "${link[idx]:0:4}" == "http" ]]; then
-    records["$idx":bsky:notified]=true
-    records["$idx":bsky:link]="${link[idx]}"
+    pa_records["$idx":bsky:notified]=true
+    pa_records["$idx":bsky:link]="${link[idx]}"
   else
-    records["$idx":bsky:notified]="error"
+    pa_records["$idx":bsky:notified]="error"
   fi
 done
 

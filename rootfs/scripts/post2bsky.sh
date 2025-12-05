@@ -9,7 +9,6 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 
-source /usr/share/planefence/persist/planefence.config
 source /scripts/pf-common
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
@@ -17,13 +16,10 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 
 shopt -s extglob
 
-# Set the default values
-BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
-BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
 SPACE=$'\x1F'   # "special" space
 
 if (( ${#@} < 1 )); then
-  log_print ERR "Usage: $0 <text> [image1] [image2] ..."
+  log_print ERR "Usage: $0 [pf|pa] <text> [image1] [image2] ..."
   exit 1
 fi
 
@@ -104,13 +100,27 @@ fi
 
 # Extract info from the command line arguments
 args=("$@")
-TEXT="${args[0]}"
-IMAGES=("${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}") # up to 4 images
+mode="${args[0]}"
+TEXT="${args[1]}"
+IMAGES=("${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}") # up to 4 images
 
 if [[ -z "$TEXT" ]]; then
     log_print ERR "A post text must be included in the request to $0"
     exit 1
 fi
+
+if [[ ${mode,,} == "pf" ]]; then
+  source /usr/share/planefence/persist/planefence.config
+elif [[ ${mode,,} == "pa" ]]; then
+  source /usr/share/planefence/persist/plane-alert.config
+else
+  log_print ERR "First argument must be either 'pf' (PlaneFence) or 'pa' (Plane Alert)"
+  exit 1
+fi
+
+# Set the default values
+BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
+BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
 
 # Authenticate with BlueSky
 bsky_auth
