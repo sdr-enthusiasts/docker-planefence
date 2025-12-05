@@ -63,10 +63,6 @@ DELETEAFTER="10"
     \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
     -mmin +"${DELETEAFTER}" \
     -exec rm -rf -- {} + 2>/dev/null || :
-# ./pf-create-html.sh	&	# create PF HTML page
-
-# Run heatmap script in the background
-./pf-heatmap.sh &
 
 # Run notifiers scripts in the background
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then

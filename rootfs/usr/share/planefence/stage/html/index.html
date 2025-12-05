@@ -91,6 +91,14 @@
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
     html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
     .station-info-card p { margin: .35rem 0; }
+    .heatmap-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1100; padding: 1rem; }
+    .heatmap-modal.open { display: flex; }
+    .heatmap-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(1100px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; }
+    html.dark .heatmap-card { border-color: rgba(255,255,255,0.12); }
+    .heatmap-frame { border: none; width: 100%; height: 100%; background: #000; display: block; flex: 1; }
+    .heatmap-close { position: absolute; top: .5rem; right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
+    .heatmap-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; background: rgba(0,0,0,0.55); padding: 0.65rem 1.25rem; border-radius: 999px; z-index: 1100; }
+    .heatmap-loading.hidden { opacity: 0; pointer-events: none; }
     a { color: var(--link); text-decoration: none; }
     a:visited { color: var(--link-visited); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
@@ -280,6 +288,7 @@
       </div>
       <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
     </div>
+  <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
   <button id="stationInfoBtn" title="Show station information">Station Info</button>
   <button id="reload" title="Update data">Update</button>
   <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
@@ -289,6 +298,14 @@
     <div class="station-info-card">
       <button type="button" id="stationInfoClose" class="station-info-close" aria-label="Close station information">&times;</button>
       <div id="stationInfoContent" class="station-info-content"></div>
+    </div>
+  </div>
+
+  <div id="heatmapModal" class="heatmap-modal" role="dialog" aria-modal="true" aria-label="Planefence heatmap" aria-hidden="true">
+    <div class="heatmap-card">
+      <button type="button" id="heatmapClose" class="heatmap-close" aria-label="Close heatmap">&times;</button>
+      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+      <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap…</div>
     </div>
   </div>
 
@@ -304,7 +321,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; <span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">Attributions</a>. <span id="appVersionText">Version --</span></small>
+    <small class="muted">&copy; <span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -348,6 +365,12 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 <p>Planefence is &copy; {{year}} by Ram&oacute;n F. Kolb, kx1t and is available as source code or as a Docker container. See the <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Github repository</a> for more information. Version: {{version}}</p>
 <p>Planefence is made possible thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>.</p>
 </footer>`;
+
+
+  let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
+  let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
+  let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
+  let appVersionEl, footerYearEl;
 
 
   const truthy = (v) => {
@@ -409,6 +432,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
         body.classList.toggle('mode-planefence', !isPlaneAlertMode());
       }
+      updateHeatmapButtonState();
     }
     applyDataModeUI();
     let modeGeneration = 0;
@@ -471,22 +495,45 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   })();
 
   // -------- Helpers --------
-  const prog = document.getElementById('progress');
-  if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
-  const lastUpdateEl = document.getElementById('lastupdate');
-  const nextUpdateEl = document.getElementById('nextupdate');
-  const theadRow = document.querySelector('#thead tr');
-  const reloadBtn = document.getElementById('reload');
-  reloadBtn?.addEventListener('click', () => location.reload());
-  // global button reference (element created in the header)
-  const newUpdatesBtn = document.getElementById('newUpdates');
-  const stationInfoBtn = document.getElementById('stationInfoBtn');
-  const stationInfoModal = document.getElementById('stationInfoModal');
-  const stationInfoContentEl = document.getElementById('stationInfoContent');
-  const stationInfoCloseBtn = document.getElementById('stationInfoClose');
-  const appVersionEl = document.getElementById('appVersionText');
-  const footerYearEl = document.getElementById('footerYear');
-  if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
+  document.addEventListener('DOMContentLoaded', ()=>{
+    prog = document.getElementById('progress');
+    if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
+    lastUpdateEl = document.getElementById('lastupdate');
+    nextUpdateEl = document.getElementById('nextupdate');
+    theadRow = document.querySelector('#thead tr');
+    reloadBtn = document.getElementById('reload');
+    reloadBtn?.addEventListener('click', () => location.reload());
+    newUpdatesBtn = document.getElementById('newUpdates');
+    heatmapBtn = document.getElementById('heatmapBtn');
+    stationInfoBtn = document.getElementById('stationInfoBtn');
+    stationInfoModal = document.getElementById('stationInfoModal');
+    stationInfoContentEl = document.getElementById('stationInfoContent');
+    stationInfoCloseBtn = document.getElementById('stationInfoClose');
+    heatmapModal = document.getElementById('heatmapModal');
+    heatmapFrame = document.getElementById('heatmapFrame');
+    heatmapCloseBtn = document.getElementById('heatmapClose');
+    heatmapLoadingEl = document.getElementById('heatmapLoading');
+    appVersionEl = document.getElementById('appVersionText');
+    footerYearEl = document.getElementById('footerYear');
+    if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
+    updateFooterVersionText('');
+    refreshStationInfoContent();
+    updateHeatmapButtonState();
+    stationInfoBtn?.addEventListener('click', openStationInfoModal);
+    stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
+    stationInfoModal?.addEventListener('click', (ev) => {
+      if (ev.target === stationInfoModal) closeStationInfoModal();
+    });
+    heatmapBtn?.addEventListener('click', openHeatmapModal);
+    heatmapCloseBtn?.addEventListener('click', closeHeatmapModal);
+    heatmapModal?.addEventListener('click', (ev) => {
+      if (ev.target === heatmapModal) closeHeatmapModal();
+    });
+    heatmapFrame?.addEventListener('load', () => {
+      if (heatmapModal?.classList.contains('open')) setHeatmapLoading(false);
+    });
+    setHeatmapLoading(true);
+  }, { once: true });
 
   const stationInfoState = {
     dist: null,
@@ -496,16 +543,183 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     lat: null,
     lon: null,
     totalLines: null,
-    version: ''
+    version: '',
+    heatmapZoom: null
   };
   let stationInfoLastFocus = null;
+  let heatmapLastFocus = null;
+  const heatmapState = {
+    lat: null,
+    lon: null,
+    distMeters: null,
+    dateStr: '',
+    zoom: 11
+  };
+
+  function setHeatmapLoading(active) {
+    if (!heatmapLoadingEl) return;
+    if (active) heatmapLoadingEl.classList.remove('hidden');
+    else heatmapLoadingEl.classList.add('hidden');
+  }
+
+  function convertDistanceToMeters(value, unit) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    const normalized = String(unit || '').trim().toLowerCase();
+    const unitMap = {
+      nm: 1852,
+      'nmi': 1852,
+      mi: 1609,
+      mile: 1609,
+      miles: 1609,
+      km: 1000,
+      kilometer: 1000,
+      kilometers: 1000,
+      m: 1,
+      meter: 1,
+      meters: 1
+    };
+    const factor = unitMap[normalized];
+    if (factor) return Math.round(num * factor);
+    return Math.round(num);
+  }
+
+  function formatHeatmapDate(globals) {
+    const ts = globals && globals.LASTUPDATE ? Number(globals.LASTUPDATE) : NaN;
+    const date = Number.isFinite(ts) && ts > 0 ? new Date(ts * 1000) : new Date();
+    const yy = String(date.getUTCFullYear()).slice(-2);
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    return `${yy}${mm}${dd}`;
+  }
+
+  function resolveHeatmapZoom() {
+    const candidate = Number(stationInfoState.heatmapZoom);
+    if (Number.isFinite(candidate) && candidate > 0) return candidate;
+    return 11;
+  }
+
+  function isHeatmapDataReady() {
+    return Number.isFinite(heatmapState.lat)
+      && Number.isFinite(heatmapState.lon)
+      && Number.isFinite(heatmapState.distMeters)
+      && typeof heatmapState.dateStr === 'string'
+      && heatmapState.dateStr.length === 6;
+  }
+
+  function updateHeatmapButtonState() {
+    if (!heatmapBtn) return;
+    const visible = !isPlaneAlertMode();
+    heatmapBtn.style.display = visible ? 'inline-block' : 'none';
+    heatmapBtn.disabled = !visible || !isHeatmapDataReady();
+  }
+
+  function updateHeatmapState(globals) {
+    const latVal = truncateCoord(stationInfoState.lat);
+    const lonVal = truncateCoord(stationInfoState.lon);
+    const distMeters = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    const dateStr = formatHeatmapDate(globals || {});
+    const zoomLevel = resolveHeatmapZoom();
+    let changed = false;
+    if (!Object.is(heatmapState.lat, latVal)) { heatmapState.lat = latVal; changed = true; }
+    if (!Object.is(heatmapState.lon, lonVal)) { heatmapState.lon = lonVal; changed = true; }
+    if (!Object.is(heatmapState.distMeters, distMeters)) { heatmapState.distMeters = distMeters; changed = true; }
+    if (heatmapState.dateStr !== dateStr) { heatmapState.dateStr = dateStr; changed = true; }
+    if (!Object.is(heatmapState.zoom, zoomLevel)) { heatmapState.zoom = zoomLevel; changed = true; }
+    if (changed) updateHeatmapButtonState(); else if (heatmapBtn) heatmapBtn.disabled = !isHeatmapDataReady() || isPlaneAlertMode();
+  }
+
+  function buildHeatmapHtml() {
+    const lat = Number(heatmapState.lat);
+    const lon = Number(heatmapState.lon);
+    const dist = Math.max(0, Math.round(Number(heatmapState.distMeters)));
+    const dateStr = heatmapState.dateStr;
+    const latStr = lat.toFixed(2);
+    const lonStr = lon.toFixed(2);
+    const zoomLevel = Number.isFinite(Number(heatmapState.zoom)) ? Number(heatmapState.zoom) : 11;
+    const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Planefence Heatmap</title>
+  <base href="${baseHref}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1725; color: #fff; display: flex; }
+    #map { flex: 1; min-height: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script src="./js/heatlayer.js"><\/script>
+  <script src="./js/leaflet-heat.js"><\/script>
+  <script src="./js/planeheatdata-${dateStr}.js"><\/script>
+  <script>
+    var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
+    var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    if (typeof addressPoints === 'undefined') { addressPoints = []; }
+    addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
+    var heat = L.heatLayer(addressPoints, {
+      minOpacity: 1,
+      radius: 7,
+      maxZoom: 14,
+      blur: 11,
+      attribution: '<a href="https://sdr-e.com/docker-planefence" target="_blank">Planefence</a>'
+    }).addTo(map);
+    var circle = L.circle([ parseFloat('${latStr}'), parseFloat('${lonStr}')], {
+      color: 'blue',
+      fillColor: '#f03',
+      fillOpacity: 0.1,
+      radius: ${dist}
+    }).addTo(map);
+    var openaip_cached_basemap = new L.TileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
+      attribution: '<a href="http://www.openaip.net">OpenAIP.net</a>'
+    }).addTo(map);
+  <\/script>
+</body>
+</html>`;
+  }
+
+  function openHeatmapModal() {
+    if (!isHeatmapDataReady()) {
+      alert('Heatmap data is not ready yet.');
+      return;
+    }
+    if (!heatmapModal || !heatmapFrame) return;
+    setHeatmapLoading(true);
+    heatmapFrame.srcdoc = buildHeatmapHtml();
+    heatmapLastFocus = document.activeElement;
+    heatmapModal.classList.add('open');
+    heatmapModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    heatmapCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeHeatmapModal() {
+    if (!heatmapModal) return;
+    heatmapModal.classList.remove('open');
+    heatmapModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (heatmapFrame) {
+      heatmapFrame.srcdoc = '';
+    }
+    setHeatmapLoading(true);
+    if (heatmapLastFocus && typeof heatmapLastFocus.focus === 'function') {
+      heatmapLastFocus.focus({ preventScroll: true });
+    }
+    heatmapLastFocus = null;
+  }
 
   function updateFooterVersionText(value) {
     if (!appVersionEl) return;
     const label = value ? `Version ${value}` : 'Version --';
     appVersionEl.textContent = label;
   }
-  updateFooterVersionText('');
 
   const numberFmt0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
   const numberFmt1 = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
@@ -616,6 +830,16 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     stationInfoLastFocus = null;
   }
 
+  function getGlobalValue(globals, key) {
+    if (!globals || typeof globals !== 'object') return undefined;
+    if (Object.prototype.hasOwnProperty.call(globals, key)) return globals[key];
+    if (key.includes(':')) {
+      const dotKey = key.replace(/:/g, '.');
+      if (Object.prototype.hasOwnProperty.call(globals, dotKey)) return globals[dotKey];
+    }
+    return undefined;
+  }
+
   function updateStationInfoFromGlobals(globals) {
     if (!globals || typeof globals !== 'object') return;
     let changed = false;
@@ -626,12 +850,12 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       ['altUnit', 'station:altitude:unit'],
       ['lat', 'station:lat'],
       ['lon', 'station:lon'],
-      ['version', 'station:version']
+      ['version', 'station:version'],
+      ['heatmapZoom', 'station:heatmapzoom']
     ];
     for (const [stateKey, globalKey] of mapping) {
-      if (!(globalKey in globals)) continue;
-      const raw = globals[globalKey];
-      if (raw === '' || raw == null) continue;
+      const raw = getGlobalValue(globals, globalKey);
+      if (raw === undefined || raw === '' || raw == null) continue;
       const numeric = Number(raw);
       const nextVal = Number.isFinite(numeric) ? numeric : String(raw);
       if (stationInfoState[stateKey] === nextVal) continue;
@@ -648,22 +872,20 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
         changed = true;
       }
     }
+    updateHeatmapState(globals);
     if (changed) refreshStationInfoContent();
   }
 
-  stationInfoBtn?.addEventListener('click', openStationInfoModal);
-  stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
-  stationInfoModal?.addEventListener('click', (ev) => {
-    if (ev.target === stationInfoModal) closeStationInfoModal();
-  });
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
       ev.preventDefault();
       closeStationInfoModal();
+    } else if (ev.key === 'Escape' && heatmapModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeHeatmapModal();
     }
   });
 
-  refreshStationInfoContent();
 
   function updateNewUpdatesBanner(){
     try {
@@ -971,6 +1193,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 
   // 2) DataTables init: numeric sort for idx, keep Seen desc
  function buildHeader(){
+   if (!theadRow) theadRow = document.querySelector('#thead tr');
+   if (!theadRow) return;
   theadRow.innerHTML = "";
   for (const c of viewCols){
     const th = document.createElement('th');

@@ -977,6 +977,18 @@ GENERATE_PA_JSON() {
   ln -sf "$PA_JSONOUT" "$HTMLDIR/plane-alert.json"
 }
 
+GENERATE_HEATMAPJS() {
+  	# Create the heatmap data
+    local tmpfile="$(mktemp)"
+	{ printf "var addressPoints = [\n"
+		for i in "${!heatmap[@]}"; do
+				printf "[ %s,%s ],\n" "$i" "${heatmap["$i"]}"
+		done
+		printf "];\n"
+	} > "$tmpfile"
+  mv -f "$tmpfile" "$OUTFILEDIR/js/planeheatdata-$TODAY.js"
+}
+
 log_print INFO "Hello. Starting $0"
 
 # ==========================
@@ -1113,10 +1125,6 @@ for line in "${socketrecords[@]}"; do
     seentime=$(date -d "$date $t" +%s)
   fi
 
-  # Heatmap tally
-  latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
-  heatmap["$latlonkey"]=$(( ${heatmap["$latlonkey"]:-0} + 1 ))
-
   # Collapse window lookup for planefence
   if [[ " ${pf_icaos[*]} " == *" $icao "* ]]; then
     idx=""
@@ -1143,6 +1151,10 @@ for line in "${socketrecords[@]}"; do
     # Update fast ICAO index maps
     last_idx_for_icao["$icao"]="$idx"
     lastseen_for_icao["$icao"]="$seentime"
+
+    # Heatmap tally (for PF records only)
+    latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
+    heatmap["$latlonkey"]=$(( ${heatmap["$latlonkey"]:-0} + 1 ))
     mode_pf=true
   else
     mode_pf=false
@@ -1531,6 +1543,7 @@ records["station:altitude:unit"]="${ALTUNIT:-}"
 records["station:lat"]="${LAT:-}"
 records["station:lon"]="${LON:-}"
 records["station:version"]="$VERSION"
+records["station:heatmapzoom"]="$HEATMAPZOOM"
 
 pa_records["station:dist:value"]="${DIST:-}"
 pa_records["station:dist:unit"]="${DISTUNIT:-}"
@@ -1569,6 +1582,9 @@ if chk_enabled "$PLANEALERT"; then
   GENERATE_PA_JSON
   log_print DEBUG "Wrote PA JSON object to ${PA_JSONOUT}"
 fi
+
+GENERATE_HEATMAPJS
+log_print DEBUG "Wrote Heatmap JS object"
 # Cleanup the per-run noise cache so it doesn't outlive this execution
 rm -rf "$NOISECACHE_DIR"
 
