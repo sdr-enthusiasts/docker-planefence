@@ -88,16 +88,6 @@ EOF
 
 }
 
-# Check if the required variables are set
-if [[ -z "$BLUESKY_HANDLE" ]]; then
-    log_print ERR "The BLUESKY_HANDLE environment variable must be set to something like \"xxxxx.bsky.social\""
-    exit 1
-fi
-if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
-    log_print ERR "The BLUESKY_APP_PASSWORD environment variable must be set to the app password"
-    exit 1
-fi
-
 # Extract info from the command line arguments
 args=("$@")
 mode="${args[0]}"
@@ -115,12 +105,23 @@ elif [[ ${mode,,} == "pa" ]]; then
   source /usr/share/planefence/persist/plane-alert.config
 else
   log_print ERR "First argument must be either 'pf' (PlaneFence) or 'pa' (Plane Alert)"
+  log_print ERR "You provided: '${args[*]}'"
   exit 1
 fi
 
 # Set the default values
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
 BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
+
+# Check if the required variables are set
+if [[ -z "$BLUESKY_HANDLE" ]]; then
+    log_print ERR "The BLUESKY_HANDLE environment variable must be set to something like \"xxxxx.bsky.social\""
+    exit 1
+fi
+if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
+    log_print ERR "The BLUESKY_APP_PASSWORD environment variable must be set to the app password"
+    exit 1
+fi
 
 # Authenticate with BlueSky
 bsky_auth

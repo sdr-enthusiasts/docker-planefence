@@ -57,12 +57,11 @@ pid=$!
 echo "$pid" > /run/pf-process_sbs.pid
 wait "$pid" &>/dev/null || true
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
-DELETEAFTER="10"
-  # Limit depth to prevent descending into other directories.
-  find /tmp -maxdepth 1 -mindepth 1 \
-    \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
-    -mmin +"${DELETEAFTER}" \
-    -exec rm -rf -- {} + 2>/dev/null || :
+# Limit depth to prevent descending into other directories.
+find /tmp -maxdepth 1 -mindepth 1 \
+  \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
+  -mmin +"${DELETEAFTER}" \
+  -exec rm -rf -- {} + 2>/dev/null || :
 
 # Run notifiers scripts in the background
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
@@ -71,5 +70,3 @@ if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   done <<< "$script_array"
 fi
 wait # wait for all background processes to finish
-
-#/usr/share/plane-alert/plane-alert.sh	# run plane-alert
