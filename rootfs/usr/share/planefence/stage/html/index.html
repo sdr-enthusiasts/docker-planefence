@@ -103,6 +103,14 @@
     .heatmap-close { position: absolute; top: .5rem; right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
     .heatmap-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; background: rgba(0,0,0,0.55); padding: 0.65rem 1.25rem; border-radius: 999px; z-index: 1100; }
     .heatmap-loading.hidden { opacity: 0; pointer-events: none; }
+    .photo-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1080; padding: 1rem; }
+    .photo-modal.open { display: flex; }
+    .photo-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(900px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+    html.dark .photo-card { border-color: rgba(255,255,255,0.12); }
+    .photo-close { position: absolute; top: .5rem; right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
+    .photo-frame { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; }
+    .photo-frame img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .photo-caption { padding: .75rem 1rem; font-size: .9rem; color: var(--muted); }
     a { color: var(--link); text-decoration: none; }
     a:visited { color: var(--link-visited); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
@@ -127,6 +135,7 @@
     }
     th, td { vertical-align: middle; }
   img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
+  img.thumb.thumb-photo { cursor: zoom-in; }
   /* Silhouette thumbnails: keep width same as thumb, preserve aspect ratio */
   img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
     .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
@@ -157,6 +166,8 @@
   td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
   /* Improve spacing for notification chips inside the Notifications cell */
   td:nth-child(11) a.chip { margin-right: .25rem; }
+  .photo-source { font-size: .85rem; color: var(--muted); }
+  .photo-source a { color: var(--link); }
   .plane-alert-cell a { display: inline-flex; align-items: center; gap: .3rem; line-height: inherit; font-size: inherit; }
   .plane-alert-favicon { width: 1em; height: 1em; object-fit: contain; border-radius: 2px; }
   .aircraft-main { display: block; }
@@ -316,6 +327,16 @@
     </div>
   </div>
 
+  <div id="photoModal" class="photo-modal" role="dialog" aria-modal="true" aria-label="Aircraft photo" aria-hidden="true">
+    <div class="photo-card">
+      <button type="button" id="photoClose" class="photo-close" aria-label="Close photo">&times;</button>
+      <div class="photo-frame">
+        <img id="photoModalImg" src="" alt="" loading="lazy">
+      </div>
+      <div id="photoModalCaption" class="photo-caption"></div>
+    </div>
+  </div>
+
   <main style="padding: 0 1rem 1rem;">
     <div style="overflow:auto;">
       <table id="t" class="display compact stripe" style="width:100%;">
@@ -378,6 +399,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   let stationHeadlineEl, stationHeadlineLink;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
+  let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
 
   const truthy = (v) => {
@@ -522,6 +544,10 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     heatmapFrame = document.getElementById('heatmapFrame');
     heatmapCloseBtn = document.getElementById('heatmapClose');
     heatmapLoadingEl = document.getElementById('heatmapLoading');
+    photoModal = document.getElementById('photoModal');
+    photoModalImg = document.getElementById('photoModalImg');
+    photoModalCloseBtn = document.getElementById('photoClose');
+    photoModalCaption = document.getElementById('photoModalCaption');
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
@@ -539,10 +565,15 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     heatmapModal?.addEventListener('click', (ev) => {
       if (ev.target === heatmapModal) closeHeatmapModal();
     });
+    photoModalCloseBtn?.addEventListener('click', closePhotoModal);
+    photoModal?.addEventListener('click', (ev) => {
+      if (ev.target === photoModal) closePhotoModal();
+    });
     heatmapFrame?.addEventListener('load', () => {
       if (heatmapModal?.classList.contains('open')) setHeatmapLoading(false);
     });
     setHeatmapLoading(true);
+    setupThumbnailInteractions();
   }, { once: true });
 
   const stationInfoState = {
@@ -560,6 +591,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   };
   let stationInfoLastFocus = null;
   let heatmapLastFocus = null;
+  let photoModalLastFocus = null;
   const heatmapState = {
     lat: null,
     lon: null,
@@ -725,6 +757,69 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       heatmapLastFocus.focus({ preventScroll: true });
     }
     heatmapLastFocus = null;
+  }
+
+  function openPhotoModal(src, caption, linkHref) {
+    if (!photoModal || !photoModalImg) return;
+    const safeSrc = String(src || '').trim();
+    if (!safeSrc) return;
+    photoModalImg.src = safeSrc;
+    photoModalImg.alt = caption || 'Aircraft photo';
+    if (photoModalCaption) {
+      const safeCaption = caption || '';
+      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">Planespotters.net</a>` : '';
+      photoModalCaption.innerHTML = `${safeCaption}${linkHtml ? ` · ${linkHtml}` : ''}`;
+    }
+    photoModalLastFocus = document.activeElement;
+    photoModal.classList.add('open');
+    photoModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    photoModalCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closePhotoModal() {
+    if (!photoModal) return;
+    photoModal.classList.remove('open');
+    photoModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (photoModalImg) photoModalImg.src = '';
+    if (photoModalLastFocus && typeof photoModalLastFocus.focus === 'function') {
+      photoModalLastFocus.focus({ preventScroll: true });
+    }
+    photoModalLastFocus = null;
+  }
+
+  function thumbnailTargetData(target) {
+    if (!target) return null;
+    const img = target.closest && target.closest('img.thumb');
+    if (!img || img.classList.contains('thumb-sil')) return null;
+    const fullSrc = img.getAttribute('data-fullsrc');
+    if (!fullSrc) return null;
+    return {
+      fullSrc,
+      caption: img.getAttribute('data-caption') || 'Aircraft photo',
+      sourceLink: img.getAttribute('data-sourcelink') || ''
+    };
+  }
+
+  function handleThumbnailClick(ev) {
+    const data = thumbnailTargetData(ev.target);
+    if (!data) return;
+    ev.preventDefault();
+    openPhotoModal(data.fullSrc, data.caption, data.sourceLink);
+  }
+
+  function handleThumbnailKeydown(ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const data = thumbnailTargetData(ev.target);
+    if (!data) return;
+    ev.preventDefault();
+    openPhotoModal(data.fullSrc, data.caption, data.sourceLink);
+  }
+
+  function setupThumbnailInteractions() {
+    document.addEventListener('click', handleThumbnailClick);
+    document.addEventListener('keydown', handleThumbnailKeydown);
   }
 
   function updateFooterVersionText(value) {
@@ -923,6 +1018,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     } else if (ev.key === 'Escape' && heatmapModal?.classList.contains('open')) {
       ev.preventDefault();
       closeHeatmapModal();
+    } else if (ev.key === 'Escape' && photoModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closePhotoModal();
     }
   });
 
@@ -1686,10 +1784,18 @@ function renderRow(r) {
   const csIcaoLine = cs
     ? `${cs}${icao ? ' · ' + icao : ''}`
     : `${icao}`;
+  const photoLabel = csIcaoLine || tail || icao || 'Aircraft photo';
+  const photoCaption = escapeHtml(photoLabel);
+  const photoSourceUrl = r["image:link"];
+  const photoSourceLink = isHttp(photoSourceUrl)
+    ? `<a href="${photoSourceUrl.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">Photo source</a>`
+    : '';
+  const photoSourceLine = photoSourceLink ? `<div class="photo-source">${photoSourceLink}</div>` : '';
   const flagIcon = renderFlagIconForIcao(icao);
   const aircraft = `
     <div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}${routeHtml}</span></div>
     <div>${tailHtml ? tailHtml+' · ' : ''}${typHtml || typ}${ownerLine ? ' · ' + ownerLine : ''}</div>
+    ${photoSourceLine}
   `.trim();
 
   // Position: coords link only; angle outside link; add N/E
@@ -1752,9 +1858,19 @@ function renderRow(r) {
   const trk = trkStr ? `${trkStr}${trkImg}` : "";
 
   const thumbUrl = r["image:thumblink"];
+  const imageFile = safe(r["image:file"]);
+  const imageBasename = (() => {
+    if (!imageFile) return '';
+    const parts = String(imageFile).split('/').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : '';
+  })();
+  const fullImageLocal = imageBasename ? `./imgcache/${imageBasename}` : '';
   let thumbEl = "";
   if (isHttp(thumbUrl)) {
-    thumbEl = `<img class="thumb" loading="lazy" data-src="${thumbUrl.replace(/"/g,'&quot;')}" alt="thumb">`;
+    const thumbAttr = thumbUrl.replace(/"/g,'&quot;');
+    const viewerSrc = (fullImageLocal || thumbUrl).replace(/"/g,'&quot;');
+    const sourceAttr = photoSourceUrl ? photoSourceUrl.replace(/"/g,'&quot;') : '';
+    thumbEl = `<img class="thumb thumb-photo" loading="lazy" data-src="${thumbAttr}" data-fullsrc="${viewerSrc}" data-caption="${photoCaption}" data-sourcelink="${sourceAttr}" alt="${photoCaption}" tabindex="0" role="button" aria-label="View larger aircraft photo">`;
   } else {
     // Fallback: show silhouette based on aircraft type code (e.g., PC21.bmp) if available
     const typCodeRaw = safe(r.type || '');
