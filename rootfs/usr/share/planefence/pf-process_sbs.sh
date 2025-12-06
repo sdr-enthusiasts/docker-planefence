@@ -1017,6 +1017,7 @@ fi
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
   curl -m 30 -fsSL "$REMOTENOISE/noisecapt-dir.gz" 2>/dev/null | zcat > /tmp/.allnoise 2>/dev/null &
+  noise_pid=$!
 fi
 
 if chk_enabled "$PLANEALERT"; then
@@ -1377,6 +1378,11 @@ if [[ -n "$REMOTENOISE" ]] && curl -m 30 -fsSL "$REMOTENOISE/noisecapt-$TODAY.lo
   noiselog="$(</tmp/noisecapt.log)"
 fi
 
+# generate the heatmap data in the background
+{ GENERATE_HEATMAPJS
+  log_print DEBUG "Wrote Heatmap JS object"
+} &
+
 # Now try to add callsigns and owners for those that don't already have them:
 # Planefence:
 for idx in "${!processed_indices[@]}"; do
@@ -1433,7 +1439,7 @@ for idx in "${!processed_indices[@]}"; do
         log_print DEBUG "Getting noise data for record $idx"
         # Make sure we have the noiselist
         if [[ -z "$noiselist" ]]; then
-          wait $!
+          wait $noise_pid
           if [[ -s /tmp/.allnoise ]]; then noiselist="$(</tmp/.allnoise)"; else REMOTENOISE=""; fi
           rm -f /tmp/.allnoise
         fi
@@ -1567,32 +1573,39 @@ log_print INFO "Processing complete. Now writing results to disk..."
 # ==========================
 # Save state
 # ==========================
-WRITE_RECORDS ignore-lock
-log_print DEBUG "Wrote $RECORDSFILE"
+{ WRITE_RECORDS ignore-lock
+  log_print DEBUG "Wrote $RECORDSFILE"
+} &
 
 # ==========================
 # Emit snapshots
 # ==========================
 
 if chk_enabled "$GENERATE_CSV"; then
-  GENERATE_PF_CSV
-  log_print DEBUG "Wrote PF CSV object to $CSVOUT"
+  { GENERATE_PF_CSV
+    log_print DEBUG "Wrote PF CSV object to $CSVOUT"
+  } &
 fi
-  GENERATE_PF_JSON
-  log_print DEBUG "Wrote PF JSON object to $JSONOUT"
+  { GENERATE_PF_JSON
+    log_print DEBUG "Wrote PF JSON object to $JSONOUT"
+  } &
 
 if chk_enabled "$PLANEALERT"; then
   if chk_enabled "$GENERATE_CSV"; then  
-    GENERATE_PA_CSV
-    log_print DEBUG "Wrote PA CSV object to ${PA_CSVOUT}"
+    { GENERATE_PA_CSV
+      log_print DEBUG "Wrote PA CSV object to ${PA_CSVOUT}"
+    } &
   fi
-  GENERATE_PA_JSON
-  log_print DEBUG "Wrote PA JSON object to ${PA_JSONOUT}"
+  { GENERATE_PA_JSON
+    log_print DEBUG "Wrote PA JSON object to ${PA_JSONOUT}"
+  } &
 fi
 
-GENERATE_HEATMAPJS
-log_print DEBUG "Wrote Heatmap JS object"
+
 # Cleanup the per-run noise cache so it doesn't outlive this execution
 rm -rf "$NOISECACHE_DIR"
+
+# wait for any straggler background processes to finish
+wait
 
 log_print INFO "Done."

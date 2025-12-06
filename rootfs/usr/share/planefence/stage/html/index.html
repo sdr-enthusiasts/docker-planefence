@@ -166,8 +166,6 @@
   td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
   /* Improve spacing for notification chips inside the Notifications cell */
   td:nth-child(11) a.chip { margin-right: .25rem; }
-  .photo-source { font-size: .85rem; color: var(--muted); }
-  .photo-source a { color: var(--link); }
   .plane-alert-cell a { display: inline-flex; align-items: center; gap: .3rem; line-height: inherit; font-size: inherit; }
   .plane-alert-favicon { width: 1em; height: 1em; object-fit: contain; border-radius: 2px; }
   .aircraft-main { display: block; }
@@ -1787,15 +1785,10 @@ function renderRow(r) {
   const photoLabel = csIcaoLine || tail || icao || 'Aircraft photo';
   const photoCaption = escapeHtml(photoLabel);
   const photoSourceUrl = r["image:link"];
-  const photoSourceLink = isHttp(photoSourceUrl)
-    ? `<a href="${photoSourceUrl.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">Photo source</a>`
-    : '';
-  const photoSourceLine = photoSourceLink ? `<div class="photo-source">${photoSourceLink}</div>` : '';
   const flagIcon = renderFlagIconForIcao(icao);
   const aircraft = `
     <div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}${routeHtml}</span></div>
     <div>${tailHtml ? tailHtml+' · ' : ''}${typHtml || typ}${ownerLine ? ' · ' + ownerLine : ''}</div>
-    ${photoSourceLine}
   `.trim();
 
   // Position: coords link only; angle outside link; add N/E
