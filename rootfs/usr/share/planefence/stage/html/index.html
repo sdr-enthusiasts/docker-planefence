@@ -347,7 +347,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; <span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <span id="appVersionText">Version --</span></small>
+    <small class="muted">&copy; 2020-<span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -389,7 +389,7 @@ Plane-Alert shows those aircraft in range of the station that are part of the st
 <h1>Messages</h1>
 Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight
 <footer>
-<p>Planefence is &copy; {{year}} by Ram&oacute;n F. Kolb, kx1t and is available as source code or as a Docker container. See the <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Github repository</a> for more information. Version: {{version}}</p>
+<p>Planefence is &copy; 2020-{{year}} by Ram&oacute;n F. Kolb, kx1t and is available as source code or as a Docker container. See the <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Github repository</a> for more information. Version: {{version}}</p>
 <p>Planefence is made possible thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>.</p>
 </footer>`;
 
@@ -1259,7 +1259,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   const PLANE_ALERT_COL_KEY = 'planealert';
   const viewCols = [
     { key:"idx", title:"#", width:"4%" },
-    { key:"thumb", title:"", width:"6%" },
+    { key:"thumb", title:"Image", width:"6%" },
   { key:"when", title:"Time (first / closest / last)" },
     { key:"aircraft", title:"Aircraft", width:"22%" },
   // Route column removed; route will be shown in Aircraft column after callsign
