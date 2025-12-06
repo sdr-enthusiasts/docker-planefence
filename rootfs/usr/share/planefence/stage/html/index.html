@@ -698,7 +698,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <script src="./js/heatlayer.js"><\/script>
   <script src="./js/leaflet-heat.js"><\/script>
-  <script src="./js/planeheatdata-${dateStr}.js"><\/script>
+  <script src="./js/planeheatdata.js"><\/script>
   <script>
     var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
     var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {

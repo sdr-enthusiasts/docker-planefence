@@ -92,6 +92,9 @@ generate_mqtt() {
 
 		# shellcheck disable=SC2068
 		outputmsg="$(echo ${mqtt_string[@]} | xargs mqtt)"
+		if ! $?; then
+			log_print DEBUG "MQTT Delivery Error: ${mqtt_string[*]}"
+		fi
 
 		if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]]; then
 			log_print DEBUG "MQTT Delivery Error: ${outputmsg//$'\n'/ }"

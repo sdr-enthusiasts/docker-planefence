@@ -986,7 +986,7 @@ GENERATE_HEATMAPJS() {
 		done
 		printf "];\n"
 	} > "$tmpfile"
-  mv -f "$tmpfile" "$OUTFILEDIR/js/planeheatdata-$TODAY.js"
+  mv -f "$tmpfile" "$OUTFILEDIR/js/planeheatdata.js"
 }
 
 log_print INFO "Hello. Starting $0"
@@ -1439,7 +1439,7 @@ for idx in "${!processed_indices[@]}"; do
         log_print DEBUG "Getting noise data for record $idx"
         # Make sure we have the noiselist
         if [[ -z "$noiselist" ]]; then
-          wait $noise_pid 2>/dev/null || true
+          wait "$noise_pid" 2>/dev/null || true
           if [[ -s /tmp/.allnoise ]]; then noiselist="$(</tmp/.allnoise)"; else REMOTENOISE=""; fi
           rm -f /tmp/.allnoise
         fi
