@@ -1439,7 +1439,7 @@ for idx in "${!processed_indices[@]}"; do
         log_print DEBUG "Getting noise data for record $idx"
         # Make sure we have the noiselist
         if [[ -z "$noiselist" ]]; then
-          wait $noise_pid
+          wait $noise_pid 2>/dev/null || true
           if [[ -s /tmp/.allnoise ]]; then noiselist="$(</tmp/.allnoise)"; else REMOTENOISE=""; fi
           rm -f /tmp/.allnoise
         fi
@@ -1606,6 +1606,6 @@ fi
 rm -rf "$NOISECACHE_DIR"
 
 # wait for any straggler background processes to finish
-wait
+wait 2>/dev/null || true
 
 log_print INFO "Done."
