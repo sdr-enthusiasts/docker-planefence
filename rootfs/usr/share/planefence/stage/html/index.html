@@ -1125,6 +1125,13 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(tsMs));
   }
 
+  function normalizeNoiseLink(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(?:[a-z]+:)?\/\//i.test(raw) || raw.startsWith('noise/')) return raw;
+    return `noise/${raw.replace(/^\/+/, '')}`;
+  }
+
   function formatClockOrDate(ts){
     const num = Number(ts);
     if (!Number.isFinite(num) || num <= 0) return { text: '--', isTime: false };
@@ -1935,19 +1942,19 @@ function renderRow(r) {
   const linkChips = [];
   // Noisegraph badge
   if (noise) {
-    const nUrl = safe(noise);
+    const nUrl = normalizeNoiseLink(noise).replace(/"/g,'&quot;');
     const nBadge = iconNoise();
     linkChips.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener" title="Show noisegraph" aria-label="Show noisegraph">${nBadge}</a>`);
   }
   // Spectrogram badge (distinct icon)
   if (spectro) {
-    const sUrl = safe(spectro);
+    const sUrl = normalizeNoiseLink(spectro).replace(/"/g,'&quot;');
     const sBadge = iconSpectro();
     linkChips.push(`<a class="chip" href="${sUrl}" target="_blank" rel="noopener" title="Show spectrogram" aria-label="Show spectrogram">${sBadge}</a>`);
   }
   // MP3 badge
   if (mp3) {
-    const mUrl = safe(mp3);
+    const mUrl = normalizeNoiseLink(mp3).replace(/"/g,'&quot;');
     const mBadge = iconMp3();
     linkChips.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener" title="Play audio" aria-label="Play audio">${mBadge}</a>`);
   }

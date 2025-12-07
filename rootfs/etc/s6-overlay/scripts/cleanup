@@ -50,27 +50,21 @@ CLEANUP ()
     [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Cleaning up logs and tmp files older than 1 day" || true
     [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
 
-    #these are temp actions to facilitate the transition to the new directory structure:
-    mkdir -p /usr/share/planefence/persist/.internal
-    mv -f /usr/share/planefence/persist/*.tmp /usr/share/planefence/persist/.internal 2>/dev/null
-    mv -f /usr/share/planefence/persist/*.log /usr/share/planefence/persist/.internal 2>/dev/null
-    mv -f /usr/share/planefence/persist/planeownerscache.txt /usr/share/planefence/persist/.internal 2>/dev/null
-
     touch -d "yesterday 00:00:00" /tmp/timestamp
-    touch -d "yesterday +$CACHETIME" /tmp/timestamp.planespottercache
     touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
     touch -d "3 hours ago" /tmp/timestamp.screenshotcache
     find /usr/share/planefence/html/plane*{.html,.js,.csv,.json,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
-    find /usr/share/planefence/html/noise* -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/html/noise/* -mtime +"$OLDERTHAN" -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
-    find /usr/share/planefence/persist/planepix/cache/screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null
-    rm -f /tmp/heatmap-*.log
+    find /usr/share/planefence/persist/planepix/cache/* -type f -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    find /usr/share/planefence/persist/planepix/cache/plane*-screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/routecache* -type f ! -newer /tmp/timestamp.routecache -delete 2>/dev/null
+    
     rm -f /tmp/timestamp*
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
@@ -80,18 +74,6 @@ CLEANUP ()
         # remove anything older than yesterday:
         (( fdate < $(date -d yesterday +%y%m%d) )) && rm -v -f "$f" && continue
     done
-
-
-    if [[ -f /tmp/planefence.log ]]
-    then
-      tail -n $MAXLOGLINES /tmp/planefence.log >/tmp/planefence.log.tmp 2>/dev/null
-      mv -f /tmp/planefence.log.tmp /tmp/planefence.log 2>/dev/null
-    fi
-    if [[ -f /tmp/noise2fence.log ]]
-    then
-      tail -n $MAXLOGLINES /tmp/noise2fence.log >/tmp/noise2fence.log.tmp 2>/dev/null
-      mv -f /tmp/noise2fence.log.tmp /tmp/noise2fence.log 2>/dev/null
-    fi
     # remove empty lines from ignore file
     sed -i '/^$/d' /usr/share/planefence/persist/planefence-ignore.txt 2>/dev/null
 
