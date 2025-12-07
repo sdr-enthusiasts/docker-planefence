@@ -53,8 +53,10 @@ CLEANUP ()
     touch -d "yesterday 00:00:00" /tmp/timestamp
     touch -d "yesterday 23:59:59" /tmp/timestamp.routecache
     touch -d "3 hours ago" /tmp/timestamp.screenshotcache
-    find /usr/share/planefence/html/plane*{.html,.js,.csv,.json,.rss} -mtime +"$OLDERTHAN" -delete 2>/dev/null
-    find /usr/share/planefence/html/noise/* -mtime +"$OLDERTHAN" -delete 2>/dev/null
+    touch -d  "$OLDERTHAN days ago" /tmp/timestamp.datafiles
+    find /usr/share/planefence/html/plane*{.html,.js,.csv,.json,.rss} -type f ! -newer /tmp/timestamp.datafiles -delete 2>/dev/null
+    find /usr/share/planefence/html/noise/* -type f ! -newer /tmp/timestamp.datafiles -delete 2>/dev/null
+    find /usr/share/planefence/persist/records/* -type f ! -newer /tmp/timestamp.datafiles -delete 2>/dev/null
     rm -f /run/socket30003/*.log
     find /run/socket30003/*.txt -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
