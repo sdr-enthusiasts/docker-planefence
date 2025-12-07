@@ -90,8 +90,8 @@ generate_mqtt() {
 		if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
 		mqtt_string+=(--message "'${MQTT_JSON}'")
 
-		# shellcheck disable=SC2068
-		outputmsg="$(echo ${mqtt_string[@]} | xargs mqtt)"
+		outputmsg="$(printf '%s\0' "${mqtt_string[@]}" | xargs -0 mqtt)"
+
 
 		if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]]; then
 			log_print DEBUG "MQTT Delivery Error: ${outputmsg//$'\n'/ }"

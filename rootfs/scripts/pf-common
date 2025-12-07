@@ -255,8 +255,8 @@ json_encode() {
   esac
 
   # escape backslash and quote with sed, then map controls with tr
-  printf '%s' "$s" | sed -u -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
-    | tr '\b\f\n\r\t' '\\b\\f\\n\\r\\t'
+    printf '%s' "$s" | sed -u -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e "s/'/ /g" \
+      | tr '\b\f\n\r\t' '\\b\\f\\n\\r\\t'
 }
 
 csv_encode() {
