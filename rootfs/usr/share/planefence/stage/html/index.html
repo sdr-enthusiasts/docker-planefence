@@ -1172,7 +1172,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     return r['sound:peak'] || r['sound:loudness'] || r['sound:color'] || r['noisegraph:link'];
   }
   function hasNotifications(r){
-    return r['discord:link'] || r['bsky:link'] || r['telegram:link'] || r['mqtt:notified'];
+    return r['discord:link'] || r['bsky:link'] || r['mastodon:link'] || r['telegram:link'] || r['mqtt:notified'] || r['mastodon:notified'];
   }
 
   // Normalize per-row values into typed fields so rendering is consistent
@@ -1187,6 +1187,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     out['discord:notified'] = truthy(out['discord:notified']);
     out['bsky:notified'] = truthy(out['bsky:notified']);
     out['telegram:notified'] = truthy(out['telegram:notified']);
+    out['mastodon:notified'] = truthy(out['mastodon:notified']);
     out['mqtt:notified'] = truthy(out['mqtt:notified']);
     // Numeric conversions
     out.index = Number(out.index);
@@ -1212,6 +1213,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   function iconDiscord(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4a16 16 0 0 0-4-.9l-.2.3c1.6.4 2.8 1 3.7 1.7-1.6-.8-3.2-1.3-4.9-1.6a16.2 16.2 0 0 0-5 0C7 3.7 5.4 4.2 3.8 5c.9-.7 2.1-1.3 3.7-1.7L7.3 3A16 16 0 0 0 3 4.1C1 7 0 10 0 13.1c2.1 2.2 4.8 3.8 7.9 4.4l.6-.9c-1.7-.5-3.2-1.3-4.5-2.4 1.6 1.2 3.6 2.1 5.8 2.5a17.3 17.3 0 0 0 6.5-.1c2.2-.4 4.2-1.3 5.8-2.5-1.3 1.1-2.8 1.9-4.5 2.4l.6.9a16.8 16.8 0 0 0 7.9-4.4C24 10 23 7 21 4.1zM8.7 14.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>` }
   function iconTelegram(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.036 15.803l-.376 5.3c.539 0 .771-.231 1.048-.508l2.515-2.41 5.213 3.81c.957.528 1.64.252 1.9-.887l3.447-16.128h.001c.306-1.424-.514-1.979-1.449-1.63L1.4 9.79c-1.371.532-1.35 1.297-.233 1.64l5.8 1.811 13.476-8.51c.635-.387 1.217-.173.74.214L9.036 15.803z"/></svg>` }
   function iconBluesky(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 6c1.2-2 3.2-4 5.2-4 1.8 0 2.6 1.3 2.6 2.7 0 2.2-1.5 4.3-3.3 6 2.1-.5 4.5-1.7 5.5-3.4.6 3-2.2 5.4-5.5 6.7 2.8.7 5.1 2.1 5.1 4.2 0 1.4-1 2.2-2.4 2.2-2 0-4.2-1.9-6.2-4.2-2 2.4-4.2 4.2-6.2 4.2-1.4 0-2.4-.8-2.4-2.2 0-2.1 2.3-3.5 5.1-4.2-3.3-1.3-6.1-3.7-5.5-6.7 1 1.7 3.4 2.9 5.5 3.4-1.8-1.7-3.3-3.8-3.3-6C6.2 3.3 7 2 8.8 2 10.8 2 12.8 4 14 6h-2z"/></svg>` }
+  function iconMastodon(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-4.6 0-8.3 1.5-8.3 6.8 0 4.3-.1 9.7 5.4 10.9 2.1.5 3.9.6 5.9 0 1.3-.4 4.5-1 4.9-4.9.1-1 .1-2.8.1-4.1 0-5.3-3.7-6.8-8.3-6.8Zm4.1 8.5v4.9h-2.4v-4.7c0-1-.4-1.5-1.1-1.5-.8 0-1.2.5-1.2 1.6v4.6H8.8v-4.9c0-1-.4-1.5-1.1-1.5-.8 0-1.2.5-1.2 1.6v4.6H4.1V10c0-1 .2-1.7.5-2.3.6-1.2 2.1-1.9 3.7-1.9 1.7 0 2.9.6 3.7 1.9.8-1.3 2-1.9 3.7-1.9 1.6 0 3.1.7 3.7 1.9.4.6.5 1.3.5 2.3Z"/></svg>` }
   function iconMQTT(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v6h-2V7zm1 10a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>` }
 
   // Helper to render notifier link with icon
@@ -1890,10 +1892,12 @@ function renderRow(r) {
   const notifyLinks = [];
   const discordLink = r["discord:link"];
   const bskyLink = r["bsky:link"];
+  const mastodonLink = r["mastodon:link"];
   const telegramLink = r["telegram:link"];
   const mqttFlag = r["mqtt:notified"];
   const discordNotified = truthy(r["discord:notified"]);
   const bskyNotified = truthy(r["bsky:notified"]);
+  const mastodonNotified = truthy(r["mastodon:notified"]);
   const telegramNotified = truthy(r["telegram:notified"]);
   const mqttNotified = truthy(mqttFlag);
 
@@ -1915,6 +1919,9 @@ function renderRow(r) {
 
   if (bskyLink) notifyLinks.push(notifierLink(bskyLink, 'Bluesky', iconBluesky()));
   else if (bskyNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconBluesky()}<span class="label">Bluesky</span></span>`);
+
+  if (mastodonLink) notifyLinks.push(notifierLink(mastodonLink, 'Mastodon', iconMastodon()));
+  else if (mastodonNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconMastodon()}<span class="label">Mastodon</span></span>`);
 
   if (telegramLink) notifyLinks.push(notifierLink(telegramLink, 'Telegram', iconTelegram()));
   else if (telegramNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconTelegram()}<span class="label">Telegram</span></span>`);
