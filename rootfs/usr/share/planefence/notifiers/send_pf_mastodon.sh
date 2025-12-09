@@ -139,14 +139,14 @@ for idx in "${INDEX[@]}"; do
   log_print DEBUG "Posting to Bsky: ${records["$idx":tail]} (${records["$idx":icao]})"
 
   # shellcheck disable=SC2068,SC2086
-  posturl="$(/scripts/post2bsky.sh pf "$template" ${img_array[@]})" || true
-  if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Mastodon notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $posturl"
+  posturl="$(/scripts/post2mastodon.sh pf "$template" ${img_array[@]})" || true
+  if url="$(extract_url "$posturl")"; then
+    log_print INFO "Mastodon notification successful for #$idx ${records["$idx":tail]} (${records["$idx":icao]}): $url"
   else
     log_print ERR "Mastodon notification failed for #$idx ${records["$idx":tail]} (${records["$idx":icao]})"
-    log_print ERR "Mastodon notification error details:\n$posturl"
+    log_print ERR "Mastodon notification error details: $posturl"
   fi
-  link[idx]="$posturl"
+  link[idx]="$url"
 done
 
 # read, update, and thensave the records:

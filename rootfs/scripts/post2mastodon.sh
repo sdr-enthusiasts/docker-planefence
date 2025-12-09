@@ -10,6 +10,7 @@
 # -----------------------------------------------------------------------------------
 
 source /scripts/pf-common
+DEBUG=true
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
                     # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
@@ -19,17 +20,6 @@ shopt -s extglob
 if (( ${#@} < 1 )); then
   log_print ERR "Usage: $0 [pf|pa] <text> [image1] [image2] ..."
   exit 1
-fi
-
-if [[ -z "${MASTODON_ACCESS_TOKEN}" ]]
-then
-    log_print ERR "MASTODON_ACCESS_TOKEN not defined. Cannot send a Mastodon notification"
-    exit 1
-fi
-if [[ -z "${MASTODON_SERVER}" ]]
-then
-    log_print ERR "MASTODON_SERVER not defined. Cannot send a Mastodon notification"
-    exit 1
 fi
 
 # Extract info from the command line arguments
@@ -53,6 +43,15 @@ else
   exit 1
 fi
 
+if [[ -z "${MASTODON_ACCESS_TOKEN}" ]]; then
+    log_print ERR "MASTODON_ACCESS_TOKEN not defined. Cannot send a Mastodon notification"
+    exit 1
+fi
+if [[ -z "${MASTODON_SERVER}" ]]; then
+    log_print ERR "MASTODON_SERVER not defined. Cannot send a Mastodon notification"
+    exit 1
+fi
+
 # Set the default values
 MASTODON_POST_VISIBILITY="${MASTODON_POST_VISIBILITY:-unlisted}"
 MASTODON_SERVER="https://${MASTODON_SERVER#http?(s)://}"
@@ -71,24 +70,23 @@ fi
 
 # send pictures to Mastodon
 for image in "${IMAGES[@]}"; do
- if [[ -f "$image" ]]
-  then
+  if [[ -z "$image" ]]; then continue; fi
+  if [[ -f "$image" ]]; then
     response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@$image")"
     [[ "$(jq '.id' <<< "${response}" | xargs)" != "null" ]] && mast_id="$(jq '.id' <<< "${response}" | xargs)" || mast_id=""
     if [[ -n "${mast_id}" ]]; then media_id+="${media_id:+ }-F media_ids[]=${mast_id}"; fi
-    print_log DEBUG "image $image successfully uploaded to Mastodon"
+    log_print DEBUG "image $image successfully uploaded to Mastodon"
   else
-    print_log WARNING "no image available at $image"
+    log_print WARNING "no image available at $image"
   fi
 done
 
 # shellcheck disable=SC2086
 response="$(curl -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -s "${MASTODON_SERVER}/api/v1/statuses" -X POST ${media_id} -F "status=${TEXT}" -F "language=en" -F "visibility=${MASTODON_POST_VISIBILITY}")"
 # check if there was an error
-if [[ "$(jq '.error' <<< "${response}"|xargs)" == "null" ]]
-then
+if [[ "$(jq '.error' <<< "${response}"|xargs)" == "null" ]]; then
     jq '.url' <<< "${response}"|xargs
 else
-    print_log ERR "Mastodon post error: ${response//http/hxttp}"
+    log_print ERR "Mastodon post error: ${response//http/hxttp}"
     exit 1
 fi

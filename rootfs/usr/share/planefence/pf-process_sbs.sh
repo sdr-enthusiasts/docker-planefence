@@ -1028,12 +1028,12 @@ fi
 # Collect new lines
 # ==========================
 if [[ -n "$LASTPROCESSEDLINE" ]]; then
-  lastdate="$(awk -F, '{print $5}' <<< "$LASTPROCESSEDLINE")"
+  lastdate="$(awk -F, '{print $5 " " $6}' <<< "$LASTPROCESSEDLINE")"
 fi
 
 log_print INFO "Collecting new records. Last processed date is $lastdate"
 
-if [[ "$(date -d "${lastdate:-1972/01/01}" +%y%m%d)" == "$TODAY" ]]; then
+if [[ "$(date -d "${lastdate:-@0}" +%y%m%d)" == "$TODAY" ]]; then
   nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then

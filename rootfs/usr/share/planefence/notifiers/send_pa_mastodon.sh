@@ -140,11 +140,11 @@ for idx in "${INDEX[@]}"; do
 
   # shellcheck disable=SC2068,SC2086
   posturl="$(/scripts/post2mastodon.sh pa "$template" ${img_array[@]})" || true
-  if posturl="$(extract_url "$posturl")"; then
-    log_print INFO "Mastodon notification successful for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}): $posturl"
+  if url="$(extract_url "$posturl")"; then
+    log_print INFO "Mastodon notification successful for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}): $url"
   else
     log_print ERR "Mastodon notification failed for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]})"
-    log_print ERR "Mastodon notification error details:\n$posturl"
+    log_print ERR "Mastodon notification error details: $posturl"
   fi
   link[idx]="$posturl"
 done
