@@ -17,8 +17,8 @@
 #
 
 # Set paths - use the same as planefence.sh
+source "/usr/share/planefence/plane-alert.conf"
 source /scripts/pf-common
-source "/usr/share/planefence/planefence.conf"
 
 # -----------------------------------------------------------------------------------
 #      TEMP DEBUG STUFF
@@ -30,13 +30,16 @@ set -eo pipefail
 TODAY=$(date --date="today" '+%y%m%d')
 
 # Site configuration - you can modify these
-SITE_TITLE="Planefence Aircraft Detections"
-SITE_DESC="Recent aircraft detected within range of our ADS-B receiver"
+SITE_TITLE="Plane-Alert Aircraft Detections"
+SITE_DESC="Interesting aircraft detected within range of our ADS-B receiver"
 SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
 
 #  If there is a site link, make sure it ends with a /
 if [[ -n "$SITE_LINK" ]] && [[ "${SITE_LINK: -1}" != "/" ]]; then SITE_LINK="${SITE_LINK}/"; fi
+
+# define the RECORDSFILE with the records assoc array
+source /scripts/pf-common
 
 # -----------------------------------------------------------------------------------
 #      FUNCTIONS
@@ -58,7 +61,7 @@ xml_escape() {
 
 # Function to generate RSS feed for a specific CSV file (optimized)
 generate_rss() {
-  local rss_file="$OUTFILEDIR/planefence-$TODAY.rss"
+  local rss_file="$OUTFILEDIR/plane-alert-$TODAY.rss"
   READ_RECORDS
 
   # Precompute some values to avoid repeated expansions
@@ -90,7 +93,7 @@ generate_rss() {
 
   # Cache max index
   local maxidx
-  maxidx=${records[maxindex]:--1}
+  maxidx=${pa_records[maxindex]:--1}
   local idx=0
 
   # Loop numeric indices; cache commonly used fields into locals once per iteration
@@ -98,18 +101,18 @@ generate_rss() {
     # Access associative array keys minimally
     local icao key_callsign callsign distance_value distance_unit alt_val firstseen lastseen sound_peak link_map ITEM_LINK
 
-    icao=${records["$idx":icao]:-}
+    icao=${pa_records["$idx":icao]:-}
     [[ -n "$icao" ]] || continue
 
-    callsign=${records["$idx":callsign]:-}
+    callsign=${pa_records["$idx":callsign]:-}
     key_callsign=${callsign:-$icao}
-    distance_value=${records["$idx":distance:value]:-}
-    distance_unit=${records["$idx":distance:unit]:-}
-    alt_val=${records["$idx":altitude:value]:-}
-    firstseen=${records["$idx":time:firstseen]:-}
-    lastseen=${records["$idx":time:lastseen]:-}
-    sound_peak=${records["$idx":sound:peak]:-}
-    link_map=${records["$idx":link:map]:-}
+    distance_value=${pa_records["$idx":distance:value]:-}
+    distance_unit=${pa_records["$idx":distance:unit]:-}
+    alt_val=${pa_records["$idx":altitude:value]:-}
+    firstseen=${pa_records["$idx":time:firstseen]:-}
+    lastseen=${pa_records["$idx":time:lastseen]:-}
+    sound_peak=${pa_records["$idx":sound:peak]:-}
+    link_map=${pa_records["$idx":link:map]:-}
 
     # Build title and description
     local title desc pubdate guid
@@ -149,7 +152,7 @@ log_print INFO "Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
 if generate_rss; then
-  ln -sf "$rss_file" "$OUTFILEDIR/planefence.rss"
+  ln -sf "$rss_file" "$OUTFILEDIR/plane-alert.rss"
   log_print INFO "RSS feed generated at $rss_file"
 else
   log_print ERR "RSS feed generation failed!"
