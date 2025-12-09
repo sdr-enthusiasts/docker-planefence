@@ -30,8 +30,8 @@ DEBUG=false
 declare -a INDEX STALE
 declare -a link
 
-SPACE=$'\x1F'   # "special" space
-
+#SPACE=$'\x1F'   # "special" space
+SPACE="_"   # Mastodon does not allow special spaces in hashtags, so use underscore instead
 log_print INFO "Hello. Starting Mastodon notification run"
 
 
