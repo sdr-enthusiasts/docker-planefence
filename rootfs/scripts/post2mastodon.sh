@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001
+#shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001,SC2034
 # -----------------------------------------------------------------------------------
 # Copyright 2025 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
