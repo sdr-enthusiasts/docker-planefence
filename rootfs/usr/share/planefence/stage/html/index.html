@@ -95,6 +95,10 @@
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
     html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
     .station-info-card p { margin: .35rem 0; }
+    .station-coords { font-weight: 600; white-space: nowrap; }
+    .station-map-wrapper { margin: 1rem 0 0; border-radius: 0.75rem; overflow: hidden; border: 1px solid var(--soft); background: var(--soft); }
+    html.dark .station-map-wrapper { border-color: rgba(255,255,255,0.08); background: #111421; }
+    .station-map-frame { width: 100%; min-height: 260px; border: none; display: block; }
     .heatmap-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1100; padding: 1rem; }
     .heatmap-modal.open { display: flex; }
     .heatmap-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(1100px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; }
@@ -121,6 +125,41 @@
     table.dataTable thead th { white-space: nowrap; }
   /* Left-align all table headers for better readability */
   table.dataTable thead th, table#t thead th { text-align: left !important; }
+  /* Normalize typography, spacing, and hierarchy inside the data table */
+  table#t {
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  table#t thead th {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  table#t thead th,
+  table#t tbody td {
+    padding: 0.65rem 0.85rem;
+  }
+  table#t tbody td {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+  table#t tbody td .muted {
+    font-size: 0.85em;
+  }
+  table#t tbody td .aircraft-main {
+    font-weight: 600;
+  }
+  table#t tbody td .secondary-line {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.85em;
+    color: var(--muted);
+  }
   /* Removed Spectro column; kept layout flexible */
     /* Keep the table header visible while scrolling; it will sit just below the page header */
     table.dataTable thead th {
@@ -140,8 +179,13 @@
   img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
     .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
   /* Position cell: give a little gap between coords and angle line */
-  td.position-cell div { line-height: 1.2; }
-  td.position-cell div + div { margin-top: 0.15rem; }
+  td.position-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+  td.position-cell div { line-height: 1.25; }
   /* Ensure angle image aligns center with the angle text */
   .angle-img { vertical-align: middle; height: 1em; margin-left: .35rem; }
     .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
@@ -182,6 +226,19 @@
     border-radius: 2px;
     box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
   }
+  .route-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    font-size: 0.85em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .route-chip::before {
+    content: '·';
+    color: inherit;
+  }
 
   /* Visually hidden text for accessibility */
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
@@ -211,6 +268,12 @@
   table.dataTable tbody td:nth-child(3) {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* Preserve legacy width for the Sound column (9th column) */
+  table#t thead th:nth-child(9),
+  table#t tbody td:nth-child(9) {
+    min-width: 11rem;
+    width: 11%;
   }
   /* Highlight freshly-added rows briefly (soft fade-out) */
   .pf-new-row { animation: pf-fade 2.2s ease-out; background-color: rgba(108,169,255,0.18); }
@@ -383,7 +446,10 @@
   const STATION_INFO_TEMPLATE = `
 <h1 class="station-welcome-title">Welcome to <a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a> Planefence and Plane-Alert Station</h1>
 <h1 id="stationInfoTitle">Planefence</h1>
-Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <a href="{{latLonUrl}}" target="_blank" rel="noreferrer noopener">{{lat}},{{lon}}</a>.
+Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <span class="station-coords">{{latCardinal}}, {{lonCardinal}}</span>.
+<div class="station-map-wrapper">
+  <iframe id="stationInfoMapFrame" class="station-map-frame" title="Station coverage map" loading="lazy"></iframe>
+</div>
 <h1>Plane-Alert</h1>
 Plane-Alert shows those aircraft in range of the station that are part of the station's <a href="alertlist.txt" target="_blank" rel="noreferrer noopener">watchlist</a>.
 <h1>Messages</h1>
@@ -671,6 +737,52 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (changed) updateHeatmapButtonState(); else if (heatmapBtn) heatmapBtn.disabled = !isHeatmapDataReady() || isPlaneAlertMode();
   }
 
+  function buildStationMapHtml() {
+    const lat = truncateCoord(stationInfoState.lat);
+    const lon = truncateCoord(stationInfoState.lon);
+    const distMeters = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    if (lat == null || lon == null || !Number.isFinite(distMeters)) return '';
+    const radius = Math.max(0, Math.round(distMeters));
+    const zoomLevel = resolveHeatmapZoom();
+    const latStr = lat.toFixed(2);
+    const lonStr = lon.toFixed(2);
+    const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Station Coverage</title>
+  <base href="${baseHref}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1725; }
+    #map { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script>
+    var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
+    L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    L.tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
+      attribution: '<a href="http://www.openaip.net">OpenAIP.net</a>'
+    }).addTo(map);
+    var circle = L.circle([parseFloat('${latStr}'), parseFloat('${lonStr}')], {
+      color: 'blue',
+      fillColor: '#0b5fff',
+      fillOpacity: 0.12,
+      radius: ${radius}
+    }).addTo(map);
+    map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+  <\/script>
+</body>
+</html>`;
+  }
+
   function buildHeatmapHtml() {
     const lat = Number(heatmapState.lat);
     const lon = Number(heatmapState.lon);
@@ -722,6 +834,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     var openaip_cached_basemap = new L.TileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
       attribution: '<a href="http://www.openaip.net">OpenAIP.net</a>'
     }).addTo(map);
+    map.fitBounds(circle.getBounds(), { padding: [20, 20] });
   <\/script>
 </body>
 </html>`;
@@ -876,21 +989,23 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     return '--';
   }
 
+  function formatStationCardinalCoord(value, axis) {
+    const truncated = truncateCoord(value);
+    if (truncated == null) {
+      return formatStationCoord(value);
+    }
+    const absVal = Math.abs(truncated).toFixed(2);
+    const dir = axis === 'lat'
+      ? (truncated >= 0 ? 'N' : 'S')
+      : (truncated >= 0 ? 'E' : 'W');
+    return `${absVal}&deg; ${dir}`;
+  }
+
   function formatStationTotal(value) {
     const num = Number(value);
     if (Number.isFinite(num)) return numberFmt0.format(num);
     if (value != null && value !== '') return escapeHtml(value);
     return '--';
-  }
-
-  function buildStationCoordUrl() {
-    const lat = truncateCoord(stationInfoState.lat);
-    const lon = truncateCoord(stationInfoState.lon);
-    if (lat == null || lon == null) return '';
-    const zoom = 11;
-    const latStr = lat.toFixed(2);
-    const lonStr = lon.toFixed(2);
-    return `https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lonStr}#map=${zoom}/${latStr}/${lonStr}`;
   }
 
   function buildStationInfoHtml() {
@@ -901,9 +1016,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       '{{distUnit}}': escapeHtml(stationInfoState.distUnit || '--'),
       '{{altitude}}': formatStationAltitude(stationInfoState.altitude),
       '{{altUnit}}': escapeHtml(stationInfoState.altUnit || '--'),
-      '{{lat}}': formatStationCoord(stationInfoState.lat),
-      '{{lon}}': formatStationCoord(stationInfoState.lon),
-      '{{latLonUrl}}': escapeHtml(buildStationCoordUrl() || 'https://www.openstreetmap.org/'),
+      '{{latCardinal}}': formatStationCardinalCoord(stationInfoState.lat, 'lat'),
+      '{{lonCardinal}}': formatStationCardinalCoord(stationInfoState.lon, 'lon'),
       '{{totalLines}}': formatStationTotal(stationInfoState.totalLines),
       '{{year}}': String(new Date().getFullYear()),
       '{{version}}': escapeHtml(stationInfoState.version || '--')
@@ -914,6 +1028,16 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   function refreshStationInfoContent() {
     if (!stationInfoContentEl) return;
     stationInfoContentEl.innerHTML = buildStationInfoHtml();
+    const mapFrame = stationInfoContentEl.querySelector('#stationInfoMapFrame');
+    if (mapFrame) {
+      const mapDoc = buildStationMapHtml();
+      if (mapDoc) {
+        mapFrame.srcdoc = mapDoc;
+      } else {
+        const wrapper = mapFrame.closest('.station-map-wrapper');
+        if (wrapper) wrapper.style.display = 'none';
+      }
+    }
   }
 
   function updateStationHeadline() {
@@ -1163,7 +1287,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const hasTimeValue = firstLine.isTime || closestLine.isTime || lastLine.isTime;
     const timeline = (tzAbbrev && hasTimeValue) ? `${timelineCore} ${tzAbbrev}` : timelineCore;
     const updating = (String(completeFlag) !== 'true')
-      ? `<div class="still-updating">· still updating</div>` : '';
+      ? `<div class="still-updating">still updating</div>` : '';
     return `<div class="mono">${primary}</div><div class="mono">${timeline}</div>${updating}`;
   }
 
@@ -1786,7 +1910,7 @@ function renderRow(r) {
   })() : '';
   const route = safe(r.route);
   // Show route after callsign in the same Aircraft cell, unless it's 'n/a'
-  const routeHtml = (route && route.toLowerCase() !== 'n/a') ? ` · ${route}` : '';
+  const routeHtml = (route && route.toLowerCase() !== 'n/a') ? `<span class="route-chip">${route}</span>` : '';
   // Right after the callsign, add the ICAO value when both exist
   const csIcaoLine = cs
     ? `${cs}${icao ? ' · ' + icao : ''}`
@@ -2042,12 +2166,16 @@ function addOrUpdateRow(r){
   return { api: apiRow, created: true, idx: idxVal };
 }
 
-  // 4) Position: link only coords, add N/E; angle outside link
+  // 4) Position: link only coords, add cardinal directions; angle outside link
   function formatLatLon(lat, lon){
     const latNum = Number(lat);
     const lonNum = Number(lon);
     if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return "";
-    return `${toFixed4(latNum)}&deg; N, ${toFixed4(lonNum)}&deg; E`;
+    const latDir = latNum >= 0 ? 'N' : 'S';
+    const lonDir = lonNum >= 0 ? 'E' : 'W';
+    const latStr = `${toFixed4(Math.abs(latNum))}&deg; ${latDir}`;
+    const lonStr = `${toFixed4(Math.abs(lonNum))}&deg; ${lonDir}`;
+    return `${latStr}, ${lonStr}`;
   }
 
   function applyMediaPrefixes(row){
