@@ -104,8 +104,8 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||OWNER||" "" "$template")"
   fi
   template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]}" || true)" "$template")"
+  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]//-/}" "$template")"
+  template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]//-/}" != "${records["$idx":callsign]//-/}" ]] && echo "#${records["$idx":tail]//-/}" || true)" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
   if [[ "${records["$idx":route]}" != "n/a" ]]; then 
     template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
