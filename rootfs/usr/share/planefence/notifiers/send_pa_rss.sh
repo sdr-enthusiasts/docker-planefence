@@ -34,7 +34,7 @@ SITE_TITLE="Plane-Alert Aircraft Detections"
 SITE_DESC="Interesting aircraft detected within range of our ADS-B receiver"
 SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
-rss_file="$OUTFILEDIR/plane-alert-$TODAY.rss"
+rss_file="${OUTFILEDIR:-/usr/share/planefence/html}/plane-alert-$TODAY.rss"
 
 #  If there is a site link, make sure it ends with a /
 if [[ -n "$SITE_LINK" ]] && [[ "${SITE_LINK: -1}" != "/" ]]; then SITE_LINK="${SITE_LINK}/"; fi
