@@ -34,6 +34,7 @@ SITE_TITLE="Plane-Alert Aircraft Detections"
 SITE_DESC="Interesting aircraft detected within range of our ADS-B receiver"
 SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
+rss_file="$OUTFILEDIR/plane-alert-$TODAY.rss"
 
 #  If there is a site link, make sure it ends with a /
 if [[ -n "$SITE_LINK" ]] && [[ "${SITE_LINK: -1}" != "/" ]]; then SITE_LINK="${SITE_LINK}/"; fi
@@ -61,13 +62,12 @@ xml_escape() {
 
 # Function to generate RSS feed for a specific CSV file (optimized)
 generate_rss() {
-  local rss_file="$OUTFILEDIR/plane-alert-$TODAY.rss"
   READ_RECORDS
 
   # Precompute some values to avoid repeated expansions
   local site_link="${SITE_LINK:-.}"
-  local site_title="${SITE_TITLE:-Planefence Aircraft Detections}"
-  local site_desc="${SITE_DESC:-Recent aircraft detected within range of our ADS-B receiver}"
+  local site_title="${SITE_TITLE:-Plane-Alert Aircraft Detections}"
+  local site_desc="${SITE_DESC:-Interesting aircraft detected within range of our ADS-B receiver}"
   local site_image="$SITE_IMAGE"
   local last_build_date
   last_build_date=$(date -R)
