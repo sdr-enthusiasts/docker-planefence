@@ -116,18 +116,18 @@ fi
 READ_RECORDS
 
 # build index and stale arrays
-build_index_and_stale INDEX STALE mqtt
+build_index_and_stale INDEX STALE mqtt pf
 
 # check if there's anything to do
 if (( ${#INDEX[@]} )); then
-  log_print DEBUG "Records ready for MQTT notification: ${INDEX[*]}"
+  log_print INFO "Records ready for MQTT notification: ${INDEX[*]}"
 else
-  log_print DEBUG "No records ready for MQTT notification"
+  log_print INFO "No records ready for MQTT notification"
 fi
 if (( ${#STALE[@]} )); then
-  log_print DEBUG "Stale records (no MQTT notification will be sent): ${STALE[*]}"
+  log_print INFO "Stale records (no MQTT notification will be sent): ${STALE[*]}"
 else
-  log_print DEBUG "No stale records for MQTT notification"
+  log_print INFO "No stale records for MQTT notification"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for MQTT notification. Exiting."
@@ -137,12 +137,19 @@ fi
 # Loop through the STALE array and mark those records as notified with status "stale"
 for idx in "${STALE[@]}"; do
 	records["$idx":mqtt:notified]="stale"
+	log_print DEBUG "Record index $idx (${records["$idx":icao]}/${records["$idx":tail]}) marked as stale"
 done
 
 # Loop through the INDEX array and send MQTT notifications
 
 for idx in "${INDEX[@]}"; do
-  if generate_mqtt "$idx"; then link[idx]=true; else link[idx]=error; fi
+  if generate_mqtt "$idx"; then
+  	link[idx]=true
+	log_print INFO "MQTT notification successful for index $idx (${records["$idx":icao]}/${records["$idx":tail]})"
+  else
+  	link[idx]=false
+	log_print ERR "MQTT notification FAILED for index $idx (${records["$idx":icao]}/${records["$idx":tail]})"
+  fi
 done
 
 # Save the records again

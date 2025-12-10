@@ -119,7 +119,7 @@ fi
 READ_RECORDS
 
 # build index and stale arrays
-build_index_and_stale pa INDEX STALE mqtt
+build_index_and_stale INDEX STALE mqtt pa
 
 # check if there's anything to do
 if (( ${#INDEX[@]} )); then
@@ -139,13 +139,20 @@ fi
 
 # Loop through the STALE array and mark those records as notified with status "stale"
 for idx in "${STALE[@]}"; do
-	pa_records["$idx":mqtt:notified]="stale"
+	link[idx]="stale"
+	log_print DEBUG "Record index $idx (${pa_records["$idx":icao]}/${pa_records["$idx":tail]}) marked as stale"
 done
 
 # Loop through the INDEX array and send MQTT notifications
 
 for idx in "${INDEX[@]}"; do
-  if generate_mqtt "$idx"; then link[idx]=true; else link[idx]=error; fi
+  if generate_mqtt "$idx"; then
+  	link[idx]=true
+	log_print INFO "MQTT notification successful for index $idx (${pa_records["$idx":icao]}/${pa_records["$idx":tail]})"
+  else
+  	link[idx]=false
+	log_print ERR "MQTT notification FAILED for index $idx (${pa_records["$idx":icao]}/${pa_records["$idx":tail]})"
+  fi
 done
 
 # Save the records again
@@ -153,10 +160,6 @@ log_print DEBUG "Updating records after MQTT notifications"
 
 LOCK_RECORDS
 READ_RECORDS ignore-lock
-
-for idx in "${STALE[@]}"; do
-  pa_records["$idx":mqtt:notified]="stale"
-done
 
 if [[ ${#link[@]} -gt 0 ]]; then pa_records[HASNOTIFS]=true; fi
 
