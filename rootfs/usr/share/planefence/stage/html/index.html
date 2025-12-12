@@ -230,14 +230,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    margin-left: 0.4rem;
     font-size: 0.85em;
     color: var(--muted);
     white-space: nowrap;
-  }
-  .route-chip::before {
-    content: '·';
-    color: inherit;
   }
 
   /* Visually hidden text for accessibility */
@@ -1919,10 +1914,15 @@ function renderRow(r) {
   const photoCaption = escapeHtml(photoLabel);
   const photoSourceUrl = r["image:link"];
   const flagIcon = renderFlagIconForIcao(icao);
-  const aircraft = `
-    <div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}${routeHtml}</span></div>
-    <div>${tailHtml ? tailHtml+' · ' : ''}${typHtml || typ}${ownerLine ? ' · ' + ownerLine : ''}</div>
-  `.trim();
+  const aircraftLines = [];
+  aircraftLines.push(`<div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}</span></div>`);
+  if (routeHtml) aircraftLines.push(`<div>${routeHtml}</div>`);
+  const detailParts = [];
+  if (tailHtml) detailParts.push(tailHtml);
+  if (typHtml || typ) detailParts.push(typHtml || typ);
+  if (ownerLine) detailParts.push(ownerLine);
+  if (detailParts.length) aircraftLines.push(`<div>${detailParts.join(' · ')}</div>`);
+  const aircraft = aircraftLines.join('').trim();
 
   // Position: coords link only; angle outside link; add N/E
   const lat = r.lat, lon = r.lon;
