@@ -1249,14 +1249,10 @@ for line in "${socketrecords[@]}"; do
       [[ -n $gs ]] && records["$idx":groundspeed:value]="$gs" && records["$idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
-      [[ -n $squawk ]] && records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
-    else
-      # ensure squawk gets set once if still empty
-      if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
-        records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
-      fi
     fi
-
+    if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
+      records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
+    fi
     # last - make sure we're storing the idx in the list of processed indices:
     processed_indices["$idx"]=true
   fi
@@ -1350,12 +1346,10 @@ for line in "${socketrecords[@]}"; do
       [[ -n $gs ]] && pa_records["$pa_idx":groundspeed:value]="$gs" && pa_records["$pa_idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && pa_records["$pa_idx":track:value]="$track" && pa_records["$pa_idx":track:name]="$(deg_to_compass "$track")"
       pa_records["$pa_idx":time:time_at_mindist]="$seentime"
-      [[ -n $squawk ]] && pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
-    else
       # ensure squawk gets set once if still empty
-      if [[ -n $squawk && -z ${pa_records["$pa_idx":squawk:value]} ]]; then
-        pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
-      fi
+    fi
+    if [[ -n $squawk && -z ${pa_records["$pa_idx":squawk:value]} ]]; then
+      pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
     fi
 
     # last - make sure we're storing the idx in the list of processed indices:
