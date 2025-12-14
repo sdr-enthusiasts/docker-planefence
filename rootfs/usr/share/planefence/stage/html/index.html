@@ -658,6 +658,15 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     dateStr: '',
     zoom: 11
   };
+  let hasNoiseAvailable = false;
+
+  function setHasNoiseAvailability(value) {
+    const next = truthy(value);
+    if (hasNoiseAvailable !== next) {
+      hasNoiseAvailable = next;
+      applyPlaneAlertColumnVisibility();
+    }
+  }
 
   function setHeatmapLoading(active) {
     if (!heatmapLoadingEl) return;
@@ -1413,7 +1422,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       const planeAlertIdx = columnIndexByKey(PLANE_ALERT_COL_KEY);
       const soundIdx = columnIndexByKey('sound');
       const planeAlertVisible = isPlaneAlertMode();
-      const soundVisible = !isPlaneAlertMode();
+      const soundVisible = !isPlaneAlertMode() && hasNoiseAvailable;
 
       if (planeAlertIdx !== -1) {
         const col = table.column(planeAlertIdx);
@@ -2220,6 +2229,7 @@ function addOrUpdateRow(r){
         streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
         streamGlobals.maxindex = Number(g.maxindex) || 0;
         for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+        setHasNoiseAvailability(streamGlobals.HASNOISE);
         updateStationInfoFromGlobals(streamGlobals);
       }
 
@@ -2338,6 +2348,7 @@ async function pollAndMerge(modeForRun, generation) {
       try { obj = JSON.parse(line); } catch (e) { console.warn('poll: bad json', e, line); continue; }
       if (obj && obj.__globals) { localGlobals = obj.__globals || {};
         updateStationInfoFromGlobals(localGlobals);
+        setHasNoiseAvailability(localGlobals.HASNOISE);
         if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
           const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');

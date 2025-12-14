@@ -1442,10 +1442,11 @@ for idx in "${!processed_indices[@]}"; do
           noisedate="${noisedate:-$TODAY}"
           read -r records["$idx":sound:peak] records["$idx":sound:1min] records["$idx":sound:5min] records["$idx":sound:10min] records["$idx":sound:1hour] records["$idx":sound:loudness] records["$idx":sound:color] <<< "$(GET_NOISEDATA "${records["$idx":time:firstseen]}" "${records["$idx":time:lastseen]}")"
           records["$idx":checked:noisedata]=true
-          records[HASNOISE]=true
+          if [[ -n "${records["$idx":sound:peak]}" ]]; then records[HASNOISE]=true; fi
         fi
   fi
   if [[ -n "$REMOTENOISE" ]] && \
+      [[ -n "${records["$idx":sound:peak]}" ]] && \
       [[ "${records["$idx":checked:noisegraph]}" != "true" ]] && \
       [[ -z "${records["$idx":noisegraph:file]}" ]] && \
       [[ -n "${records["$idx":icao]}" ]]; then
@@ -1534,7 +1535,7 @@ if [[ -z "${records[HASROUTE]}" ]]; then records[HASROUTE]=false; fi
 if [[ -z "${records[HASIMAGES]}" ]]; then records[HASIMAGES]=false; fi
 if [[ -z "${pa_records[HASROUTE]}" ]]; then pa_records[HASROUTE]=false; fi
 if [[ -z "${pa_records[HASIMAGES]}" ]]; then pa_records[HASIMAGES]=false; fi
-if [[ -z "${records[HASNOISE]}" ]]; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
+if [[ -z "${records[HASNOISE]}" || -z "$REMOTENOISE" ]] || chk_disabled "$REMOTENOISE"; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
 
 # Provide station metadata for front-end summaries
 records["station:dist:value"]="${DIST:-}"
