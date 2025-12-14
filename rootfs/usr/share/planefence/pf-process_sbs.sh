@@ -2,9 +2,7 @@
 #shellcheck shell=bash
 #shellcheck disable=SC1090,SC1091,SC2034,SC2154,SC2155
 #
-# PLANEFENCE - a Bash shell script to render a HTML and CSV table with nearby aircraft
-#
-# Usage: ./planefence.sh
+# PF-PROCESS_SBS - a Bash shell script to read SBS data and create a planefence and plane-alert database
 #
 # Copyright 2020-2025 Ramon F. Kolb (kx1t) - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
