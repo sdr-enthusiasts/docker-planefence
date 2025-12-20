@@ -27,8 +27,8 @@
 
     :root {
       color-scheme: light dark;
-      /* height reserved for the top page header; table thead will stick beneath this */
-      --header-height: 3.5rem;
+      /* height reserved for the top page header; table thead will stick beneath this (reduced ~25% for desktop) */
+      --header-height: 2.625rem;
       --bg: #ffffff;
       --fg: #111111;
       --muted: #666;
@@ -170,7 +170,7 @@
     }
     /* Give the first data row extra padding so it clears the sticky header */
     table.dataTable tbody tr:first-of-type > * {
-      padding-top: 1.5rem;
+      padding-top: calc(var(--header-height) + 0.5rem);
     }
     th, td { vertical-align: middle; }
   img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
@@ -317,9 +317,10 @@
   .theme-toggle .theme-ico { display: inline-flex; color: var(--muted); opacity: .8; transition: color .2s ease, opacity .2s ease; font-size: 1.15rem; line-height: 1; }
   html.dark .theme-toggle .theme-ico.moon,
   html:not(.dark) .theme-toggle .theme-ico.sun { color: var(--accent); opacity: 1; }
+  .toggle-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
   html.dark .header-divider { opacity: .35; }
-  .mode-toggle { display: flex; align-items: center; gap: .35rem; font-size: .85rem; }
+  .mode-toggle { display: flex; align-items: center; gap: .25rem; font-size: .85rem; }
   .mode-toggle .mode-label { font-weight: 600; }
   .switch.switch-mode { width: 56px; height: 26px; }
   .switch.switch-mode .slider:before { width: 20px; height: 20px; top: 3px; }
@@ -331,6 +332,62 @@
   .pf-controls .pf-right .dataTables_filter label { display: flex; align-items: center; gap: .35rem; margin: 0; }
   .pf-controls .pf-right .dataTables_info { margin: 0; white-space: nowrap; }
   .pf-controls .pf-right .dataTables_paginate { margin: 0; }
+  .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
+  .table-shell { overflow: auto; margin-top: .35rem; }
+  .station-map-frame,
+  .heatmap-frame { min-height: clamp(260px, 50vh, 520px); }
+
+  @media (max-width: 960px) {
+    :root { --header-height: 4.25rem; }
+    header { flex-wrap: wrap; }
+    header .spacer { display: none; }
+  }
+
+  @media (max-width: 720px) {
+    :root { --header-height: 5.5rem; }
+    header { flex-direction: column; align-items: stretch; gap: .35rem; }
+    header h1 { font-size: 1rem; }
+    .station-headline { margin-left: 0; }
+    .status { width: 100%; display: flex; justify-content: space-between; margin-left: 0; font-size: .95rem; }
+    .toggle-row { width: 100%; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-start; }
+    .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
+    #reload { display: none; }
+    button, .btn { min-height: 42px; }
+    .mode-toggle, .theme-toggle { width: auto; justify-content: flex-start; }
+    .mode-toggle .mode-label:last-of-type { display: inline; }
+    .pf-controls { flex-direction: column; align-items: stretch; gap: .75rem; }
+    .pf-controls .pf-left, .pf-controls .pf-right { width: 100%; justify-content: space-between; }
+    .pf-controls .pf-right { gap: .75rem; }
+    .pf-controls .pf-right .dataTables_filter { width: 100%; }
+    .pf-controls .pf-right .dataTables_filter input { width: 100%; }
+    table#t { font-size: clamp(.88rem, 2.5vw, 1rem); }
+    table#t thead th, table#t tbody td { white-space: normal; }
+    table#t tbody td { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--soft); }
+    table#t tbody tr:last-child td { border-bottom: none; }
+    td.position-cell { gap: 0.25rem; }
+  }
+
+  @media (max-width: 640px) {
+    .station-info-modal,
+    .heatmap-modal,
+    .photo-modal {
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    }
+    .station-info-card,
+    .heatmap-card,
+    .photo-card {
+      width: min(100%, calc(100vw - 1.5rem));
+      border-radius: min(1rem, 4vw);
+    }
+    .photo-frame img { max-width: 100%; max-height: 100%; }
+  }
+
+  @media (max-width: 480px) {
+    .header-actions { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+    .station-headline { font-size: .95rem; }
+  }
   </style>
 </head>
 <body>
@@ -343,29 +400,33 @@
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
     <div class="spacer"></div>
-    <div class="mode-toggle" role="group" aria-label="Choose data source">
-      <span class="mode-label">Planefence</span>
-      <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
-        <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
-        <span class="slider" aria-hidden="true"></span>
-      </label>
-      <span class="mode-label">Plane-Alert</span>
-    </div>
-    <div class="header-divider" aria-hidden="true"></div>
-    <div class="theme-toggle">
-      <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
-      <div class="theme-switch-wrap">
-        <label class="switch" title="Toggle dark/light">
-          <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+    <div class="toggle-row">
+      <div class="mode-toggle" role="group" aria-label="Choose data source">
+        <span class="mode-label">Planefence</span>
+        <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
+          <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
           <span class="slider" aria-hidden="true"></span>
         </label>
+        <span class="mode-label">Plane-Alert</span>
       </div>
-      <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
+      <div class="header-divider" aria-hidden="true"></div>
+      <div class="theme-toggle">
+        <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
+        <div class="theme-switch-wrap">
+          <label class="switch" title="Toggle dark/light">
+            <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+        <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
+      </div>
     </div>
-  <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
-  <button id="stationInfoBtn" title="Show station information">Station Info</button>
-  <button id="reload" title="Update data">Update</button>
-  <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
+  <div class="header-actions">
+    <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
+    <button id="stationInfoBtn" title="Show station information">Station Info</button>
+    <button id="reload" title="Update data">Update</button>
+    <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
+  </div>
   </header>
 
   <div id="stationInfoModal" class="station-info-modal" role="dialog" aria-modal="true" aria-labelledby="stationInfoTitle" aria-hidden="true">
@@ -394,7 +455,7 @@
   </div>
 
   <main style="padding: 0 1rem 1rem;">
-    <div style="overflow:auto;">
+    <div class="table-shell" style="overflow:auto;">
       <table id="t" class="display compact stripe" style="width:100%;">
         <thead id="thead">
           <tr></tr>
@@ -1649,11 +1710,13 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     });
   };
 
+  const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 100;
+
   const api = $('#t').DataTable({
     dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
     // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
     deferRender: true,
-    pageLength: 100,
+    pageLength: defaultPageLength,
     lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', 'All']],
     responsive: true,
   // Default ordering: newest (highest index) first

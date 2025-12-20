@@ -311,12 +311,12 @@ CHK_SCREENSHOT_ENABLED() {
   screenshothost="$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$screenshoturl")"
 
   if chk_disabled "$screenshoturl"; then
-    log_print INFO "Screenshot additions not enabled, exiting"
+    log_print DEBUG "Screenshot additions not enabled, exiting"
     return 1
   fi
   # check if the screenshot container can be reached. If it can't, exit
   if ! ping -W 1 -c 1 "$screenshothost" &>/dev/null; then
-    log_print ERR "Screenshot service not reachable at ${screenshoturl}, exiting"
+    log_print DEBUG "Screenshot service not reachable at ${screenshoturl}, exiting"
     return 1
   fi
   return 0

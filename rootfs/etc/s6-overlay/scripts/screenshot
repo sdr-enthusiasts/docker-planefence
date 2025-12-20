@@ -20,6 +20,11 @@
 
 source /scripts/pf-common
 
+if ! CHK_SCREENSHOT_ENABLED; then
+  log_print INFO "Screenshot service disabled in config"
+  stop_service
+fi
+
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"
 
