@@ -20,11 +20,6 @@
 
 source /scripts/pf-common
 
-if ! CHK_SCREENSHOT_ENABLED; then
-  log_print INFO "Screenshot service disabled in config"
-  stop_service
-fi
-
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"
 
@@ -43,10 +38,15 @@ done
 pid="$(< /run/pf-process_sbs.pid)"
 while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
 
-if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Screenshot starting its initial run now"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]] && CHK_SCREENSHOT_ENABLED; then log_print INFO "Screenshot starting its initial run now"; fi
 
 while true
 do
+  if ! CHK_SCREENSHOT_ENABLED; then
+    # we do this instead of stop_service because this will autmatically detect changes to screenshot settings
+    sleep $LOOPTIME
+    continue
+  fi
   starttime=$(date +%s)
   $PLANEFENCEDIR/pf-screenshot.sh
   endtime=$(date +%s)
