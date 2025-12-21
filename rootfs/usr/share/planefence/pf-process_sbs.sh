@@ -68,6 +68,8 @@ fi
 midnight_epoch=$(date -d "$(date +%F) 00:00:00" +%s)
 today_ymd=$(date +%Y/%m/%d)
 yesterday_epoch=$(date -d yesterday +%s)
+tracedate="${today_ymd//\//-}"  # YYYY-MM-DD
+# ==========================
 
 # constants
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
@@ -1185,9 +1187,9 @@ for line in "${socketrecords[@]}"; do
       records["$idx":icao]="$icao"
       # map link at first touch
       if [[ -n $lat && -n $lon ]]; then
-        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
+        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
       else
-        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
+        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$tracedate"
       fi
     fi
 
@@ -1263,9 +1265,9 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":icao]="$icao"
       # map link at first touch
       if [[ -n $lat && -n $lon ]]; then
-        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$TODAY"
+        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
       else
-        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$TODAY"
+        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$tracedate"
       fi
     fi
     
