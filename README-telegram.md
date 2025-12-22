@@ -43,6 +43,14 @@ The "Copy Message Link" option appears to be available only when you are using a
 1. You must add the bot as a subscriber to the channel. You can only do this if you are an Administrator of the Channel
 2. For the CHAT_ID, feel free to use the `@ChannelName` value, or follow steps 4 and 5 above to get the numeric ID.
 
+### Sending to a private chat (direct messages)
+
+To receive notifications directly to your personal Telegram account:
+
+1. Start a conversation with your bot by clicking "Start"
+2. Use your Telegram user ID as the CHAT_ID
+3. Set `PF_TELEGRAM_CHAT_TYPE` and/or `PA_TELEGRAM_CHAT_TYPE` to `private` (see Step 3)
+
 ## Step 3: Configure Planefence to send notifications to Telegram
 
 Edit your `planefence.config` file, and add or modify the following parameters:
@@ -51,6 +59,8 @@ Edit your `planefence.config` file, and add or modify the following parameters:
 TELEGRAM_BOT_TOKEN=""         # set this parameter to the HTTP API Token you got in Step 1
 PF_TELEGRAM_CHAT_ID=""        # Planefence Chat (channel) ID - set this parameter to the CHAT_ID you got in Step 2
 PA_TELEGRAM_CHAT_ID=""        # Plane-Alert Chat (channel) ID - set this parameter to the CHAT_ID you got in Step 2
+PF_TELEGRAM_CHAT_TYPE=""      # set to "private" for direct messages to a user, leave empty for channels
+PA_TELEGRAM_CHAT_TYPE=""      # set to "private" for direct messages to a user, leave empty for channels
 PF_TELEGRAM_ENABLED=false     # Set this to "on"/"enabled"/"1"/"yes"/"true" to start sending Planefence notifications
 PA_TELEGRAM_ENABLED=false     # Set this to "on"/"enabled"/"1"/"yes"/"true" to start sending Plane-Alert notifications
 ```
