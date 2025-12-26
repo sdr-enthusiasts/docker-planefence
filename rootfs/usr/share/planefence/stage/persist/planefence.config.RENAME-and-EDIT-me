@@ -93,7 +93,7 @@ PF_ALTUNIT=feet
 PF_SPEEDUNIT=knotph
 #
 # ---------------------------------------------------------------------
-# This defines which instance of dump1090[-fa] or readsb we get our data from
+# This defines which instance of ultrafeeder/dump1090[-fa]/readsb we get our data from
 # By default, this is defined within the same docker container.
 # If you haven't changed this, the value should be the "service name"
 # as defined in docker-compose.yml
@@ -106,7 +106,7 @@ PF_SPEEDUNIT=knotph
 # If you have set up "tar1090" as your mapping app of choice, and you are showing
 # MLAT data on the map, then we recommend using tar1090 as your data source. That
 # way Planefence will also take aircraft received using MLAT into account.
-PF_SOCK30003HOST=readsb
+PF_SOCK30003HOST=ultrafeeder
 #
 # ---------------------------------------------------------------------
 # PF_SOCK30003PORT defines which port we should connect to for SBS data.

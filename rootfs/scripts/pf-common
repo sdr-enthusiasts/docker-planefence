@@ -71,12 +71,12 @@ WAIT_LOCK() {
   fi
   if [[ "${1,,}" == "ignore-lock" ]]; then
     if [[ -f "/tmp/.records.lock" ]]; then
-      log_print DEBUG "PF Records lock time expired, lock left in place"
+      log_print DEBUG ".records.lock time expired, lock left in place"
     else
-      log_print DEBUG "PF Records lock ignored but not present, continuing..."
+      log_print DEBUG ".records.lock ignored but not present, continuing..."
     fi
   else
-    log_print DEBUG "PF Records lock released and removed, continuing..."
+    log_print DEBUG ".records.lock released and removed, continuing..."
     rm -f "/tmp/.records.lock"
   fi
 }
@@ -88,15 +88,15 @@ LOCK_RECORDS() {
     WAIT_LOCK ""
   fi
   echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.records.lock"
-  log_print DEBUG "Records locked by $(</tmp/.records.lock)"
+  log_print DEBUG ".records.lock locked by $(</tmp/.records.lock)"
 }
 
 UNLOCK_RECORDS() {
   if [[ -f "/tmp/.records.lock" ]]; then
-    log_print DEBUG "Unlocking records locked by $(</tmp/.records.lock)"
+    log_print DEBUG "Unlocking .records.lock locked by $(</tmp/.records.lock)"
     rm -f "/tmp/.records.lock"
   else
-    log_print DEBUG "Unlocking records (they were already unlocked)"
+    log_print DEBUG "Unlocking .records.lock (it was already unlocked)"
   fi
 }
 
@@ -203,14 +203,14 @@ READ_RECORDS() {
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
     starttime="$(date +%s)"
-    log_print DEBUG "Waiting for pf.records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    log_print DEBUG "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
     while :; do
       sleep "0.${RANDOM: -3}s"
       if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
     done
-    log_print DEBUG "PF.Records.lock unlocked. Continuing..."
+    log_print DEBUG ".records.lock unlocked. Continuing..."
   fi
-  log_print DEBUG "PF Records read by $(basename "$0")"
+  log_print DEBUG "records read by $(basename "$0")"
   # shellcheck disable=SC1090
   source <(gzip -cd "$RECORDSFILE")
 
