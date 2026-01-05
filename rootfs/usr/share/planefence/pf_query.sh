@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# pf_php.sh -- Script to be called from PHP - returns REGEX subset of Planefence
+# pf_query.sh -- Script to be called from PHP - returns REGEX subset of Plane-Alert
 #
-# Usage: pf_php.sh [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>
+# Usage: pf_query.sh [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>
 #        File argument is always required and at least 1 additional argument is required.
 #
 # Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
@@ -23,21 +23,28 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
+# shellcheck disable=SC1091
+source /script/pf-common
+
 # Parse command line into variables:
-for i in "$@"
-do
+for i in "$@"; do
+	[[ "${i:0:6}" == "index=" ]] && index="${i:6}"
 	[[ "${i:0:4}" == "hex=" ]] && hex="${i:4}"
+	[[ "${i:0:5}" == "tail=" ]] && tail="${i:5}"
+	[[ "${i:0:5}" == "name=" ]] && name="${i:5}"
+	[[ "${i:0:10}" == "equipment=" ]] && equip="${i:10}"
+	[[ "${i:0:10}" == "timestamp=" ]] && timestamp="${i:10}"
 	[[ "${i:0:5}" == "call=" ]] && call="${i:5}"
-	[[ "${i:0:6}" == "start=" ]] && start="${i:6}"
-	[[ "${i:0:4}" == "end=" ]] && end="${i:4}"
-	[[ "${i:0:5}" == "file=" ]] && file="${i:5}"
+	[[ "${i:0:4}" == "lat=" ]] && lat="${i:4}"
+	[[ "${i:0:4}" == "lon=" ]] && lon="${i:4}"
+	# [[ "${i:0:5}" == "file=" ]] && file="${i:5}" # not supported, always the same file for PA
   [[ "${i:0:5}" == "type=" ]] && output_type="${i:5}"
 done
 
 # If the command line didn't include any valid args, or if the arg is --help or -?, then show them the way:
-if [[ "$hex$call$start$end" == "" ]] || [[ "$file" == "" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
+if [[ "$index$hex$tail$name$equip$timestamp$call$lat$lon" == "" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
 then
-  echo "Usage: $0 [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles> type=csv|json"
+  echo "Usage: $0 [index=<regex>][hex=<regex>] [tail=<regex>] [name=<regex>] [equipment=<regex>] [timestamp=<regex>] [call=<regex>] [lat=<regex>] [lon=<regex>] type=csv|json"
   echo "The file argument is always required and at least 1 additional argument is required."
 	echo "The arguments can contain plain text or be a regex that is used with the \`awk\` command."
 	echo ""
@@ -45,43 +52,44 @@ then
 	echo ""
 	echo "For example:"
 	echo "$0 hex=\"^A[DE]\" file=\"*.csv\""
+	echo ""
+	# shellcheck disable=SC2145
+	echo "Command line was: $0 ${@}"
   exit 1
 else
 #	echo  Now we get the data and print to the stdout:
-#	echo "hex=$hex call=$call start=$start end=$end file=$file"
-# printf "hex,call,start,end,alt,dist,url\n$(./pf_php.sh hex="^A[DE]" file="html/*.csv" call="^C" start="2021/12/1[345]")" | jq -Rs 'split("\n")|map(split(",")|to_entries)|.[0] as $header|.[1:]|map(reduce .[] as $item ({};.[$header[$item.key].value]=$item.value))'
+	csv=""
+	for ((idx=0; idx<records[maxindex]; idx++)); do
+		if [[ $idx =~ ${index:-xxxxxx} || \
+					${records["$idx":icao]} =~ ${hex:-xxxxxx} || \
+					${records["$idx":tail]} =~ ${tail:-xxxxxx} || \
+					${records["$idx":owner]} =~ ${name:-xxxxxx} || \
+					${records["$idx":type]} =~ ${equip:-xxxxxx} || \
+					${records["$idx":time:time_at_mindist]} =~ ${timestamp:-xxxxxx} || \
+					${records["$idx":callsign]} =~ ${call:-xxxxxx} || \
+					${records["$idx":lat]} =~ ${lat:-xxxxxx} || \
+					${records["$idx":lon]} =~ ${lon:-xxxxxx} ]]; then
+			readarray -t headers <<< "$(printf "%s\n" "${!records[@]}" | sed -n "s/^\($idx:.*\)/\1/p")"
 
-	# Create the header string:
-	# First few positions are fixed:
-	header[0]="hex_id"
-	header[1]="callsign"
-	header[2]="start_time"
-	header[3]="end_time"
-	header[4]="min_alt"
-	header[5]="min_dist"
-	header[6]="adsbx_link"
-
-	# Next header positions are variable, if they exist at all. We will take the first line of the first file to figure this out
-	read -r LINE <<< $(cat $file | head -1)
-	IFS=, read -ra RECORD <<< "$LINE"
-	[[ "${RECORD[7]:0:1}" == "-" ]] &&  header[7]="audio_peak"
-	[[ "${RECORD[8]:0:1}" == "-" ]] &&  header[8]="audio_1min_avg"
-	[[ "${RECORD[9]:0:1}" == "-" ]] &&  header[9]="audio_5min_avg"
-	[[ "${RECORD[10]:0:1}" == "-" ]] && header[10]="audio_10min_avg"
-	[[ "${RECORD[11]:0:1}" == "-" ]] && header[11]="audio_60min_avg"
-	[[ "${RECORD[1]:0:1}" == "@" ]] && [[ "${RECORD[7]:0:4}" == "http" ]] && header[7]="tweet_url"
-	[[ "${RECORD[1]:0:1}" == "@" ]] && [[ "${RECORD[12]:0:4}" == "http" ]] && header[12]="tweet_url"
-
-	# concatenate header:
-	printf -v h "%s," "${header[@]}"
-	header=${h:0:-1}
-
-	# now AWK the required lines and optionally convert the output to JSON using JQ:
-  if [[ "$output_type" == "csv" ]]
-  then
-    printf "$header\n$(awk -F ',' -v "IGNORECASE=1" -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)"
+			for h in "${headers[@]}"; do
+				csv+="$(printf '%s=%s,' "$h" "${records["$h"]}")"
+			done
+			# shellcheck disable=SC2001
+			csv="$(sed "s/.$/\n/" <<< "$csv")"
+		fi
+	done
+	if [[ "$output_type" == "csv" ]]; then
+		# Print the CSV:
+		printf "%s" "$csv"			
   else
-	   printf "$header\n$(awk -F ',' -v "IGNORECASE=1" -v hex="$hex" -v call="$call" -v start="$start" -v end="$end" '$1~hex && $2~call && $3~start && $4~end' $file)" \
-		   | jq -Rs 'split("\n")|map(split(",")|to_entries)|.[0] as $header|.[1:]|map(reduce .[] as $item ({};.[$header[$item.key].value]=$item.value))'
-  fi
+		# Convert CSV to JSON using JQ:
+  	jq -Rn '
+			[inputs |
+				split(",") |                            # Split each line by comma
+				map(gsub("^\"|\"$"; "")) |               # Remove surrounding quotes
+				map(split("=") | { (.[0]): .[1] }) |     # Split key=value pairs into objects
+				add                                     # Combine the objects into one
+			]
+  ' <<< "$csv"
+	fi
 fi

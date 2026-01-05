@@ -1,4 +1,9 @@
 <?php
+
+  if(isset($_GET['index'])) {
+    $index = "index=" . $_GET['index'];
+  } else { $index = ""; }
+
   if(isset($_GET['hex'])) {
     $hex = "hex=" . $_GET['hex'];
   } else { $hex = ""; }
@@ -40,7 +45,7 @@
 	   echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=regex&amp;tail=regex&name=regex&amp;equipment=regex&amp;timestamp=regex&amp;call=regex&amp;lat=regex&amp;lon=regex&amp;type=csv|json</h3>";
 	   echo "This will read the Planefence database and return matching records in JSON format.<br />";
 	   echo "<br />";
-	   echo "At least one argument of hex, tail, name, equipment, timestamp, call, lat, lon must be present.<br />";
+	   echo "At least one argument of index, hex, tail, name, equipment, timestamp, call, lat, lon must be present.<br />";
 	   echo "It will do a &quot;fuzzy&quot; match, or you can use a Regular Expression.<br />";
 	   echo "<br />";
 	   echo "The optional type argument indicates if the data returned will be json (default if omitted) or csv.<br />";
