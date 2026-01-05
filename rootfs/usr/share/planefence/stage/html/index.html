@@ -68,7 +68,10 @@
     }
   header, footer { padding: .75rem 1rem; background: var(--soft); display: flex; align-items: center; gap: .75rem; }
   /* Keep header visible while scrolling */
-  header { position: sticky; top: 0; z-index: 50; }
+  header { position: sticky; top: 0; z-index: 50; flex-direction: column; align-items: stretch; gap: .35rem; }
+    .header-top-line { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .header-right { display: flex; align-items: center; gap: .75rem; }
     header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
     .station-headline { display: flex; align-items: baseline; margin-left: .75rem; font-size: 1rem; color: var(--muted); }
     .station-headline.station-headline-empty { display: none; }
@@ -76,9 +79,6 @@
     .station-headline a:hover, .station-headline a:focus-visible { text-decoration: underline; }
     .station-motd { margin-left: .75rem; margin-top: .35rem; color: var(--muted); font-size: .95rem; }
     .station-motd.station-motd-empty { display: none; }
-    .station-motd-popover { position: absolute; z-index: 60; background: var(--soft); color: var(--fg); border: 1px solid rgba(0,0,0,0.15); border-radius: .5rem; padding: .6rem .75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: min(480px, 90vw); display: none; }
-    html.dark .station-motd-popover { border-color: rgba(255,255,255,0.12); box-shadow: 0 10px 25px rgba(0,0,0,0.55); }
-    .station-motd-popover.open { display: block; }
     header .spacer { flex: 1; }
     button, .btn {
       background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
@@ -347,6 +347,8 @@
     :root { --header-height: 4.25rem; }
     header { flex-wrap: wrap; }
     header .spacer { display: none; }
+    .header-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .header-top-line { gap: .5rem; }
   }
 
   @media (max-width: 720px) {
@@ -356,7 +358,8 @@
     .station-headline { margin-left: 0; }
     .status { width: 100%; display: flex; justify-content: space-between; margin-left: 0; font-size: .95rem; }
     .toggle-row { width: 100%; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-start; }
-    .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .header-right { width: 100%; }
+    .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: flex-start; }
     .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
     #reload { display: none; }
     button, .btn { min-height: 42px; }
@@ -397,42 +400,48 @@
 </head>
 <body>
   <header>
-    <h1>Planefence</h1>
-    <div id="stationHeadline" class="station-headline station-headline-empty">
-      <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
+    <div class="header-top-line">
+      <div class="header-left">
+        <h1>Planefence</h1>
+        <div id="stationHeadline" class="station-headline station-headline-empty">
+          <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
+        </div>
+        <span class="status mono" id="progress">Loading…</span>
+        <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
+        <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="header-right">
+        <div class="toggle-row">
+          <div class="mode-toggle" role="group" aria-label="Choose data source">
+            <span class="mode-label">Planefence</span>
+            <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
+              <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
+              <span class="slider" aria-hidden="true"></span>
+            </label>
+            <span class="mode-label">Plane-Alert</span>
+          </div>
+          <div class="header-divider" aria-hidden="true"></div>
+          <div class="theme-toggle">
+            <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
+            <div class="theme-switch-wrap">
+              <label class="switch" title="Toggle dark/light">
+                <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+                <span class="slider" aria-hidden="true"></span>
+              </label>
+            </div>
+            <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
+          </div>
+          <div class="header-actions">
+            <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
+            <button id="stationInfoBtn" title="Show station information">Station Info</button>
+            <button id="reload" title="Update data">Update</button>
+            <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="stationMotd" class="station-motd station-motd-empty" aria-live="polite"></div>
-    <span class="status mono" id="progress">Loading…</span>
-  <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
-  <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
-    <div class="spacer"></div>
-    <div class="toggle-row">
-      <div class="mode-toggle" role="group" aria-label="Choose data source">
-        <span class="mode-label">Planefence</span>
-        <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
-          <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
-          <span class="slider" aria-hidden="true"></span>
-        </label>
-        <span class="mode-label">Plane-Alert</span>
-      </div>
-      <div class="header-divider" aria-hidden="true"></div>
-      <div class="theme-toggle">
-        <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
-        <div class="theme-switch-wrap">
-          <label class="switch" title="Toggle dark/light">
-            <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
-            <span class="slider" aria-hidden="true"></span>
-          </label>
-        </div>
-        <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
-      </div>
-    </div>
-  <div class="header-actions">
-    <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
-    <button id="stationInfoBtn" title="Show station information">Station Info</button>
-    <button id="reload" title="Update data">Update</button>
-    <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
-  </div>
   </header>
 
   <div id="stationInfoModal" class="station-info-modal" role="dialog" aria-modal="true" aria-labelledby="stationInfoTitle" aria-hidden="true">
@@ -522,7 +531,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 </footer>`;
 
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
-  let stationHeadlineEl, stationHeadlineLink, stationMotdEl, stationMotdPopover;
+  let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
@@ -677,26 +686,11 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     photoModalCaption = document.getElementById('photoModalCaption');
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
-    stationMotdPopover = document.createElement('div');
-    stationMotdPopover.id = 'stationMotdPopover';
-    stationMotdPopover.className = 'station-motd-popover';
-    document.body.appendChild(stationMotdPopover);
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
     updateFooterVersionText('');
     refreshStationInfoContent();
     updateStationHeadline();
     updateStationMotd();
-    stationMotdEl?.addEventListener('click', (ev) => {
-      const full = stationMotdEl.dataset.fullMotd;
-      if (full) {
-        toggleMotdPopover(ev);
-      }
-    });
-    stationMotdEl?.addEventListener('mouseenter', (ev) => {
-      const full = stationMotdEl.dataset.fullMotd;
-      if (full) showMotdPopover(ev);
-    });
-    stationMotdEl?.addEventListener('mouseleave', hideMotdPopover);
     updateHeatmapButtonState();
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
@@ -1155,61 +1149,13 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const raw = stationInfoState.motd;
     const has = raw !== undefined && raw !== null && String(raw).trim() !== '';
     if (has) {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = String(raw);
-      const plain = (tmp.textContent || tmp.innerText || '').trim();
-      const needsEllipsis = plain.length > 20;
-      const displayText = needsEllipsis ? `${plain.slice(0, 17)}...` : plain;
-      stationMotdEl.textContent = displayText;
-      stationMotdEl.title = String(raw);
-      stationMotdEl.dataset.fullMotd = String(raw);
+      stationMotdEl.innerHTML = String(raw);
+      stationMotdEl.title = '';
       stationMotdEl.classList.remove('station-motd-empty');
     } else {
       stationMotdEl.textContent = '';
       stationMotdEl.title = '';
-      delete stationMotdEl.dataset.fullMotd;
       stationMotdEl.classList.add('station-motd-empty');
-    }
-  }
-
-  function positionMotdPopover(anchorRect) {
-    if (!stationMotdPopover || !anchorRect) return;
-    const margin = 6;
-    const viewportW = document.documentElement.clientWidth;
-    const viewportH = document.documentElement.clientHeight;
-    let top = anchorRect.bottom + margin + window.scrollY;
-    let left = anchorRect.left + window.scrollX;
-    const maxLeft = viewportW - 20;
-    const popW = Math.min(stationMotdPopover.offsetWidth || 0, 480);
-    if (left + popW > maxLeft) left = Math.max(10, maxLeft - popW);
-    if (top + (stationMotdPopover.offsetHeight || 0) > viewportH + window.scrollY) {
-      top = anchorRect.top + window.scrollY - margin - (stationMotdPopover.offsetHeight || 0);
-    }
-    stationMotdPopover.style.top = `${top}px`;
-    stationMotdPopover.style.left = `${left}px`;
-  }
-
-  function showMotdPopover(ev) {
-    if (!stationMotdEl || !stationMotdPopover) return;
-    const full = stationMotdEl.dataset.fullMotd;
-    if (!full) return;
-    stationMotdPopover.innerHTML = full;
-    stationMotdPopover.classList.add('open');
-    const rect = stationMotdEl.getBoundingClientRect();
-    positionMotdPopover(rect);
-  }
-
-  function hideMotdPopover() {
-    if (!stationMotdPopover) return;
-    stationMotdPopover.classList.remove('open');
-  }
-
-  function toggleMotdPopover(ev) {
-    if (!stationMotdPopover) return;
-    if (stationMotdPopover.classList.contains('open')) {
-      hideMotdPopover();
-    } else {
-      showMotdPopover(ev);
     }
   }
 
@@ -1284,7 +1230,6 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       refreshStationInfoContent();
       updateStationHeadline();
       updateStationMotd();
-      hideMotdPopover();
     }
   }
 
@@ -1298,9 +1243,6 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     } else if (ev.key === 'Escape' && photoModal?.classList.contains('open')) {
       ev.preventDefault();
       closePhotoModal();
-    } else if (ev.key === 'Escape' && stationMotdPopover?.classList.contains('open')) {
-      ev.preventDefault();
-      hideMotdPopover();
     }
   });
 
