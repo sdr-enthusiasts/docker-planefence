@@ -1181,6 +1181,7 @@ $(if chk_enabled "$DARKMODE"; then echo "<body class=\"dark\">"; else echo "<bod
 <h1>Planefence</h1>
 <h2>Show aircraft in range of <a href="$MYURL" target="_top">$MY</a> ADS-B station for a specific day</h2>
 ${PF_MOTD}
+<hr>Note - soon, we will update Planefence to use a more modern web framework. Preview <a href="https://kx1t.com/planefence-dev">here</a>. Feel free to provide feedback via <a href="https://discord.com/channels/734090820684349521/810227340344819733">Discord</a> or <a href="http://sdr-e.com/docker-planefence/issues">GitHub Issues</a>.<hr>
 <section style="border: none; margin: 0; padding: 0; font: 12px/1.4 'Helvetica Neue', Arial, sans-serif;">
 <article>
 <details open>
