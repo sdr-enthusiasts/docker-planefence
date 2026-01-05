@@ -91,7 +91,8 @@ fi
 PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
-
+PF_MOTD="$(awk -F'=' '/^\s*PF_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
+PA_MOTD="$(awk -F'=' '/^\s*PA_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/plane-alert.conf)"
 
 # ==========================
 # Functions
@@ -1548,6 +1549,7 @@ records["station:version"]="$VERSION"
 records["station:heatmapzoom"]="$HEATMAPZOOM"
 records["station:me"]="$MY"
 records["station:myurl"]="$MYURL"
+records["station:motd"]="$PF_MOTD"
 records["LASTUPDATE"]="$NOWTIME"
 
 pa_records["station:dist:value"]="${DIST:-}"
@@ -1557,10 +1559,12 @@ pa_records["station:altitude:unit"]="${ALTUNIT:-}"
 pa_records["station:lat"]="${LAT:-}"
 pa_records["station:lon"]="${LON:-}"
 pa_records["station:version"]="$VERSION"
-records["station:me"]="$MY"
-records["station:myurl"]="$MYURL"
 pa_records["station:me"]="$MY"
 pa_records["station:myurl"]="$MYURL"
+pa_records["station:me"]="$MY"
+pa_records["station:myurl"]="$MYURL"
+pa_records["station:motd"]="$PA_MOTD"
+
 pa_records["LASTUPDATE"]="$NOWTIME"
 
 log_print INFO "Processing complete. Now writing results to disk..."

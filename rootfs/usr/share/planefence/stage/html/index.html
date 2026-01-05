@@ -74,6 +74,11 @@
     .station-headline.station-headline-empty { display: none; }
     .station-headline a { color: var(--accent); font-weight: 600; text-decoration: none; }
     .station-headline a:hover, .station-headline a:focus-visible { text-decoration: underline; }
+    .station-motd { margin-left: .75rem; margin-top: .35rem; color: var(--muted); font-size: .95rem; }
+    .station-motd.station-motd-empty { display: none; }
+    .station-motd-popover { position: absolute; z-index: 60; background: var(--soft); color: var(--fg); border: 1px solid rgba(0,0,0,0.15); border-radius: .5rem; padding: .6rem .75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: min(480px, 90vw); display: none; }
+    html.dark .station-motd-popover { border-color: rgba(255,255,255,0.12); box-shadow: 0 10px 25px rgba(0,0,0,0.55); }
+    .station-motd-popover.open { display: block; }
     header .spacer { flex: 1; }
     button, .btn {
       background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
@@ -396,6 +401,7 @@
     <div id="stationHeadline" class="station-headline station-headline-empty">
       <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
     </div>
+    <div id="stationMotd" class="station-motd station-motd-empty" aria-live="polite"></div>
     <span class="status mono" id="progress">Loading…</span>
   <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
   <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
@@ -516,7 +522,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 </footer>`;
 
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
-  let stationHeadlineEl, stationHeadlineLink;
+  let stationHeadlineEl, stationHeadlineLink, stationMotdEl, stationMotdPopover;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
@@ -656,6 +662,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     heatmapBtn = document.getElementById('heatmapBtn');
     stationHeadlineEl = document.getElementById('stationHeadline');
     stationHeadlineLink = document.getElementById('stationHeadlineLink');
+    stationMotdEl = document.getElementById('stationMotd');
     stationInfoBtn = document.getElementById('stationInfoBtn');
     stationInfoModal = document.getElementById('stationInfoModal');
     stationInfoContentEl = document.getElementById('stationInfoContent');
@@ -670,10 +677,26 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     photoModalCaption = document.getElementById('photoModalCaption');
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
+    stationMotdPopover = document.createElement('div');
+    stationMotdPopover.id = 'stationMotdPopover';
+    stationMotdPopover.className = 'station-motd-popover';
+    document.body.appendChild(stationMotdPopover);
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
     updateFooterVersionText('');
     refreshStationInfoContent();
     updateStationHeadline();
+    updateStationMotd();
+    stationMotdEl?.addEventListener('click', (ev) => {
+      const full = stationMotdEl.dataset.fullMotd;
+      if (full) {
+        toggleMotdPopover(ev);
+      }
+    });
+    stationMotdEl?.addEventListener('mouseenter', (ev) => {
+      const full = stationMotdEl.dataset.fullMotd;
+      if (full) showMotdPopover(ev);
+    });
+    stationMotdEl?.addEventListener('mouseleave', hideMotdPopover);
     updateHeatmapButtonState();
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
@@ -707,7 +730,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     version: '',
     heatmapZoom: null,
     stationName: '',
-    stationUrl: ''
+    stationUrl: '',
+    motd: ''
   };
   let stationInfoLastFocus = null;
   let heatmapLastFocus = null;
@@ -1126,6 +1150,69 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     }
   }
 
+  function updateStationMotd() {
+    if (!stationMotdEl) return;
+    const raw = stationInfoState.motd;
+    const has = raw !== undefined && raw !== null && String(raw).trim() !== '';
+    if (has) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = String(raw);
+      const plain = (tmp.textContent || tmp.innerText || '').trim();
+      const needsEllipsis = plain.length > 20;
+      const displayText = needsEllipsis ? `${plain.slice(0, 17)}...` : plain;
+      stationMotdEl.textContent = displayText;
+      stationMotdEl.title = String(raw);
+      stationMotdEl.dataset.fullMotd = String(raw);
+      stationMotdEl.classList.remove('station-motd-empty');
+    } else {
+      stationMotdEl.textContent = '';
+      stationMotdEl.title = '';
+      delete stationMotdEl.dataset.fullMotd;
+      stationMotdEl.classList.add('station-motd-empty');
+    }
+  }
+
+  function positionMotdPopover(anchorRect) {
+    if (!stationMotdPopover || !anchorRect) return;
+    const margin = 6;
+    const viewportW = document.documentElement.clientWidth;
+    const viewportH = document.documentElement.clientHeight;
+    let top = anchorRect.bottom + margin + window.scrollY;
+    let left = anchorRect.left + window.scrollX;
+    const maxLeft = viewportW - 20;
+    const popW = Math.min(stationMotdPopover.offsetWidth || 0, 480);
+    if (left + popW > maxLeft) left = Math.max(10, maxLeft - popW);
+    if (top + (stationMotdPopover.offsetHeight || 0) > viewportH + window.scrollY) {
+      top = anchorRect.top + window.scrollY - margin - (stationMotdPopover.offsetHeight || 0);
+    }
+    stationMotdPopover.style.top = `${top}px`;
+    stationMotdPopover.style.left = `${left}px`;
+  }
+
+  function showMotdPopover(ev) {
+    if (!stationMotdEl || !stationMotdPopover) return;
+    const full = stationMotdEl.dataset.fullMotd;
+    if (!full) return;
+    stationMotdPopover.innerHTML = full;
+    stationMotdPopover.classList.add('open');
+    const rect = stationMotdEl.getBoundingClientRect();
+    positionMotdPopover(rect);
+  }
+
+  function hideMotdPopover() {
+    if (!stationMotdPopover) return;
+    stationMotdPopover.classList.remove('open');
+  }
+
+  function toggleMotdPopover(ev) {
+    if (!stationMotdPopover) return;
+    if (stationMotdPopover.classList.contains('open')) {
+      hideMotdPopover();
+    } else {
+      showMotdPopover(ev);
+    }
+  }
+
   function openStationInfoModal() {
     if (!stationInfoModal) return;
     refreshStationInfoContent();
@@ -1170,7 +1257,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       ['version', 'station:version'],
       ['heatmapZoom', 'station:heatmapzoom'],
       ['stationName', 'station:me'],
-      ['stationUrl', 'station:myurl']
+      ['stationUrl', 'station:myurl'],
+      ['motd', 'station:motd']
     ];
     for (const [stateKey, globalKey] of mapping) {
       const raw = getGlobalValue(globals, globalKey);
@@ -1195,6 +1283,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (changed) {
       refreshStationInfoContent();
       updateStationHeadline();
+      updateStationMotd();
+      hideMotdPopover();
     }
   }
 
@@ -1208,6 +1298,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     } else if (ev.key === 'Escape' && photoModal?.classList.contains('open')) {
       ev.preventDefault();
       closePhotoModal();
+    } else if (ev.key === 'Escape' && stationMotdPopover?.classList.contains('open')) {
+      ev.preventDefault();
+      hideMotdPopover();
     }
   });
 
@@ -2547,7 +2640,7 @@ async function pollAndMerge(modeForRun, generation) {
       } catch (e) { console.warn('poll: post-draw registration failed', e); }
   // If new rows were added during the poll, update the banner count.
   if (toAdd.length) updateNewUpdatesBanner();
-  if (prog) prog.textContent = `Updated ${toUpdate.length} / Added ${toAdd.length} / Purged ${purged} — Rows: ${rowCount()}`;
+  if (prog) prog.textContent = '';
     }
   } catch (e) {
     console.error('pollAndMerge error', e);
