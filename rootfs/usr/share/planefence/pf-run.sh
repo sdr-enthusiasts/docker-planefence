@@ -24,6 +24,8 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
+renice -n 10 -p $$
+
 source /scripts/pf-common
 
 PF_PATH="/usr/share/planefence"
