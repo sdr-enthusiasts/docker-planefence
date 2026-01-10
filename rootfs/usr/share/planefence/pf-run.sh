@@ -24,7 +24,7 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
-renice -n 10 -p $$
+renice -n 10 -p $$ >/dev/null 2>&1 || true
 
 source /scripts/pf-common
 
