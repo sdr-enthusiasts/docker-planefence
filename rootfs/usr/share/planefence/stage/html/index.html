@@ -90,11 +90,11 @@
     #themeToggle svg { width: 1.1em; height: 1.1em; display: inline-block; vertical-align: middle; }
     button:hover { border-color: var(--fg); }
     body.modal-open { overflow: hidden; }
-    .station-info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+    .station-info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; z-index: 1000; padding: calc(env(safe-area-inset-top, 0px) + 2.5rem) 1rem 1.25rem; }
     .station-info-modal.open { display: flex; }
-    .station-info-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; max-width: 640px; width: min(640px, 100%); max-height: 90vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border: 1px solid rgba(0,0,0,0.08); }
+    .station-info-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; width: min(50vw, 900px); max-width: calc(100vw - 2rem); max-height: 90vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border: 1px solid rgba(0,0,0,0.08); }
     html.dark .station-info-card { border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
-    .station-info-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: .5rem; right: 1rem; cursor: pointer; padding: .25rem; line-height: 1; }
+    .station-info-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: max(.5rem, env(safe-area-inset-top, 0px)); right: 1rem; cursor: pointer; padding: .25rem; line-height: 1; }
     .station-info-card h1 { margin-top: 1.25rem; font-size: 1.2rem; }
     .station-info-card h1:first-of-type { margin-top: 0; }
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
@@ -104,12 +104,12 @@
     .station-map-wrapper { margin: 1rem 0 0; border-radius: 0.75rem; overflow: hidden; border: 1px solid var(--soft); background: var(--soft); }
     html.dark .station-map-wrapper { border-color: rgba(255,255,255,0.08); background: #111421; }
     .station-map-frame { width: 100%; min-height: 260px; border: none; display: block; }
-    .heatmap-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1100; padding: 1rem; }
+    .heatmap-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1100; padding: max(1rem, env(safe-area-inset-top, 0px) + .75rem) 1rem 1rem; }
     .heatmap-modal.open { display: flex; }
     .heatmap-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(1100px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; }
     html.dark .heatmap-card { border-color: rgba(255,255,255,0.12); }
     .heatmap-frame { border: none; width: 100%; height: 100%; background: #000; display: block; flex: 1; }
-    .heatmap-close { position: absolute; top: .5rem; right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
+    .heatmap-close { position: absolute; top: max(.5rem, env(safe-area-inset-top, 0px) * 0.5); right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
     .heatmap-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; background: rgba(0,0,0,0.55); padding: 0.65rem 1.25rem; border-radius: 999px; z-index: 1100; }
     .heatmap-loading.hidden { opacity: 0; pointer-events: none; }
     .photo-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1080; padding: 1rem; }
@@ -231,6 +231,19 @@
     border-radius: 2px;
     box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
   }
+  .operator-flag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: .35rem;
+    vertical-align: middle;
+  }
+  .operator-flag img {
+    height: 1em;
+    width: auto;
+    object-fit: contain;
+    border-radius: 2px;
+    box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
+  }
   .route-chip {
     display: inline-flex;
     align-items: center;
@@ -332,6 +345,9 @@
   .language-menu.open { display: block; }
   .language-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
   .language-menu button:hover, .language-menu button:focus-visible { background: var(--soft); outline: none; }
+  @media (max-width: 640px) {
+    .language-menu { left: 50%; right: auto; transform: translateX(-50%); min-width: max(11rem, 70vw); max-width: calc(100vw - 1.25rem); }
+  }
   .toggle-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
   html.dark .header-divider { opacity: .35; }
@@ -471,7 +487,7 @@
   <div id="heatmapModal" class="heatmap-modal" role="dialog" aria-modal="true" aria-label="Planefence heatmap" aria-hidden="true">
     <div class="heatmap-card">
       <button type="button" id="heatmapClose" class="heatmap-close" aria-label="Close heatmap">&times;</button>
-      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-popups allow-forms"></iframe>
       <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap...</div>
     </div>
   </div>
@@ -507,167 +523,47 @@
 
   <script>
   // -------- Config --------
-  const cfg = {
-    // Base URL where docroot images live (arrowXXX_day|night.png, thumbnails if hosted locally)
-    // Ensure trailing slash. Change as needed, e.g., `${location.origin}/assets/`
-    // mediaBase: location.origin + 'assets/',
-    mediaBase: './assets/',
-    // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
-    // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
-    // noisePrefix: './noise/',
-  noisePrefix: './',
+  var cfg = window.cfg || {};
+  if (!window.cfg) window.cfg = cfg;
+
+  // Base URL where docroot images live (arrowXXX_day|night.png, thumbnails if hosted locally)
+  // Ensure trailing slash. Change as needed, e.g., `${location.origin}/assets/`
+  if (cfg.mediaBase === undefined) cfg.mediaBase = './assets/';
+
+  // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
+  // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
+  // noisePrefix: './noise/',
+  if (cfg.noisePrefix === undefined) cfg.noisePrefix = './';
+
   // Directory for aircraft silhouettes (configurable). Ensure trailing slash.
-  silhouetteDir: './assets/silhouettes/',
+  if (cfg.silhouetteDir === undefined) cfg.silhouetteDir = './assets/silhouettes/';
+
   // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
   // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
-    noiseIcon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E',
-    mp3Icon: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E',
-    // Enable or disable the live stream reader and/or periodic polling. Set one or both to true as needed.
-    enableStream: true,
-    enablePoll: true,
-    // Poll interval in seconds (used when enablePoll is true)
-    pollIntervalSec: 60
-  };
+  if (cfg.noiseIcon === undefined) cfg.noiseIcon = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E';
+  if (cfg.mp3Icon === undefined) cfg.mp3Icon = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E';
+
+  // Enable or disable the live stream reader and/or periodic polling. Set one or both to true as needed.
+  if (cfg.enableStream === undefined) cfg.enableStream = true;
+  if (cfg.enablePoll === undefined) cfg.enablePoll = true;
+
+  // Poll interval in seconds (used when enablePoll is true)
+  if (cfg.pollIntervalSec === undefined) cfg.pollIntervalSec = 60;
 
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
 
   const LANGUAGE_STORAGE_KEY = 'pf-language';
-  const I18N_FALLBACK = {
+  const I18N_FALLBACK = window.I18N_FALLBACK || {
     defaultLanguage: 'en-US',
     fallbackLanguage: 'en-US',
-    languages: {
-      'en-US': {
-        name: 'English (US)',
-        flag: 'us',
-        strings: {
-          'page.title': 'Planefence',
-          'header.planefenceTitle': 'Planefence',
-          'header.planeAlertTitle': 'Plane-Alert',
-          'header.mode.label.planefence': 'Planefence',
-          'header.mode.label.planeAlert': 'Plane-Alert',
-          'header.mode.aria': 'Choose data source',
-          'header.mode.toggleTitle': 'Toggle between Planefence and Plane-Alert data',
-          'header.mode.switchAria': 'Switch data source',
-          'header.mode.switchToPlanefence': 'Switch to Planefence data',
-          'header.mode.switchToPlaneAlert': 'Switch to Plane-Alert data',
-          'header.theme.toggleTitle': 'Toggle dark/light',
-          'header.theme.switchAria': 'Toggle theme',
-          'header.theme.switchToLight': 'Switch to light theme',
-          'header.theme.switchToDark': 'Switch to dark theme',
-          'status.loading': 'Loading...',
-          'status.loadingPlaneAlert': 'Loading Plane-Alert...',
-          'status.placeholder': '--',
-          'status.nextUpdate': 'Next update: {value}',
-          'status.nextUpdateCountdown': 'Next update: {seconds}s',
-          'status.lastUpdate': 'Last update: {time}',
-          'status.streamFailed': 'Stream failed',
-          'status.streamError': 'Stream error',
-          'status.doneRows': 'Done. Rows: {count}',
-          'status.loadingCount': 'Loaded {count}...',
-          'status.loadingZeroOfMax': 'Loaded 0 / {max}',
-          'status.errorPrefix': 'Error: {message}',
-          'actions.heatmap': 'Heatmap',
-          'actions.heatmap.title': 'Show station heatmap',
-          'actions.stationInfo': 'Station Info',
-          'actions.stationInfo.title': 'Show station information',
-          'actions.reload': 'Update',
-          'actions.reload.title': 'Update data',
-          'actions.newUpdates': 'New updates available',
-          'actions.newUpdates.count': 'New updates ({count})',
-          'actions.newUpdates.title': 'Show new updates',
-          'stationInfo.close': 'Close station information',
-          'heatmap.modal.label': 'Planefence heatmap',
-          'heatmap.modal.close': 'Close heatmap',
-          'heatmap.loading': 'Preparing heatmap...',
-          'heatmap.notReady': 'Heatmap data is not ready yet.',
-          'photo.modal.label': 'Aircraft photo',
-          'photo.modal.close': 'Close photo',
-          'photo.source': 'Planespotters.net',
-          'table.headers.idx': '#',
-          'table.headers.image': 'Image',
-          'table.headers.when': 'Time (first / closest / last)',
-          'table.headers.aircraft': 'Aircraft',
-          'table.headers.position': 'Position',
-          'table.headers.altspd': 'Alt / Spd',
-          'table.headers.track': 'Track',
-          'table.headers.squawk': 'Squawk',
-          'table.headers.sound': 'Sound',
-          'table.headers.planeAlert': 'Plane-Alert Tags',
-          'table.headers.notify': 'Notifications',
-          'table.empty': 'Waiting for aircraft... Data will appear as it arrives.',
-          'table.lengthAll': 'All',
-          'table.search': 'Search:',
-          'table.lengthMenuLabel': 'Show _MENU_ entries',
-          'table.info': 'Showing _START_ to _END_ of _TOTAL_ entries',
-          'table.infoEmpty': 'Showing 0 to 0 of 0 entries',
-          'table.zeroRecords': 'No matching records found',
-          'table.paginate.first': 'First',
-          'table.paginate.previous': 'Previous',
-          'table.paginate.next': 'Next',
-          'table.paginate.last': 'Last',
-          'table.sort.alt': 'Sort by altitude (toggle asc/desc)',
-          'table.sort.spd': 'Sort by speed (toggle asc/desc)',
-          'table.alt.label': 'Alt',
-          'table.speed.label': 'Spd',
-          'time.secondsAgo': '{value}s ago',
-          'time.minutesAgo': '{value}m ago',
-          'time.hoursAgo': '{value}h ago',
-          'time.closest': 'closest {value}',
-          'time.stillUpdating': 'still updating',
-          'time.separator': ' / ',
-          'heatmap.title': 'Planefence Heatmap',
-          'coverage.title': 'Station Coverage',
-          'stationMap.title': 'Station Coverage',
-          'stationMap.label': 'Station coverage map',
-          'stationMap.attr.osm': 'OpenStreetMap contributors',
-          'stationMap.attr.openaip': 'OpenAIP.net',
-          'stationInfo.welcome': 'Welcome to {stationName} Planefence and Plane-Alert Station',
-          'stationInfo.heading.planefence': 'Planefence',
-          'stationInfo.heading.planeAlert': 'Plane-Alert',
-          'stationInfo.heading.messages': 'Messages',
-          'stationInfo.planefence.description': 'Planefence shows all aircraft received today by this station within a range of {dist} {distUnit} and altitude below {altitude} {altUnit} from {coords}. Note that the station\'s actual location may differ as these coordinates may have been obfuscated for privacy reasons.',
-          'stationInfo.planeAlert.description': 'Plane-Alert shows those aircraft in range of the station that are part of the station\'s watchlist.',
-          'stationInfo.watchlistLabel': 'watchlist',
-          'stationInfo.defaultName': 'this station',
-          'stationInfo.messages.description': 'Today\'s data is derived from {totalLines} ADS-B messages received by the station since midnight',
-          'stationInfo.footer.license': 'Planefence is (c) 2020-{year} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {version}',
-          'stationInfo.footer.contributors': 'Planefence is made possible thanks to our repo contributors and other external contributors.',
-          'footer.copyright': '(c) 2020-{year} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see',
-          'footer.repo': 'Github repo',
-          'footer.contributors': 'repo contributors',
-          'footer.externalContributors': 'contributors',
-          'footer.version': 'Version {version}',
-          'footer.version.placeholder': 'Version --',
-          'sound.peak': 'Peak {value} dbFS',
-          'sound.loud': 'Loud {value} dB',
-          'sound.noisegraph.title': 'Show noisegraph',
-          'sound.spectrogram.title': 'Show spectrogram',
-          'sound.audio.title': 'Play audio',
-          'planeAlert.link': 'Link',
-          'notify.noLink': 'There\'s no link associated with this notification',
-          'notify.discord': 'Discord',
-          'notify.discordIndexed': 'Discord ({index})',
-          'notify.bluesky': 'Bluesky',
-          'notify.mastodon': 'Mastodon',
-          'notify.telegram': 'Telegram',
-          'notify.mqtt': 'MQTT',
-          'image.silhouette.alt': 'silhouette {code}',
-          'image.photo.alt': 'Aircraft photo',
-          'image.photo.view': 'View larger aircraft photo',
-          'language.menu.label': 'Select language',
-          'language.button.aria': 'Change language',
-          'language.selector.aria': 'Language selector',
-          'language.menu.item': 'Switch to {language}'
-        }
-      }
-    }
+    languages: {}
   };
 
   const i18nState = {
-    lang: I18N_FALLBACK.defaultLanguage,
-    strings: I18N_FALLBACK.languages['en-US'].strings,
-    fallbackStrings: I18N_FALLBACK.languages['en-US'].strings,
-    languages: I18N_FALLBACK.languages
+    lang: I18N_FALLBACK.defaultLanguage || 'en-US',
+    strings: (I18N_FALLBACK.languages?.[I18N_FALLBACK.defaultLanguage]?.strings) || {},
+    fallbackStrings: (I18N_FALLBACK.languages?.[I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US']?.strings) || {},
+    languages: I18N_FALLBACK.languages || {}
   };
 
   function normalizeLang(code){
@@ -745,7 +641,7 @@
     } catch (e) {
       console.warn('i18n load failed; falling back to built-in strings', e);
     }
-    const rawLanguages = config.languages || I18N_FALLBACK.languages;
+    const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
     Object.entries(rawLanguages).forEach(([code, meta]) => {
       const norm = normalizeLang(code);
@@ -755,7 +651,7 @@
     const chosen = pickLanguage(normalizedLanguages, fallbackLang);
     i18nState.lang = chosen;
     i18nState.languages = normalizedLanguages;
-    i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || I18N_FALLBACK.languages['en-US'].strings;
+    i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || I18N_FALLBACK.languages?.['en-US']?.strings || {};
     i18nState.strings = (normalizedLanguages[chosen]?.strings) || i18nState.fallbackStrings;
     try { document.documentElement.lang = chosen; } catch (e) { /* ignore */ }
     return i18nState;
@@ -769,22 +665,6 @@
   }
 
   const i18nReady = loadI18n();
-
-  const STATION_INFO_TEMPLATE_FALLBACK = `
-<h1 class="station-welcome-title">Welcome to <a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a> Planefence and Plane-Alert Station</h1>
-<h1 id="stationInfoTitle">Planefence</h1>
-Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <span class="station-coords">{{latCardinal}}, {{lonCardinal}}</span>. Note that the station's actual location may differ as these coordinates may have been obfuscated for privacy reasons.
-<div class="station-map-wrapper">
-  <iframe id="stationInfoMapFrame" class="station-map-frame" title="Station coverage map" loading="lazy"></iframe>
-</div>
-<h1>Plane-Alert</h1>
-Plane-Alert shows those aircraft in range of the station that are part of the station's <a href="alertlist.txt" target="_blank" rel="noreferrer noopener">watchlist</a>.
-<h1>Messages</h1>
-Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight
-<footer>
-<p>Planefence is &copy; 2020-{{year}} by Ram&oacute;n F. Kolb, kx1t and is available as source code or as a Docker container. See the <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Github repository</a> for more information. Version: {{version}}</p>
-<p>Planefence is made possible thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>.</p>
-</footer>`;
 
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
   let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
@@ -807,10 +687,13 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       coords: coordsHtml
     }, 'Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from {{latCardinal}}, {{lonCardinal}}.');
     const planeAlertHeading = t('stationInfo.heading.planeAlert', {}, 'Plane-Alert');
-    const planeAlertBase = t('stationInfo.planeAlert.description', {}, "Plane-Alert shows those aircraft in range of the station that are part of the station's watchlist.");
-    const planeAlertDesc = planeAlertBase.includes('{watchlist}')
-      ? applyParams(planeAlertBase, { watchlist: watchlistLink })
-      : `${planeAlertBase} ${watchlistLink}`;
+    const planeAlertBase = t('stationInfo.planeAlert.description', {}, "Plane-Alert shows those aircraft in range of the station that are part of the station's {watchlist}.");
+    const planeAlertDesc = (() => {
+      if (planeAlertBase.includes('{watchlist}')) return applyParams(planeAlertBase, { watchlist: watchlistLink });
+      const swapped = planeAlertBase.replace(/watchlist/i, watchlistLink);
+      if (swapped !== planeAlertBase) return swapped;
+      return `${planeAlertBase} ${watchlistLink}`;
+    })();
     const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
     const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
@@ -1273,8 +1156,6 @@ ${messagesDesc}
     const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
     const mapTitle = t('coverage.title', {}, 'Station Coverage');
     const mapFrameTitle = t('stationMap.label', {}, 'Station coverage map');
-    const osmAttr = t('stationMap.attr.osm', {}, 'OpenStreetMap contributors');
-    const openaipAttr = t('stationMap.attr.openaip', {}, 'OpenAIP.net');
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -1293,11 +1174,9 @@ ${messagesDesc}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <script>
     var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
-    L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="http://osm.org/copyright">${osmAttr}</a>'
-    }).addTo(map);
-    L.tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
-      attribution: '<a href="http://www.openaip.net">${openaipAttr}</a>'
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+      crossOrigin: 'anonymous'
     }).addTo(map);
     var circle = L.circle([parseFloat('${latStr}'), parseFloat('${lonStr}')], {
       color: 'blue',
@@ -1306,6 +1185,8 @@ ${messagesDesc}
       radius: ${radius}
     }).addTo(map);
     map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+    map.whenReady(function(){ map.invalidateSize(); });
+    setTimeout(function(){ map.invalidateSize(); }, 120);
   <\/script>
 </body>
 </html>`;
@@ -1314,14 +1195,15 @@ ${messagesDesc}
   function buildHeatmapHtml() {
     const lat = Number(heatmapState.lat);
     const lon = Number(heatmapState.lon);
-    const dist = Math.max(0, Math.round(Number(heatmapState.distMeters)));
+    const fallbackDist = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    const distMeters = Number.isFinite(Number(heatmapState.distMeters)) ? Number(heatmapState.distMeters) : fallbackDist;
+    const dist = Math.max(1000, Math.round(Number(distMeters) || 0));
     const dateStr = heatmapState.dateStr;
     const latStr = lat.toFixed(2);
     const lonStr = lon.toFixed(2);
     const zoomLevel = Number.isFinite(Number(heatmapState.zoom)) ? Number(heatmapState.zoom) : 11;
     const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
     const heatmapTitle = t('heatmap.title', {}, 'Planefence Heatmap');
-    const heatmapAttribution = t('stationMap.attr.osm', {}, 'OpenStreetMap contributors');
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -1342,29 +1224,49 @@ ${messagesDesc}
   <script src="./js/leaflet-heat.js"><\/script>
   <script src="./js/planeheatdata.js"><\/script>
   <script>
-    var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
-    var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-      attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">${heatmapAttribution}</a>'
+    var map = L.map('map', { scrollWheelZoom: true, zoomSnap: 0.25, zoomDelta: 0.5 }).setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
+    var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+      crossOrigin: 'anonymous'
     }).addTo(map);
-    if (typeof addressPoints === 'undefined') { addressPoints = []; }
-    addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
-    var heat = L.heatLayer(addressPoints, {
-      minOpacity: 1,
-      radius: 7,
-      maxZoom: 14,
-      blur: 11,
-      attribution: '<a href="https://sdr-e.com/docker-planefence" target="_blank">Planefence</a>'
-    }).addTo(map);
-    var circle = L.circle([ parseFloat('${latStr}'), parseFloat('${lonStr}')], {
+    if (typeof addressPoints === 'undefined' || !Array.isArray(addressPoints)) { addressPoints = []; }
+    var coords = addressPoints.map(function (p) { return [p[0], p[1]]; }).filter(function (p) { return Number.isFinite(p[0]) && Number.isFinite(p[1]); });
+    var heat = null;
+    function addHeatIfReady(attempt){
+      if (!map) return;
+      var size = map.getSize();
+      if (size.x <= 0 || size.y <= 0) {
+        if ((attempt || 0) < 8) setTimeout(function(){ addHeatIfReady((attempt || 0) + 1); }, 80);
+        return;
+      }
+      heat = L.heatLayer(coords, {
+        minOpacity: 1,
+        radius: 7,
+        maxZoom: 14,
+        blur: 11
+      }).addTo(map);
+      var canvas = heat && heat._heatmap && heat._heatmap._canvas;
+      if (canvas && canvas.getContext) {
+        var ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx && heat._heatmap) { heat._heatmap._ctx = ctx; }
+      }
+    }
+    var center = [ parseFloat('${latStr}'), parseFloat('${lonStr}')];
+    var circle = L.circle(center, {
       color: 'blue',
       fillColor: '#f03',
       fillOpacity: 0.1,
       radius: ${dist}
     }).addTo(map);
-    var openaip_cached_basemap = new L.TileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
-      attribution: '<a href="http://www.openaip.net">OpenAIP.net</a>'
-    }).addTo(map);
-    map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+    map.whenReady(function(){
+      map.invalidateSize();
+      map.fitBounds(circle.getBounds(), { padding: [20, 20], maxZoom: ${zoomLevel} });
+      addHeatIfReady(0);
+    });
+    setTimeout(function(){
+      map.invalidateSize();
+      map.fitBounds(circle.getBounds(), { padding: [20, 20], maxZoom: ${zoomLevel} });
+    }, 160);
   <\/script>
 </body>
 </html>`;
@@ -1554,7 +1456,7 @@ ${messagesDesc}
       '{{year}}': String(new Date().getFullYear()),
       '{{version}}': escapeHtml(stationInfoState.version || '--')
     };
-    return replaceTemplatePlaceholders(stationInfoTemplate() || STATION_INFO_TEMPLATE_FALLBACK, replacements);
+    return replaceTemplatePlaceholders(stationInfoTemplate(), replacements);
   }
 
   function refreshStationInfoContent() {
@@ -1918,6 +1820,21 @@ ${messagesDesc}
     const title = info.name ? info.name.replace(/"/g, '&quot;') : '';
     const src = `${FLAG_ICON_SRC_BASE}${info.code}.svg`;
     return `<span class="aircraft-flag-icon" title="${title}" aria-label="${title}"><img src="${src}" alt="${title}"></span>`;
+  }
+
+  function renderOperatorFlagForCallsign(callsign){
+    try {
+      if (!callsign) return '';
+      const m = String(callsign).trim().match(/^([A-Za-z]{3})/);
+      if (!m) return '';
+      const op = m[1].toUpperCase();
+      const src = `${cfg.mediaBase}operatorflags/${op}.bmp`;
+      const title = `${op} operator flag`;
+      // Hide image if the asset is missing to avoid broken icons.
+      return `<span class="operator-flag" title="${title}"><img src="${src}" alt="${title}" onerror="this.style.display='none'"></span>`;
+    } catch (e) {
+      return '';
+    }
   }
 
   function hostnameFromUrl(urlValue){
@@ -2505,8 +2422,9 @@ function renderRow(r) {
   const viewPhotoLabel = t('image.photo.view', {}, 'View larger aircraft photo');
   const photoSourceUrl = r["image:link"];
   const flagIcon = renderFlagIconForIcao(icao);
+  const operatorFlag = renderOperatorFlagForCallsign(cs);
   const aircraftLines = [];
-  aircraftLines.push(`<div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}</span></div>`);
+  aircraftLines.push(`<div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}</span>${operatorFlag}</div>`);
   if (routeHtml) aircraftLines.push(`<div>${routeHtml}</div>`);
   const detailParts = [];
   if (tailHtml) detailParts.push(tailHtml);

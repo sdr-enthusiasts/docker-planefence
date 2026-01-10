@@ -7,7 +7,7 @@
     "use strict";
     function t(i) {
         return this instanceof t ? (this._canvas = i = "string" == typeof i ? document.getElementById(i) : i,
-        this._ctx = i.getContext("2d"),
+        this._ctx = i.getContext("2d", { willReadFrequently: true }) || i.getContext("2d"),
         this._width = i.width,
         this._height = i.height,
         this._max = 1,

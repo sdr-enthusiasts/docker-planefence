@@ -3,7 +3,12 @@
 // Declare ICAO registration address ranges and country
 // install the flag images in flags-tiny subdirectory. 
 
-let ICAO_Ranges = [
+const globalScope = typeof window !== 'undefined' ? window : globalThis;
+
+// Only populate the range list once to avoid redeclaration errors if the
+// script executes multiple times (e.g., in dynamic embeds or re-renders).
+if (!globalScope.ICAO_Ranges) {
+  globalScope.ICAO_Ranges = [
 	// Mostly generated from the assignment table in the appendix to Chapter 9 of
 	// Annex 10 Vol III, Second Edition, July 2007 (with amendments through 88-A, 14/11/2013)
 
@@ -220,9 +225,12 @@ let ICAO_Ranges = [
 	{ start: 0xF09000, end: 0xF097FF, country: "ICAO (special use)", country_code: null },
 
     // block assignments if nothing else above applies are no longer a thing
-];
+  ];
+}
 
-let unassigned_range = {
+var ICAO_Ranges = globalScope.ICAO_Ranges;
+
+var unassigned_range = {
 	country: "Unassigned",
 	country_code: null
 };
