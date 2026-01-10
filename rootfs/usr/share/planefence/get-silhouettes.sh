@@ -14,6 +14,7 @@ source /scripts/pf-common
 
 SILHOUETTES_DIR=/usr/share/planefence/html/assets/silhouettes
 OPFLAGS_DIR=/usr/share/planefence/html/assets/operatorflags
+OPFLAGS_INDEX=${OPFLAGS_DIR}/index.json
 
 log_print INFO "get-silhouettes.sh started"
 
@@ -83,6 +84,18 @@ then
 else
 	# delete any bitmaps that aren't 3-letter airline codes to avoid clutter
 	find "$OPFLAGS_DIR" -type f ! -name '[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].bmp' -exec rm -f {} +
+	# rebuild operator flag manifest for the UI to avoid 404 fetches
+	python3 - <<'PY'
+import json, os, glob, sys
+opdir = os.environ.get('OPFLAGS_DIR', '/usr/share/planefence/html/assets/operatorflags')
+paths = glob.glob(os.path.join(opdir, '[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].bmp'))
+flags = sorted({os.path.splitext(os.path.basename(p))[0].upper() for p in paths})
+out = {"flags": flags}
+index_path = os.path.join(opdir, 'index.json')
+os.makedirs(opdir, exist_ok=True)
+with open(index_path, 'w', encoding='utf-8') as f:
+    json.dump(out, f, ensure_ascii=False)
+PY
 	log_print DEBUG "Unzipped operator flags to $OPFLAGS_DIR"
 fi
 
