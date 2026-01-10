@@ -236,6 +236,7 @@
     align-items: center;
     margin-left: .35rem;
     vertical-align: middle;
+    position: relative;
   }
   .operator-flag img {
     height: 1em;
@@ -244,6 +245,22 @@
     border-radius: 2px;
     box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
   }
+  .operator-flag .op-flag-large {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: var(--bg);
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    z-index: 30;
+    height: auto;
+    width: auto;
+    max-width: 180px;
+    max-height: 120px;
+  }
+  .operator-flag:hover .op-flag-large { display: block; }
   .route-chip {
     display: inline-flex;
     align-items: center;
@@ -1859,15 +1876,14 @@ ${messagesDesc}
   function renderOperatorFlagForCallsign(callsign){
     try {
       if (!callsign) return '';
-      const m = String(callsign).trim().match(/^([A-Za-z]{3})/);
+      const m = String(callsign).trim().match(/^([A-Za-z]{3})([^A-Za-z]|$)/);
       if (!m) return '';
       const op = m[1].toUpperCase();
       if (!operatorFlagsLoaded && !operatorFlagsLoading) loadOperatorFlagsManifest();
       if (!operatorFlagsSet.size) return '';
       if (!operatorFlagsSet.has(op)) return '';
       const src = `${cfg.mediaBase}operatorflags/${op}.bmp`;
-      const title = `${op} operator flag`;
-      return `<span class="operator-flag" title="${title}"><img src="${src}" alt="${title}"></span>`;
+      return `<span class="operator-flag"><img src="${src}" alt=""><img class="op-flag-large" src="${src}" alt=""></span>`;
     } catch (e) {
       return '';
     }
