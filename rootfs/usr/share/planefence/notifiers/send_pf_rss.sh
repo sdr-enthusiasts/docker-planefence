@@ -10,7 +10,7 @@
 # on that package for its execution.
 #
 # Based on a script provided by @randomrobbie - https://github.com/sdr-enthusiasts/docker-planefence/issues/211
-# Copyright 2024-2025 @randomrobbie, Ramon F. Kolb (kx1t), and contributors - licensed under the terms and conditions
+# Copyright 2024-2026 @randomrobbie, Ramon F. Kolb (kx1t), and contributors - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence

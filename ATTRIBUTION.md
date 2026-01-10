@@ -1,6 +1,6 @@
 # Planefence Attribution
 
-Planefence, and its associated programs, data, tools, documentation, and example code, is Copyright (C) 2020 - 2025 by Ramon F. Kolb, KX1T.
+Planefence, and its associated programs, data, tools, documentation, and example code, is Copyright (C) 2020 - 2026 by Ramon F. Kolb, KX1T.
 KX1T can be reached via email at k x 1 t   (at)   k x 1 t d o t org or via snail mail at PO Box 11, Belmont, MA 02478, USA.
 
 This file contains attributions and license terms of software, databases, and other items that were used in the creation and operation of Planefence and Plane-Alert. We are sincerely grateful to all who contributed.

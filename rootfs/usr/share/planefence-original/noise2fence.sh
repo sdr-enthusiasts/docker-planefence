@@ -2,7 +2,7 @@
 # NOISE2FENCE -- a script for extracting recorded noise values from NOISECAPT
 # and adding them to CSV files that have been created by Planefence
 #
-# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/

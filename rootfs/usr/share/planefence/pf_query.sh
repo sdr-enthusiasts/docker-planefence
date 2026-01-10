@@ -5,7 +5,7 @@
 # Usage: pf_query.sh [hex=<regex>] [call=<regex>] [start=<regex>] [end=<regex>] file=<inputfiles>
 #        File argument is always required and at least 1 additional argument is required.
 #
-# Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/
