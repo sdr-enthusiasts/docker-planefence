@@ -1,1 +1,0 @@
-#list anything you want to be ignored, 1 entry per line. ICAO, flight numbers, 3-letter airline code, etc.

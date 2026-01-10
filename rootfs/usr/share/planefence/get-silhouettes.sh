@@ -14,7 +14,7 @@ source /scripts/pf-common
 
 SILHOUETTES_DIR=/usr/share/planefence/html/assets/silhouettes
 OPFLAGS_DIR=/usr/share/planefence/html/assets/operatorflags
-OPFLAGS_INDEX=${OPFLAGS_DIR}/index.json
+#OPFLAGS_INDEX=${OPFLAGS_DIR}/index.json
 
 log_print INFO "get-silhouettes.sh started"
 
