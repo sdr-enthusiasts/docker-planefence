@@ -322,6 +322,16 @@
   .theme-toggle .theme-ico { display: inline-flex; color: var(--muted); opacity: .8; transition: color .2s ease, opacity .2s ease; font-size: 1.15rem; line-height: 1; }
   html.dark .theme-toggle .theme-ico.moon,
   html:not(.dark) .theme-toggle .theme-ico.sun { color: var(--accent); opacity: 1; }
+  .language-toggle { position: relative; display: flex; align-items: center; }
+  .language-button { display: inline-flex; align-items: center; gap: .35rem; background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer; }
+  .language-button:hover { border-color: var(--fg); }
+  .language-flag { width: 1.25rem; height: .95rem; object-fit: cover; border-radius: 2px; box-shadow: 0 0 1px rgba(0,0,0,0.35); }
+  .language-label { font-size: .9rem; }
+  .language-menu { position: absolute; top: calc(100% + .35rem); right: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--soft); border-radius: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: .35rem 0; min-width: 11rem; z-index: 60; display: none; }
+  html.dark .language-menu { border-color: rgba(255,255,255,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.55); }
+  .language-menu.open { display: block; }
+  .language-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
+  .language-menu button:hover, .language-menu button:focus-visible { background: var(--soft); outline: none; }
   .toggle-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
   html.dark .header-divider { opacity: .35; }
@@ -406,7 +416,7 @@
         <div id="stationHeadline" class="station-headline station-headline-empty">
           <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
         </div>
-        <span class="status mono" id="progress">Loading…</span>
+        <span class="status mono" id="progress">Loading...</span>
         <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
         <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
       </div>
@@ -432,6 +442,13 @@
             </div>
             <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
           </div>
+          <div id="languageSelector" class="language-toggle" aria-label="Language selector">
+            <button id="languageButton" class="language-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <img id="languageButtonFlag" class="language-flag" alt="" src="" />
+              <span id="languageButtonLabel" class="language-label"></span>
+            </button>
+            <div id="languageMenu" class="language-menu" role="listbox" aria-label="Languages"></div>
+          </div>
           <div class="header-actions">
             <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
             <button id="stationInfoBtn" title="Show station information">Station Info</button>
@@ -455,7 +472,7 @@
     <div class="heatmap-card">
       <button type="button" id="heatmapClose" class="heatmap-close" aria-label="Close heatmap">&times;</button>
       <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
-      <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap…</div>
+      <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap...</div>
     </div>
   </div>
 
@@ -514,7 +531,246 @@
 
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
 
-  const STATION_INFO_TEMPLATE = `
+  const LANGUAGE_STORAGE_KEY = 'pf-language';
+  const I18N_FALLBACK = {
+    defaultLanguage: 'en-US',
+    fallbackLanguage: 'en-US',
+    languages: {
+      'en-US': {
+        name: 'English (US)',
+        flag: 'us',
+        strings: {
+          'page.title': 'Planefence',
+          'header.planefenceTitle': 'Planefence',
+          'header.planeAlertTitle': 'Plane-Alert',
+          'header.mode.label.planefence': 'Planefence',
+          'header.mode.label.planeAlert': 'Plane-Alert',
+          'header.mode.aria': 'Choose data source',
+          'header.mode.toggleTitle': 'Toggle between Planefence and Plane-Alert data',
+          'header.mode.switchAria': 'Switch data source',
+          'header.mode.switchToPlanefence': 'Switch to Planefence data',
+          'header.mode.switchToPlaneAlert': 'Switch to Plane-Alert data',
+          'header.theme.toggleTitle': 'Toggle dark/light',
+          'header.theme.switchAria': 'Toggle theme',
+          'header.theme.switchToLight': 'Switch to light theme',
+          'header.theme.switchToDark': 'Switch to dark theme',
+          'status.loading': 'Loading...',
+          'status.loadingPlaneAlert': 'Loading Plane-Alert...',
+          'status.placeholder': '--',
+          'status.nextUpdate': 'Next update: {value}',
+          'status.nextUpdateCountdown': 'Next update: {seconds}s',
+          'status.lastUpdate': 'Last update: {time}',
+          'status.streamFailed': 'Stream failed',
+          'status.streamError': 'Stream error',
+          'status.doneRows': 'Done. Rows: {count}',
+          'status.loadingCount': 'Loaded {count}...',
+          'status.loadingZeroOfMax': 'Loaded 0 / {max}',
+          'status.errorPrefix': 'Error: {message}',
+          'actions.heatmap': 'Heatmap',
+          'actions.heatmap.title': 'Show station heatmap',
+          'actions.stationInfo': 'Station Info',
+          'actions.stationInfo.title': 'Show station information',
+          'actions.reload': 'Update',
+          'actions.reload.title': 'Update data',
+          'actions.newUpdates': 'New updates available',
+          'actions.newUpdates.count': 'New updates ({count})',
+          'actions.newUpdates.title': 'Show new updates',
+          'stationInfo.close': 'Close station information',
+          'heatmap.modal.label': 'Planefence heatmap',
+          'heatmap.modal.close': 'Close heatmap',
+          'heatmap.loading': 'Preparing heatmap...',
+          'heatmap.notReady': 'Heatmap data is not ready yet.',
+          'photo.modal.label': 'Aircraft photo',
+          'photo.modal.close': 'Close photo',
+          'photo.source': 'Planespotters.net',
+          'table.headers.idx': '#',
+          'table.headers.image': 'Image',
+          'table.headers.when': 'Time (first / closest / last)',
+          'table.headers.aircraft': 'Aircraft',
+          'table.headers.position': 'Position',
+          'table.headers.altspd': 'Alt / Spd',
+          'table.headers.track': 'Track',
+          'table.headers.squawk': 'Squawk',
+          'table.headers.sound': 'Sound',
+          'table.headers.planeAlert': 'Plane-Alert Tags',
+          'table.headers.notify': 'Notifications',
+          'table.empty': 'Waiting for aircraft... Data will appear as it arrives.',
+          'table.lengthAll': 'All',
+          'table.search': 'Search:',
+          'table.lengthMenuLabel': 'Show _MENU_ entries',
+          'table.info': 'Showing _START_ to _END_ of _TOTAL_ entries',
+          'table.infoEmpty': 'Showing 0 to 0 of 0 entries',
+          'table.zeroRecords': 'No matching records found',
+          'table.paginate.first': 'First',
+          'table.paginate.previous': 'Previous',
+          'table.paginate.next': 'Next',
+          'table.paginate.last': 'Last',
+          'table.sort.alt': 'Sort by altitude (toggle asc/desc)',
+          'table.sort.spd': 'Sort by speed (toggle asc/desc)',
+          'table.alt.label': 'Alt',
+          'table.speed.label': 'Spd',
+          'time.secondsAgo': '{value}s ago',
+          'time.minutesAgo': '{value}m ago',
+          'time.hoursAgo': '{value}h ago',
+          'time.closest': 'closest {value}',
+          'time.stillUpdating': 'still updating',
+          'time.separator': ' / ',
+          'heatmap.title': 'Planefence Heatmap',
+          'coverage.title': 'Station Coverage',
+          'stationMap.title': 'Station Coverage',
+          'stationMap.label': 'Station coverage map',
+          'stationMap.attr.osm': 'OpenStreetMap contributors',
+          'stationMap.attr.openaip': 'OpenAIP.net',
+          'stationInfo.welcome': 'Welcome to {stationName} Planefence and Plane-Alert Station',
+          'stationInfo.heading.planefence': 'Planefence',
+          'stationInfo.heading.planeAlert': 'Plane-Alert',
+          'stationInfo.heading.messages': 'Messages',
+          'stationInfo.planefence.description': 'Planefence shows all aircraft received today by this station within a range of {dist} {distUnit} and altitude below {altitude} {altUnit} from {coords}. Note that the station\'s actual location may differ as these coordinates may have been obfuscated for privacy reasons.',
+          'stationInfo.planeAlert.description': 'Plane-Alert shows those aircraft in range of the station that are part of the station\'s watchlist.',
+          'stationInfo.watchlistLabel': 'watchlist',
+          'stationInfo.defaultName': 'this station',
+          'stationInfo.messages.description': 'Today\'s data is derived from {totalLines} ADS-B messages received by the station since midnight',
+          'stationInfo.footer.license': 'Planefence is (c) 2020-{year} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {version}',
+          'stationInfo.footer.contributors': 'Planefence is made possible thanks to our repo contributors and other external contributors.',
+          'footer.copyright': '(c) 2020-{year} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see',
+          'footer.repo': 'Github repo',
+          'footer.contributors': 'repo contributors',
+          'footer.externalContributors': 'contributors',
+          'footer.version': 'Version {version}',
+          'footer.version.placeholder': 'Version --',
+          'sound.peak': 'Peak {value} dbFS',
+          'sound.loud': 'Loud {value} dB',
+          'sound.noisegraph.title': 'Show noisegraph',
+          'sound.spectrogram.title': 'Show spectrogram',
+          'sound.audio.title': 'Play audio',
+          'planeAlert.link': 'Link',
+          'notify.noLink': 'There\'s no link associated with this notification',
+          'notify.discord': 'Discord',
+          'notify.discordIndexed': 'Discord ({index})',
+          'notify.bluesky': 'Bluesky',
+          'notify.mastodon': 'Mastodon',
+          'notify.telegram': 'Telegram',
+          'notify.mqtt': 'MQTT',
+          'image.silhouette.alt': 'silhouette {code}',
+          'image.photo.alt': 'Aircraft photo',
+          'image.photo.view': 'View larger aircraft photo',
+          'language.menu.label': 'Select language',
+          'language.button.aria': 'Change language',
+          'language.selector.aria': 'Language selector',
+          'language.menu.item': 'Switch to {language}'
+        }
+      }
+    }
+  };
+
+  const i18nState = {
+    lang: I18N_FALLBACK.defaultLanguage,
+    strings: I18N_FALLBACK.languages['en-US'].strings,
+    fallbackStrings: I18N_FALLBACK.languages['en-US'].strings,
+    languages: I18N_FALLBACK.languages
+  };
+
+  function normalizeLang(code){
+    const raw = (code || '').replace(/_/g, '-').trim();
+    if (!raw) return '';
+    const parts = raw.split('-');
+    const base = parts.shift()?.toLowerCase() || '';
+    const region = parts.shift();
+    const regionPart = region ? region.toUpperCase() : '';
+    const rest = parts.length ? `-${parts.join('-')}` : '';
+    return regionPart ? `${base}-${regionPart}${rest}` : `${base}${rest}`;
+  }
+
+  function applyParams(template, params){
+    if (!params) return template;
+    return template.replace(/\{(\w+)\}/g, (m, key) => (params[key] ?? m));
+  }
+
+  function t(key, params, fallback){
+    const fromPrimary = i18nState.strings?.[key];
+    const fromFallback = i18nState.fallbackStrings?.[key];
+    const chosen = (fromPrimary ?? fromFallback ?? fallback ?? key);
+    return applyParams(String(chosen), params);
+  }
+
+  function getStoredLanguage(){
+    try { return localStorage.getItem(LANGUAGE_STORAGE_KEY); } catch (e) { return null; }
+  }
+
+  function findLanguageMatch(requested, available){
+    if (!available) return null;
+    const norm = normalizeLang(requested);
+    if (!norm) return null;
+    if (available[norm]) return norm;
+    const base = norm.split('-')[0];
+    const baseExact = Object.keys(available).find(k => normalizeLang(k) === base);
+    if (baseExact) return normalizeLang(baseExact);
+    const prefixed = Object.keys(available).find(k => normalizeLang(k).startsWith(`${base}-`));
+    if (prefixed) return normalizeLang(prefixed);
+    return null;
+  }
+
+  function detectBrowserLanguage(available){
+    if (!available) return null;
+    const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
+    for (const raw of langs) {
+      const match = findLanguageMatch(raw, available);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  function pickLanguage(available, fallbackLang){
+    const fallback = normalizeLang(fallbackLang || I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US');
+    const storedRaw = getStoredLanguage();
+    const stored = findLanguageMatch(storedRaw, available);
+    const browser = detectBrowserLanguage(available);
+    const chain = [stored, browser, fallback];
+    for (const cand of chain) {
+      const matched = findLanguageMatch(cand, available);
+      if (matched) return matched;
+    }
+    const anyKey = Object.keys(available)[0];
+    return anyKey || fallback || 'en-US';
+  }
+
+  async function loadI18n(){
+    let config = I18N_FALLBACK;
+    try {
+      const resp = await fetch('./locales/strings.json', { cache: 'no-store' });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.languages) config = data;
+      }
+    } catch (e) {
+      console.warn('i18n load failed; falling back to built-in strings', e);
+    }
+    const rawLanguages = config.languages || I18N_FALLBACK.languages;
+    const normalizedLanguages = {};
+    Object.entries(rawLanguages).forEach(([code, meta]) => {
+      const norm = normalizeLang(code);
+      if (norm) normalizedLanguages[norm] = meta;
+    });
+    const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
+    const chosen = pickLanguage(normalizedLanguages, fallbackLang);
+    i18nState.lang = chosen;
+    i18nState.languages = normalizedLanguages;
+    i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || I18N_FALLBACK.languages['en-US'].strings;
+    i18nState.strings = (normalizedLanguages[chosen]?.strings) || i18nState.fallbackStrings;
+    try { document.documentElement.lang = chosen; } catch (e) { /* ignore */ }
+    return i18nState;
+  }
+
+  function languageMeta(code){
+    const normalized = normalizeLang(code || i18nState.lang);
+    const meta = i18nState.languages?.[normalized];
+    if (meta) return { code: normalized, name: meta.name, flag: meta.flag };
+    return { code: normalized || 'en-US', name: 'English (US)', flag: 'us' };
+  }
+
+  const i18nReady = loadI18n();
+
+  const STATION_INFO_TEMPLATE_FALLBACK = `
 <h1 class="station-welcome-title">Welcome to <a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a> Planefence and Plane-Alert Station</h1>
 <h1 id="stationInfoTitle">Planefence</h1>
 Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from <span class="station-coords">{{latCardinal}}, {{lonCardinal}}</span>. Note that the station's actual location may differ as these coordinates may have been obfuscated for privacy reasons.
@@ -536,6 +792,49 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
+
+  function stationInfoTemplate(){
+    const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
+    const coordsHtml = `<span class="station-coords">{{latCardinal}}, {{lonCardinal}}</span>`;
+    const watchlistLink = `<a href="alertlist.txt" target="_blank" rel="noreferrer noopener">${t('stationInfo.watchlistLabel', {}, 'watchlist')}</a>`;
+    const welcome = t('stationInfo.welcome', { stationName: stationLink }, 'Welcome to {{stationName}} Planefence and Plane-Alert Station');
+    const pfHeading = t('stationInfo.heading.planefence', {}, 'Planefence');
+    const pfDesc = t('stationInfo.planefence.description', {
+      dist: '{{dist}}',
+      distUnit: '{{distUnit}}',
+      altitude: '{{altitude}}',
+      altUnit: '{{altUnit}}',
+      coords: coordsHtml
+    }, 'Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from {{latCardinal}}, {{lonCardinal}}.');
+    const planeAlertHeading = t('stationInfo.heading.planeAlert', {}, 'Plane-Alert');
+    const planeAlertBase = t('stationInfo.planeAlert.description', {}, "Plane-Alert shows those aircraft in range of the station that are part of the station's watchlist.");
+    const planeAlertDesc = planeAlertBase.includes('{watchlist}')
+      ? applyParams(planeAlertBase, { watchlist: watchlistLink })
+      : `${planeAlertBase} ${watchlistLink}`;
+    const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
+    const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
+    const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
+    const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
+    const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const footerLicense = t('stationInfo.footer.license', { year: '{{year}}', version: '{{version}}', repoLink }, 'Planefence is (c) 2020-{{year}} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {{version}}');
+    const footerContrib = t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Planefence is made possible thanks to our repo contributors and other external contributors.');
+    const mapTitle = t('stationMap.label', {}, 'Station coverage map');
+    return `
+<h1 class="station-welcome-title">${welcome}</h1>
+<h1 id="stationInfoTitle">${pfHeading}</h1>
+${pfDesc}
+<div class="station-map-wrapper">
+  <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>
+</div>
+<h1>${planeAlertHeading}</h1>
+${planeAlertDesc}
+<h1>${messagesHeading}</h1>
+${messagesDesc}
+<footer>
+<p>${footerLicense}</p>
+<p>${footerContrib}</p>
+</footer>`;
+  }
 
   const truthy = (v) => {
     if (v === true || v === 1) return true;
@@ -586,11 +885,15 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       const toggle = document.getElementById('dataModeToggle');
       if (toggle) {
         try { toggle.checked = isPlaneAlertMode(); } catch (e) { /* ignore */ }
-        const label = isPlaneAlertMode() ? 'Switch to Planefence data' : 'Switch to Plane-Alert data';
+        const label = isPlaneAlertMode()
+          ? t('header.mode.switchToPlanefence', {}, 'Switch to Planefence data')
+          : t('header.mode.switchToPlaneAlert', {}, 'Switch to Plane-Alert data');
         toggle.setAttribute('aria-label', label);
       }
       const heading = document.querySelector('header h1');
-      if (heading) heading.textContent = isPlaneAlertMode() ? 'Plane-Alert' : 'Planefence';
+      if (heading) heading.textContent = isPlaneAlertMode()
+        ? t('header.planeAlertTitle', {}, 'Plane-Alert')
+        : t('header.planefenceTitle', {}, 'Planefence');
       const body = document.body;
       if (body) {
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
@@ -630,7 +933,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     document.documentElement.classList.toggle('dark', dark);
     const toggle = document.getElementById('themeToggle');
     if (toggle) {
-      const label = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      const label = dark
+        ? t('header.theme.switchToLight', {}, 'Switch to light theme')
+        : t('header.theme.switchToDark', {}, 'Switch to dark theme');
       toggle.setAttribute('aria-label', label);
       try { toggle.checked = dark; } catch(e) { /* ignore */ }
     }
@@ -659,9 +964,12 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   })();
 
   // -------- Helpers --------
-  document.addEventListener('DOMContentLoaded', ()=>{
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    await i18nReady;
     prog = document.getElementById('progress');
-    if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
+    if (prog) prog.textContent = isPlaneAlertMode()
+      ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
+      : t('status.loading', {}, 'Loading...');
     lastUpdateEl = document.getElementById('lastupdate');
     nextUpdateEl = document.getElementById('nextupdate');
     theadRow = document.querySelector('#thead tr');
@@ -687,6 +995,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
+    setupLanguageSelector();
+    applyTranslationsToDom();
+    renderFooterText();
     updateFooterVersionText('');
     refreshStationInfoContent();
     updateStationHeadline();
@@ -711,6 +1022,15 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     });
     setHeatmapLoading(true);
     setupThumbnailInteractions();
+    newUpdatesBtn?.addEventListener('click', ()=>{
+      try {
+        if (table) {
+          table.page('first').draw(false);
+          highlightPendingNewRows();
+        }
+        newUpdatesBtn.style.display = 'none';
+      } catch (e) { console.error('newUpdates click', e); }
+    });
   }, { once: true });
 
   const stationInfoState = {
@@ -745,6 +1065,127 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       hasNoiseAvailable = next;
       applyPlaneAlertColumnVisibility();
     }
+  }
+
+  function availableLanguages(){
+    const langs = i18nState.languages || {};
+    return Object.entries(langs).map(([code, meta]) => ({
+      code,
+      name: meta?.name || code,
+      flag: meta?.flag || code
+    }));
+  }
+
+  function renderLanguageSelector(){
+    const btn = document.getElementById('languageButton');
+    const flagImg = document.getElementById('languageButtonFlag');
+    const labelEl = document.getElementById('languageButtonLabel');
+    const menu = document.getElementById('languageMenu');
+    if (!btn || !flagImg || !labelEl || !menu) return;
+    btn.setAttribute('aria-label', t('language.button.aria', {}, 'Change language'));
+    const meta = languageMeta();
+    const code = meta.code || 'en';
+    const flag = meta.flag || code;
+    flagImg.src = `${FLAG_ICON_SRC_BASE}${flag}.svg`;
+    flagImg.alt = meta.name || code.toUpperCase();
+    labelEl.textContent = meta.name || code.toUpperCase();
+    menu.setAttribute('aria-label', t('language.menu.label', {}, 'Select language'));
+    menu.innerHTML = '';
+    const langs = availableLanguages();
+    for (const lang of langs) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.setAttribute('role', 'option');
+      item.setAttribute('data-lang', lang.code);
+      const label = lang.name || lang.code.toUpperCase();
+      item.innerHTML = `<img class="language-flag" alt="" src="${FLAG_ICON_SRC_BASE}${lang.flag || lang.code}.svg"><span>${label}</span>`;
+      item.addEventListener('click', ()=> selectLanguage(lang.code));
+      menu.appendChild(item);
+    }
+  }
+
+  function toggleLanguageMenu(force){
+    const menu = document.getElementById('languageMenu');
+    const btn = document.getElementById('languageButton');
+    if (!menu || !btn) return;
+    const next = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+    menu.classList.toggle('open', next);
+    btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+  }
+
+  function selectLanguage(code){
+    try { localStorage.setItem(LANGUAGE_STORAGE_KEY, code); } catch (e) { /* ignore */ }
+    location.reload();
+  }
+
+  function setupLanguageSelector(){
+    renderLanguageSelector();
+    const btn = document.getElementById('languageButton');
+    const menu = document.getElementById('languageMenu');
+    if (btn) btn.addEventListener('click', (ev)=> { ev.preventDefault(); toggleLanguageMenu(); });
+    document.addEventListener('click', (ev)=> {
+      if (!menu || !btn) return;
+      if (menu.contains(ev.target) || btn.contains(ev.target)) return;
+      toggleLanguageMenu(false);
+    });
+  }
+
+  function applyTranslationsToDom(){
+    try { document.title = t('page.title', {}, document.title); } catch (e) { /* ignore */ }
+    const heading = document.querySelector('header h1');
+    if (heading) heading.textContent = isPlaneAlertMode()
+      ? t('header.planeAlertTitle', {}, 'Plane-Alert')
+      : t('header.planefenceTitle', {}, 'Planefence');
+    const modeToggleEl = document.querySelector('.mode-toggle');
+    if (modeToggleEl) modeToggleEl.setAttribute('aria-label', t('header.mode.aria', {}, 'Choose data source'));
+    const modeSwitchLabel = document.querySelector('.switch.switch-mode');
+    if (modeSwitchLabel) modeSwitchLabel.setAttribute('title', t('header.mode.toggleTitle', {}, 'Toggle between Planefence and Plane-Alert data'));
+    const modeLabels = document.querySelectorAll('.mode-toggle .mode-label');
+    if (modeLabels[0]) modeLabels[0].textContent = t('header.mode.label.planefence', {}, 'Planefence');
+    if (modeLabels[1]) modeLabels[1].textContent = t('header.mode.label.planeAlert', {}, 'Plane-Alert');
+    const dataToggle = document.getElementById('dataModeToggle');
+    if (dataToggle) dataToggle.setAttribute('aria-label', t('header.mode.switchAria', {}, 'Switch data source'));
+    const themeLabel = document.querySelector('.theme-switch-wrap label');
+    if (themeLabel) themeLabel.title = t('header.theme.toggleTitle', {}, 'Toggle dark/light');
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      const dark = document.documentElement.classList.contains('dark');
+      themeToggle.setAttribute('aria-label', dark ? t('header.theme.switchToLight', {}, 'Switch to light theme') : t('header.theme.switchToDark', {}, 'Switch to dark theme'));
+    }
+    if (heatmapBtn) { heatmapBtn.textContent = t('actions.heatmap', {}, 'Heatmap'); heatmapBtn.title = t('actions.heatmap.title', {}, 'Show station heatmap'); }
+    if (stationInfoBtn) { stationInfoBtn.textContent = t('actions.stationInfo', {}, 'Station Info'); stationInfoBtn.title = t('actions.stationInfo.title', {}, 'Show station information'); }
+    if (reloadBtn) { reloadBtn.textContent = t('actions.reload', {}, 'Update'); reloadBtn.title = t('actions.reload.title', {}, 'Update data'); }
+    if (newUpdatesBtn) { newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available'); newUpdatesBtn.title = t('actions.newUpdates.title', {}, 'Show new updates'); }
+    if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
+    if (heatmapLoadingEl) heatmapLoadingEl.textContent = t('heatmap.loading', {}, 'Preparing heatmap...');
+    if (heatmapModal) heatmapModal.setAttribute('aria-label', t('heatmap.modal.label', {}, 'Planefence heatmap'));
+    if (heatmapFrame) {
+      const heatmapLabel = t('heatmap.modal.label', {}, 'Planefence heatmap');
+      heatmapFrame.setAttribute('title', heatmapLabel);
+      heatmapFrame.setAttribute('aria-label', heatmapLabel);
+    }
+    if (heatmapCloseBtn) heatmapCloseBtn.setAttribute('aria-label', t('heatmap.modal.close', {}, 'Close heatmap'));
+    if (photoModal) photoModal.setAttribute('aria-label', t('photo.modal.label', {}, 'Aircraft photo'));
+    if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
+    if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
+    const languageSelector = document.getElementById('languageSelector');
+    if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
+    renderLanguageSelector();
+  }
+
+  function renderFooterText(){
+    const footerSmall = document.querySelector('footer small');
+    if (!footerSmall) return;
+    const year = String(new Date().getFullYear());
+    const yearSpan = `<span id="footerYear">${year}</span>`;
+    const repoLink = `<a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
+    const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
+    const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const copyrightText = t('footer.copyright', { year: yearSpan }, `(c) 2020-${yearSpan} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see`);
+    const versionHtml = `<span id="appVersionText">${t('footer.version.placeholder', {}, 'Version --')}</span>`;
+    footerSmall.innerHTML = `${copyrightText} ${repoLink}. ${t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Thanks to our repo contributors and other external contributors.')}. ${versionHtml}`;
+    appVersionEl = document.getElementById('appVersionText');
+    footerYearEl = document.getElementById('footerYear') || footerSmall.querySelector('#footerYear');
   }
 
   function setHeatmapLoading(active) {
@@ -830,11 +1271,15 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const latStr = lat.toFixed(2);
     const lonStr = lon.toFixed(2);
     const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    const mapTitle = t('coverage.title', {}, 'Station Coverage');
+    const mapFrameTitle = t('stationMap.label', {}, 'Station coverage map');
+    const osmAttr = t('stationMap.attr.osm', {}, 'OpenStreetMap contributors');
+    const openaipAttr = t('stationMap.attr.openaip', {}, 'OpenAIP.net');
     return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Station Coverage</title>
+  <title>${mapTitle}</title>
   <base href="${baseHref}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
@@ -849,10 +1294,10 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   <script>
     var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
     L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      attribution: '&copy; <a href="http://osm.org/copyright">${osmAttr}</a>'
     }).addTo(map);
     L.tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=', {
-      attribution: '<a href="http://www.openaip.net">OpenAIP.net</a>'
+      attribution: '<a href="http://www.openaip.net">${openaipAttr}</a>'
     }).addTo(map);
     var circle = L.circle([parseFloat('${latStr}'), parseFloat('${lonStr}')], {
       color: 'blue',
@@ -875,11 +1320,13 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const lonStr = lon.toFixed(2);
     const zoomLevel = Number.isFinite(Number(heatmapState.zoom)) ? Number(heatmapState.zoom) : 11;
     const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    const heatmapTitle = t('heatmap.title', {}, 'Planefence Heatmap');
+    const heatmapAttribution = t('stationMap.attr.osm', {}, 'OpenStreetMap contributors');
     return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Planefence Heatmap</title>
+  <title>${heatmapTitle}</title>
   <base href="${baseHref}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
@@ -897,7 +1344,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   <script>
     var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
     var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-      attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      attribution: '<a href="https://github.com/Leaflet/Leaflet.heat">Leaflet.heat</a> , &copy; <a href="http://osm.org/copyright">${heatmapAttribution}</a>'
     }).addTo(map);
     if (typeof addressPoints === 'undefined') { addressPoints = []; }
     addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
@@ -925,7 +1372,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 
   function openHeatmapModal() {
     if (!isHeatmapDataReady()) {
-      alert('Heatmap data is not ready yet.');
+      alert(t('heatmap.notReady', {}, 'Heatmap data is not ready yet.'));
       return;
     }
     if (!heatmapModal || !heatmapFrame) return;
@@ -958,10 +1405,10 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const safeSrc = String(src || '').trim();
     if (!safeSrc) return;
     photoModalImg.src = safeSrc;
-    photoModalImg.alt = caption || 'Aircraft photo';
+    photoModalImg.alt = caption || t('photo.modal.label', {}, 'Aircraft photo');
     if (photoModalCaption) {
       const safeCaption = caption || '';
-      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">Planespotters.net</a>` : '';
+      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">${t('photo.source', {}, 'Planespotters.net')}</a>` : '';
       photoModalCaption.innerHTML = `${safeCaption}${linkHtml ? ` · ${linkHtml}` : ''}`;
     }
     photoModalLastFocus = document.activeElement;
@@ -991,7 +1438,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (!fullSrc) return null;
     return {
       fullSrc,
-      caption: img.getAttribute('data-caption') || 'Aircraft photo',
+      caption: img.getAttribute('data-caption') || t('photo.modal.label', {}, 'Aircraft photo'),
       sourceLink: img.getAttribute('data-sourcelink') || ''
     };
   }
@@ -1018,7 +1465,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 
   function updateFooterVersionText(value) {
     if (!appVersionEl) return;
-    const label = value ? `Version ${value}` : 'Version --';
+    const label = value
+      ? t('footer.version', { version: value }, `Version ${value}`)
+      : t('footer.version.placeholder', {}, 'Version --');
     appVersionEl.textContent = label;
   }
 
@@ -1037,7 +1486,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
 
   function replaceTemplatePlaceholders(template, replacements) {
     return Object.entries(replacements).reduce((acc, [token, rawValue]) => {
-      const safeVal = rawValue ?? '--';
+      const safeVal = rawValue ?? t('status.placeholder', {}, '--');
       const pattern = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       return acc.replace(new RegExp(pattern, 'g'), safeVal);
     }, template);
@@ -1049,14 +1498,14 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       return (num < 10 ? numberFmt1.format(num) : numberFmt0.format(Math.round(num)));
     }
     if (value != null && value !== '') return escapeHtml(value);
-    return '--';
+    return t('status.placeholder', {}, '--');
   }
 
   function formatStationAltitude(value) {
     const num = Number(value);
     if (Number.isFinite(num)) return numberFmt0.format(num);
     if (value != null && value !== '') return escapeHtml(value);
-    return '--';
+    return t('status.placeholder', {}, '--');
   }
 
   function truncateCoord(value) {
@@ -1069,7 +1518,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const truncated = truncateCoord(value);
     if (truncated != null) return coordFmt.format(truncated);
     if (value != null && value !== '') return escapeHtml(value);
-    return '--';
+    return t('status.placeholder', {}, '--');
   }
 
   function formatStationCardinalCoord(value, axis) {
@@ -1088,12 +1537,12 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const num = Number(value);
     if (Number.isFinite(num)) return numberFmt0.format(num);
     if (value != null && value !== '') return escapeHtml(value);
-    return '--';
+    return t('status.placeholder', {}, '--');
   }
 
   function buildStationInfoHtml() {
     const replacements = {
-      '{{stationName}}': escapeHtml(stationInfoState.stationName || 'this'),
+      '{{stationName}}': escapeHtml(stationInfoState.stationName || t('stationInfo.defaultName', {}, 'this station')),
       '{{stationUrl}}': escapeHtml(stationInfoState.stationUrl || 'https://sdr-e.com/docker-planefence'),
       '{{dist}}': formatStationDistance(stationInfoState.dist),
       '{{distUnit}}': escapeHtml(stationInfoState.distUnit || '--'),
@@ -1105,7 +1554,7 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       '{{year}}': String(new Date().getFullYear()),
       '{{version}}': escapeHtml(stationInfoState.version || '--')
     };
-    return replaceTemplatePlaceholders(STATION_INFO_TEMPLATE, replacements);
+    return replaceTemplatePlaceholders(stationInfoTemplate() || STATION_INFO_TEMPLATE_FALLBACK, replacements);
   }
 
   function refreshStationInfoContent() {
@@ -1252,9 +1701,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       if (!newUpdatesBtn) return;
       const count = pendingNewIndices.size || 0;
       if (count > 0) {
-        newUpdatesBtn.textContent = `New updates (${count})`;
+        newUpdatesBtn.textContent = t('actions.newUpdates.count', { count }, `New updates (${count})`);
       } else {
-        newUpdatesBtn.textContent = 'New updates available';
+        newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available');
         newUpdatesBtn.style.display = 'none';
       }
     } catch (e) { /* ignore */ }
@@ -1268,9 +1717,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (!nextUpdateEl) return;
     if (countdownTimerId) clearInterval(countdownTimerId);
     countdownTimerId = setInterval(()=>{
-      if (!nextPollAt) { nextUpdateEl.textContent = 'Next update: --'; return; }
+      if (!nextPollAt) { nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --'); return; }
       const sec = Math.max(0, Math.round((nextPollAt - Date.now())/1000));
-      nextUpdateEl.textContent = `Next update: ${sec}s`;
+      nextUpdateEl.textContent = t('status.nextUpdateCountdown', { seconds: sec }, `Next update: ${sec}s`);
     }, 250);
   }
 
@@ -1343,9 +1792,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const nowMs = Date.now();
     const tsMs = num * 1000;
     const diffSec = Math.max(0, Math.floor((nowMs - tsMs) / 1000));
-    if (diffSec < 60) return `${diffSec}s ago`;
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 60) return t('time.secondsAgo', { value: diffSec }, `${diffSec}s ago`);
+    if (diffSec < 3600) return t('time.minutesAgo', { value: Math.floor(diffSec / 60) }, `${Math.floor(diffSec / 60)}m ago`);
+    if (diffSec < 86400) return t('time.hoursAgo', { value: Math.floor(diffSec / 3600) }, `${Math.floor(diffSec / 3600)}h ago`);
     return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(tsMs));
   }
 
@@ -1379,15 +1828,16 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     const lastStr = formatRelativeOrDate(lastTs || closestTs || firstTs);
     if (!firstStr && !closestStr && !lastStr) return '';
     const closestPrimary = closestStr || lastStr || firstStr || '--';
-    const primary = `closest ${closestPrimary}`;
+    const primary = t('time.closest', { value: closestPrimary }, `closest ${closestPrimary}`);
     const firstLine = formatClockOrDate(firstTs);
     const closestLine = formatClockOrDate(closestTs);
     const lastLine = formatClockOrDate(lastTs || closestTs || firstTs);
-    const timelineCore = [firstLine.text, closestLine.text, lastLine.text].join(' / ');
+    const separator = t('time.separator', {}, ' / ');
+    const timelineCore = [firstLine.text, closestLine.text, lastLine.text].join(separator);
     const hasTimeValue = firstLine.isTime || closestLine.isTime || lastLine.isTime;
     const timeline = (tzAbbrev && hasTimeValue) ? `${timelineCore} ${tzAbbrev}` : timelineCore;
     const updating = (String(completeFlag) !== 'true')
-      ? `<div class="still-updating">still updating</div>` : '';
+      ? `<div class="still-updating">${t('time.stillUpdating', {}, 'still updating')}</div>` : '';
     return `<div class="mono">${primary}</div><div class="mono">${timeline}</div>${updating}`;
   }
 
@@ -1491,21 +1941,21 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
   // -------- Columns definition --------
   const PLANE_ALERT_COL_KEY = 'planealert';
   const viewCols = [
-    { key:"idx", title:"#", width:"4%" },
-    { key:"thumb", title:"Image", width:"6%" },
-  { key:"when", title:"Time (first / closest / last)" },
-    { key:"aircraft", title:"Aircraft", width:"22%" },
-  // Route column removed; route will be shown in Aircraft column after callsign
-  // Position column slightly narrower (~70% of previous). Previous was 16%.
-  { key:"position", title:"Position", width:"11%" },
+    { key:"idx", titleKey:"table.headers.idx", width:"4%" },
+    { key:"thumb", titleKey:"table.headers.image", width:"6%" },
+    { key:"when", titleKey:"table.headers.when" },
+    { key:"aircraft", titleKey:"table.headers.aircraft", width:"22%" },
+    // Route column removed; route will be shown in Aircraft column after callsign
+    // Position column slightly narrower (~70% of previous). Previous was 16%.
+    { key:"position", titleKey:"table.headers.position", width:"11%" },
     // Combined Alt/Spd column: both values shown on separate lines inside the same cell
-  // Make Alt/Spd (speed) about 50% of previous width
-  { key:"altspd", title:"Alt / Spd", width:"7%" },
-    { key:"trk", title:"Track", width:"7%" },
-  { key:"squawk", title:"Squawk", width:"8%" },
-  { key:"sound", title:"Sound" },
-    { key: PLANE_ALERT_COL_KEY, title:"Plane-Alert Tags", width:"12%" },
-    { key:"notify", title:"Notifications", width:"12%" }
+    // Make Alt/Spd (speed) about 50% of previous width
+    { key:"altspd", titleKey:"table.headers.altspd", width:"7%" },
+    { key:"trk", titleKey:"table.headers.track", width:"7%" },
+    { key:"squawk", titleKey:"table.headers.squawk", width:"8%" },
+    { key:"sound", titleKey:"table.headers.sound" },
+    { key: PLANE_ALERT_COL_KEY, titleKey:"table.headers.planeAlert", width:"12%" },
+    { key:"notify", titleKey:"table.headers.notify", width:"12%" }
   ];
 
   function columnIndexByKey(key){
@@ -1550,7 +2000,9 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     pendingNewIndices.clear();
     updateNewUpdatesBanner();
     if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
-    if (prog) prog.textContent = isPlaneAlertMode() ? 'Loading Plane-Alert…' : 'Loading…';
+    if (prog) prog.textContent = isPlaneAlertMode()
+      ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
+      : t('status.loading', {}, 'Loading...');
   }
 
   function highlightPendingNewRows(){
@@ -1583,22 +2035,27 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
         }
         table.order([[0,'desc']]).draw(false);
       }
+      try { lazyLoadImagesIn(document); } catch (e) { /* ignore lazy load errors */ }
     } catch (e) { console.error('redraw error', e); }
   }
 
   // 2) DataTables init: numeric sort for idx, keep Seen desc
+ function columnTitle(c){
+   return c.titleHtml ?? t(c.titleKey || '', {}, c.title || '');
+ }
+
  function buildHeader(){
    if (!theadRow) theadRow = document.querySelector('#thead tr');
    if (!theadRow) return;
-  theadRow.innerHTML = "";
-  for (const c of viewCols){
-    const th = document.createElement('th');
-    const headerHtml = c.titleHtml ?? c.title ?? '';
-    if (c.titleHtml) th.innerHTML = headerHtml;
-    else th.textContent = headerHtml;
-    if (c.width) th.style.width = c.width;
-    theadRow.appendChild(th);
-  }
+    theadRow.innerHTML = "";
+    for (const c of viewCols){
+      const th = document.createElement('th');
+      const headerHtml = columnTitle(c);
+      if (c.titleHtml) th.innerHTML = headerHtml;
+      else th.textContent = headerHtml;
+      if (c.width) th.style.width = c.width;
+      theadRow.appendChild(th);
+    }
 
   // Replace Alt / Spd header content with clickable sort controls for numeric sorting
   try {
@@ -1606,9 +2063,10 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     if (altIdx >= 0) {
       const th = theadRow.children[altIdx];
       if (th) {
-        th.innerHTML = `Alt / Spd <span style="margin-left:.5rem; font-size:0.85em; color:var(--muted);">` +
-          `<a href="#" id="sortAlt" title="Sort by altitude (toggle asc/desc)" style="margin-right:.4rem;">Alt</a>` +
-          `<a href="#" id="sortSpd" title="Sort by speed (toggle asc/desc)">Spd</a>` +
+        const headerLabel = columnTitle({ titleKey: 'table.headers.altspd' });
+        th.innerHTML = `${headerLabel} <span style="margin-left:.5rem; font-size:0.85em; color:var(--muted);">` +
+          `<a href="#" id="sortAlt" title="${t('table.sort.alt')}" style="margin-right:.4rem;">${t('table.alt.label')}</a>` +
+          `<a href="#" id="sortSpd" title="${t('table.sort.spd')}">${t('table.speed.label')}</a>` +
           ` <span id="sortDir" class="mono" aria-hidden="true" style="margin-left:.25rem;"></span>`+
           `</span>`;
         // Wire click handlers which compute the Alt/Spd column index at runtime,
@@ -1668,6 +2126,8 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       }
     }
   } catch (e) { /* ignore header wiring errors */ }
+
+ }
 
   // Create DataTable and capture API
   // Ordering plugin: read numeric value from an inner element's data-order attribute
@@ -1745,74 +2205,92 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
     });
   };
 
-  const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 100;
+  (async () => {
+    await i18nReady;
+    buildHeader();
+    const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 100;
 
-  const api = $('#t').DataTable({
-    dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
-    // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
-    deferRender: true,
-    pageLength: defaultPageLength,
-    lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', 'All']],
-    responsive: true,
-  // Default ordering: newest (highest index) first
-  order: [[0, 'desc']],
-    language: { emptyTable: 'Waiting for aircraft… Data will appear as it arrives.' },
-    columns: viewCols.map(_ => ({ title: _.title })),
-    columnDefs: [
-      // Use our dom-data-order plugin for column 0 (index) so sorting honors
-      // the numeric value placed in the cell's data-order attribute.
-      {
-        targets: 0,
-        orderDataType: 'dom-data-order',
-        type: 'num',
-        // Ensure numeric sort even if the order plugin isn't engaged by parsing
-        // the data-order attribute or falling back to numeric text extraction.
-        render: {
-          _: function(data) { return data; },
-          sort: function(data) {
-            try {
-              const s = String(data || '');
-              const m = s.match(/data-order="(-?\d+)"/);
-              if (m) return Number(m[1]);
-              const n = Number(s.replace(/[^0-9.\-]/g, ''));
-              return Number.isFinite(n) ? n : 0;
-            } catch (e) { return 0; }
-          }
+    const api = $('#t').DataTable({
+      dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
+      // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
+      deferRender: true,
+      pageLength: defaultPageLength,
+      lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', t('table.lengthAll')]],
+      responsive: true,
+    // Default ordering: newest (highest index) first
+    order: [[0, 'desc']],
+      language: {
+        emptyTable: t('table.empty'),
+        search: t('table.search'),
+        lengthMenu: t('table.lengthMenuLabel'),
+        info: t('table.info'),
+        infoEmpty: t('table.infoEmpty'),
+        zeroRecords: t('table.zeroRecords'),
+        paginate: {
+          first: t('table.paginate.first'),
+          previous: t('table.paginate.previous'),
+          next: t('table.paginate.next'),
+          last: t('table.paginate.last')
         }
       },
-      // For Alt/Spd column (index 5 in viewCols), allow numeric ordering by
-      // altitude or by speed via our custom orderDataType plugins. We'll
-      // wire header click handlers to call the appropriate ordering.
-      { targets: 5, orderDataType: 'dom-data-order-alt' },
-      { targets: "_all", render: (data)=>data }
-    ],
-    createdRow: function(row, data){
-      // Mark rows that are still updating
-      if ((data?.[2] || '').includes('still-updating')) {
-        row.classList.add('row-incomplete');
-      } else {
-        row.classList.remove('row-incomplete');
-      }
-
-      // Try to extract numeric index from the first-cell HTML and stash it on the TR.
-      try {
-        const first = data && data[0] ? String(data[0]) : '';
-        const m = first.match(/data-order="(-?\d+)"/);
-        if (m) {
-          const id = Number(m[1]);
-          row.dataset.idx = id;
-          // If the table API is available, store the API row reference for fast lookup
-          if (table) rowByIndex.set(id, table.row(row));
+      columns: viewCols.map(col => ({ title: columnTitle(col) })),
+      columnDefs: [
+        // Use our dom-data-order plugin for column 0 (index) so sorting honors
+        // the numeric value placed in the cell's data-order attribute.
+        {
+          targets: 0,
+          orderDataType: 'dom-data-order',
+          type: 'num',
+          // Ensure numeric sort even if the order plugin isn't engaged by parsing
+          // the data-order attribute or falling back to numeric text extraction.
+          render: {
+            _: function(data) { return data; },
+            sort: function(data) {
+              try {
+                const s = String(data || '');
+                const m = s.match(/data-order="(-?\d+)"/);
+                if (m) return Number(m[1]);
+                const n = Number(s.replace(/[^0-9.\-]/g, ''));
+                return Number.isFinite(n) ? n : 0;
+              } catch (e) { return 0; }
+            }
+          }
+        },
+        // For Alt/Spd column (index 5 in viewCols), allow numeric ordering by
+        // altitude or by speed via our custom orderDataType plugins. We'll
+        // wire header click handlers to call the appropriate ordering.
+        { targets: 5, orderDataType: 'dom-data-order-alt' },
+        { targets: "_all", render: (data)=>data }
+      ],
+      createdRow: function(row, data){
+        // Mark rows that are still updating
+        if ((data?.[2] || '').includes('still-updating')) {
+          row.classList.add('row-incomplete');
+        } else {
+          row.classList.remove('row-incomplete');
         }
-      } catch (e) { /* ignore */ }
-    }
-  });
 
-  // Store globally if you need it
-  table = api;
-  window.table = api;
+        // Try to extract numeric index from the first-cell HTML and stash it on the TR.
+        try {
+          const first = data && data[0] ? String(data[0]) : '';
+          const m = first.match(/data-order="(-?\d+)"/);
+          if (m) {
+            const id = Number(m[1]);
+            row.dataset.idx = id;
+            // If the table API is available, store the API row reference for fast lookup
+            if (table) rowByIndex.set(id, table.row(row));
+          }
+        } catch (e) { /* ignore */ }
+      }
+    });
 
-  applyPlaneAlertColumnVisibility();
+    // Store globally if you need it
+    table = api;
+    window.table = api;
+  try { table.on('draw', ()=> lazyLoadImagesIn(document)); } catch (e) { /* ignore draw hook */ }
+  try { lazyLoadImagesIn(document); } catch (e) { /* ignore initial lazy load */ }
+
+    applyPlaneAlertColumnVisibility();
 
   // Preserve top row when the page length changes: capture current display start
   // and restore it after DataTables applies the new length. This keeps the
@@ -1902,7 +2380,6 @@ Today's data is derived from {{totalLines}} ADS-B messages received by the stati
       else tr.classList.remove('row-incomplete');
     });
   });
-}
 
 // Helper: expand comma-separated discord links in the Notifications column.
 // If a cell contains a single anchor whose href contains commas (multiple URLs),
@@ -1953,12 +2430,15 @@ function expandDiscordLinksInNotifications() {
         // Clear existing content and append an anchor per link, separated by middot
         cell.innerHTML = '';
         const multi = links.length > 1;
+        const labelBase = t('notify.discord', {}, 'Discord');
         links.forEach((lnk, i) => {
           const a = document.createElement('a');
           a.href = lnk;
           a.target = '_blank';
           a.rel = 'noopener';
-          a.textContent = multi ? `Discord (${i+1})` : 'Discord';
+          a.textContent = multi
+            ? t('notify.discordIndexed', { index: i + 1 }, `Discord (${i+1})`)
+            : labelBase;
           cell.appendChild(a);
           if (i !== links.length - 1) cell.appendChild(document.createTextNode(' · '));
         });
@@ -1974,6 +2454,9 @@ if (typeof table !== 'undefined' && table) {
 
 // Also call once after initial setup if table exists
 setTimeout(()=> expandDiscordLinksInNotifications(), 150);
+
+    restartDataPipelines();
+  })();
 
 // 5) Render row with row class + position split link + numeric idx data source
 function renderRow(r) {
@@ -2017,8 +2500,9 @@ function renderRow(r) {
   const csIcaoLine = cs
     ? `${cs}${icao ? ' · ' + icao : ''}`
     : `${icao}`;
-  const photoLabel = csIcaoLine || tail || icao || 'Aircraft photo';
+  const photoLabel = csIcaoLine || tail || icao || t('image.photo.alt', {}, 'Aircraft photo');
   const photoCaption = escapeHtml(photoLabel);
+  const viewPhotoLabel = t('image.photo.view', {}, 'View larger aircraft photo');
   const photoSourceUrl = r["image:link"];
   const flagIcon = renderFlagIconForIcao(icao);
   const aircraftLines = [];
@@ -2103,7 +2587,7 @@ function renderRow(r) {
     const thumbAttr = thumbUrl.replace(/"/g,'&quot;');
     const viewerSrc = (fullImageLocal || thumbUrl).replace(/"/g,'&quot;');
     const sourceAttr = photoSourceUrl ? photoSourceUrl.replace(/"/g,'&quot;') : '';
-    thumbEl = `<img class="thumb thumb-photo" loading="lazy" data-src="${thumbAttr}" data-fullsrc="${viewerSrc}" data-caption="${photoCaption}" data-sourcelink="${sourceAttr}" alt="${photoCaption}" tabindex="0" role="button" aria-label="View larger aircraft photo">`;
+    thumbEl = `<img class="thumb thumb-photo" loading="lazy" data-src="${thumbAttr}" data-fullsrc="${viewerSrc}" data-caption="${photoCaption}" data-sourcelink="${sourceAttr}" alt="${photoCaption}" tabindex="0" role="button" aria-label="${viewPhotoLabel}">`;
   } else {
     // Fallback: show silhouette based on aircraft type code (e.g., PC21.bmp) if available
     const typCodeRaw = safe(r.type || '');
@@ -2112,7 +2596,7 @@ function renderRow(r) {
       const base = cfg.silhouetteDir || (cfg.mediaBase + 'silhouettes/');
       const silSrc = `${base}${code}.bmp`;
       // Hide the image if the silhouette is not found
-  thumbEl = `<img class="thumb thumb-sil" loading="lazy" data-src="${silSrc.replace(/"/g,'&quot;')}" alt="silhouette ${code}" onerror="this.style.display='none'">`;
+  thumbEl = `<img class="thumb thumb-sil" loading="lazy" data-src="${silSrc.replace(/"/g,'&quot;')}" alt="${t('image.silhouette.alt', { code }, `silhouette ${code}`)}" onerror="this.style.display='none'">`;
     }
   }
 
@@ -2131,6 +2615,12 @@ function renderRow(r) {
   const mastodonNotified = truthy(r["mastodon:notified"]);
   const telegramNotified = truthy(r["telegram:notified"]);
   const mqttNotified = truthy(mqttFlag);
+  const labelDiscord = t('notify.discord', {}, 'Discord');
+  const labelDiscordIndexed = (index) => t('notify.discordIndexed', { index }, `Discord (${index})`);
+  const labelBluesky = t('notify.bluesky', {}, 'Bluesky');
+  const labelMastodon = t('notify.mastodon', {}, 'Mastodon');
+  const labelTelegram = t('notify.telegram', {}, 'Telegram');
+  const labelMqtt = t('notify.mqtt', {}, 'MQTT');
 
   if (discordLink) {
     // discord:link may be a comma-separated list of URLs; render each as its own anchor
@@ -2141,30 +2631,30 @@ function renderRow(r) {
     const multi = links.length > 1;
     for (let i = 0; i < links.length; i++) {
       const lnk = links[i];
-      const label = multi ? `Discord (${i+1})` : 'Discord';
+      const label = multi ? labelDiscordIndexed(i+1) : labelDiscord;
       notifyLinks.push(notifierLink(lnk, label, iconDiscord()));
     }
   } else if (discordNotified) {
-    notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconDiscord()}<span class="label">Discord</span></span>`);
+    notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconDiscord()}<span class="label">${labelDiscord}</span></span>`);
   }
 
-  if (bskyLink) notifyLinks.push(notifierLink(bskyLink, 'Bluesky', iconBluesky()));
-  else if (bskyNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconBluesky()}<span class="label">Bluesky</span></span>`);
+  if (bskyLink) notifyLinks.push(notifierLink(bskyLink, labelBluesky, iconBluesky()));
+  else if (bskyNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconBluesky()}<span class="label">${labelBluesky}</span></span>`);
 
-  if (mastodonLink) notifyLinks.push(notifierLink(mastodonLink, 'Mastodon', iconMastodon()));
-  else if (mastodonNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconMastodon()}<span class="label">Mastodon</span></span>`);
+  if (mastodonLink) notifyLinks.push(notifierLink(mastodonLink, labelMastodon, iconMastodon()));
+  else if (mastodonNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconMastodon()}<span class="label">${labelMastodon}</span></span>`);
 
-  if (telegramLink) notifyLinks.push(notifierLink(telegramLink, 'Telegram', iconTelegram()));
-  else if (telegramNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconTelegram()}<span class="label">Telegram</span></span>`);
+  if (telegramLink) notifyLinks.push(notifierLink(telegramLink, labelTelegram, iconTelegram()));
+  else if (telegramNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconTelegram()}<span class="label">${labelTelegram}</span></span>`);
 
-  if (mqttNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="There's no link associated with this notification">${iconMQTT()}<span class="label">MQTT</span></span>`);
+  if (mqttNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconMQTT()}<span class="label">${labelMqtt}</span></span>`);
 
   // Sound column: show a small chip with peak/loud info, and separate small clickable badges for noisegraph and mp3 if present.
   let sound = "";
   const parts = [];
   if (hasSound(r)) {
-  const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"]) } dbFS` : "";
-  const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"]) } dB` : "";
+  const peak = r["sound:peak"] ? t('sound.peak', { value: safe(r["sound:peak"]) }, `Peak ${safe(r["sound:peak"]) } dbFS`) : "";
+  const loud = r["sound:loudness"] ? t('sound.loud', { value: safe(r["sound:loudness"]) }, `Loud ${safe(r["sound:loudness"]) } dB`) : "";
   const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
     const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
     parts.push(inner);
@@ -2172,8 +2662,8 @@ function renderRow(r) {
   // Build Sound column in two lines: first Peak/Loudness, then the chip links below
   let measurementChip = '';
   if (hasSound(r)) {
-    const peak = r["sound:peak"] ? `Peak ${safe(r["sound:peak"]) } dbFS` : "";
-    const loud = r["sound:loudness"] ? `Loud ${safe(r["sound:loudness"]) } dB` : "";
+    const peak = r["sound:peak"] ? t('sound.peak', { value: safe(r["sound:peak"]) }, `Peak ${safe(r["sound:peak"]) } dbFS`) : "";
+    const loud = r["sound:loudness"] ? t('sound.loud', { value: safe(r["sound:loudness"]) }, `Loud ${safe(r["sound:loudness"]) } dB`) : "";
     const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
     measurementChip = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
   }
@@ -2182,19 +2672,22 @@ function renderRow(r) {
   if (noise) {
     const nUrl = normalizeNoiseLink(noise).replace(/"/g,'&quot;');
     const nBadge = iconNoise();
-    linkChips.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener" title="Show noisegraph" aria-label="Show noisegraph">${nBadge}</a>`);
+    const labelNoise = t('sound.noisegraph.title', {}, 'Show noisegraph');
+    linkChips.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener" title="${labelNoise}" aria-label="${labelNoise}">${nBadge}</a>`);
   }
   // Spectrogram badge (distinct icon)
   if (spectro) {
     const sUrl = normalizeNoiseLink(spectro).replace(/"/g,'&quot;');
     const sBadge = iconSpectro();
-    linkChips.push(`<a class="chip" href="${sUrl}" target="_blank" rel="noopener" title="Show spectrogram" aria-label="Show spectrogram">${sBadge}</a>`);
+    const labelSpectro = t('sound.spectrogram.title', {}, 'Show spectrogram');
+    linkChips.push(`<a class="chip" href="${sUrl}" target="_blank" rel="noopener" title="${labelSpectro}" aria-label="${labelSpectro}">${sBadge}</a>`);
   }
   // MP3 badge
   if (mp3) {
     const mUrl = normalizeNoiseLink(mp3).replace(/"/g,'&quot;');
     const mBadge = iconMp3();
-    linkChips.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener" title="Play audio" aria-label="Play audio">${mBadge}</a>`);
+    const labelAudio = t('sound.audio.title', {}, 'Play audio');
+    linkChips.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener" title="${labelAudio}" aria-label="${labelAudio}">${mBadge}</a>`);
   }
   if (measurementChip && linkChips.length) sound = `<div>${measurementChip}</div><div>${linkChips.join(' ')}</div>`;
   else if (measurementChip) sound = measurementChip;
@@ -2237,7 +2730,7 @@ function renderPlaneAlertCell(r){
     const href = linkVal.replace(/"/g, '&quot;');
     const favicon = planeAlertFaviconUrl(linkVal);
     const faviconImg = favicon ? `<img class="plane-alert-favicon" src="${favicon}" alt="">` : '';
-    pieces.push(`<a href="${href}" target="_blank" rel="noopener">${faviconImg}<span>Link</span></a>`);
+    pieces.push(`<a href="${href}" target="_blank" rel="noopener">${faviconImg}<span>${t('planeAlert.link', {}, 'Link')}</span></a>`);
   }
   return pieces.length ? `<div class="plane-alert-cell">${pieces.join(' · ')}</div>` : '';
 }
@@ -2297,9 +2790,6 @@ function addOrUpdateRow(r){
     });
   }
 
-  if (!table) buildHeader();
-  restartDataPipelines();
-
 
   async function startStreamReader(generation){
     if (!cfg.enableStream) return;
@@ -2309,7 +2799,7 @@ function addOrUpdateRow(r){
     const modeForRun = dataMode;
     try {
       const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store', signal: controller.signal });
-      if (!resp.ok || !resp.body) { if (prog) prog.textContent = 'Stream failed'; return; }
+      if (!resp.ok || !resp.body) { if (prog) prog.textContent = t('status.streamFailed', {}, 'Stream failed'); return; }
 
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
@@ -2349,10 +2839,10 @@ function addOrUpdateRow(r){
               const dt = new Date(streamGlobals.LASTUPDATE * 1000);
               const hh = String(dt.getHours()).padStart(2,'0');
               const mm = String(dt.getMinutes()).padStart(2,'0');
-              lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
+              lastUpdateEl.textContent = t('status.lastUpdate', { time: `${hh}:${mm}` }, `Last update: ${hh}:${mm}`);
             }
             if (streamGlobals.maxindex && streamGlobals.maxindex > 0 && prog) {
-              prog.textContent = `Loaded 0 / ${streamGlobals.maxindex}`;
+              prog.textContent = t('status.loadingZeroOfMax', { max: streamGlobals.maxindex }, `Loaded 0 / ${streamGlobals.maxindex}`);
             }
             continue;
           }
@@ -2362,7 +2852,7 @@ function addOrUpdateRow(r){
             continue;
           }
           if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
-            if (prog) prog.textContent = `Error: ${obj.error}`;
+            if (prog) prog.textContent = t('status.errorPrefix', { message: obj.error }, `Error: ${obj.error}`);
             continue;
           }
           const payload = (obj && typeof obj === 'object')
@@ -2384,7 +2874,7 @@ function addOrUpdateRow(r){
           if (added % 10 === 0) {
             if (generation !== modeGeneration || controller.signal.aborted) return;
             redrawTable(false);
-            if (prog) prog.textContent = `Loaded ${rowCount()}…`;
+            if (prog) prog.textContent = t('status.loadingCount', { count: rowCount() }, `Loaded ${rowCount()}...`);
           }
         }
       }
@@ -2402,11 +2892,11 @@ function addOrUpdateRow(r){
       }
       if (generation !== modeGeneration || controller.signal.aborted) return;
       redrawTable(true);
-      if (prog && !prog.textContent.startsWith('Error')) prog.textContent = `Done. Rows: ${rowCount()}`;
+      if (prog) prog.textContent = t('status.doneRows', { count: rowCount() }, `Done. Rows: ${rowCount()}`);
     } catch (e) {
       if (controller.signal.aborted || generation !== modeGeneration) return;
       console.error('stream error', e);
-      if (prog) prog.textContent = 'Stream error';
+      if (prog) prog.textContent = t('status.streamError', {}, 'Stream error');
     } finally {
       if (streamAbortController === controller) streamAbortController = null;
     }
@@ -2451,7 +2941,7 @@ async function pollAndMerge(modeForRun, generation) {
           const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');
           const mm = String(dt.getMinutes()).padStart(2,'0');
-          lastUpdateEl.textContent = `Last update: ${hh}:${mm}`;
+          lastUpdateEl.textContent = t('status.lastUpdate', { time: `${hh}:${mm}` }, `Last update: ${hh}:${mm}`);
         }
         continue; }
       if (!seenHeader && obj && obj.__columns) { seenHeader = true; continue; }
@@ -2620,20 +3110,6 @@ async function pollAndMerge(modeForRun, generation) {
     if (cfg.enablePoll) startPollingLoop(modeGeneration);
   }
 
-// New-updates banner: when user clicks, jump to first page and show new rows
-if (newUpdatesBtn) {
-  newUpdatesBtn.addEventListener('click', ()=>{
-    try {
-      if (table) {
-        table.page('first').draw(false);
-        // After jumping, highlight pending rows
-        highlightPendingNewRows();
-      }
-      newUpdatesBtn.style.display = 'none';
-    } catch (e) { console.error('newUpdates click', e); }
-  });
-}
-
 </script>
 
 <script>
@@ -2664,7 +3140,10 @@ function lazyLoadImagesIn(container){
 // Observe DataTables draws to (re)apply lazy loading
 document.addEventListener('DOMContentLoaded', ()=>{
   try { lazyLoadImagesIn(document); } catch(e){}
-  try { if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document)); } catch(e){}
+  try {
+    if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document));
+    else setTimeout(()=> { try { if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document)); } catch(e){} }, 300);
+  } catch(e){}
 });
 </script>
 </body></html>
