@@ -631,6 +631,13 @@
     return template.replace(/\{(\w+)\}/g, (m, key) => (params[key] ?? m));
   }
 
+  function resolveFlagSrc(flagPath, flagCode, fallbackCode){
+    const custom = (flagPath || '').trim();
+    if (custom) return custom;
+    const code = flagCode || fallbackCode || 'un';
+    return `${FLAG_ICON_SRC_BASE}${code}.svg`;
+  }
+
   function t(key, params, fallback){
     const fromPrimary = i18nState.strings?.[key];
     const fromFallback = i18nState.fallbackStrings?.[key];
@@ -709,8 +716,8 @@
   function languageMeta(code){
     const normalized = normalizeLang(code || i18nState.lang);
     const meta = i18nState.languages?.[normalized];
-    if (meta) return { code: normalized, name: meta.name, flag: meta.flag };
-    return { code: normalized || 'en-US', name: 'English (US)', flag: 'us' };
+    if (meta) return { code: normalized, name: meta.name, flag: meta.flag, flag_path: meta.flag_path };
+    return { code: normalized || 'en-US', name: 'English (US)', flag: 'us', flag_path: '' };
   }
 
   const i18nReady = loadI18n();
@@ -1006,7 +1013,8 @@ ${messagesDesc}
     return Object.entries(langs).map(([code, meta]) => ({
       code,
       name: meta?.name || code,
-      flag: meta?.flag || code
+      flag: meta?.flag || code,
+      flag_path: meta?.flag_path || ''
     }));
   }
 
@@ -1020,7 +1028,7 @@ ${messagesDesc}
     const meta = languageMeta();
     const code = meta.code || 'en';
     const flag = meta.flag || code;
-    flagImg.src = `${FLAG_ICON_SRC_BASE}${flag}.svg`;
+    flagImg.src = resolveFlagSrc(meta.flag_path, flag, code);
     flagImg.alt = meta.name || code.toUpperCase();
     labelEl.textContent = meta.name || code.toUpperCase();
     menu.setAttribute('aria-label', t('language.menu.label', {}, 'Select language'));
@@ -1032,7 +1040,8 @@ ${messagesDesc}
       item.setAttribute('role', 'option');
       item.setAttribute('data-lang', lang.code);
       const label = lang.name || lang.code.toUpperCase();
-      item.innerHTML = `<img class="language-flag" alt="" src="${FLAG_ICON_SRC_BASE}${lang.flag || lang.code}.svg"><span>${label}</span>`;
+      const flagSrc = resolveFlagSrc(lang.flag_path, lang.flag, lang.code);
+      item.innerHTML = `<img class="language-flag" alt="" src="${flagSrc}"><span>${label}</span>`;
       item.addEventListener('click', ()=> selectLanguage(lang.code));
       menu.appendChild(item);
     }
