@@ -1467,6 +1467,25 @@ ${messagesDesc}
     return Math.trunc(num * 100) / 100;
   }
 
+  function directionLabel(code){
+    if (!code) return '';
+    const key = `direction.${String(code).toLowerCase()}`;
+    return t(key, {}, String(code).toUpperCase());
+  }
+
+  function directionFromDegrees(deg){
+    if (!Number.isFinite(deg)) return null;
+    const dirs = [
+      'n','nne','ne','ene',
+      'e','ese','se','sse',
+      's','ssw','sw','wsw',
+      'w','wnw','nw','nnw'
+    ];
+    const norm = ((deg % 360) + 360) % 360;
+    const idx = Math.round(norm / 22.5) % 16;
+    return dirs[idx];
+  }
+
   function formatStationCoord(value) {
     const truncated = truncateCoord(value);
     if (truncated != null) return coordFmt.format(truncated);
@@ -1480,10 +1499,11 @@ ${messagesDesc}
       return formatStationCoord(value);
     }
     const absVal = Math.abs(truncated).toFixed(2);
-    const dir = axis === 'lat'
-      ? (truncated >= 0 ? 'N' : 'S')
-      : (truncated >= 0 ? 'E' : 'W');
-    return `${absVal}&deg; ${dir}`;
+    const dirCode = axis === 'lat'
+      ? (truncated >= 0 ? 'n' : 's')
+      : (truncated >= 0 ? 'e' : 'w');
+    const dirLabel = directionLabel(dirCode);
+    return `${absVal}&deg; ${dirLabel}`;
   }
 
   function formatStationTotal(value) {
@@ -2491,7 +2511,10 @@ function renderRow(r) {
   const map = safe(r["link:map"]);
   const angleDegRaw = Number(r["angle:value"]);
   const angleDegInt = Number.isFinite(angleDegRaw) ? Math.round(angleDegRaw) : null;
-  const angleName = r["angle:name"] ? ` (${safe(r["angle:name"])})` : "";
+  const angleDirCode = directionFromDegrees(angleDegRaw);
+  const angleDirLabel = angleDirCode ? directionLabel(angleDirCode) : '';
+  const angleLabel = angleDirLabel || (r["angle:name"] ? safe(r["angle:name"]) : "");
+  const angleName = angleLabel ? ` (${angleLabel})` : "";
   const angleStr = angleDegInt != null ? `${angleDegInt}°${angleName}` : "";
   const angleImg = (() => {
     const a = angleAssetName(angleDegRaw, document.documentElement.classList.contains('dark'));
@@ -2536,7 +2559,10 @@ function renderRow(r) {
 
   const trackDegRaw = Number(r["track:value"]);
   const trackDegInt = Number.isFinite(trackDegRaw) ? Math.round(trackDegRaw) : null;
-  const trackName = r["track:name"] ? ` (${safe(r["track:name"])})` : "";
+  const trackDirCode = directionFromDegrees(trackDegRaw);
+  const trackDirLabel = trackDirCode ? directionLabel(trackDirCode) : '';
+  const trackNameRaw = r["track:name"]; // backend-provided text if any
+  const trackName = trackDirLabel ? ` (${trackDirLabel})` : (trackNameRaw ? ` (${safe(trackNameRaw)})` : "");
   const trkStr = trackDegInt != null ? `${trackDegInt}°${trackName}` : "";
   const trkImg = (() => {
     const a = angleAssetName(trackDegRaw, document.documentElement.classList.contains('dark'));
@@ -2741,10 +2767,10 @@ function addOrUpdateRow(r){
     const latNum = Number(lat);
     const lonNum = Number(lon);
     if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return "";
-    const latDir = latNum >= 0 ? 'N' : 'S';
-    const lonDir = lonNum >= 0 ? 'E' : 'W';
-    const latStr = `${toFixed4(Math.abs(latNum))}&deg; ${latDir}`;
-    const lonStr = `${toFixed4(Math.abs(lonNum))}&deg; ${lonDir}`;
+    const latDir = latNum >= 0 ? 'n' : 's';
+    const lonDir = lonNum >= 0 ? 'e' : 'w';
+    const latStr = `${toFixed4(Math.abs(latNum))}&deg; ${directionLabel(latDir)}`;
+    const lonStr = `${toFixed4(Math.abs(lonNum))}&deg; ${directionLabel(lonDir)}`;
     return `${latStr}, ${lonStr}`;
   }
 
