@@ -1,70 +1,65 @@
 <?php
+  // Collect supported query parameters and forward them to pf_query.sh
+  $params = [
+    'index'     => isset($_GET['index']) ? 'index=' . $_GET['index'] : '',
+    'hex'       => isset($_GET['hex']) ? 'hex=' . $_GET['hex'] : '',
+    'tail'      => isset($_GET['tail']) ? 'tail=' . $_GET['tail'] : '',
+    'name'      => isset($_GET['name']) ? 'name=' . $_GET['name'] : '',
+    'equipment' => isset($_GET['equipment']) ? 'equipment=' . $_GET['equipment'] : '',
+    'timestamp' => isset($_GET['timestamp']) ? 'timestamp=' . $_GET['timestamp'] : '',
+    'call'      => isset($_GET['call']) ? 'call=' . $_GET['call'] : '',
+    'lat'       => isset($_GET['lat']) ? 'lat=' . $_GET['lat'] : '',
+    'lon'       => isset($_GET['lon']) ? 'lon=' . $_GET['lon'] : '',
+    'type'      => isset($_GET['type']) ? 'type=' . $_GET['type'] : '',
+  ];
 
-  if(isset($_GET['index'])) {
-    $index = "index=" . $_GET['index'];
-  } else { $index = ""; }
+  // Determine if any filter argument is present (excluding type)
+  $has_filter = false;
+  foreach ($params as $key => $value) {
+    if ($key === 'type') { continue; }
+    if (strcmp($value, '') !== 0) { $has_filter = true; break; }
+  }
 
-  if(isset($_GET['hex'])) {
-    $hex = "hex=" . $_GET['hex'];
-  } else { $hex = ""; }
-
-  if(isset($_GET['tail'])) {
-    $tail = "tail=" . $_GET['tail'];
-  } else { $tail = ""; }
-
-  if(isset($_GET['name'])) {
-    $name = "name=" . $_GET['name'];
-  } else { $name = ""; }
-
-  if(isset($_GET['equipment'])) {
-    $equipment = "equipment=" . $_GET['equipment'];
-  } else { $equipment = ""; }
-
-  if(isset($_GET['timestamp'])) {
-    $timestamp = "timestamp=" . $_GET['timestamp'];
-  } else { $timestamp = ""; }
-
-  if(isset($_GET['call'])) {
-    $call = "call=" . $_GET['call'];
-  } else { $call = ""; }
-
-  if(isset($_GET['lat'])) {
-    $lat = "lat=" . $_GET['lat'];
-  } else { $lat = ""; }
-
-  if(isset($_GET['lon'])) {
-    $lon = "lon=" . $_GET['lon'];
-  } else { $lon = ""; }
-
-  if(isset($_GET['type'])) {
-    $outputtype = "type=" . $_GET['type'];
-  } else { $outputtype = ""; }
-
-  if (strcmp($hex . $tail . $name . $equipment . $timestamp . $call . $lat . $lon , "") == 0) {
-	   echo "<html><body><H1>Planefence Query Interface</H1>";
-	   echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=regex&amp;tail=regex&name=regex&amp;equipment=regex&amp;timestamp=regex&amp;call=regex&amp;lat=regex&amp;lon=regex&amp;type=csv|json</h3>";
-	   echo "This will read the Planefence database and return matching records in JSON format.<br />";
-	   echo "<br />";
-	   echo "At least one argument of index, hex, tail, name, equipment, timestamp, call, lat, lon must be present.<br />";
-	   echo "It will do a &quot;fuzzy&quot; match, or you can use a Regular Expression.<br />";
-	   echo "<br />";
-	   echo "The optional type argument indicates if the data returned will be json (default if omitted) or csv.<br />";
-	   echo "<br />";
-	   echo "For example:<br />";
-	   echo "<b>http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?tail=N14[1-3]NE&amp;timestamp=2021/12/2.</b><br />";
-	   echo "will return records of tail N141NE, N142NE, N143NE, and that have a timestamp that contains 2021/12/20 - 2021/21/29.<br />";
-	   echo "<br />";
-	   echo "Note that the date range is limited to the data available to Plane-Alert.<hr />";
-	   echo "(C)opyright 2021-2025 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the Planefence repository at GitHub</a>.<br />";
-     echo "<hr>" . $hex . $tail . $name . $equipment . $timestamp . $call . $lat . $lon;
-	   echo "</body></html>";
+  if ($has_filter === false) {
+	  echo "<html><body><H1>Planefence Query Interface</H1>";
+	  echo "<h3>Usage: http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=regex&tail=regex&name=regex&equipment=regex&timestamp=regex&call=regex&lat=regex&lon=regex&index=regex&type=csv|json</h3>";
+	  echo "This will read the Plane-Alert database and return matching records in JSON format.<br />";
+	  echo "<br />";
+	  echo "At least one argument of index, hex, tail, name, equipment, timestamp, call, lat, or lon must be present. The timestamp is in secs_since_epoch.<br />";
+	  echo "It will do a \"fuzzy\" match, or you can use a Regular Expression.<br />";
+	  echo "<br />";
+	  echo "The optional type argument indicates if the data returned will be JSON (default if omitted) or CSV.<br />";
+	  echo "<br />";
+	  echo "For example:<br />";
+	  echo "<b>http://" . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] . "?hex=^A[DE]</b><br />";
+	  echo "will return records of which the Hex ID starts with A followed by a D or E.<br />";
+	  echo "<br />";
+	  echo "Note that the date range is limited to the data available to Plane-Alert. By default, this is set to the last 14 days.<hr />";
+	  echo "(C)opyright 2021-2026 by kx1t, available under GPL3 as defined at <a href=https://github.com/sdr-enthusiasts/docker-planefence>the Plane-Alert repository at GitHub</a>.<br />";
+	  echo "</body></html>";
   } else {
-     if (strcmp($outputtype, "csv") == 0) {
+     // Build argument list, skipping empty ones
+     $args = [];
+     foreach ($params as $value) {
+       if (strcmp($value, '') !== 0) { $args[] = escapeshellarg($value); }
+     }
+
+     // Content type depends on requested output
+     $outputtype = $params['type'];
+     if (strcmp($outputtype, 'type=csv') === 0) {
         header('Content-Type: text/csv');
      } else {
         header('Content-Type: application/json');
      }
-     system("/usr/share/plane-alert/pa_query.sh " . escapeshellarg($hex) . " "  . escapeshellarg($tail) . " " . escapeshellarg($name) . " " . escapeshellarg($equipment) . " " . escapeshellarg($timestamp) . " " . escapeshellarg($call) . " " . escapeshellarg($lat) . " " . escapeshellarg($lon) . " " . escapeshellarg($outputtype), $return_value );
-     ($return_value == 0) or die("#php error returned an error: $return_value");
+
+     $command = "/usr/share/planefence/pa_query.sh " . implode(' ', $args);
+     date_default_timezone_set(date_default_timezone_get());
+     $output = shell_exec($command);
+     if ($output === null) {
+       http_response_code(500);
+       die("#php error: command failed to run");
+     }
+     echo $output;
+     exit;
   }
 ?>

@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2015,SC2034,SC2154,SC2174
 #
 # pf_query.sh -- Script to be called from PHP - returns REGEX subset of Plane-Alert
 #
@@ -24,10 +25,11 @@
 # -----------------------------------------------------------------------------------
 
 # shellcheck disable=SC1091
-source /script/pf-common
-
+source /scripts/pf-common
+DEBUG=false
 # Parse command line into variables:
 for i in "$@"; do
+	i="${i//\'/}"	# remove any single quotes
 	[[ "${i:0:6}" == "index=" ]] && index="${i:6}"
 	[[ "${i:0:4}" == "hex=" ]] && hex="${i:4}"
 	[[ "${i:0:5}" == "tail=" ]] && tail="${i:5}"
@@ -37,59 +39,66 @@ for i in "$@"; do
 	[[ "${i:0:5}" == "call=" ]] && call="${i:5}"
 	[[ "${i:0:4}" == "lat=" ]] && lat="${i:4}"
 	[[ "${i:0:4}" == "lon=" ]] && lon="${i:4}"
-	# [[ "${i:0:5}" == "file=" ]] && file="${i:5}" # not supported, always the same file for PA
   [[ "${i:0:5}" == "type=" ]] && output_type="${i:5}"
 done
+
+# echo "args received: index=${index} hex=${hex} tail=${tail} name=${name} equipment=${equip} timestamp=${timestamp} call=${call} lat=${lat} lon=${lon} output_type=${output_type}.TZ=${TZ}, date=$(date)"
 
 # If the command line didn't include any valid args, or if the arg is --help or -?, then show them the way:
 if [[ "$index$hex$tail$name$equip$timestamp$call$lat$lon" == "" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
 then
-  echo "Usage: $0 [index=<regex>][hex=<regex>] [tail=<regex>] [name=<regex>] [equipment=<regex>] [timestamp=<regex>] [call=<regex>] [lat=<regex>] [lon=<regex>] type=csv|json"
+  echo "Usage: $0 [index=<regex>] [hex=<regex>] [tail=<regex>] [name=<regex>] [equipment=<regex>] [timestamp=<regex>] [call=<regex>] [lat=<regex>] [lon=<regex>] [type=csv|json]"
   echo "The file argument is always required and at least 1 additional argument is required."
 	echo "The arguments can contain plain text or be a regex that is used with the \`awk\` command."
 	echo ""
 	echo "The arguments can be passed in any order."
 	echo ""
 	echo "For example:"
-	echo "$0 hex=\"^A[DE]\" file=\"*.csv\""
+	echo "$0 hex=\"^A[DE]\" type=\"*.csv\""
 	echo ""
 	# shellcheck disable=SC2145
 	echo "Command line was: $0 ${@}"
   exit 1
 else
-#	echo  Now we get the data and print to the stdout:
+	#	echo  Now we get the data and print to the stdout:
+	READ_RECORDS ignore-lock
+	shopt -s nocasematch
 	csv=""
-	for ((idx=0; idx<records[maxindex]; idx++)); do
+	for ((idx=${records[maxindex]}; idx>=0; idx--)); do
 		if [[ $idx =~ ${index:-xxxxxx} || \
-					${records["$idx":icao]} =~ ${hex:-xxxxxx} || \
-					${records["$idx":tail]} =~ ${tail:-xxxxxx} || \
-					${records["$idx":owner]} =~ ${name:-xxxxxx} || \
-					${records["$idx":type]} =~ ${equip:-xxxxxx} || \
-					${records["$idx":time:time_at_mindist]} =~ ${timestamp:-xxxxxx} || \
-					${records["$idx":callsign]} =~ ${call:-xxxxxx} || \
-					${records["$idx":lat]} =~ ${lat:-xxxxxx} || \
-					${records["$idx":lon]} =~ ${lon:-xxxxxx} ]]; then
-			readarray -t headers <<< "$(printf "%s\n" "${!records[@]}" | sed -n "s/^\($idx:.*\)/\1/p")"
-
+				${records["$idx":icao]} =~ ${hex:-xxxxxx} || \
+				${records["$idx":tail]} =~ ${tail:-xxxxxx} || \
+				${records["$idx":owner]} =~ ${name:-xxxxxx} || \
+				${records["$idx":type]} =~ ${equip:-xxxxxx} || \
+				${records["$idx":time:time_at_mindist]} =~ ${timestamp:-xxxxxx} || \
+				${records["$idx":callsign]} =~ ${call:-xxxxxx} || \
+				${records["$idx":lat]} =~ ${lat:-xxxxxx} || \
+				${records["$idx":lon]} =~ ${lon:-xxxxxx} ]]; then
+			readarray -t headers < <(printf '%s\n' "${!records[@]}" | sed -n "s/^${idx}:\(.*\)$/\1/p" | LC_ALL=C sort)
+			
+			# Build the CSV line:
+			line="index=${idx},"
 			for h in "${headers[@]}"; do
-				csv+="$(printf '%s=%s,' "$h" "${records["$h"]}")"
+				line+="$(printf '%s=%s,' "$h" "${records["$idx:$h"]//,/ }")"
 			done
-			# shellcheck disable=SC2001
-			csv="$(sed "s/.$/\n/" <<< "$csv")"
+			line=${line%,}
+			line+=$'\n'
+			csv+="$line"
 		fi
 	done
 	if [[ "$output_type" == "csv" ]]; then
 		# Print the CSV:
-		printf "%s" "$csv"			
-  else
-		# Convert CSV to JSON using JQ:
-  	jq -Rn '
-			[inputs |
-				split(",") |                            # Split each line by comma
-				map(gsub("^\"|\"$"; "")) |               # Remove surrounding quotes
-				map(split("=") | { (.[0]): .[1] }) |     # Split key=value pairs into objects
-				add                                     # Combine the objects into one
-			]
-  ' <<< "$csv"
+		printf "%s" "$csv"
+	else
+		# Convert CSV to JSON using JQ (split by newline, one object per line)
+		jq -sR '
+		  [ split("\n")[]
+		    | select(length>0)
+		    | split(",")
+		    | map(select(length>0))
+		    | map(split("=") | { (.[0]): .[1] })
+		    | add
+		  ]
+		' <<< "$csv"
 	fi
 fi
