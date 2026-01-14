@@ -55,7 +55,41 @@ if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
   exit 1
 fi
 
-if [[ "${TELEGRAM_CHAT_ID:0:4}" != "-100" ]]; then TELEGRAM_CHAT_ID="-100${TELEGRAM_CHAT_ID}"; fi
+# Handle different chat ID formats:
+# - Starts with @ : public channel username, use as-is (e.g., @mychannel)
+# - Positive number: private chat with user (user ID), use as-is (e.g., 37560172)
+# - Starts with -100: supergroup/channel ID, use as-is (e.g., -1001234567890)
+# - Negative number not starting with -100: regular group, use as-is (e.g., -123456789)
+#
+# For backward compatibility with existing channel configurations that only stored
+# the numeric part without -100 prefix, we add it for IDs that look like channel IDs
+# (large positive numbers that don't start with -100 when they should be channels).
+# Users can set PF_TELEGRAM_CHAT_TYPE or PA_TELEGRAM_CHAT_TYPE to "private" to
+# explicitly indicate a private chat with the bot.
+
+if [[ "${1,,}" == "pf" ]]; then
+  TELEGRAM_CHAT_TYPE="${PF_TELEGRAM_CHAT_TYPE:-}"
+else
+  TELEGRAM_CHAT_TYPE="${PA_TELEGRAM_CHAT_TYPE:-}"
+fi
+
+# Flag to track if this is a private chat (used for link generation)
+IS_PRIVATE_CHAT=false
+
+if [[ "${TELEGRAM_CHAT_ID:0:1}" == "@" ]]; then
+  # Public channel username - use as-is
+  :
+elif [[ "${TELEGRAM_CHAT_TYPE,,}" == "private" ]] || [[ "${TELEGRAM_CHAT_TYPE,,}" == "user" ]] || [[ "${TELEGRAM_CHAT_TYPE,,}" == "dm" ]]; then
+  # Explicitly marked as private chat - use as-is
+  IS_PRIVATE_CHAT=true
+elif [[ "${TELEGRAM_CHAT_ID:0:1}" == "-" ]]; then
+  # Already negative - use as-is (either -100... channel or regular group)
+  :
+else
+  # Positive number without explicit private type - assume it's a channel ID for backward compatibility
+  # Add -100 prefix as before
+  TELEGRAM_CHAT_ID="-100${TELEGRAM_CHAT_ID}"
+fi
 
 # Extract info from the command line arguments
 args=("$@")
@@ -137,8 +171,17 @@ for image in "${IMAGES[@]}"; do
         ${curlcmd//http/hxttp}"
         exit 1
       else
-        echo "https://t.me/c/${TELEGRAM_CHAT_ID//-100/}/${message_id}" 
-        log_print DEBUG "Photo message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
+        # Generate link only for channels/groups (private chats don't have public links)
+        if [[ "$IS_PRIVATE_CHAT" == "true" ]]; then
+          log_print DEBUG "Photo message sent successfully to Telegram (private chat, message_id: ${message_id})"
+          echo ""
+        else
+          # For channels, strip the -100 prefix for the link if present
+          link_chat_id="${TELEGRAM_CHAT_ID#-100}"
+          link_chat_id="${link_chat_id#-}"
+          echo "https://t.me/c/${link_chat_id}/${message_id}"
+          log_print DEBUG "Photo message sent successfully to Telegram (https://t.me/c/${link_chat_id}/${message_id})"
+        fi
       fi
     fi
 
@@ -163,7 +206,16 @@ if (( image_count == 0 )); then
         ${curlcmd//http/hxttp}"
         exit 1
     else
-      echo "https://t.me/c/${TELEGRAM_CHAT_ID//-100/}/${message_id}"
-      # log_print INFO "Text message sent successfully to Telegram (https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id})"
+      # Generate link only for channels/groups (private chats don't have public links)
+      if [[ "$IS_PRIVATE_CHAT" == "true" ]]; then
+        log_print DEBUG "Text message sent successfully to Telegram (private chat, message_id: ${message_id})"
+        echo ""
+      else
+        # For channels, strip the -100 prefix for the link if present
+        link_chat_id="${TELEGRAM_CHAT_ID#-100}"
+        link_chat_id="${link_chat_id#-}"
+        echo "https://t.me/c/${link_chat_id}/${message_id}"
+        log_print DEBUG "Text message sent successfully to Telegram (https://t.me/c/${link_chat_id}/${message_id})"
+      fi
     fi
 fi
