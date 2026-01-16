@@ -1,0 +1,58 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2015,SC2154
+
+# -----------------------------------------------------------------------------------
+# Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/sdr-enthusiasts/planefence4docker/
+#
+# The package contains parts of, and modifications or derivatives to the following:
+# Dump1090.Socket30003 by Ted Sluis: https://github.com/tedsluis/dump1090.socket30003
+# These packages may incorporate other software and license terms.
+#
+# -----------------------------------------------------------------------------------
+#
+# We moved the initialization sequence to /usr/share/planefence/prep-planefence.sh
+# because then we can re-run the sequence if we detect changes to the config file
+# Also, this time needs to be sourced otherwise it won't pick up $LOOPTIME as variables
+# can't be exported back to parent processes.
+
+source /scripts/pf-common
+
+LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
+LOOPTIME="${LOOPTIME:-60}"
+
+## Debug:
+LOOPTIME=120  # for testing only - set to 120 secs
+
+PLANEFENCEDIR=/usr/share/planefence
+
+log_print INFO "Screenshot started as an s6 service. Waiting for Planefence to finish its initial run..."
+
+# Wait until pf-process_sbs.sh has run at least once
+
+while [[ ! -f /run/pf-process_sbs.pid ]]; do
+  sleep 1
+done
+pid="$(< /run/pf-process_sbs.pid)"
+while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
+
+if [[ "$LOGLEVEL" != "ERROR" ]] && CHK_SCREENSHOT_ENABLED; then log_print INFO "Screenshot starting its initial run now"; fi
+
+while true
+do
+  if ! CHK_SCREENSHOT_ENABLED; then
+    # we do this instead of stop_service because this will autmatically detect changes to screenshot settings
+    sleep $LOOPTIME
+    continue
+  fi
+  starttime=$(date +%s)
+  $PLANEFENCEDIR/pf-screenshot.sh
+  endtime=$(date +%s)
+  # [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Screenshot ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) )." || true
+  if (( starttime + LOOPTIME > endtime )); then
+      sleep $(( (starttime + LOOPTIME) - endtime )) &
+  fi
+  wait
+done

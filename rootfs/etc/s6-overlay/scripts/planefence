@@ -2,7 +2,7 @@
 #shellcheck shell=bash disable=SC1091,SC2015,SC2154
 
 # -----------------------------------------------------------------------------------
-# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence4docker/
@@ -18,7 +18,7 @@
 # Also, this time needs to be sourced otherwise it won't pick up $LOOPTIME as variables
 # can't be exported back to parent processes.
 
-source /scripts/common
+source /scripts/pf-common
 
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"
@@ -31,6 +31,14 @@ if [[ "$LOGLEVEL" != "ERROR" ]]; then
 fi
 
 source /usr/share/planefence/prep-planefence.sh
+
+# Add VERSION info to footer of HTML files
+if [[ -f /.VERSION ]]; then
+    VERSION="$(cat /.VERSION)"
+    sed -i "s/##VERSION##/${VERSION}/g" /usr/share/planefence/html/index.html
+else
+    sed -i "s/##VERSION##/unknown/g" /usr/share/planefence/html/index.html
+fi
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call Planefence
 # We are randomizing the initial looptime in case there are multiple Planefence instances running. That way the load will be spread out a bit
@@ -55,11 +63,11 @@ do
         # shellcheck disable=SC2155
         if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
         [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Starting Planefence run..." || true
-        $PLANEFENCEDIR/planefence.sh
+        $PLANEFENCEDIR/pf-run.sh
         endtime=$(date +%s)
         [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")." || true
     else
-        "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-(date +%y%m%d).txt not found or socket30003 not running."
+        "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-$(date +%y%m%d).txt not found or socket30003 not running."
         "${s6wrap[@]}" echo "If this continues to happen after 5-10 minutes, check your \$PF_SOCK30003HOST setting and check your data source"
         "${s6wrap[@]}" echo "We will try again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")."
     fi

@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154
 # -----------------------------------------------------------------------------------
-# Copyright 2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/
@@ -9,11 +9,17 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 
-source /scripts/common
+source /scripts/pf-common
 source /usr/share/planefence/persist/planefence.config
 
+# shellcheck disable=SC2034
+DEBUG=false
+
+exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
+
+
 if (( ${#@} < 1 )); then
-  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  log_print INFO "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
@@ -22,7 +28,7 @@ TELEGRAM_API="${TELEGRAM_API:-https://api.telegram.org/bot}"
 TELEGRAM_MAX_LENGTH="${TELEGRAM_MAX_LENGTH:-4096}"
 if [[ "${1,,}" == "pf" ]]; then
   if [[ -z "${PF_TELEGRAM_CHAT_ID}" ]]; then
-    "${s6wrap[@]}" echo "Fatal: the PF_TELEGRAM_CHAT_ID environment variable must be set"
+    log_print ERR "the PF_TELEGRAM_CHAT_ID environment variable must be set"
     exit 1
   fi
   TELEGRAM_CHAT_ID="${PF_TELEGRAM_CHAT_ID}"
@@ -30,26 +36,60 @@ elif [[ "${1,,}" == "pa" ]]; then
   # shellcheck disable=SC2153
   TELEGRAM_CHAT_ID="${PA_TELEGRAM_CHAT_ID}"
   if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
-    "${s6wrap[@]}" echo "Fatal: the PA_TELEGRAM_CHAT_ID environment variable must be set"
+    log_print ERR "the PA_TELEGRAM_CHAT_ID environment variable must be set"
     exit 1
   fi
 else
-  "${s6wrap[@]}" echo "Fatal: you must specify either 'PF' or 'PA' as the first argument to $0"
-  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  log_print ERR "you must specify either 'PF' or 'PA' as the first argument to $0"
+  log_print ERR "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
 # Check if the required variables are set
 if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
-  "${s6wrap[@]}" echo "Fatal: the TELEGRAM_BOT_TOKEN environment variable must be set"
+  log_print ERR "the TELEGRAM_BOT_TOKEN environment variable must be set"
   exit 1
 fi
 if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
-  "${s6wrap[@]}" echo "Fatal: the TELEGRAM_CHAT_ID environment variable must be set"
+  log_print ERR "the TELEGRAM_CHAT_ID environment variable must be set"
   exit 1
 fi
 
-if [[ "${TELEGRAM_CHAT_ID:0:4}" != "-100" ]]; then TELEGRAM_CHAT_ID="-100${TELEGRAM_CHAT_ID}"; fi
+# Handle different chat ID formats:
+# - Starts with @ : public channel username, use as-is (e.g., @mychannel)
+# - Positive number: private chat with user (user ID), use as-is (e.g., 37560172)
+# - Starts with -100: supergroup/channel ID, use as-is (e.g., -1001234567890)
+# - Negative number not starting with -100: regular group, use as-is (e.g., -123456789)
+#
+# For backward compatibility with existing channel configurations that only stored
+# the numeric part without -100 prefix, we add it for IDs that look like channel IDs
+# (large positive numbers that don't start with -100 when they should be channels).
+# Users can set PF_TELEGRAM_CHAT_TYPE or PA_TELEGRAM_CHAT_TYPE to "private" to
+# explicitly indicate a private chat with the bot.
+
+if [[ "${1,,}" == "pf" ]]; then
+  TELEGRAM_CHAT_TYPE="${PF_TELEGRAM_CHAT_TYPE:-}"
+else
+  TELEGRAM_CHAT_TYPE="${PA_TELEGRAM_CHAT_TYPE:-}"
+fi
+
+# Flag to track if this is a private chat (used for link generation)
+IS_PRIVATE_CHAT=false
+
+if [[ "${TELEGRAM_CHAT_ID:0:1}" == "@" ]]; then
+  # Public channel username - use as-is
+  :
+elif [[ "${TELEGRAM_CHAT_TYPE,,}" == "private" ]] || [[ "${TELEGRAM_CHAT_TYPE,,}" == "user" ]] || [[ "${TELEGRAM_CHAT_TYPE,,}" == "dm" ]]; then
+  # Explicitly marked as private chat - use as-is
+  IS_PRIVATE_CHAT=true
+elif [[ "${TELEGRAM_CHAT_ID:0:1}" == "-" ]]; then
+  # Already negative - use as-is (either -100... channel or regular group)
+  :
+else
+  # Positive number without explicit private type - assume it's a channel ID for backward compatibility
+  # Add -100 prefix as before
+  TELEGRAM_CHAT_ID="-100${TELEGRAM_CHAT_ID}"
+fi
 
 # Extract info from the command line arguments
 args=("$@")
@@ -57,12 +97,12 @@ TEXT="${args[1]}"
 IMAGES=("${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}") # up to 4 images
 
 if [[ -z "$TEXT" ]]; then
-  "${s6wrap[@]}" echo "Fatal: a message text must be included in the request to $0"
-  "${s6wrap[@]}" echo "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+  log_print ERR "a message text must be included in the request to $0"
+  log_print ERR "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
 
-# "${s6wrap[@]}" echo "DEBUG: Invoking: $0 $1 $TEXT ${IMAGES[*]}"
+# log_print INFO "DEBUG: Invoking: $0 $1 $TEXT ${IMAGES[*]}"
 
 # Clean up the text
 TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters
@@ -77,14 +117,14 @@ for image in "${IMAGES[@]}"; do
 done
 image_counter=1
 # shellcheck disable=SC2001
-ICAO="$(sed -n 's/.*ICAO: #\?\([A-Fa-f0-9]\{6\}\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
-TAIL="$(sed -n 's/.*Tail: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
-FLIGHT="$(sed -n 's/.*Flt: #\?\([A-Za-z0-9-]\+\).*/\1/p' <<< "${TEXT//[[:cntrl:]]/ }")"
 
-if [[ -n "$ICAO" ]]; then image_header="ICAO $ICAO"; else image_header=""; fi
-if [[ -n "$TAIL" ]]; then image_header+="${image_header:+ - }Tail $TAIL"; fi
-if [[ -n "$FLIGHT" ]]; then image_header+="${image_header:+ - }Flight $FLIGHT"; fi
-image_header="${image_header:+$image_header - }"
+# shellcheck disable=SC2034
+IFS=" " read -r header CALL TAIL TYPE ROUTE <<< "$(grep -i "^flt:" <<< "$TEXT")"
+image_header=""
+if [[ -n "$CALL" ]]; then image_header+="Flt ${CALL//#/} - "; fi
+if [[ -n "$TAIL" ]]; then image_header+="Tail ${TAIL//#/} - "; fi
+if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
+if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
 
 for image in "${IMAGES[@]}"; do
     # Skip if the image is not a file that exists
@@ -103,29 +143,45 @@ for image in "${IMAGES[@]}"; do
 
     # Send the photo with the message
     if (( image_counter == 1 )); then
-      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-          -F "chat_id=${TELEGRAM_CHAT_ID}" \
-          -F "photo=@${image}" \
-          -F "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
-          -F "parse_mode=HTML")"
+      printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
+        "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+        "chat_id=${TELEGRAM_CHAT_ID}" \
+        "photo=@${image}" \
+        "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
+        "parse_mode=HTML"
+      # shellcheck disable=SC2090
+      response="$(eval "$curlcmd")"
       message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     else
-      response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-          -F "chat_id=${TELEGRAM_CHAT_ID}" \
-          -F "photo=@${image}" \
-          -F "caption=${image_text}" \
-          -F "parse_mode=HTML")"
+      printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
+        "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+        "chat_id=${TELEGRAM_CHAT_ID}" \
+        "photo=@${image}" \
+        "caption=${image_text}" \
+        "parse_mode=HTML"
+      # shellcheck disable=SC2090
+      response="$(eval "$curlcmd")"
     fi
 
     if (( image_counter == 1)); then
       if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-        "${s6wrap[@]}" echo "Error sending photo to Telegram: $response"
-        { echo "{ \"title\": \"Telegram Photo Send Error\","
-          echo "  \"response\": $response }"
-        } >> /tmp/telegram.json
+        log_print ERR "Error sending photo message to Telegram: (original had http instead of hxttp):
+        ${response//http/hxttp}
+        Original command posted:
+        ${curlcmd//http/hxttp}"
+        exit 1
       else
-        echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
-        "${s6wrap[@]}" echo "Photo message sent successfully to Telegram; link: $(</tmp/telegram.link)"
+        # Generate link only for channels/groups (private chats don't have public links)
+        if [[ "$IS_PRIVATE_CHAT" == "true" ]]; then
+          log_print DEBUG "Photo message sent successfully to Telegram (private chat, message_id: ${message_id})"
+          echo ""
+        else
+          # For channels, strip the -100 prefix for the link if present
+          link_chat_id="${TELEGRAM_CHAT_ID#-100}"
+          link_chat_id="${link_chat_id#-}"
+          echo "https://t.me/c/${link_chat_id}/${message_id}"
+          log_print DEBUG "Photo message sent successfully to Telegram (https://t.me/c/${link_chat_id}/${message_id})"
+        fi
       fi
     fi
 
@@ -134,21 +190,32 @@ done
 
 # If no images or image sending failed, send text only
 if (( image_count == 0 )); then
-    response="$(curl --max-time 30 -sSL -X POST "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -F "chat_id=${TELEGRAM_CHAT_ID}" \
-        -F "text=${TEXT}" \
-        -F "parse_mode=HTML")"
-    
+    printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q' \
+      "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
+      "chat_id=${TELEGRAM_CHAT_ID}" \
+      "text=${TEXT}" \
+      "parse_mode=HTML"
+    # shellcheck disable=SC2090
+    response="$(eval "$curlcmd")"
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
     
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
-      "${s6wrap[@]}" echo "Error sending message to Telegram: $response"
-      { echo "{ \"title\": \"Telegram Message Send Error\","
-        echo "  \"response\": $response }"
-      } >> /tmp/telegram.json
-      exit 1
+      log_print ERR "Error sending text-only message to Telegram: (original had http instead of hxttp):
+        ${response//http/hxttp}
+        Original command posted:
+        ${curlcmd//http/hxttp}"
+        exit 1
     else
-      echo "https://t.me/c/${TELEGRAM_CHAT_ID}/${message_id}" > /tmp/telegram.link
-      "${s6wrap[@]}" echo "Text message sent successfully to Telegram; link: $(</tmp/telegram.link)"
+      # Generate link only for channels/groups (private chats don't have public links)
+      if [[ "$IS_PRIVATE_CHAT" == "true" ]]; then
+        log_print DEBUG "Text message sent successfully to Telegram (private chat, message_id: ${message_id})"
+        echo ""
+      else
+        # For channels, strip the -100 prefix for the link if present
+        link_chat_id="${TELEGRAM_CHAT_ID#-100}"
+        link_chat_id="${link_chat_id#-}"
+        echo "https://t.me/c/${link_chat_id}/${message_id}"
+        log_print DEBUG "Text message sent successfully to Telegram (https://t.me/c/${link_chat_id}/${message_id})"
+      fi
     fi
 fi

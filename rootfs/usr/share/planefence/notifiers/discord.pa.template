@@ -1,0 +1,76 @@
+{
+  "username": "||USER||",
+  "avatar_url": "||AVATAR||",
+  "tts": false,
+  "embeds": 
+    [
+      {
+        "tts": false,
+        "type": "rich",
+        "title": "||TITLE||",
+        "description": "||DESCRIPTION|| ",
+        "color": "16711680",
+        "fields":
+        [
+          {
+            "name": "ICAO",
+            "value": "||ICAO||",
+            "inline": true
+          },
+          {
+            "name": "Tail Number",
+            "value": "||TAIL||",
+            "inline": true
+          },
+          {
+            "name": "Callsign",
+            "value": "||CALLSIGN|| ",
+            "inline": true
+          },
+          {
+            "name": "Type",
+            "value": "||TYPE|| ",
+            "inline": true
+          },
+          {
+            "name": "Min dist",
+            "value": "||DISTANCE|| ",
+            "inline": true
+          },
+          {
+            "name": "Gnd Speed",
+            "value": "||GROUNDSPEED|| ",
+            "inline": true
+          },
+          {
+            "name": "Track",
+            "value": "||TRACK||",
+            "inline": true
+          },
+          {
+            "name": "Route",
+            "value": "||ROUTE||",
+            "inline": true
+          }
+        ],
+        "timestamp": "||TIMESTAMP||",
+        ||THUMBNAIL--"thumbnail":
+        {
+          "url": "||THUMBNAIL||"
+        },--THUMBNAIL||
+        "footer":
+        {
+          "text": "Plane-Alert © ||YEAR|| by kx1t"
+        }||IMAGE--,
+        "image":
+        {
+          "url":"||IMAGE||"
+        }--IMAGE||,
+        "author":
+        {
+          "name": "Plane-Alert",
+          "url": "https://sdr-e.com/docker-planefence"
+        }
+      }
+    ]
+}

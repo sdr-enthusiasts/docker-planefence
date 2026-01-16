@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC2015,SC2268,SC2174,SC1091,SC2154
 # -----------------------------------------------------------------------------------
-# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/planefence4docker/
@@ -11,9 +11,9 @@
 #
 # -----------------------------------------------------------------------------------
 #
-source /scripts/common
+source /scripts/pf-common
 
-REMOTEURL=$(sed -n 's/\(^\s*REMOTEURL=\)\(.*\)/\2/p' /usr/share/planefence/planefence.conf)
+shopt -s nullglob
 
 function configure_planefence() {
 	local SETTING_NAME="$1"
@@ -32,9 +32,9 @@ function configure_planealert() {
 	if [[ -n "$SETTING_VALUE" ]]; then
 		if [[ "${SETTING_VALUE:0:1}" != "\"" ]] && [[ "${SETTING_VALUE:0:1}" != "'" ]]; then SETTING_VALUE="\"$SETTING_VALUE"; fi
 		if [[ "${SETTING_VALUE: -1}" != "\"" ]] && [[ "${SETTING_VALUE: -1}" != "'" ]]; then SETTING_VALUE="$SETTING_VALUE\""; fi
-		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/plane-alert/plane-alert.conf
+		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/planefence/plane-alert.conf
 	else
-		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/plane-alert/plane-alert.conf
+		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/planefence/plane-alert.conf
 	fi
 }
 function configure_both() {
@@ -45,62 +45,41 @@ function configure_both() {
 [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running Planefence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
-# (by default exposed to ~/.planefence) then export all of those variables as well
-# note that the grep strips off any spaces at the beginning of a line, and any commented line
-mkdir -p /usr/share/planefence/persist/.internal
-mkdir -p /usr/share/planefence/persist/planepix/cache
-mkdir -p /usr/share/planefence/html/plane-alert/silhouettes
-mkdir -p /usr/share/planefence/html/scripts
-chmod -f a=rwx /usr/share/planefence/persist /usr/share/planefence/persist/planepix
-chmod -fR a+rw /usr/share/planefence/persist/{.[!.]*,*}
-chmod u=rwx,go=rx \
+# then export all of those variables as well
+mkdir -p -m 0777 /usr/share/planefence/persist/.internal
+mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
+mkdir -p -m 0777 /usr/share/planefence/html/plane-alert/silhouettes
+mkdir -p -m 0777 /usr/share/planefence/html/assets/images
+mkdir -p -m 0777 /usr/share/planefence/html/noise
+chmod -f a=rwx /usr/share/planefence/persist
+chmod -fR u=rwx,go=rx \
 	/usr/share/planefence/persist/.internal \
-	/usr/share/planefence/html \
-	/usr/share/planefence/html/plane-alert \
-	/usr/share/planefence/html/plane-alert/silhouettes \
-	/usr/share/planefence/html/scripts
-ln -sf /usr/share/planefence/html/scripts /usr/share/planefence/html/plane-alert/scripts
-if [[ ! -e /usr/share/planefence/html/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache; fi
-if [[ ! -e /usr/share/planefence/html/plane-alert/imgcache ]]; then ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/plane-alert/imgcache; fi
-chmod a+rx /usr/share/planefence/html/imgcache /usr/share/planefence/html/plane-alert/imgcache
+	/usr/share/planefence/html
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
 	# shellcheck disable=SC1091
 	source /usr/share/planefence/persist/planefence.config
 	set +o allexport
 else
-	cp -n /usr/share/planefence/stage/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+	cp -n /usr/share/planefence/stage/persist/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
 	chmod -f a+rw /usr/share/planefence/persist/planefence.config
 fi
+ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache
+
 #
 # -----------------------------------------------------------------------------------
 #
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -f /usr/share/planefence/stage/* /usr/share/planefence/html
-cp -n /usr/share/planefence/stage/favicon.ico /usr/share/planefence/html/plane-alert
-mv -f /usr/share/planefence/html/{*.js,*.css} /usr/share/planefence/html/scripts
-mv -f /usr/share/planefence/html/Silhouettes.zip /tmp/silhouettes-org.zip
-rm -f /usr/share/planefence/html/planefence.config /usr/share/planefence/html/*.template /usr/share/planefence/html/aircraft-database-complete-
-mv -f /usr/share/planefence/html/pa_query.php /usr/share/planefence/html/plane-alert
-[[ ! -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pf_background.jpg
-[[ ! -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/html/background.jpg /usr/share/planefence/persist/pa_background.jpg
-rm -f /usr/share/planefence/html/background.jpg
-[[ ! -f /usr/share/planefence/persist/planefence-ignore.txt ]] && mv -f /usr/share/planefence/html/planefence-ignore.txt /usr/share/planefence/persist/ || rm -f /usr/share/planefence/html/planefence-ignore.txt
-#
-# maybe for future use
-# cp -u /usr/share/planefence/stage/*.template /usr/share/planefence/persist >/dev/null 2>&1
-#
+cp -Rf /usr/share/planefence/stage/html/* /usr/share/planefence/html/	# always update to latest version
+cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
+if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
+
 #--------------------------------------------------------------------------------
 #
 # Now initialize Plane Alert. Note that this isn't in its own s6 runtime because it's
 # only called synchronously from planefence (if enabled)
-#
-mkdir -p /usr/share/planefence/html/plane-alert
-[[ ! -f /usr/share/planefence/html/plane-alert/index.html ]] && cp /usr/share/plane-alert/html/index.html /usr/share/planefence/html/plane-alert/
-# Sync the plane-alert DB with a preference for newer versions on the persist volume:
-cp -n /usr/share/plane-alert/plane-alert-db.txt /usr/share/planefence/persist
 #
 # LOOPTIME is the time between two runs of Planefence (in seconds)
 if [[ -n "$PF_INTERVAL" ]]; then
@@ -126,7 +105,7 @@ if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
 	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	exec sleep infinity
+	stop_service
 fi
 
 #
@@ -148,14 +127,14 @@ if [[ -n "$FEEDER_LAT" ]]; then
 	configure_planefence "LAT" "$FEEDER_LAT"
 else
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
-	exec sleep infinity
+	stop_service
 fi
 
 if [[ -n "$FEEDER_LONG" ]]; then
 	configure_planefence "LON" "$FEEDER_LONG"
 else
 	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
-	exec sleep infinity
+	stop_service
 fi
 
 configure_planefence "MAXALT" "$PF_MAXALT"
@@ -192,7 +171,6 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 	# shellcheck disable=SC2001
 	a=$(sed 's|\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)|\1\_\2\_\3\_\4|g' <<<"$PF_SOCK30003HOST")
 	sed -i 's|\(^\s*LOGFILEBASE=/run/socket30003/dump1090-\).*|\1'"$a"'-|' /usr/share/planefence/planefence.conf
-	sed -i 's/127_0_0_1/'"$a"'/' /usr/share/planefence/planeheat.sh
 	unset a
 else
 	sleep 10s
@@ -203,9 +181,7 @@ else
 	"${s6wrap[@]}" echo "sudo nano -l ~/planefence/planefence.config"
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	while true; do
-		sleep 99999
-	done
+	stop_service
 fi
 #
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
@@ -215,15 +191,6 @@ a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf
 [[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
 unset a
 #
-# -----------------------------------------------------------------------------------
-#
-# same for planeheat.sh
-#
-sed -i 's/\(^\s*LAT=\).*/\1'"\"$FEEDER_LAT\""'/' /usr/share/planefence/planeheat.sh
-sed -i 's/\(^\s*LON=\).*/\1'"\"$FEEDER_LONG\""'/' /usr/share/planefence/planeheat.sh
-[[ -n "$PF_MAXALT" ]] && sed -i 's/\(^\s*MAXALT=\).*/\1'"\"$PF_MAXALT\""'/' /usr/share/planefence/planeheat.sh
-[[ -n "$PF_MAXDIST" ]] && sed -i 's/\(^\s*DIST=\).*/\1'"\"$PF_MAXDIST\""'/' /usr/share/planefence/planeheat.sh
-# -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
 #
 # enable or disable tweeting:
@@ -247,14 +214,6 @@ configure_planefence "HEATMAPHEIGHT" "$PF_MAPHEIGHT"
 configure_planefence "HEATMAPWIDTH" "$PF_MAPWIDTH"
 configure_planefence "HEATMAPZOOM" "$PF_MAPZOOM"
 #
-# Also do this for files in the past -- /usr/share/planefence/html/planefence-??????.html
-if compgen -G "$1/planefence-??????.html" >/dev/null; then
-	for i in /usr/share/planefence/html/planefence-??????.html; do
-		[[ -n "$PF_MAPWIDTH" ]] && sed -i 's|\(^\s*<div id=\"map\" style=\"width:.*;\)|<div id=\"map\" style=\"width:'"$PF_MAPWIDTH"';|' "$i"
-		[[ -n "$PF_MAPHEIGHT" ]] && sed -i 's|\(; height:[^\"]*\)|; height: '"$PF_MAPHEIGHT"'\"|' "$i"
-		[[ -n "$PF_MAPZOOM" ]] && sed -i 's|\(^\s*var map =.*], \)\(.*\)|\1'"$PF_MAPZOOM"');|' "$i"
-	done
-fi
 
 # place the screenshotting URL in place:
 
@@ -265,20 +224,12 @@ if [[ -n "$PF_SCREENSHOT_TIMEOUT" ]]; then
 	configure_both "SCREENSHOT_TIMEOUT" "$PF_SCREENSHOT_TIMEOUT"
 fi
 
-# if it still doesn't exist, something went drastically wrong and we need to set $PF_PLANEALERT to OFF!
-if [[ ! -f /usr/share/planefence/persist/plane-alert-db.txt ]] && chk_enabled "$PF_PLANEALERT"; then
-	"${s6wrap[@]}" echo "Cannot find or create the plane-alert-db.txt file. Disabling Plane-Alert."
-	"${s6wrap[@]}" echo "Do this on the host to get a base file:"
-	"${s6wrap[@]}" echo "curl --compressed -s https://raw.githubusercontent.com/kx1t/docker-planefence/plane-alert/plane-alert-db.txt >~/.planefence/plane-alert-db.txt"
-	"${s6wrap[@]}" echo "and then restart this docker container"
-	PF_PLANEALERT="OFF"
-fi
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
 if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PLANEALERT" "ON"; else configure_planefence "PLANEALERT" "OFF"; fi
 # Go get the plane-alert-db files:
-/usr/share/plane-alert/get-pa-alertlist.sh
-/usr/share/plane-alert/get-silhouettes.sh
+/usr/share/planefence/get-pa-alertlist.sh
+/usr/share/planefence/get-silhouettes.sh
 
 configure_planefence "PF_DISCORD" "$PF_DISCORD"
 configure_planealert "PA_DISCORD" "$PA_DISCORD"
@@ -287,7 +238,8 @@ configure_planefence "PF_DISCORD_WEBHOOKS" "${PF_DISCORD_WEBHOOKS}"
 configure_planealert "PA_DISCORD_COLOR" "$PA_DISCORD_COLOR"
 configure_both "DISCORD_FEEDER_NAME" "${DISCORD_FEEDER_NAME}"
 configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
-configure_both "NOTIFICATION_SERVER" "NOTIFICATION_SERVER"
+#configure_both "NOTIFICATION_SERVER" "$NOTIFICATION_SERVER"
+configure_both "GENERATE_CSV" "${GENERATE_CSV:-OFF}"
 
 # Add OPENAIPKEY for use with OpenAIP, necessary for it to work if PF_OPENAIP_LAYER is ON
 configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"
@@ -325,6 +277,9 @@ fi
 # Configure Telegram parameters:
 configure_planefence "TELEGRAM_ENABLED" "$PF_TELEGRAM_ENABLED"
 configure_planealert "TELEGRAM_ENABLED" "$PA_TELEGRAM_ENABLED"
+configure_both "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
+configure_planefence "TELEGRAM_CHAT_ID" "$PF_TELEGRAM_CHAT_ID"
+configure_planealert "TELEGRAM_CHAT_ID" "$PA_TELEGRAM_CHAT_ID"
 
 configure_planealert "NAME" "${PF_NAME:-My}"
 configure_planealert "ADSBLINK" "$PF_MAPURL"
@@ -358,16 +313,9 @@ if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/soc
 fi
 #
 #--------------------------------------------------------------------------------
-# Check if the remote airlinename server is online
-#[[ "$PF_CHECKREMOTEDB" != "OFF" ]] && a="$(curl -L -s https://get-airline.planefence.com/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/build ]] && cat /usr/share/planefence/build || cat /root/.buildtime | cut -c 1-23 | tr ' ' '_'))" || a=""
-#shellcheck disable=SC2046
-! chk_disabled "$PF_CHECKREMOTEDB" && a="$(curl -L -s "$REMOTEURL"/?flight=hello_from_$(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime))" || a=""
-[[ "${a:0:4}" == "#100" ]] && sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1ON|' /usr/share/planefence/planefence.conf || sed -i 's|\(^\s*CHECKREMOTEDB=\).*|\1OFF|' /usr/share/planefence/planefence.conf
-#
-#--------------------------------------------------------------------------------
 # Move web page background pictures in place
 [[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
-[[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html/plane-alert || rm -f /usr/share/planefence/html/plane-alert/pa_background.jpg
+[[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pa_background.jpg
 
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
@@ -419,39 +367,13 @@ if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_HANDLE" ]]; then configu
 if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_APP_PASSWORD" ]]; then configure_planealert "BLUESKY_APP_PASSWORD" "$BLUESKY_APP_PASSWORD"; else configure_planealert "BLUESKY_APP_PASSWORD" ""; fi
 if chk_enabled "$PA_BLUESKY_ENABLED" && [[ -n "$BLUESKY_API" ]]; then configure_planealert "BLUESKY_API" "$BLUESKY_API"; else configure_planealert "BLUESKY_API" ""; fi
 #
-#--------------------------------------------------------------------------------
-# Make sure that all past map links follow PA/PF_TRACKS
-replacement="${PF_TRACKSERVICE:-https://globe.adsbexchange.com}"
-replacement="${replacement,,}"
-if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
-shopt -s nullglob
-for file in /usr/share/planefence/html/*.csv; do
-	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' "$file"
-done
-
-if [[ -f /usr/share/planefence/html/plane-alert/plane-alert.csv ]]; then
-	replacement="${PA_TRACKSERVICE:-https://globe.adsbexchange.com}"
-	replacement="${replacement,,}"
-	if [[ ${replacement::4} != "http" ]]; then replacement="https://$replacement"; fi
-	sed -i 's|\(http[s]\?://\)[^/]\+[/]\?\(?icao=.*\)|'"$replacement"'/\2|gI' /usr/share/planefence/html/plane-alert/plane-alert.csv
-fi
-
-# ---------------------------------------------------------------------
-# Set DARKMODE
-
-if chk_enabled "$PF_DARKMODE"; then configure_planefence "DARKMODE" "true"; else configure_planefence "DARKMODE" "false"; fi
-if chk_enabled "$PA_DARKMODE"; then configure_planealert "DARKMODE" "true"; else configure_planealert "DARKMODE" "false"; fi
 #
 # ---------------------------------------------------------------------
 # Set default table sizes:
 configure_planefence "TABLESIZE" "${PF_TABLESIZE:-50}"
 configure_planealert "TABLESIZE" "${PA_TABLESIZE:-50}"
 #--------------------------------------------------------------------------------
-# Configure the Planefence/Plane-Alert Ignore button:
-configure_planefence "SHOWIGNORE" "${PF_SHOWIGNORE:-false}"
-configure_planealert "SHOWIGNORE" "${PA_SHOWIGNORE:-false}"
 configure_planealert "EXCLUSIONS" "${PA_EXCLUSIONS}"
-touch /tmp/.force_pa_webpage_update	# this is used to force a Plane-Alert webpage update upon change of parameters
 #
 # ---------------------------------------------------------------------
 # Last thing - save the date we processed the config to disk. That way, if ~/.planefence/planefence.conf is changed,

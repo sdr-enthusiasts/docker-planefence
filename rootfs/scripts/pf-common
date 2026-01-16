@@ -1,0 +1,589 @@
+# shellcheck shell=bash disable=SC1091,SC2034,SC2154
+# -----------------------------------------------------------------------------------
+# Copyright 2026 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/docker-planefence/
+#
+# This package may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+#
+# Common functions for Planefence / Plane-Alert
+# To be sourced in at the beginning of other bash scripts - not a stand-alone file
+
+source /scripts/common
+
+set -eo pipefail
+LC_ALL=C
+
+MAXWAITTIME=300   # max time we'll wait for the records lock to expire
+CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
+NEWLINE="
+"
+
+declare -gA records pa_records
+
+log_print() {
+  # Give up quickly is DEBUG isn't on:
+  if [[ "${1^^}" == "DEBUG" ]] && ! chk_enabled "$DEBUG"; then return; fi
+  local loglevel="" logmsg=""
+
+  case "${1^^}" in
+    INF|INFO) loglevel="INFO" ;;
+    WARN|WARNING) loglevel="WARNING" ;;
+    ERROR|ERR|FATAL) loglevel="FATAL" ;;
+    DEBUG) loglevel="DEBUG" ;;
+  esac
+
+  if [[ -z "$loglevel" ]]; then
+    loglevel="INFO"
+    logmsg="$1"
+  else
+    logmsg="$2"
+  fi
+
+  if [[ "$loglevel" == "DEBUG" ]]; then
+    local currenttime
+    if [[ -z "$execstarttime" ]]; then
+      execstarttime="$(date +%s.%3N)"
+      execlaststeptime="$execstarttime"
+    fi
+    currenttime="$(date +%s.%3N)"
+    "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$logmsg" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+    execlaststeptime="$currenttime"
+  else
+    "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
+  fi
+
+}
+
+
+WAIT_LOCK() {
+  if [[ -f "/tmp/.records.lock" ]]; then
+    log_print DEBUG "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$(($(date +%s) + MAXWAITTIME))")"
+    # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    local starttime
+    starttime="$(date +%s)"
+    while :; do
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+    done
+  fi
+  if [[ "${1,,}" == "ignore-lock" ]]; then
+    if [[ -f "/tmp/.records.lock" ]]; then
+      log_print DEBUG ".records.lock time expired, lock left in place"
+    else
+      log_print DEBUG ".records.lock ignored but not present, continuing..."
+    fi
+  else
+    log_print DEBUG ".records.lock released and removed, continuing..."
+    rm -f "/tmp/.records.lock"
+  fi
+}
+
+
+# shellcheck disable=SC2120
+LOCK_RECORDS() {
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+    WAIT_LOCK ""
+  fi
+  echo "$(basename "$0") @ $(date +'%Y-%m-%d %H:%M:%S.%3N')" > "/tmp/.records.lock"
+  log_print DEBUG ".records.lock locked by $(</tmp/.records.lock)"
+}
+
+UNLOCK_RECORDS() {
+  if [[ -f "/tmp/.records.lock" ]]; then
+    log_print DEBUG "Unlocking .records.lock locked by $(</tmp/.records.lock)"
+    rm -f "/tmp/.records.lock"
+  else
+    log_print DEBUG "Unlocking .records.lock (it was already unlocked)"
+  fi
+}
+
+READ_RECORDS() {
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local YESTERDAY="${YESTERDAY:-$(date -d 'yesterday' +%y%m%d)}"
+  local YESTERDAYRECORDSFILE="${YESTERDAYRECORDSFILE:-$RECORDSDIR/planefence-records-${YESTERDAY}.gz}"
+  local plane_alert_conf="/usr/share/planefence/plane-alert.conf"
+
+  if [[ ! -f "$RECORDSFILE" ]]; then 
+    log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
+    declare -gA records=()
+    declare -gA pa_records=()
+    declare -gA heatmap=()
+    declare -gA last_idx_for_icao=()
+    declare -gA lastseen_for_icao=()
+    declare -gA pa_last_idx_for_icao=()
+    records[maxindex]=-1
+    pa_records[maxindex]=-1
+    LASTPROCESSEDLINE=""
+
+    if [[ -f "$YESTERDAYRECORDSFILE" ]]; then
+      log_print DEBUG "Loading Plane-Alert history from $YESTERDAYRECORDSFILE"
+      local extracted
+      extracted="$(gzip -cd "$YESTERDAYRECORDSFILE" | grep -E '^declare -[^ ]+ pa_(records|last_idx_for_icao)=' 2>/dev/null)" || true
+      if [[ -n $extracted ]]; then
+        eval "$extracted"
+      fi
+      [[ -z ${pa_records[maxindex]+x} ]] && pa_records[maxindex]=-1
+
+      # Now prune old Plane-Alert records according to HISTTIME setting
+      local hist_days hist_seconds now_epoch cutoff
+      hist_days="$(sed -n 's/^\s*HISTTIME\s*=\s*\(.*\)$/\1/p' "$plane_alert_conf" | head -n1)"
+      hist_days="${hist_days%%#*}"
+      hist_days="${hist_days//\"/}"
+      hist_days="${hist_days//\'/}"
+      hist_days="${hist_days//[[:space:]]/}"
+      [[ $hist_days =~ ^[0-9]+$ ]] || hist_days=14
+      log_print DEBUG "Rebuilding Plane-Alert records to remove obsolete (older than $hist_days days) entries"
+      hist_seconds=$(( hist_days * 86400 ))
+      now_epoch=$(date +%s)
+      cutoff=$(( now_epoch - hist_seconds ))
+
+      if (( ${pa_records[maxindex]:--1} >= 0 )); then
+        local -A keep_idx=()
+        local -A new_idx_map=()
+        local next_idx=0
+        local idx
+        for (( idx=0; idx<=pa_records[maxindex]; idx++ )); do
+          local lastseen_ts="${pa_records["$idx":time:lastseen]}"
+          local keep=true
+          if [[ -n $lastseen_ts && $lastseen_ts =~ ^[0-9]+$ ]]; then
+            if (( lastseen_ts < cutoff )); then
+              keep=false
+            fi
+          fi
+          if $keep; then
+            keep_idx[$idx]=1
+            new_idx_map[$idx]=$next_idx
+            (( next_idx++ )) || true
+          fi
+        done
+        local -A rebuilt_pa_records=()
+        local key old_idx suffix new_idx
+        for key in "${!pa_records[@]}"; do
+          if [[ $key == maxindex ]]; then
+            continue
+          elif [[ $key =~ ^([0-9]+):(.*)$ ]]; then
+            old_idx="${BASH_REMATCH[1]}"
+            suffix="${BASH_REMATCH[2]}"
+            if [[ -n ${keep_idx[$old_idx]} ]]; then
+              new_idx=${new_idx_map[$old_idx]}
+              rebuilt_pa_records["$new_idx":$suffix]="${pa_records[$key]}"
+            fi
+          else
+            rebuilt_pa_records["$key"]="${pa_records[$key]}"
+          fi
+        done
+
+        local final_max=$(( next_idx - 1 ))
+        rebuilt_pa_records[maxindex]=$final_max
+        unset pa_records
+        declare -gA pa_records=()
+        for key in "${!rebuilt_pa_records[@]}"; do
+          pa_records["$key"]="${rebuilt_pa_records[$key]}"
+        done
+
+        unset pa_last_idx_for_icao
+        declare -gA pa_last_idx_for_icao=()
+        if (( final_max >= 0 )); then
+          for (( idx=0; idx<=final_max; idx++ )); do
+            local icao_value="${pa_records["$idx":icao]}"
+            if [[ -n $icao_value ]]; then
+              pa_last_idx_for_icao["$icao_value"]="$idx"
+            fi
+          done
+        fi
+      fi
+    fi
+    return
+  fi
+  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    starttime="$(date +%s)"
+    log_print DEBUG "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    while :; do
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+    done
+    log_print DEBUG ".records.lock unlocked. Continuing..."
+  fi
+  log_print DEBUG "records read by $(basename "$0")"
+  # shellcheck disable=SC1090
+  source <(gzip -cd "$RECORDSFILE")
+
+}
+
+WRITE_RECORDS() {
+
+  local TODAY="${TODAY:-$(date +%y%m%d)}"
+  local RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+  local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local tmpfile
+  tmpfile="$(mktemp)"
+
+  LOCK_RECORDS "$1"
+  #declare -A records pf_last_idx_for_icao pf_lastseen_for_icao  # declare them just in case they don't exist yet
+  { declare -p records
+    declare -p heatmap
+    declare -p last_idx_for_icao
+    declare -p lastseen_for_icao
+    declare -p pa_records
+    declare -p pa_last_idx_for_icao
+    echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
+  } | \
+    sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
+    gzip -c > "$tmpfile"
+  mv -f "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+  chmod a+r "$RECORDSFILE"
+  log_print DEBUG "Records written by $(basename "$0")"
+  if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
+}
+
+# Function to encode special characters for XML
+xml_encode() {
+    echo "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g'
+}
+
+json_encode() {
+  local s=${1-}
+  case "$s" in
+    (*[\"\\$'\n'$'\r'$'\t'$'\b'$'\f']*) ;; 
+    (*) printf '%s' "$s"; return ;;
+  esac
+
+  # escape backslash and quote with sed, then map controls with tr
+    printf '%s' "$s" | sed -u -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e "s/'/ /g" \
+      | tr '\b\f\n\r\t' '\\b\\f\\n\\r\\t'
+}
+
+csv_encode() {
+  local s
+  s=$1
+
+  # Quick safe-return for empty string
+  if [[ -z "${s+set}" ]] || [[ "$s" = "" ]]; then
+    printf '%s' "$s"
+    return
+  fi
+
+  # Needs quoting if contains comma, double-quote, newline, CR, or leading/trailing space
+  case "$s" in
+    *[,$'\n'$'\r'"\""]* ) ;;
+    [[:space:]]*|*'[[:space:]]' ) ;;  # fall through to quoting
+    * ) printf '%s' "$s"; return ;;
+  esac
+
+  # Double internal quotes per RFC 4180
+  s=${s//\"/\"\"}
+  printf '"%s"' "$s"
+}
+
+template_replace() {
+  local token=$1 repl=$2 template=$3 prefix
+  [[ -z ${token+x} || -z ${repl+x} || -z ${template+x} ]] && { printf 'Usage: template_replace token replacement template\n' >&2; return 1; }
+  [[ $token == "" ]] && { printf '%s' "$template"; return 0; }
+  [[ $template != *"$token"* ]] && { printf '%s' "$template"; return 0; }
+
+  local tmp
+  tmp=$(mktemp) || { printf 'mktemp failed\n' >&2; return 1; }
+  {
+    while [[ $template == *"$token"* ]]; do
+      prefix=${template%%"$token"*}
+      printf '%s%s' "$prefix" "$repl"
+      template=${template#*"$token"}
+    done
+    printf '%s' "$template"
+  } >"$tmp"
+  cat "$tmp"
+  rm -f -- "$tmp"
+}
+
+CHK_SCREENSHOT_ENABLED() {
+  # Check if screenshot additions are enabled
+  local screenshothost
+  local screenshoturl="$PF_SCREENSHOTURL"
+  if [[ -z "$screenshoturl" ]]; then
+    screenshoturl="$(sed -n 's/\(^\s*PF_SCREENSHOTURL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
+  fi
+  screenshothost="$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$screenshoturl")"
+
+  if chk_disabled "$screenshoturl"; then
+    log_print DEBUG "Screenshot additions not enabled, exiting"
+    return 1
+  fi
+  # check if the screenshot container can be reached. If it can't, exit
+  if ! ping -W 1 -c 1 "$screenshothost" &>/dev/null; then
+    log_print DEBUG "Screenshot service not reachable at ${screenshoturl}, exiting"
+    return 1
+  fi
+  return 0
+}
+
+CHK_NOTIFICATIONS_ENABLED () {
+  # Check if any notifications are enabled
+  if chk_enabled "$DISCORD_ENABLED" || \
+     { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
+     [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
+     [[ -n "$MQTT_URL" ]] || \
+     chk_enabled "${TELEGRAM_ENABLED}"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+extract_base() {
+  awk '
+    BEGIN {
+      split("co.uk|ac.uk|gov.uk|co.jp|com.au|net.au|org.au|co.nz|com.br|com.mx|co.in", PSL, "|")
+      for (i in PSL) psl[PSL[i]] = 1
+    }
+    {
+      url = $0
+      sub(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "", url)  # scheme
+      sub(/^[^@]*@/, "", url)                        # creds
+      host = url
+      if (match(host, /[\/?#]/)) host = substr(host, 1, RSTART-1)
+      if (host ~ /^\[/) { print ""; next }           # IPv6 -> no basename
+      sub(/:[0-9]+$/, "", host)                      # port
+
+      n = split(host, parts, /\./)
+      if (n < 2) { print ""; next }
+
+      sfx = parts[n-1] "." parts[n]
+      if (psl[sfx] && n >= 3) print parts[n-2]
+      else print parts[n-1]
+    }
+  ' <<< "$1"
+}
+
+# assumes: extract_base prints the base label (domain text) for a URL
+# replace_urls "text with https://example.com/a?b=1 and http://foo.co.uk/x"
+# -> text with <a href="https://example.com/a?b=1">example</a> and <a href="http://foo.co.uk/x">foo</a>
+replace_urls() {
+  local s=$1 url dom out rest
+  out=""
+  rest=$s
+
+  # Best‑effort URL regex (http/https). Unquoted on RHS of =~.
+  local re='https?://[A-Za-z0-9._~:/?#$$$$@!$'"&"'\x27()*+,;=%-]+'
+
+  while [[ $rest =~ $re ]]; do
+    url=${BASH_REMATCH[0]}
+    out+="${rest%%"$url"*}"
+    dom=$(extract_base "$url")
+    [[ -n $dom ]] || dom="$url"
+    out+="<a href=\"$url\">$dom</a>"
+    rest=${rest#*"$url"}
+  done
+  printf '%s\n' "$out"
+}
+
+GET_SQUAWK_DESCRIPTION () {
+  local squawk_code=$1
+  case "$squawk_code" in
+    1000) echo "IFR generic (EU)" ;;
+    1200) echo "VFR below 18kft" ;;
+    1201) echo "VFR firefighting (US)" ;;
+    1202) echo "Glider" ;;
+    1255) echo "Balloon (US)" ;;
+    1276) echo "Parachute jumping (US)" ;;
+    2000) echo "IFR (EU); SVFR (US)" ;;
+    2100) echo "Helicopter offshore" ;;
+    3000) echo "VFR generic (EU)" ;;
+    4000) echo "Military" ;;
+    4401) echo "Formation flight" ;;
+    4402) echo "Formation flight" ;;
+    5101) echo "Military" ;;
+    5102) echo "Military" ;;
+    5103) echo "Military" ;;
+    5104) echo "Military" ;;
+    5105) echo "Military" ;;
+    5106) echo "Military" ;;
+    5107) echo "Military" ;;
+    5108) echo "Military" ;;
+    5109) echo "Military" ;;
+    5110) echo "Military" ;;
+    5111) echo "Military" ;;
+    5112) echo "Military" ;;
+    5113) echo "Military" ;;
+    5114) echo "Military" ;;
+    5115) echo "Military" ;;
+    5116) echo "Military" ;;
+    5117) echo "Military" ;;
+    7000) echo "VFR generic (EU)/Glider (US)" ;;
+    7001) echo "Aerobatics" ;;
+    7004) echo "Military fast-jet (UK)" ;;
+    7007) echo "Military" ;;
+    7010) echo "RPAS/UAS (EU)" ;;
+    7400) echo "Lost C2 link (RPAS/UAS)" ;;
+    7500) echo "Hijack" ;;
+    7600) echo "No Radio" ;;
+    7700) echo "Emergency" ;;
+    7777) echo "No Transponder" ;;
+  esac
+}
+
+deg_to_compass() {
+  local d=${1%%.*}
+  if [[ ! $d =~ ^-?[0-9]+$ ]]; then 
+    log_print ERR "$1 is not a valid angle"
+    return 1
+  fi
+  d=$(( ((d % 360) + 360) % 360 ))
+  local -a dirs=(N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW);
+  local idx=$(( ((d * 10 + 112) / 225) % 16 ))
+  printf '%s\n' "${dirs[$idx]}"
+}
+
+extract_url() {
+  local s=$*
+  # Unquoted regex to avoid shell escaping issues; & is literal in [].
+  local re='https?://[A-Za-z0-9._~:/?#$$$$@!$'"&"'\x27()*+,;=%-]+'
+  if [[ $s =~ $re ]]; then
+    printf '%s\n' "${BASH_REMATCH[0]}"
+    return 0
+  else
+    printf '%s\n' "$s"
+    return 1
+  fi
+}
+
+# Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
+# Use:
+# declare -a INDEX STALE
+# build_index_and_stale INDEX STALE <notifservice> [<mode>]
+#
+# Assumes:
+#   - records[...] (Planefence) or pa_records[...] (Plane-Alert) assoc with keys: "<id>:lastseen|$notifservice:notified|complete|checked:screenshot"
+#   - CONTAINERSTARTTIME (epoch, integer)
+#   - screenshots (0/1 or truthy string)
+# $notifservice is one of: discord, telegram, mqtt, bsky, mastodon
+# NOTE -- only use this function for notification scripts. Don't use it in screenshot script as the needed functionality is slightly different
+build_index_and_stale() {
+  local -n _INDEX=$1
+  local -n _STALE=$2
+  local notifservice=$3
+  local data_mode="${4:-pf}"
+  data_mode="${data_mode,,}"
+
+  log_print DEBUG "build_index_and_stale called for mode $data_mode with notifservice='$notifservice'"
+  if [[ -z "$notifservice" ]]; then
+    log_print ERR "build_index_and_stale: notifservice argument missing"
+    return 1
+  fi
+   
+  _INDEX=(); _STALE=()
+
+  local record_array="records"
+  if [[ "$data_mode" == "pa" ]]; then record_array="pa_records"; fi
+  local -n _RECORDS="$record_array"
+
+  # Optional numeric ceiling from the selected records array
+  local MAXIDX
+  MAXIDX=${_RECORDS[maxindex]}
+
+  # Capture gawk output once, then demux without subshells
+  local out
+  out="$(
+    {
+      local k id field
+      for k in "${!_RECORDS[@]}"; do
+        [[ $k == +([0-9]):* ]] || continue
+        id=${k%%:*}
+        [[ -n "$MAXIDX" && $id -gt $MAXIDX ]] && continue
+        field=${k#*:}
+        # Only pass fields we care about to reduce awk work
+        case $field in
+          time:lastseen|"${notifservice}:notified"|complete|checked:screenshot)
+            printf '%s\t%s\t%s\n' "$id" "$field" "${_RECORDS[$k]}"
+            ;;
+        esac
+      done
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v SS="${screenshots:-0}" -v notifservice="$notifservice" '
+      BEGIN { FS="\t" }
+      {
+        id=$1; key=$2; val=$3
+        if (key=="time:lastseen")                 { lastseen[id]=val+0; ids[id]=1 }
+        else if (key==(notifservice ":notified")) notified[id]=val
+        else if (key=="complete")                 complete[id]=val
+        else if (key=="checked:screenshot")       schecked[id]=val
+      }
+      END {        
+        CSTN = CST+0
+        # Evaluate only ids that have lastseen
+        for (id in ids) {
+          n  = (id in notified)? notified[id] : ""
+          ls = lastseen[id]
+          # stale first
+          if (ls < CSTN && n == "") { stale[id]=1; continue }
+          # eligibility checks
+          c  = (id in complete)? complete[id] : ""
+          if (!enabled(c)) continue
+          if (enabled(n)) continue
+          if (n!="") continue
+          if (SS && !enabled((id in schecked)? schecked[id] : "")) continue
+          ok[id]=1
+        }
+        # Print lists (tagged), numerically sorted
+        ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
+        ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
+      }
+      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
+    '
+  )"
+
+  local tag id
+  while IFS=$'\t' read -r tag id; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$tag" == I ]]; then _INDEX+=("$id"); else _STALE+=("$id"); fi
+  done <<< "$out"
+}
+
+
+# Default units
+if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
+	case "$(awk -F= -v var="distanceunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometer"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
+		nauticalmile)
+		DISTUNIT="nm"
+    TO_METER=1852
+		;;
+		mile)
+		DISTUNIT="mi"
+		TO_METER=1609
+		;;
+		meter)
+		DISTUNIT="m"
+		TO_METER=1
+    ;;
+    *)
+    # socket30003 default is kilometer; we don't have to check this explicitly for this value
+		DISTUNIT="km"
+		TO_METER=1000
+		;;
+	esac
+	case "$(awk -F= -v var="altitudeunit" '$1==var {print $2;found=1;exit} END {if(!found) print "meter"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
+		feet)
+		ALTUNIT="ft"
+		;;
+		*)
+    # socket30003 default is meter; we don't have to check this explicitly for this value
+		ALTUNIT="m"
+	esac
+  	case "$(awk -F= -v var="speedunit" '$1==var {print $2;found=1;exit} END {if(!found) print "kilometerph"}' "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}")" in
+		knotph)
+		SPEEDUNIT="kt"
+    ;;
+    mileph)
+    SPEEDUNIT="mph"
+    ;;
+    *)
+    # socket30003 default is kilometerph; we don't have to check this explicitly for this value
+		SPEEDUNIT="km/h"
+		;;
+	esac
+fi
+(( ${ALTCORR:-0} > 0 )) && ALTREF="AGL" || ALTREF="MSL" 

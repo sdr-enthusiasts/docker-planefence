@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154
 # -----------------------------------------------------------------------------------
-# Copyright 2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/kx1t/docker-planefence/
@@ -13,7 +13,7 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
 fi
 
-source /scripts/common
+source /scripts/pf-common
 
 ACCESS_TOKEN=$MASTODON_ACCESS_TOKEN
 INSTANCE_URL="https://$MASTODON_SERVER"
@@ -25,29 +25,33 @@ delete_toot() {
     local result
     if ! result="$(curl -s --fail -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" "$INSTANCE_URL/api/v1/statuses/$toot_id" 2>&1)"; then
         if chk_enabled "$MASTODON_DEBUG"; then
-            echo ""
-            "${s6wrap[@]}" echo "error deleting $toot_id: $result"
+            log_print ERR "error deleting $toot_id: $result"
         fi
     fi
 }
 
 if chk_disabled "$MASTODON_RETENTION_TIME"; then
-    "${s6wrap[@]}" echo "MASTODON_RETENTION_TIME is set to $MASTODON_RETENTION_TIME (disabled); nothing to do!"
+    log_print ERR "MASTODON_RETENTION_TIME is set to $MASTODON_RETENTION_TIME (disabled); nothing to do!"
     exit 0
 fi
 
 if [[ -z "$MASTODON_RETENTION_TIME" ]]; then
-    "${s6wrap[@]}" echo "Warning: MASTODON_RETENTION_TIME not set. Defaulting to $RETENTION_DAYS days."
+    log_print WARN "MASTODON_RETENTION_TIME not set. Defaulting to $RETENTION_DAYS days."
 fi
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]]; then
-    "${s6wrap[@]}" echo "MASTODON_ACCESS_TOKEN not set. Exiting."
+    log_print ERR "MASTODON_ACCESS_TOKEN not set. Exiting."
     exit 1
 fi
 
 if [[ -z "$MASTODON_SERVER" ]]; then
-    "${s6wrap[@]}" echo "MASTODON_SERVER not set. Exiting."
+    log_print ERR "MASTODON_SERVER not set. Exiting."
     exit 1
+fi
+
+if [[ "${1,,}" != "delete" ]]; then
+    log_print WARN "You didn't pass 'delete' as a command line argument. We'll evaluate Toots but won't actually delete them."
+    log_print WARN "Usage: $0 [delete]"
 fi
 
 unset toot_dates counter last_id
@@ -67,7 +71,7 @@ while : ; do
     # shellcheck disable=SC2207
     toot_ids=($(jq -r '.[] | .id' <<< "$toots" 2>/dev/null || true))
     if (( ${#toot_ids[@]} == 0)); then
-        "${s6wrap[@]}" echo "No more Toots; done!"
+        log_print INFO "No more Toots; done!"
         exit 0
     fi
     last_id="${toot_ids[-1]}"
@@ -88,12 +92,12 @@ while : ; do
                 (( unexpired++ )) || true
             fi
         else
-            if chk_enabled "$MASTODON_DEBUG"; then "${s6wrap[@]}" echo "No more Toots; done!"; fi
+            if chk_enabled "$MASTODON_DEBUG"; then log_print INFO "No more Toots; done!"; fi
             exit
         fi
     done
     if chk_enabled "$MASTODON_DEBUG"; then 
         output+=("($unexpired unexpired; $expired expired; oldest $(date -d "@$oldest") ($(( (now - oldest)/(60*60*24) )) days); newest $(date -d "@$newest") ($(( (now - newest)/(60*60*24) )) days))")
-        "${s6wrap[@]}" echo "${output[@]}"
+        log_print INFO "${output[@]}"
     fi
 done

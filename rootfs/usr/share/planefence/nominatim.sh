@@ -1,99 +1,103 @@
-#!/bin/bash
-#shellcheck shell=bash disable=SC2015,SC2001
-#
-# Usage: nominatim.sh lat=xxxx lon=yyyy
-# Returns
-#
-# -----------------------------------------------------------------------------------
-# This package is part of https://github.com/sdr-enthusiasts/docker-planefence/ and may not work or have any
-# value outside of this repository.
-#
-# Copyright 2023-2025 Ramon F. Kolb - licensed under the terms and conditions
-# of GPLv3. The terms and conditions of this license are included with the Github
-# distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/docker-planefence/
-#
-# Summary of License Terms
-# This program is free software: you can redistribute it and/or modify it under the terms of
-# the GNU General Public License as published by the Free Software Foundation, either version 3
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see https://www.gnu.org/licenses/.
-# -----------------------------------------------------------------------------------
+#!/usr/bin/env bash
+# Fast Nominatim reverse with cache and rounding; errors -> stderr
+set -euo pipefail
 
-# read command line params and extract lat and long from it
+NOMI_CACHE_DIR=/usr/share/planefence/persist/.nominatim-cache
 
-for arg in "$@"
-do
-    arg=${arg,,}
-    [[ "${arg%%=*}" == "--lat" ]] && lat="${arg#*=}" || true
-    [[ "${arg%%=*}" == "--lon" ]] && lon="${arg#*=}" || true
-    [[ "${arg%%=*}" == "--raw" ]] && raw=true || unset raw
+lat=""; lon=""; raw=false
+for arg in "$@"; do
+  case "${arg,,}" in
+    --lat=*) lat="${arg#*=}";;
+    --lon=*) lon="${arg#*=}";;
+    --raw)   raw=true;;
+  esac
 done
-
-if [[ -z "$lat" || -z "$lon" ]]
-then
-    echo "Missing argument. Usage: $0 --lat=xx.xxxx --lon=yy.yyyy"
-    exit 1
+if [[ -z $lat || -z $lon ]]; then
+  printf 'Missing argument. Usage: %s --lat=xx.xxxx --lon=yy.yyyy\n' "${0##*/}" >&2
+  exit 1
 fi
 
-if ! result="$(curl -sSL "https://nominatim.openstreetmap.org/reverse?format=xml&lat=$lat&lon=$lon")"
-then
-    echo "Error fetching nominatim results - bad format"
-    exit 1
-fi
 
-if grep "<error>" >/dev/null 2>&1 <<< "$result"
-then
-    if grep "Unable to geocode" >/dev/null 2>&1 <<< "$result"
-    then
-        # nothing to return - no location name found
-        exit 0
+ROUND=2
+CACHE_DIR=${NOMI_CACHE_DIR:-/tmp/nominatim-cache}
+mkdir -p "$CACHE_DIR"
+
+round() { printf "%.${ROUND}f" "$1"; }
+rlat=$(round "$lat"); rlon=$(round "$lon")
+key="${rlat},${rlon}"
+cache_file="$CACHE_DIR/${key//,/_}.json"
+
+ua="planefence-nominatim/1.0 (+https://github.com/sdr-enthusiasts/docker-planefence)"
+url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$rlat&lon=$rlon&addressdetails=1"
+
+# Fetch or cache
+if [[ -s $cache_file && $(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0))) -lt ${NOMI_TTL:-604800} ]]; then
+  result=$(<"$cache_file")
+else
+  if [[ -n ${NOMI_RATE_SLEEP:-} ]]; then sleep "$NOMI_RATE_SLEEP"; else sleep 0.2; fi
+  if ! result="$(curl -sS --fail -H "User-Agent: $ua" "$url")"; then
+    printf 'Error fetching nominatim results - network\n' >&2
+    exit 1
+  fi
+  if [[ $result == *'"error"'* ]]; then
+    if [[ $result == *"Unable to geocode"* ]]; then
+      : >"$cache_file"
+      exit 0
     else
-        echo -n "Error fetching nominatim results:"
-        sed 's|.*<error>\(.*\)</error>.*|\1|g' <<< "$result"
-        exit 1
+      msg=$(printf '%s' "$result" | sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"$[^"]*$".*/\1/p')
+      printf 'Error fetching nominatim results: %s\n' "${msg:-unknown error}" >&2
+      exit 1
     fi
+  fi
+  printf '%s' "$result" >"$cache_file".tmp && mv -f "$cache_file".tmp "$cache_file"
 fi
 
-if [[ $raw == true ]]
-then
-    echo "$result"
-    exit 0
+$raw && { printf '%s\n' "$result"; exit 0; }
+
+if command -v jq >/dev/null 2>&1; then
+  city=$(jq -r '.address.city // empty' <<<"$result")
+  town=$(jq -r '.address.town // empty' <<<"$result")
+  municipality=$(jq -r '.address.municipality // empty' <<<"$result")
+  state=$(jq -r '.address.state // empty' <<<"$result")
+  # country=$(jq -r '.address.country // empty' <<<"$result")
+  county=$(jq -r '.address.county // empty' <<<"$result")
+  country_code=$(jq -r '.address.country_code // empty' <<<"$result")
+  postcode=$(jq -r '.address.postcode // empty' <<<"$result")
+else
+  parse_json() { awk -v k="$1" -v s="$2" '
+    function unq(x){gsub(/\\"/,"\"",x);gsub(/\\\\/,"\\",x);return x}
+    BEGIN{match(k,/^[^.]+/); base=substr(k,1,RLENGTH); sub(/^[^.]+\./,"",k); subkey=k}
+    {
+      gsub(/\r/,"")
+      if($0 ~ /"address"\s*:/){inaddr=1}
+      if(inaddr && $0 ~ "\""subkey"\"[[:space:]]*:[[:space:]]*\""){
+        match($0, "\""subkey"\"[[:space:]]*:[[:space:]]*\"[^\"]*\"")
+        str=substr($0,RSTART,RLENGTH)
+        sub(/^[^:]*:[[:space:]]*"/,"",str); sub(/"$/,"",str)
+        print unq(str); exit
+      }
+    }' <<<"$result"; }
+  city=$(parse_json address.city)
+  town=$(parse_json address.town)
+  municipality=$(parse_json address.municipality)
+  state=$(parse_json address.state)
+ # country=$(parse_json address.country)
+  county=$(parse_json address.county)
+  country_code=$(parse_json address.country_code)
+  postcode=$(parse_json address.postcode)
 fi
 
-# fetch elements:
-city="$(sed -n 's|.*<city>\(.*\)</city>.*|\1|p' <<< "$result")"
-town="$(sed -n 's|.*<town>\(.*\)</town>.*|\1|p' <<< "$result")"
-municipality="$(sed -n 's|.*<municipality>\(.*\)</municipality>.*|\1|p' <<< "$result")"
-state="$(sed -n 's|.*<state>\(.*\)</state>.*|\1|p' <<< "$result")"
-country="$(sed -n 's|.*<country>\(.*\)</country>.*|\1|p' <<< "$result")"
-county="$(sed -n 's|.*<county>\(.*\)</county>.*|\1|p' <<< "$result")"
-country_code="$(sed -n 's|.*<country_code>\(.*\)</country_code>.*|\1|p' <<< "$result")"
-postcode="$(sed -n 's|.*<postcode>\(.*\)</postcode>.*|\1|p' <<< "$result")"
-# do some parsing based on country
-if [[ "${country_code,,}" == "de" ]]
-then
-    county=""
-fi
-if [[ "${country_code,,}" == "be" ]]
-then
-    state=""
-fi
-if [[ "${country_code,,}" == "fr" ]]
-then
-    state=""
-    county="$county (${postcode:0:2})"
-fi
-[[ -n "$city" ]] && returnstr="$city, " || true
-[[ -z "$returnstr" ]] && [[ -n "$town" ]] && returnstr="$town, " || true
-[[ -z "$returnstr" ]] && [[ -n "$municipality" ]] && returnstr="$municipality, " || true
-[[ -n "$county" ]] && returnstr+="$county, " || true
-[[ -n "$state" ]] && returnstr+="$state, " || true
-[[ -n "$country_code" ]] && returnstr+="${country_code^^}" || true
-echo "$returnstr"
+case "${country_code,,}" in
+  de) county="";;
+  be) state="";;
+  fr) state=""; [[ -n $postcode ]] && county="$county (${postcode:0:2})";;
+esac
+
+ret=""
+[[ -n $city ]] && ret="$city, "
+[[ -z $ret && -n $town ]] && ret="$town, "
+[[ -z $ret && -n $municipality ]] && ret="$municipality, "
+[[ -n $county ]] && ret+="$county, "
+[[ -n $state ]] && ret+="$state, "
+[[ -n $country_code ]] && ret+="${country_code^^}"
+printf '%s\n' "$ret"

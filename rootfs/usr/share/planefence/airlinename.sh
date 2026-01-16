@@ -21,7 +21,7 @@
 # This package is part of https://github.com/sdr-enthusiasts/docker-planefence/ and may not work or have any
 # value outside of this repository.
 #
-# Copyright 2021-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2021-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence/
@@ -124,7 +124,7 @@ fi
 
 # Nothing? Then do an FAA DB lookup
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "N" ]]; then
-  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g')"
+  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" 2>/dev/null | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g; s/[[:space:]]\+$//')"
   # If we got something, make sure it will get added to the cache:
   if [[ -n "$b" ]]; then
     MUSTCACHE=1
@@ -136,10 +136,10 @@ fi
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
   a_clean="${a//-/}"     # remove any -
   a_clean="${a_clean:1}" # remove the leading C
-  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" | hxclean)"
+  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" 2>/dev/null | hxnormalize -x)"
   name="$(hxselect -i -c div#divTradeName div.col-md-7 <<< "$b" | xargs)"
   if [[ -z "$name" ]]; then
-    name="$(hxselect -i -c div#dvOwnerName div.col-md-6 <<< "$b" | xargs)"
+    name="$(hxselect -c 'div#dvOwnerName > div.col-md-6.mrgn-bttm-md' <<< "$b" | xargs)"
   fi
   b="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$name")"
   # If we got something, make sure it will get added to the cache:
@@ -180,12 +180,12 @@ fi
 
 # Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
 if chk_enabled "$CHECKREMOTEDB" && [[ -z "$b" ]] && [[ "$(echo "$a" | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]; then
-    b="$(curl -L -s "$REMOTEURL/?flight=$a&icao=$c")"
+    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)"
     if [[ "${b:0:1}" == "#" ]]; then b="#NOTFOUND"; fi # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 elif chk_enabled "$CHECKREMOTEDB" && [[ -z "$b" ]] && [[ "${a:0:4}" == "HMED" ]]
 then
-    b="$(curl -L -s "$REMOTEURL/?flight=$a&icao=$c")"
+    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)"
     if [[ "${b:0:1}" == "#" ]]; then b="#NOTFOUND"; fi # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
     if [[ -n "$b" ]]; then
@@ -236,4 +236,4 @@ if [[ "$MUSTCACHE" != "0" ]]; then CLEANUP_CACHE "$CACHEFILE" "$OWNERDBCACHE"; f
 # so.... if we got no reponse from the remote server, then remove it now:
 if  [[ "$b" == "#NOTFOUND" ]] || [[ "$b" == "NOTFOUND" ]]; then b=""; fi
 # Lookup is done - return the result
-echo "$b"
+echo "${b//$'\n'/ }"

@@ -6,7 +6,7 @@ source /scripts/common
 if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Get-PA-Alertlist started as an s6 service"; fi
 
 # -----------------------------------------------------------------------------------
-# Copyright 2020-2025 Ramon F. Kolb - licensed under the terms and conditions
+# Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
 # https://github.com/sdr-enthusiasts/docker-planefence
@@ -19,14 +19,14 @@ if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Get-PA-Alertlist star
 LOOPTIME=6h
 
 # Now let's wait a bit on the initial run to ensure that start_planefence is deployed and has finished calling prep-planefence.sh
-# this ensures that the ALERTLIST parameter in /usr/share/plane-alert/plane-alert.conf is populated
+# this ensures that the ALERTLIST parameter in /usr/share/planefence/plane-alert.conf is populated
 
-# Note that on startup, get-pa-alertlist.sh is called form start_planefence so we don't need to do this right away.
+# Note that on startup, get-pa-alertlist.sh is called from start_planefence so we don't need to do this right away.
 
 while true
 do
 	if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Restarting in $LOOPTIME"; fi 
 	sleep $LOOPTIME
-	/usr/share/plane-alert/get-pa-alertlist.sh
-	/usr/share/plane-alert/get-silhouettes.sh
+	/usr/share/planefence/get-pa-alertlist.sh
+	/usr/share/planefence/get-silhouettes.sh
  	done

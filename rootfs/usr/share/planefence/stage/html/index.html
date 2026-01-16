@@ -1,0 +1,3154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planefence</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css">
+  <!-- 1) CSS: row dim + small updater + dark zebra fix -->
+  <style>
+
+    /* Dim entire row while incomplete */
+    tr.row-incomplete { color: var(--row-incomplete); }
+    tr.row-incomplete a { color: inherit; }
+    tr.row-incomplete .muted { color: inherit; opacity: .9; }
+
+    /* Small “still updating” */
+    .still-updating { font-size: 0.85em; }
+
+    /* Override DataTables zebra to adapt to theme */
+    table.dataTable.stripe tbody tr.odd,
+    table.dataTable.display tbody tr.odd {
+      background-color: var(--table-stripe);
+    }
+    /* Ensure even rows use base bg in both themes */
+    table.dataTable tbody tr.even { background-color: var(--bg); }
+
+    :root {
+      color-scheme: light dark;
+      /* height reserved for the top page header; table thead will stick beneath this (reduced ~25% for desktop) */
+      --header-height: 2.625rem;
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666;
+      --soft: #f5f5f5;
+      --accent: #0b5fff;
+      --danger-bg: #fff3f3;
+      --danger-fg: #a40000;
+      --row-incomplete: #6b6b6b;
+      --chip-bg: #eee;
+      --chip-fg: #222;
+      --link: #0b5fff;
+      --link-visited: #5a32a3;
+      --table-stripe: #fafafa;
+    }
+    html.dark {
+      --bg: #0f1115;
+      --fg: #e6e6e6;
+      --muted: #9aa0a6;
+      --soft: #1a1d23;
+      --accent: #6ca0ff;
+      --danger-bg: #2a1212;
+      --danger-fg: #ff8a8a;
+      --row-incomplete: #9aa0a6;
+      --chip-bg: #1f2430;
+      --chip-fg: #e6e6e6;
+      --link: #8fb1ff;
+      --link-visited: #c6a6ff;
+      --table-stripe: #151922;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      background: var(--bg); color: var(--fg);
+      line-height: 1.45;
+    }
+  header, footer { padding: .75rem 1rem; background: var(--soft); display: flex; align-items: center; gap: .75rem; }
+  /* Keep header visible while scrolling */
+  header { position: sticky; top: 0; z-index: 50; flex-direction: column; align-items: stretch; gap: .35rem; }
+    .header-top-line { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .header-right { display: flex; align-items: center; gap: .75rem; }
+    header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+    .station-headline { display: flex; align-items: baseline; margin-left: .75rem; font-size: 1rem; color: var(--muted); }
+    .station-headline.station-headline-empty { display: none; }
+    .station-headline a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .station-headline a:hover, .station-headline a:focus-visible { text-decoration: underline; }
+    .station-motd { margin-left: .75rem; margin-top: .35rem; color: var(--muted); font-size: .95rem; }
+    .station-motd.station-motd-empty { display: none; }
+    header .spacer { flex: 1; }
+    button, .btn {
+      background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer;
+    }
+    /* Force the theme toggle to inherit and display the foreground color explicitly */
+    #themeToggle { color: var(--fg) !important; }
+    #themeToggle svg { color: currentColor; }
+    /* Ensure theme toggle SVG is visible in both themes */
+    #themeToggle svg { width: 1.1em; height: 1.1em; display: inline-block; vertical-align: middle; }
+    button:hover { border-color: var(--fg); }
+    body.modal-open { overflow: hidden; }
+    .station-info-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; z-index: 1000; padding: calc(env(safe-area-inset-top, 0px) + 2.5rem) 1rem 1.25rem; }
+    .station-info-modal.open { display: flex; }
+    .station-info-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; width: min(50vw, 900px); max-width: calc(100vw - 2rem); max-height: 90vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border: 1px solid rgba(0,0,0,0.08); }
+    html.dark .station-info-card { border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+    .station-info-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: max(.5rem, env(safe-area-inset-top, 0px)); right: 1rem; cursor: pointer; padding: .25rem; line-height: 1; }
+    .station-info-card h1 { margin-top: 1.25rem; font-size: 1.2rem; }
+    .station-info-card h1:first-of-type { margin-top: 0; }
+    .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
+    html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
+    .station-info-card p { margin: .35rem 0; }
+    .station-coords { font-weight: 600; white-space: nowrap; }
+    .station-map-wrapper { margin: 1rem 0 0; border-radius: 0.75rem; overflow: hidden; border: 1px solid var(--soft); background: var(--soft); }
+    html.dark .station-map-wrapper { border-color: rgba(255,255,255,0.08); background: #111421; }
+    .station-map-frame { width: 100%; min-height: 260px; border: none; display: block; }
+    .heatmap-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1100; padding: max(1rem, env(safe-area-inset-top, 0px) + .75rem) 1rem 1rem; }
+    .heatmap-modal.open { display: flex; }
+    .heatmap-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(1100px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; }
+    html.dark .heatmap-card { border-color: rgba(255,255,255,0.12); }
+    .heatmap-frame { border: none; width: 100%; height: 100%; background: #000; display: block; flex: 1; }
+    .heatmap-close { position: absolute; top: max(.5rem, env(safe-area-inset-top, 0px) * 0.5); right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
+    .heatmap-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; background: rgba(0,0,0,0.55); padding: 0.65rem 1.25rem; border-radius: 999px; z-index: 1100; }
+    .heatmap-loading.hidden { opacity: 0; pointer-events: none; }
+    .photo-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.75); display: none; align-items: center; justify-content: center; z-index: 1080; padding: 1rem; }
+    .photo-modal.open { display: flex; }
+    .photo-card { position: relative; background: var(--bg); border-radius: 1rem; width: min(900px, 95vw); height: min(80vh, 720px); padding: 0; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+    html.dark .photo-card { border-color: rgba(255,255,255,0.12); }
+    .photo-close { position: absolute; top: .5rem; right: .75rem; background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 1.5rem; line-height: 1; padding: .2rem .75rem; border-radius: 999px; cursor: pointer; z-index: 1101; }
+    .photo-frame { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; }
+    .photo-frame img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .photo-caption { padding: .75rem 1rem; font-size: .9rem; color: var(--muted); }
+    a { color: var(--link); text-decoration: none; }
+    a:visited { color: var(--link-visited); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .muted { color: var(--muted); }
+    .status { margin-left: .5rem; }
+
+    table.dataTable tbody tr:nth-child(odd) { background: var(--table-stripe); }
+    table.dataTable thead th { white-space: nowrap; }
+  /* Left-align all table headers for better readability */
+  table.dataTable thead th, table#t thead th { text-align: left !important; }
+  /* Normalize typography, spacing, and hierarchy inside the data table */
+  table#t {
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  table#t thead th {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  table#t thead th,
+  table#t tbody td {
+    padding: 0.65rem 0.85rem;
+  }
+  table#t tbody td {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+  table#t tbody td .muted {
+    font-size: 0.85em;
+  }
+  table#t tbody td .aircraft-main {
+    font-weight: 600;
+  }
+  table#t tbody td .secondary-line {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.85em;
+    color: var(--muted);
+  }
+  /* Removed Spectro column; kept layout flexible */
+    /* Keep the table header visible while scrolling; it will sit just below the page header */
+    table.dataTable thead th {
+      position: sticky;
+      top: var(--header-height);
+      z-index: 40;
+      background: var(--soft);
+    }
+    /* Give the first data row extra padding so it clears the sticky header */
+    table.dataTable tbody tr:first-of-type > * {
+      padding-top: calc(var(--header-height) + 0.5rem);
+    }
+    th, td { vertical-align: middle; }
+  img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
+  img.thumb.thumb-photo { cursor: zoom-in; }
+  /* Silhouette thumbnails: keep width same as thumb, preserve aspect ratio */
+  img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
+    .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
+  /* Position cell: give a little gap between coords and angle line */
+  td.position-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+  td.position-cell div { line-height: 1.25; }
+  /* Ensure angle image aligns center with the angle text */
+  .angle-img { vertical-align: middle; height: 1em; margin-left: .35rem; }
+    .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
+  .dot { display:none; }
+    .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
+  /* small SVG icons inside chips — make slightly larger for visibility */
+  .chip svg { height: 1.25em; width: 1.25em; vertical-align: -0.15em; }
+  .chip.muted { opacity: 0.8; }
+  .badge-icon { height: 1.25em; width: 1.25em; object-fit: contain; vertical-align: -0.15em; }
+  /* Slightly increase chip padding for better tap targets and add spacing between chips */
+  .chip { padding: 0.15rem 0.5rem; }
+  .chip + .chip { margin-left: 0.35rem; }
+  /* Tooltip hint for non-link notifications: underline only the label, not the chip outline */
+  .chip.has-tooltip { cursor: help; }
+  .chip.has-tooltip .label { border-bottom: 1px dotted currentColor; }
+  /* Keep notifier icons at or below line height and align nicely */
+  .ico { height: 1em; width: 1em; vertical-align: text-bottom; }
+  .chip .ico { margin-right: .3rem; }
+  /* For notifier links that are not chips (Notifications column), add spacing */
+  td:nth-child(11) a .ico { margin-right: .3rem; }
+  /* Center the empty state message nicely */
+  td.dataTables_empty { height: 40vh; vertical-align: middle !important; text-align: center !important; color: var(--muted); }
+  /* Improve spacing for notification chips inside the Notifications cell */
+  td:nth-child(11) a.chip { margin-right: .25rem; }
+  .plane-alert-cell a { display: inline-flex; align-items: center; gap: .3rem; line-height: inherit; font-size: inherit; }
+  .plane-alert-favicon { width: 1em; height: 1em; object-fit: contain; border-radius: 2px; }
+  .aircraft-main { display: block; }
+  .aircraft-flag-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-right: .35rem;
+    vertical-align: middle;
+  }
+  .aircraft-flag-icon img {
+    height: 1em;
+    width: calc(4/3 * 1em);
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
+  }
+  .operator-flag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: .35rem;
+    vertical-align: middle;
+    position: relative;
+  }
+  .operator-flag img {
+    height: 1em;
+    width: auto;
+    object-fit: contain;
+    border-radius: 2px;
+    box-shadow: 0 0 0.5px rgba(0,0,0,0.4);
+  }
+  .operator-flag .op-flag-large {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: var(--bg);
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    z-index: 30;
+    height: auto;
+    width: auto;
+    max-width: 180px;
+    max-height: 120px;
+  }
+  .operator-flag:hover .op-flag-large { display: block; }
+  .route-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* Visually hidden text for accessibility */
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); border: 0; }
+  /* In dark mode, invert bitmap badges so dark lines become light */
+  html.dark .badge-icon { filter: invert(1) brightness(2) contrast(1.2); }
+
+  /* Chips (small badges) should use the chip background color in dark mode */
+  html.dark .chip { background: var(--chip-bg); color: var(--chip-fg); }
+
+  /* Modal preview for spectro images */
+  .pf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999; }
+  .pf-modal.open { display: flex; }
+  .pf-modal .box { max-width: 90%; max-height: 90%; border-radius: .5rem; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+  .pf-modal img { display: block; max-width: 100%; max-height: 100%; }
+
+    .seen-incomplete { color: var(--row-incomplete); }
+
+    .nowrap { white-space: nowrap; }
+  /* Prevent Seen column from collapsing too narrow */
+  /* DataTables places columns in the table header; target the third th (index starts at 1) */
+  /* Keep Seen column readable but compact: single-line with ellipsis if too long */
+  table.dataTable thead th:nth-child(3),
+  table.dataTable tbody td:nth-child(3) {
+    width: 1%;
+    white-space: nowrap;
+  }
+  table.dataTable tbody td:nth-child(3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Preserve legacy width for the Sound column (9th column) */
+  table#t thead th:nth-child(9),
+  table#t tbody td:nth-child(9) {
+    min-width: 11rem;
+    width: 11%;
+  }
+  /* Highlight freshly-added rows briefly (soft fade-out) */
+  .pf-new-row { animation: pf-fade 2.2s ease-out; background-color: rgba(108,169,255,0.18); }
+  @keyframes pf-fade { 0% { background-color: rgba(108,169,255,0.28); } 100% { background-color: transparent; } }
+  /* Ensure DataTables respects theme colors in dark mode and doesn't leave
+    white cells/stripes. Use !important where DataTables default CSS is stronger. */
+  table.dataTable { background: transparent; }
+  table.dataTable tbody td, table.dataTable tbody tr { background: transparent; }
+  /* Regular stripe rules (light and dark) */
+  table.dataTable.stripe tbody tr.odd,
+  table.dataTable.display tbody tr.odd { background-color: var(--table-stripe) !important; }
+  table.dataTable tbody tr.even { background-color: var(--bg) !important; }
+  /* Dark-mode specific enforcement to override DataTables' defaults */
+  html.dark table.dataTable.stripe tbody tr.odd,
+  html.dark table.dataTable.display tbody tr.odd { background-color: var(--table-stripe) !important; }
+  html.dark table.dataTable tbody tr.even { background-color: var(--bg) !important; }
+  /* Ensure individual cells (including the index cell span) don't show white */
+  html.dark table.dataTable tbody td, html.dark table.dataTable tbody td * { background: transparent !important; color: var(--fg) !important; }
+  /* DataTables sometimes wraps table body for scrolling; ensure those cells are covered */
+  html.dark .dataTables_scrollBody table tbody tr td { background: transparent !important; }
+
+  /* New-updates button default style (light mode) */
+  #newUpdates { background: var(--chip-bg); color: var(--chip-fg); border-color: var(--muted); }
+  /* Dark-mode adjustments for banner/button */
+  html.dark #newUpdates { background: rgba(108,169,255,0.08); color: var(--fg); border-color: rgba(255,255,255,0.06); }
+
+  /* Make the new-row highlight slightly different in dark mode */
+  html.dark .pf-new-row { background-color: rgba(108,169,255,0.12) !important; }
+
+  /* Row hover: ensure hover color is theme-aware (not white in dark mode) */
+  /* Light mode hover: subtle darker tint */
+  table.dataTable tbody tr:hover { background-color: rgba(0,0,0,0.03) !important; }
+  table.dataTable tbody tr:hover td, table.dataTable tbody tr:hover td * { background: transparent !important; }
+  /* Dark mode hover: subtle light tint */
+  html.dark table.dataTable tbody tr:hover { background-color: rgba(255,255,255,0.03) !important; }
+  html.dark table.dataTable tbody tr:hover td, html.dark table.dataTable tbody tr:hover td * { background: transparent !important; }
+
+  /* Toggle switch for theme */
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--muted); transition: .2s ease; border-radius: 999px; }
+  .switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; top: 3px; background: var(--bg); transition: .2s ease; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+  .theme-toggle { display: flex; align-items: center; gap: .4rem; }
+  .theme-toggle .theme-ico { display: inline-flex; color: var(--muted); opacity: .8; transition: color .2s ease, opacity .2s ease; font-size: 1.15rem; line-height: 1; }
+  html.dark .theme-toggle .theme-ico.moon,
+  html:not(.dark) .theme-toggle .theme-ico.sun { color: var(--accent); opacity: 1; }
+  .language-toggle { position: relative; display: flex; align-items: center; }
+  .language-button { display: inline-flex; align-items: center; gap: .35rem; background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer; }
+  .language-button:hover { border-color: var(--fg); }
+  .language-flag { width: 1.25rem; height: .95rem; object-fit: cover; border-radius: 2px; box-shadow: 0 0 1px rgba(0,0,0,0.35); }
+  .language-label { font-size: .9rem; }
+  .language-menu { position: absolute; top: calc(100% + .35rem); right: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--soft); border-radius: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: .35rem 0; min-width: 11rem; z-index: 60; display: none; }
+  html.dark .language-menu { border-color: rgba(255,255,255,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.55); }
+  .language-menu.open { display: block; }
+  .language-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
+  .language-menu button:hover, .language-menu button:focus-visible { background: var(--soft); outline: none; }
+  @media (max-width: 640px) {
+    .language-menu { left: 50%; right: auto; transform: translateX(-50%); min-width: max(11rem, 70vw); max-width: calc(100vw - 1.25rem); }
+  }
+  .toggle-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
+  html.dark .header-divider { opacity: .35; }
+  .mode-toggle { display: flex; align-items: center; gap: .25rem; font-size: .85rem; }
+  .mode-toggle .mode-label { font-weight: 600; }
+  .switch.switch-mode { width: 56px; height: 26px; }
+  .switch.switch-mode .slider:before { width: 20px; height: 20px; top: 3px; }
+  .switch.switch-mode input:checked + .slider:before { transform: translateX(28px); }
+  .pf-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
+  .pf-controls .pf-left { display: flex; align-items: center; }
+  .pf-controls .pf-right { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; }
+  .pf-controls .pf-right .dataTables_filter { margin: 0; }
+  .pf-controls .pf-right .dataTables_filter label { display: flex; align-items: center; gap: .35rem; margin: 0; }
+  .pf-controls .pf-right .dataTables_info { margin: 0; white-space: nowrap; }
+  .pf-controls .pf-right .dataTables_paginate { margin: 0; }
+  .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
+  .table-shell { overflow: auto; margin-top: .35rem; }
+  .station-map-frame,
+  .heatmap-frame { min-height: clamp(260px, 50vh, 520px); }
+
+  @media (max-width: 960px) {
+    :root { --header-height: 4.25rem; }
+    header { flex-wrap: wrap; }
+    header .spacer { display: none; }
+    .header-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .header-top-line { gap: .5rem; }
+  }
+
+  @media (max-width: 720px) {
+    :root { --header-height: 5.5rem; }
+    header { flex-direction: column; align-items: stretch; gap: .35rem; }
+    header h1 { font-size: 1rem; }
+    .station-headline { margin-left: 0; }
+    .status { width: 100%; display: flex; justify-content: space-between; margin-left: 0; font-size: .95rem; }
+    .toggle-row { width: 100%; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-start; }
+    .header-right { width: 100%; }
+    .header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: flex-start; }
+    .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
+    #reload { display: none; }
+    button, .btn { min-height: 42px; }
+    .mode-toggle, .theme-toggle { width: auto; justify-content: flex-start; }
+    .mode-toggle .mode-label:last-of-type { display: inline; }
+    .pf-controls { flex-direction: column; align-items: stretch; gap: .75rem; }
+    .pf-controls .pf-left, .pf-controls .pf-right { width: 100%; justify-content: space-between; }
+    .pf-controls .pf-right { gap: .75rem; }
+    .pf-controls .pf-right .dataTables_filter { width: 100%; }
+    .pf-controls .pf-right .dataTables_filter input { width: 100%; }
+    table#t { font-size: clamp(.88rem, 2.5vw, 1rem); }
+    table#t thead th, table#t tbody td { white-space: normal; }
+    table#t tbody td { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--soft); }
+    table#t tbody tr:last-child td { border-bottom: none; }
+    td.position-cell { gap: 0.25rem; }
+  }
+
+  @media (max-width: 640px) {
+    .station-info-modal,
+    .heatmap-modal,
+    .photo-modal {
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    }
+    .station-info-card,
+    .heatmap-card,
+    .photo-card {
+      width: min(100%, calc(100vw - 1.5rem));
+      border-radius: min(1rem, 4vw);
+    }
+    .photo-frame img { max-width: 100%; max-height: 100%; }
+  }
+
+  @media (max-width: 480px) {
+    .header-actions { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+    .station-headline { font-size: .95rem; }
+  }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-top-line">
+      <div class="header-left">
+        <h1>Planefence</h1>
+        <div id="stationHeadline" class="station-headline station-headline-empty">
+          <a id="stationHeadlineLink" href="#" target="_blank" rel="noreferrer noopener"></a>
+        </div>
+        <span class="status mono" id="progress">Loading...</span>
+        <span class="status mono" id="lastupdate" style="margin-left: .5rem"></span>
+        <span class="status mono" id="nextupdate" style="margin-left: .75rem">Next update: --</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="header-right">
+        <div class="toggle-row">
+          <div class="mode-toggle" role="group" aria-label="Choose data source">
+            <span class="mode-label">Planefence</span>
+            <label class="switch switch-mode" title="Toggle between Planefence and Plane-Alert data">
+              <input id="dataModeToggle" type="checkbox" aria-label="Switch data source" />
+              <span class="slider" aria-hidden="true"></span>
+            </label>
+            <span class="mode-label">Plane-Alert</span>
+          </div>
+          <div class="header-divider" aria-hidden="true"></div>
+          <div class="theme-toggle">
+            <span class="theme-ico sun" aria-hidden="true">&#9728;</span>
+            <div class="theme-switch-wrap">
+              <label class="switch" title="Toggle dark/light">
+                <input id="themeToggle" type="checkbox" aria-label="Toggle theme" />
+                <span class="slider" aria-hidden="true"></span>
+              </label>
+            </div>
+            <span class="theme-ico moon" aria-hidden="true">&#9790;</span>
+          </div>
+          <div id="languageSelector" class="language-toggle" aria-label="Language selector">
+            <button id="languageButton" class="language-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <img id="languageButtonFlag" class="language-flag" alt="" src="" />
+              <span id="languageButtonLabel" class="language-label"></span>
+            </button>
+            <div id="languageMenu" class="language-menu" role="listbox" aria-label="Languages"></div>
+          </div>
+          <div class="header-actions">
+            <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
+            <button id="stationInfoBtn" title="Show station information">Station Info</button>
+            <button id="reload" title="Update data">Update</button>
+            <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="stationMotd" class="station-motd station-motd-empty" aria-live="polite"></div>
+  </header>
+
+  <div id="stationInfoModal" class="station-info-modal" role="dialog" aria-modal="true" aria-labelledby="stationInfoTitle" aria-hidden="true">
+    <div class="station-info-card">
+      <button type="button" id="stationInfoClose" class="station-info-close" aria-label="Close station information">&times;</button>
+      <div id="stationInfoContent" class="station-info-content"></div>
+    </div>
+  </div>
+
+  <div id="heatmapModal" class="heatmap-modal" role="dialog" aria-modal="true" aria-label="Planefence heatmap" aria-hidden="true">
+    <div class="heatmap-card">
+      <button type="button" id="heatmapClose" class="heatmap-close" aria-label="Close heatmap">&times;</button>
+      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+      <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap...</div>
+    </div>
+  </div>
+
+  <div id="photoModal" class="photo-modal" role="dialog" aria-modal="true" aria-label="Aircraft photo" aria-hidden="true">
+    <div class="photo-card">
+      <button type="button" id="photoClose" class="photo-close" aria-label="Close photo">&times;</button>
+      <div class="photo-frame">
+        <img id="photoModalImg" src="" alt="" loading="lazy">
+      </div>
+      <div id="photoModalCaption" class="photo-caption"></div>
+    </div>
+  </div>
+
+  <main style="padding: 0 1rem 1rem;">
+    <div class="table-shell" style="overflow:auto;">
+      <table id="t" class="display compact stripe" style="width:100%;">
+        <thead id="thead">
+          <tr></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    <small class="muted">&copy; 2020-<span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <span id="appVersionText">Version --</span></small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net@2/js/dataTables.min.js"></script>
+  <script src="./js/flags.js"></script>
+
+  <script>
+  // -------- Config --------
+  var cfg = window.cfg || {};
+  if (!window.cfg) window.cfg = cfg;
+
+  // Base URL where docroot images live (arrowXXX_day|night.png, thumbnails if hosted locally)
+  // Ensure trailing slash. Change as needed, e.g., `${location.origin}/assets/`
+  if (cfg.mediaBase === undefined) cfg.mediaBase = './assets/';
+
+  // Temporary prefix to apply to noise/spectro/mp3 links (easy to change)
+  // Set to empty string to disable. Useful when those files are served under a subpath like /noise/
+  // noisePrefix: './noise/',
+  if (cfg.noisePrefix === undefined) cfg.noisePrefix = './';
+
+  // Directory for aircraft silhouettes (configurable). Ensure trailing slash.
+  if (cfg.silhouetteDir === undefined) cfg.silhouetteDir = './assets/silhouettes/';
+
+  // Optional per-badge images (inlined as data URI so the page doesn't need external assets)
+  // The UI will use CSS (html.dark .badge-icon) to invert/brighten bitmap/SVG badges in dark mode.
+  if (cfg.noiseIcon === undefined) cfg.noiseIcon = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%230b5fff%22/%3E%3C/svg%3E';
+  if (cfg.mp3Icon === undefined) cfg.mp3Icon = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%228%22%20r%3D%226%22%20fill%3D%22%23ff8a00%22/%3E%3C/svg%3E';
+
+  // Enable or disable the live stream reader and/or periodic polling. Set one or both to true as needed.
+  if (cfg.enableStream === undefined) cfg.enableStream = true;
+  if (cfg.enablePoll === undefined) cfg.enablePoll = true;
+
+  // Poll interval in seconds (used when enablePoll is true)
+  if (cfg.pollIntervalSec === undefined) cfg.pollIntervalSec = 60;
+
+  const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
+
+  const LANGUAGE_STORAGE_KEY = 'pf-language';
+  const I18N_FALLBACK = window.I18N_FALLBACK || {
+    defaultLanguage: 'en-US',
+    fallbackLanguage: 'en-US',
+    languages: {}
+  };
+
+  // Operator flag manifest (generated by get-silhouettes.sh). Avoids 404s for missing flags.
+  const OPERATOR_FLAGS_MANIFEST_URL = './assets/operatorflags/index.json';
+  let operatorFlagsSet = new Set();
+  let operatorFlagsLoaded = false;
+  let operatorFlagsLoading = false;
+
+  const i18nState = {
+    lang: I18N_FALLBACK.defaultLanguage || 'en-US',
+    strings: (I18N_FALLBACK.languages?.[I18N_FALLBACK.defaultLanguage]?.strings) || {},
+    fallbackStrings: (I18N_FALLBACK.languages?.[I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US']?.strings) || {},
+    languages: I18N_FALLBACK.languages || {}
+  };
+
+  async function loadOperatorFlagsManifest(){
+    if (operatorFlagsLoaded || operatorFlagsLoading) return operatorFlagsSet;
+    operatorFlagsLoading = true;
+    try {
+      const resp = await fetch(OPERATOR_FLAGS_MANIFEST_URL, { cache: 'no-store' });
+      if (resp.ok) {
+        const data = await resp.json();
+        const codes = Array.isArray(data?.flags) ? data.flags : [];
+        operatorFlagsSet = new Set(codes.map(c => String(c).toUpperCase()));
+      } else {
+        operatorFlagsSet = new Set();
+      }
+    } catch (e) {
+      operatorFlagsSet = new Set();
+    } finally {
+      operatorFlagsLoaded = true;
+      operatorFlagsLoading = false;
+      try {
+        if (window.table) {
+          table.rows().invalidate().draw(false);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return operatorFlagsSet;
+  }
+
+  function normalizeLang(code){
+    const raw = (code || '').replace(/_/g, '-').trim();
+    if (!raw) return '';
+    const parts = raw.split('-');
+    const base = parts.shift()?.toLowerCase() || '';
+    const region = parts.shift();
+    const regionPart = region ? region.toUpperCase() : '';
+    const rest = parts.length ? `-${parts.join('-')}` : '';
+    return regionPart ? `${base}-${regionPart}${rest}` : `${base}${rest}`;
+  }
+
+  function applyParams(template, params){
+    if (!params) return template;
+    return template.replace(/\{(\w+)\}/g, (m, key) => (params[key] ?? m));
+  }
+
+  function resolveFlagSrc(flagPath, flagCode, fallbackCode){
+    const custom = (flagPath || '').trim();
+    if (custom) return custom;
+    const code = flagCode || fallbackCode || 'un';
+    return `${FLAG_ICON_SRC_BASE}${code}.svg`;
+  }
+
+  function t(key, params, fallback){
+    const fromPrimary = i18nState.strings?.[key];
+    const fromFallback = i18nState.fallbackStrings?.[key];
+    const chosen = (fromPrimary ?? fromFallback ?? fallback ?? key);
+    return applyParams(String(chosen), params);
+  }
+
+  function getStoredLanguage(){
+    try { return localStorage.getItem(LANGUAGE_STORAGE_KEY); } catch (e) { return null; }
+  }
+
+  function findLanguageMatch(requested, available){
+    if (!available) return null;
+    const norm = normalizeLang(requested);
+    if (!norm) return null;
+    if (available[norm]) return norm;
+    const base = norm.split('-')[0];
+    const baseExact = Object.keys(available).find(k => normalizeLang(k) === base);
+    if (baseExact) return normalizeLang(baseExact);
+    const prefixed = Object.keys(available).find(k => normalizeLang(k).startsWith(`${base}-`));
+    if (prefixed) return normalizeLang(prefixed);
+    return null;
+  }
+
+  function detectBrowserLanguage(available){
+    if (!available) return null;
+    const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
+    for (const raw of langs) {
+      const match = findLanguageMatch(raw, available);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  function pickLanguage(available, fallbackLang){
+    const fallback = normalizeLang(fallbackLang || I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US');
+    const storedRaw = getStoredLanguage();
+    const stored = findLanguageMatch(storedRaw, available);
+    const browser = detectBrowserLanguage(available);
+    const chain = [stored, browser, fallback];
+    for (const cand of chain) {
+      const matched = findLanguageMatch(cand, available);
+      if (matched) return matched;
+    }
+    const anyKey = Object.keys(available)[0];
+    return anyKey || fallback || 'en-US';
+  }
+
+  async function loadI18n(){
+    let config = I18N_FALLBACK;
+    try {
+      const resp = await fetch('./locales/strings.json', { cache: 'no-store' });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.languages) config = data;
+      }
+    } catch (e) {
+      console.warn('i18n load failed; falling back to built-in strings', e);
+    }
+    const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
+    const normalizedLanguages = {};
+    Object.entries(rawLanguages).forEach(([code, meta]) => {
+      const norm = normalizeLang(code);
+      if (norm) normalizedLanguages[norm] = meta;
+    });
+    const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
+    const chosen = pickLanguage(normalizedLanguages, fallbackLang);
+    i18nState.lang = chosen;
+    i18nState.languages = normalizedLanguages;
+    i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || I18N_FALLBACK.languages?.['en-US']?.strings || {};
+    i18nState.strings = (normalizedLanguages[chosen]?.strings) || i18nState.fallbackStrings;
+    try { document.documentElement.lang = chosen; } catch (e) { /* ignore */ }
+    return i18nState;
+  }
+
+  function languageMeta(code){
+    const normalized = normalizeLang(code || i18nState.lang);
+    const meta = i18nState.languages?.[normalized];
+    if (meta) return { code: normalized, name: meta.name, flag: meta.flag, flag_path: meta.flag_path };
+    return { code: normalized || 'en-US', name: 'English (US)', flag: 'us', flag_path: '' };
+  }
+
+  const i18nReady = loadI18n();
+  // Kick off operator flag manifest load early to avoid 404s when rendering aircraft rows.
+  loadOperatorFlagsManifest();
+
+  let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
+  let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
+  let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
+  let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
+  let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
+  let appVersionEl, footerYearEl;
+
+  function stationInfoTemplate(){
+    const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
+    const coordsHtml = `<span class="station-coords">{{latCardinal}}, {{lonCardinal}}</span>`;
+    const watchlistLink = `<a href="alertlist.txt" target="_blank" rel="noreferrer noopener">${t('stationInfo.watchlistLabel', {}, 'watchlist')}</a>`;
+    const welcome = t('stationInfo.welcome', { stationName: stationLink }, 'Welcome to {{stationName}} Planefence and Plane-Alert Station');
+    const pfHeading = t('stationInfo.heading.planefence', {}, 'Planefence');
+    const pfDesc = t('stationInfo.planefence.description', {
+      dist: '{{dist}}',
+      distUnit: '{{distUnit}}',
+      altitude: '{{altitude}}',
+      altUnit: '{{altUnit}}',
+      coords: coordsHtml
+    }, 'Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from {{latCardinal}}, {{lonCardinal}}.');
+    const planeAlertHeading = t('stationInfo.heading.planeAlert', {}, 'Plane-Alert');
+    const planeAlertBase = t('stationInfo.planeAlert.description', {}, "Plane-Alert shows those aircraft in range of the station that are part of the station's {watchlist}.");
+    const planeAlertDesc = (() => {
+      if (planeAlertBase.includes('{watchlist}')) return applyParams(planeAlertBase, { watchlist: watchlistLink });
+      const swapped = planeAlertBase.replace(/watchlist/i, watchlistLink);
+      if (swapped !== planeAlertBase) return swapped;
+      return `${planeAlertBase} ${watchlistLink}`;
+    })();
+    const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
+    const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
+    const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
+    const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
+    const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const footerLicense = t('stationInfo.footer.license', { year: '{{year}}', version: '{{version}}', repoLink }, 'Planefence is (c) 2020-{{year}} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {{version}}');
+    const footerContrib = t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Planefence is made possible thanks to our repo contributors and other external contributors.');
+    const mapTitle = t('stationMap.label', {}, 'Station coverage map');
+    return `
+<h1 class="station-welcome-title">${welcome}</h1>
+<h1 id="stationInfoTitle">${pfHeading}</h1>
+${pfDesc}
+<div class="station-map-wrapper">
+  <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>
+</div>
+<h1>${planeAlertHeading}</h1>
+${planeAlertDesc}
+<h1>${messagesHeading}</h1>
+${messagesDesc}
+<footer>
+<p>${footerLicense}</p>
+<p>${footerContrib}</p>
+</footer>`;
+  }
+
+  const truthy = (v) => {
+    if (v === true || v === 1) return true;
+    if (typeof v === 'string') {
+      const s = v.toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    }
+    return false;
+  };
+
+    // -------- Data mode (Planefence vs Plane-Alert) --------
+    const DATA_MODE_KEY = 'pf-data-mode';
+    const DATA_MODES = {
+      PLANEFENCE: 'planefence',
+      PLANE_ALERT: 'plane-alert'
+    };
+    function modeFromQuery(){
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const raw = params.get('mode');
+        if (!raw) return null;
+        const normalized = raw.trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === 'pf' || normalized === DATA_MODES.PLANEFENCE) return DATA_MODES.PLANEFENCE;
+        if (normalized === 'pa' || normalized === DATA_MODES.PLANE_ALERT || normalized === 'planealert') return DATA_MODES.PLANE_ALERT;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+    function currentDataMode(){
+      try {
+        const saved = localStorage.getItem(DATA_MODE_KEY);
+        return saved === DATA_MODES.PLANE_ALERT ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+      } catch (e) {
+        return DATA_MODES.PLANEFENCE;
+      }
+    }
+    const presetMode = modeFromQuery();
+    if (presetMode) {
+      try { localStorage.setItem(DATA_MODE_KEY, presetMode); } catch (e) { /* ignore */ }
+    }
+    let dataMode = presetMode || currentDataMode();
+    function isPlaneAlertMode(){
+      return dataMode === DATA_MODES.PLANE_ALERT;
+    }
+    function applyDataModeUI(){
+      const toggle = document.getElementById('dataModeToggle');
+      if (toggle) {
+        try { toggle.checked = isPlaneAlertMode(); } catch (e) { /* ignore */ }
+        const label = isPlaneAlertMode()
+          ? t('header.mode.switchToPlanefence', {}, 'Switch to Planefence data')
+          : t('header.mode.switchToPlaneAlert', {}, 'Switch to Plane-Alert data');
+        toggle.setAttribute('aria-label', label);
+      }
+      const heading = document.querySelector('header h1');
+      if (heading) heading.textContent = isPlaneAlertMode()
+        ? t('header.planeAlertTitle', {}, 'Plane-Alert')
+        : t('header.planefenceTitle', {}, 'Planefence');
+      const body = document.body;
+      if (body) {
+        body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
+        body.classList.toggle('mode-planefence', !isPlaneAlertMode());
+      }
+      updateHeatmapButtonState();
+    }
+    applyDataModeUI();
+    let modeGeneration = 0;
+    let streamAbortController = null;
+    let pollIntervalHandle = null;
+    function buildStreamUrl(mode){
+      const base = './cgi/stream.sh';
+      return mode === DATA_MODES.PLANE_ALERT ? `${base}?mode=plane-alert` : base;
+    }
+    function currentStreamUrl(){
+      return buildStreamUrl(dataMode);
+    }
+    (function(){
+      const toggle = document.getElementById('dataModeToggle');
+      if (!toggle) return;
+      toggle.addEventListener('change', ()=>{
+        const newMode = toggle.checked ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+        if (newMode === dataMode) return;
+        try { localStorage.setItem(DATA_MODE_KEY, newMode); } catch (e) { /* ignore */ }
+        dataMode = newMode;
+        applyDataModeUI();
+        applyPlaneAlertColumnVisibility();
+        restartDataPipelines();
+      });
+    })();
+
+  // -------- Theme (dark/light) --------
+  const THEME_KEY = 'pf-theme';
+  function applyTheme(theme){
+    const dark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) {
+      const label = dark
+        ? t('header.theme.switchToLight', {}, 'Switch to light theme')
+        : t('header.theme.switchToDark', {}, 'Switch to dark theme');
+      toggle.setAttribute('aria-label', label);
+      try { toggle.checked = dark; } catch(e) { /* ignore */ }
+    }
+    localStorage.setItem(THEME_KEY, theme);
+    // After theme flip, update arrow images to day/night variants without full re-render
+    try { updateAngleImagesForTheme(dark); } catch(e) { /* ignore */ }
+  }
+  function currentTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  applyTheme(currentTheme());
+  // On initial apply, ensure arrow images reflect theme
+  try { updateAngleImagesForTheme(document.documentElement.classList.contains('dark')); } catch(e){}
+  (function(){
+    const t = document.getElementById('themeToggle');
+    if (!t) return;
+    // Ensure initial checked reflects current theme
+    try { t.checked = document.documentElement.classList.contains('dark'); } catch(e){}
+    t.addEventListener('change', () => {
+      const useDark = !!t.checked;
+      applyTheme(useDark ? 'dark' : 'light');
+      // No need to invalidate rows just to swap arrow icons; we directly update sources.
+    });
+  })();
+
+  // -------- Helpers --------
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    await i18nReady;
+    prog = document.getElementById('progress');
+    if (prog) prog.textContent = isPlaneAlertMode()
+      ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
+      : t('status.loading', {}, 'Loading...');
+    lastUpdateEl = document.getElementById('lastupdate');
+    nextUpdateEl = document.getElementById('nextupdate');
+    theadRow = document.querySelector('#thead tr');
+    reloadBtn = document.getElementById('reload');
+    reloadBtn?.addEventListener('click', () => location.reload());
+    newUpdatesBtn = document.getElementById('newUpdates');
+    heatmapBtn = document.getElementById('heatmapBtn');
+    stationHeadlineEl = document.getElementById('stationHeadline');
+    stationHeadlineLink = document.getElementById('stationHeadlineLink');
+    stationMotdEl = document.getElementById('stationMotd');
+    stationInfoBtn = document.getElementById('stationInfoBtn');
+    stationInfoModal = document.getElementById('stationInfoModal');
+    stationInfoContentEl = document.getElementById('stationInfoContent');
+    stationInfoCloseBtn = document.getElementById('stationInfoClose');
+    heatmapModal = document.getElementById('heatmapModal');
+    heatmapFrame = document.getElementById('heatmapFrame');
+    heatmapCloseBtn = document.getElementById('heatmapClose');
+    heatmapLoadingEl = document.getElementById('heatmapLoading');
+    photoModal = document.getElementById('photoModal');
+    photoModalImg = document.getElementById('photoModalImg');
+    photoModalCloseBtn = document.getElementById('photoClose');
+    photoModalCaption = document.getElementById('photoModalCaption');
+    appVersionEl = document.getElementById('appVersionText');
+    footerYearEl = document.getElementById('footerYear');
+    if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
+    setupLanguageSelector();
+    applyTranslationsToDom();
+    renderFooterText();
+    updateFooterVersionText('');
+    refreshStationInfoContent();
+    updateStationHeadline();
+    updateStationMotd();
+    updateHeatmapButtonState();
+    stationInfoBtn?.addEventListener('click', openStationInfoModal);
+    stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
+    stationInfoModal?.addEventListener('click', (ev) => {
+      if (ev.target === stationInfoModal) closeStationInfoModal();
+    });
+    heatmapBtn?.addEventListener('click', openHeatmapModal);
+    heatmapCloseBtn?.addEventListener('click', closeHeatmapModal);
+    heatmapModal?.addEventListener('click', (ev) => {
+      if (ev.target === heatmapModal) closeHeatmapModal();
+    });
+    photoModalCloseBtn?.addEventListener('click', closePhotoModal);
+    photoModal?.addEventListener('click', (ev) => {
+      if (ev.target === photoModal) closePhotoModal();
+    });
+    heatmapFrame?.addEventListener('load', () => {
+      if (heatmapModal?.classList.contains('open')) setHeatmapLoading(false);
+    });
+    setHeatmapLoading(true);
+    setupThumbnailInteractions();
+    newUpdatesBtn?.addEventListener('click', ()=>{
+      try {
+        if (table) {
+          table.page('first').draw(false);
+          highlightPendingNewRows();
+        }
+        newUpdatesBtn.style.display = 'none';
+      } catch (e) { console.error('newUpdates click', e); }
+    });
+  }, { once: true });
+
+  const stationInfoState = {
+    dist: null,
+    distUnit: '',
+    altitude: null,
+    altUnit: '',
+    lat: null,
+    lon: null,
+    totalLines: null,
+    version: '',
+    heatmapZoom: null,
+    stationName: '',
+    stationUrl: '',
+    motd: ''
+  };
+  let stationInfoLastFocus = null;
+  let heatmapLastFocus = null;
+  let photoModalLastFocus = null;
+  const heatmapState = {
+    lat: null,
+    lon: null,
+    distMeters: null,
+    dateStr: '',
+    zoom: 11
+  };
+  let hasNoiseAvailable = false;
+
+  function setHasNoiseAvailability(value) {
+    const next = truthy(value);
+    if (hasNoiseAvailable !== next) {
+      hasNoiseAvailable = next;
+      applyPlaneAlertColumnVisibility();
+    }
+  }
+
+  function availableLanguages(){
+    const langs = i18nState.languages || {};
+    return Object.entries(langs).map(([code, meta]) => ({
+      code,
+      name: meta?.name || code,
+      flag: meta?.flag || code,
+      flag_path: meta?.flag_path || ''
+    }));
+  }
+
+  function renderLanguageSelector(){
+    const btn = document.getElementById('languageButton');
+    const flagImg = document.getElementById('languageButtonFlag');
+    const labelEl = document.getElementById('languageButtonLabel');
+    const menu = document.getElementById('languageMenu');
+    if (!btn || !flagImg || !labelEl || !menu) return;
+    btn.setAttribute('aria-label', t('language.button.aria', {}, 'Change language'));
+    const meta = languageMeta();
+    const code = meta.code || 'en';
+    const flag = meta.flag || code;
+    flagImg.src = resolveFlagSrc(meta.flag_path, flag, code);
+    flagImg.alt = meta.name || code.toUpperCase();
+    labelEl.textContent = meta.name || code.toUpperCase();
+    menu.setAttribute('aria-label', t('language.menu.label', {}, 'Select language'));
+    menu.innerHTML = '';
+    const langs = availableLanguages();
+    for (const lang of langs) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.setAttribute('role', 'option');
+      item.setAttribute('data-lang', lang.code);
+      const label = lang.name || lang.code.toUpperCase();
+      const flagSrc = resolveFlagSrc(lang.flag_path, lang.flag, lang.code);
+      item.innerHTML = `<img class="language-flag" alt="" src="${flagSrc}"><span>${label}</span>`;
+      item.addEventListener('click', ()=> selectLanguage(lang.code));
+      menu.appendChild(item);
+    }
+  }
+
+  function toggleLanguageMenu(force){
+    const menu = document.getElementById('languageMenu');
+    const btn = document.getElementById('languageButton');
+    if (!menu || !btn) return;
+    const next = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+    menu.classList.toggle('open', next);
+    btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+  }
+
+  function selectLanguage(code){
+    try { localStorage.setItem(LANGUAGE_STORAGE_KEY, code); } catch (e) { /* ignore */ }
+    location.reload();
+  }
+
+  function setupLanguageSelector(){
+    renderLanguageSelector();
+    const btn = document.getElementById('languageButton');
+    const menu = document.getElementById('languageMenu');
+    if (btn) btn.addEventListener('click', (ev)=> { ev.preventDefault(); toggleLanguageMenu(); });
+    document.addEventListener('click', (ev)=> {
+      if (!menu || !btn) return;
+      if (menu.contains(ev.target) || btn.contains(ev.target)) return;
+      toggleLanguageMenu(false);
+    });
+  }
+
+  function applyTranslationsToDom(){
+    try { document.title = t('page.title', {}, document.title); } catch (e) { /* ignore */ }
+    const heading = document.querySelector('header h1');
+    if (heading) heading.textContent = isPlaneAlertMode()
+      ? t('header.planeAlertTitle', {}, 'Plane-Alert')
+      : t('header.planefenceTitle', {}, 'Planefence');
+    const modeToggleEl = document.querySelector('.mode-toggle');
+    if (modeToggleEl) modeToggleEl.setAttribute('aria-label', t('header.mode.aria', {}, 'Choose data source'));
+    const modeSwitchLabel = document.querySelector('.switch.switch-mode');
+    if (modeSwitchLabel) modeSwitchLabel.setAttribute('title', t('header.mode.toggleTitle', {}, 'Toggle between Planefence and Plane-Alert data'));
+    const modeLabels = document.querySelectorAll('.mode-toggle .mode-label');
+    if (modeLabels[0]) modeLabels[0].textContent = t('header.mode.label.planefence', {}, 'Planefence');
+    if (modeLabels[1]) modeLabels[1].textContent = t('header.mode.label.planeAlert', {}, 'Plane-Alert');
+    const dataToggle = document.getElementById('dataModeToggle');
+    if (dataToggle) dataToggle.setAttribute('aria-label', t('header.mode.switchAria', {}, 'Switch data source'));
+    const themeLabel = document.querySelector('.theme-switch-wrap label');
+    if (themeLabel) themeLabel.title = t('header.theme.toggleTitle', {}, 'Toggle dark/light');
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      const dark = document.documentElement.classList.contains('dark');
+      themeToggle.setAttribute('aria-label', dark ? t('header.theme.switchToLight', {}, 'Switch to light theme') : t('header.theme.switchToDark', {}, 'Switch to dark theme'));
+    }
+    if (heatmapBtn) { heatmapBtn.textContent = t('actions.heatmap', {}, 'Heatmap'); heatmapBtn.title = t('actions.heatmap.title', {}, 'Show station heatmap'); }
+    if (stationInfoBtn) { stationInfoBtn.textContent = t('actions.stationInfo', {}, 'Station Info'); stationInfoBtn.title = t('actions.stationInfo.title', {}, 'Show station information'); }
+    if (reloadBtn) { reloadBtn.textContent = t('actions.reload', {}, 'Update'); reloadBtn.title = t('actions.reload.title', {}, 'Update data'); }
+    if (newUpdatesBtn) { newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available'); newUpdatesBtn.title = t('actions.newUpdates.title', {}, 'Show new updates'); }
+    if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
+    if (heatmapLoadingEl) heatmapLoadingEl.textContent = t('heatmap.loading', {}, 'Preparing heatmap...');
+    if (heatmapModal) heatmapModal.setAttribute('aria-label', t('heatmap.modal.label', {}, 'Planefence heatmap'));
+    if (heatmapFrame) {
+      const heatmapLabel = t('heatmap.modal.label', {}, 'Planefence heatmap');
+      heatmapFrame.setAttribute('title', heatmapLabel);
+      heatmapFrame.setAttribute('aria-label', heatmapLabel);
+    }
+    if (heatmapCloseBtn) heatmapCloseBtn.setAttribute('aria-label', t('heatmap.modal.close', {}, 'Close heatmap'));
+    if (photoModal) photoModal.setAttribute('aria-label', t('photo.modal.label', {}, 'Aircraft photo'));
+    if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
+    if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
+    const languageSelector = document.getElementById('languageSelector');
+    if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
+    renderLanguageSelector();
+  }
+
+  function renderFooterText(){
+    const footerSmall = document.querySelector('footer small');
+    if (!footerSmall) return;
+    const year = String(new Date().getFullYear());
+    const yearSpan = `<span id="footerYear">${year}</span>`;
+    const repoLink = `<a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
+    const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
+    const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const copyrightText = t('footer.copyright', { year: yearSpan }, `(c) 2020-${yearSpan} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see`);
+    const versionHtml = `<span id="appVersionText">${t('footer.version.placeholder', {}, 'Version --')}</span>`;
+    footerSmall.innerHTML = `${copyrightText} ${repoLink}. ${t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Thanks to our repo contributors and other external contributors.')}. ${versionHtml}`;
+    appVersionEl = document.getElementById('appVersionText');
+    footerYearEl = document.getElementById('footerYear') || footerSmall.querySelector('#footerYear');
+  }
+
+  function setHeatmapLoading(active) {
+    if (!heatmapLoadingEl) return;
+    if (active) heatmapLoadingEl.classList.remove('hidden');
+    else heatmapLoadingEl.classList.add('hidden');
+  }
+
+  function convertDistanceToMeters(value, unit) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    const normalized = String(unit || '').trim().toLowerCase();
+    const unitMap = {
+      nm: 1852,
+      'nmi': 1852,
+      mi: 1609,
+      mile: 1609,
+      miles: 1609,
+      km: 1000,
+      kilometer: 1000,
+      kilometers: 1000,
+      m: 1,
+      meter: 1,
+      meters: 1
+    };
+    const factor = unitMap[normalized];
+    if (factor) return Math.round(num * factor);
+    return Math.round(num);
+  }
+
+  function formatHeatmapDate(globals) {
+    const ts = globals && globals.LASTUPDATE ? Number(globals.LASTUPDATE) : NaN;
+    const date = Number.isFinite(ts) && ts > 0 ? new Date(ts * 1000) : new Date();
+    const yy = String(date.getUTCFullYear()).slice(-2);
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    return `${yy}${mm}${dd}`;
+  }
+
+  function resolveHeatmapZoom() {
+    const candidate = Number(stationInfoState.heatmapZoom);
+    if (Number.isFinite(candidate) && candidate > 0) return candidate;
+    return 11;
+  }
+
+  function isHeatmapDataReady() {
+    return Number.isFinite(heatmapState.lat)
+      && Number.isFinite(heatmapState.lon)
+      && Number.isFinite(heatmapState.distMeters)
+      && typeof heatmapState.dateStr === 'string'
+      && heatmapState.dateStr.length === 6;
+  }
+
+  function updateHeatmapButtonState() {
+    if (!heatmapBtn) return;
+    const visible = !isPlaneAlertMode();
+    heatmapBtn.style.display = visible ? 'inline-block' : 'none';
+    heatmapBtn.disabled = !visible || !isHeatmapDataReady();
+  }
+
+  function updateHeatmapState(globals) {
+    const latVal = truncateCoord(stationInfoState.lat);
+    const lonVal = truncateCoord(stationInfoState.lon);
+    const distMeters = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    const dateStr = formatHeatmapDate(globals || {});
+    const zoomLevel = resolveHeatmapZoom();
+    let changed = false;
+    if (!Object.is(heatmapState.lat, latVal)) { heatmapState.lat = latVal; changed = true; }
+    if (!Object.is(heatmapState.lon, lonVal)) { heatmapState.lon = lonVal; changed = true; }
+    if (!Object.is(heatmapState.distMeters, distMeters)) { heatmapState.distMeters = distMeters; changed = true; }
+    if (heatmapState.dateStr !== dateStr) { heatmapState.dateStr = dateStr; changed = true; }
+    if (!Object.is(heatmapState.zoom, zoomLevel)) { heatmapState.zoom = zoomLevel; changed = true; }
+    if (changed) updateHeatmapButtonState(); else if (heatmapBtn) heatmapBtn.disabled = !isHeatmapDataReady() || isPlaneAlertMode();
+  }
+
+  function buildStationMapHtml() {
+    const lat = truncateCoord(stationInfoState.lat);
+    const lon = truncateCoord(stationInfoState.lon);
+    const distMeters = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    if (lat == null || lon == null || !Number.isFinite(distMeters)) return '';
+    const radius = Math.max(0, Math.round(distMeters));
+    const zoomLevel = resolveHeatmapZoom();
+    const latStr = lat.toFixed(2);
+    const lonStr = lon.toFixed(2);
+    const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    const mapTitle = t('coverage.title', {}, 'Station Coverage');
+    const mapFrameTitle = t('stationMap.label', {}, 'Station coverage map');
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${mapTitle}</title>
+  <base href="${baseHref}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1725; }
+    #map { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script>
+    var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+      crossOrigin: 'anonymous'
+    }).addTo(map);
+    var circle = L.circle([parseFloat('${latStr}'), parseFloat('${lonStr}')], {
+      color: 'blue',
+      fillColor: '#0b5fff',
+      fillOpacity: 0.12,
+      radius: ${radius}
+    }).addTo(map);
+    map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+    map.whenReady(function(){ map.invalidateSize(); });
+    setTimeout(function(){ map.invalidateSize(); }, 120);
+  <\/script>
+</body>
+</html>`;
+  }
+
+  function buildHeatmapHtml() {
+    const lat = Number(heatmapState.lat);
+    const lon = Number(heatmapState.lon);
+    const fallbackDist = convertDistanceToMeters(stationInfoState.dist, stationInfoState.distUnit);
+    const distMeters = Number.isFinite(Number(heatmapState.distMeters)) ? Number(heatmapState.distMeters) : fallbackDist;
+    const dist = Math.max(1000, Math.round(Number(distMeters) || 0));
+    const dateStr = heatmapState.dateStr;
+    const latStr = lat.toFixed(2);
+    const lonStr = lon.toFixed(2);
+    const zoomLevel = Number.isFinite(Number(heatmapState.zoom)) ? Number(heatmapState.zoom) : 11;
+    const baseHref = String(document.baseURI || location.href).replace(/"/g, '&quot;');
+    const heatmapTitle = t('heatmap.title', {}, 'Planefence Heatmap');
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${heatmapTitle}</title>
+  <base href="${baseHref}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1725; color: #fff; display: flex; }
+    #map { flex: 1; min-height: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script src="./js/heatlayer.js"><\/script>
+  <script src="./js/leaflet-heat.js"><\/script>
+  <script src="./js/planeheatdata.js"><\/script>
+  <script>
+    var map = L.map('map', { scrollWheelZoom: true, zoomSnap: 0.25, zoomDelta: 0.5 }).setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
+    var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+      crossOrigin: 'anonymous'
+    }).addTo(map);
+    if (typeof addressPoints === 'undefined' || !Array.isArray(addressPoints)) { addressPoints = []; }
+    var coords = addressPoints.map(function (p) { return [p[0], p[1]]; }).filter(function (p) { return Number.isFinite(p[0]) && Number.isFinite(p[1]); });
+    var heat = null;
+    function addHeatIfReady(attempt){
+      if (!map) return;
+      var size = map.getSize();
+      if (size.x <= 0 || size.y <= 0) {
+        if ((attempt || 0) < 8) setTimeout(function(){ addHeatIfReady((attempt || 0) + 1); }, 80);
+        return;
+      }
+      heat = L.heatLayer(coords, {
+        minOpacity: 1,
+        radius: 7,
+        maxZoom: 14,
+        blur: 11
+      }).addTo(map);
+      var canvas = heat && heat._heatmap && heat._heatmap._canvas;
+      if (canvas && canvas.getContext) {
+        var ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx && heat._heatmap) { heat._heatmap._ctx = ctx; }
+      }
+    }
+    var center = [ parseFloat('${latStr}'), parseFloat('${lonStr}')];
+    var circle = L.circle(center, {
+      color: 'blue',
+      fillColor: '#f03',
+      fillOpacity: 0.1,
+      radius: ${dist}
+    }).addTo(map);
+    map.whenReady(function(){
+      map.invalidateSize();
+      map.fitBounds(circle.getBounds(), { padding: [20, 20], maxZoom: ${zoomLevel} });
+      addHeatIfReady(0);
+    });
+    setTimeout(function(){
+      map.invalidateSize();
+      map.fitBounds(circle.getBounds(), { padding: [20, 20], maxZoom: ${zoomLevel} });
+    }, 160);
+  <\/script>
+</body>
+</html>`;
+  }
+
+  function openHeatmapModal() {
+    if (!isHeatmapDataReady()) {
+      alert(t('heatmap.notReady', {}, 'Heatmap data is not ready yet.'));
+      return;
+    }
+    if (!heatmapModal || !heatmapFrame) return;
+    setHeatmapLoading(true);
+    heatmapFrame.srcdoc = buildHeatmapHtml();
+    heatmapLastFocus = document.activeElement;
+    heatmapModal.classList.add('open');
+    heatmapModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    heatmapCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeHeatmapModal() {
+    if (!heatmapModal) return;
+    heatmapModal.classList.remove('open');
+    heatmapModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (heatmapFrame) {
+      heatmapFrame.srcdoc = '';
+    }
+    setHeatmapLoading(true);
+    if (heatmapLastFocus && typeof heatmapLastFocus.focus === 'function') {
+      heatmapLastFocus.focus({ preventScroll: true });
+    }
+    heatmapLastFocus = null;
+  }
+
+  function openPhotoModal(src, caption, linkHref) {
+    if (!photoModal || !photoModalImg) return;
+    const safeSrc = String(src || '').trim();
+    if (!safeSrc) return;
+    photoModalImg.src = safeSrc;
+    photoModalImg.alt = caption || t('photo.modal.label', {}, 'Aircraft photo');
+    if (photoModalCaption) {
+      const safeCaption = caption || '';
+      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">${t('photo.source', {}, 'Planespotters.net')}</a>` : '';
+      photoModalCaption.innerHTML = `${safeCaption}${linkHtml ? ` · ${linkHtml}` : ''}`;
+    }
+    photoModalLastFocus = document.activeElement;
+    photoModal.classList.add('open');
+    photoModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    photoModalCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closePhotoModal() {
+    if (!photoModal) return;
+    photoModal.classList.remove('open');
+    photoModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (photoModalImg) photoModalImg.src = '';
+    if (photoModalLastFocus && typeof photoModalLastFocus.focus === 'function') {
+      photoModalLastFocus.focus({ preventScroll: true });
+    }
+    photoModalLastFocus = null;
+  }
+
+  function thumbnailTargetData(target) {
+    if (!target) return null;
+    const img = target.closest && target.closest('img.thumb');
+    if (!img || img.classList.contains('thumb-sil')) return null;
+    const fullSrc = img.getAttribute('data-fullsrc');
+    if (!fullSrc) return null;
+    return {
+      fullSrc,
+      caption: img.getAttribute('data-caption') || t('photo.modal.label', {}, 'Aircraft photo'),
+      sourceLink: img.getAttribute('data-sourcelink') || ''
+    };
+  }
+
+  function handleThumbnailClick(ev) {
+    const data = thumbnailTargetData(ev.target);
+    if (!data) return;
+    ev.preventDefault();
+    openPhotoModal(data.fullSrc, data.caption, data.sourceLink);
+  }
+
+  function handleThumbnailKeydown(ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const data = thumbnailTargetData(ev.target);
+    if (!data) return;
+    ev.preventDefault();
+    openPhotoModal(data.fullSrc, data.caption, data.sourceLink);
+  }
+
+  function setupThumbnailInteractions() {
+    document.addEventListener('click', handleThumbnailClick);
+    document.addEventListener('keydown', handleThumbnailKeydown);
+  }
+
+  function updateFooterVersionText(value) {
+    if (!appVersionEl) return;
+    const label = value
+      ? t('footer.version', { version: value }, `Version ${value}`)
+      : t('footer.version.placeholder', {}, 'Version --');
+    appVersionEl.textContent = label;
+  }
+
+  const numberFmt0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const numberFmt1 = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  const coordFmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function replaceTemplatePlaceholders(template, replacements) {
+    return Object.entries(replacements).reduce((acc, [token, rawValue]) => {
+      const safeVal = rawValue ?? t('status.placeholder', {}, '--');
+      const pattern = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return acc.replace(new RegExp(pattern, 'g'), safeVal);
+    }, template);
+  }
+
+  function formatStationDistance(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      return (num < 10 ? numberFmt1.format(num) : numberFmt0.format(Math.round(num)));
+    }
+    if (value != null && value !== '') return escapeHtml(value);
+    return t('status.placeholder', {}, '--');
+  }
+
+  function formatStationAltitude(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return numberFmt0.format(num);
+    if (value != null && value !== '') return escapeHtml(value);
+    return t('status.placeholder', {}, '--');
+  }
+
+  function truncateCoord(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    return Math.trunc(num * 100) / 100;
+  }
+
+  function directionLabel(code){
+    if (!code) return '';
+    const key = `direction.${String(code).toLowerCase()}`;
+    return t(key, {}, String(code).toUpperCase());
+  }
+
+  function directionFromDegrees(deg){
+    if (!Number.isFinite(deg)) return null;
+    const dirs = [
+      'n','nne','ne','ene',
+      'e','ese','se','sse',
+      's','ssw','sw','wsw',
+      'w','wnw','nw','nnw'
+    ];
+    const norm = ((deg % 360) + 360) % 360;
+    const idx = Math.round(norm / 22.5) % 16;
+    return dirs[idx];
+  }
+
+  function formatStationCoord(value) {
+    const truncated = truncateCoord(value);
+    if (truncated != null) return coordFmt.format(truncated);
+    if (value != null && value !== '') return escapeHtml(value);
+    return t('status.placeholder', {}, '--');
+  }
+
+  function formatStationCardinalCoord(value, axis) {
+    const truncated = truncateCoord(value);
+    if (truncated == null) {
+      return formatStationCoord(value);
+    }
+    const absVal = Math.abs(truncated).toFixed(2);
+    const dirCode = axis === 'lat'
+      ? (truncated >= 0 ? 'n' : 's')
+      : (truncated >= 0 ? 'e' : 'w');
+    const dirLabel = directionLabel(dirCode);
+    return `${absVal}&deg; ${dirLabel}`;
+  }
+
+  function formatStationTotal(value) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return numberFmt0.format(num);
+    if (value != null && value !== '') return escapeHtml(value);
+    return t('status.placeholder', {}, '--');
+  }
+
+  function buildStationInfoHtml() {
+    const replacements = {
+      '{{stationName}}': escapeHtml(stationInfoState.stationName || t('stationInfo.defaultName', {}, 'this station')),
+      '{{stationUrl}}': escapeHtml(stationInfoState.stationUrl || 'https://sdr-e.com/docker-planefence'),
+      '{{dist}}': formatStationDistance(stationInfoState.dist),
+      '{{distUnit}}': escapeHtml(stationInfoState.distUnit || '--'),
+      '{{altitude}}': formatStationAltitude(stationInfoState.altitude),
+      '{{altUnit}}': escapeHtml(stationInfoState.altUnit || '--'),
+      '{{latCardinal}}': formatStationCardinalCoord(stationInfoState.lat, 'lat'),
+      '{{lonCardinal}}': formatStationCardinalCoord(stationInfoState.lon, 'lon'),
+      '{{totalLines}}': formatStationTotal(stationInfoState.totalLines),
+      '{{year}}': String(new Date().getFullYear()),
+      '{{version}}': escapeHtml(stationInfoState.version || '--')
+    };
+    return replaceTemplatePlaceholders(stationInfoTemplate(), replacements);
+  }
+
+  function refreshStationInfoContent() {
+    if (!stationInfoContentEl) return;
+    stationInfoContentEl.innerHTML = buildStationInfoHtml();
+    const mapFrame = stationInfoContentEl.querySelector('#stationInfoMapFrame');
+    if (mapFrame) {
+      const mapDoc = buildStationMapHtml();
+      if (mapDoc) {
+        mapFrame.srcdoc = mapDoc;
+      } else {
+        const wrapper = mapFrame.closest('.station-map-wrapper');
+        if (wrapper) wrapper.style.display = 'none';
+      }
+    }
+  }
+
+  function updateStationHeadline() {
+    if (!stationHeadlineEl || !stationHeadlineLink) return;
+    const rawName = stationInfoState.stationName;
+    const name = typeof rawName === 'string' ? rawName.trim() : '';
+    const rawUrl = stationInfoState.stationUrl;
+    const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (name && url) {
+      stationHeadlineLink.textContent = name;
+      stationHeadlineLink.setAttribute('href', url);
+      stationHeadlineLink.setAttribute('target', '_blank');
+      stationHeadlineLink.setAttribute('rel', 'noreferrer noopener');
+      stationHeadlineEl.classList.remove('station-headline-empty');
+    } else {
+      stationHeadlineLink.textContent = '';
+      stationHeadlineLink.removeAttribute('href');
+      stationHeadlineLink.removeAttribute('target');
+      stationHeadlineLink.removeAttribute('rel');
+      stationHeadlineEl.classList.add('station-headline-empty');
+    }
+  }
+
+  function updateStationMotd() {
+    if (!stationMotdEl) return;
+    const raw = stationInfoState.motd;
+    const has = raw !== undefined && raw !== null && String(raw).trim() !== '';
+    if (has) {
+      stationMotdEl.innerHTML = String(raw);
+      stationMotdEl.title = '';
+      stationMotdEl.classList.remove('station-motd-empty');
+    } else {
+      stationMotdEl.textContent = '';
+      stationMotdEl.title = '';
+      stationMotdEl.classList.add('station-motd-empty');
+    }
+  }
+
+  function openStationInfoModal() {
+    if (!stationInfoModal) return;
+    refreshStationInfoContent();
+    stationInfoLastFocus = document.activeElement;
+    stationInfoModal.classList.add('open');
+    stationInfoModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    stationInfoCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeStationInfoModal() {
+    if (!stationInfoModal) return;
+    stationInfoModal.classList.remove('open');
+    stationInfoModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (stationInfoLastFocus && typeof stationInfoLastFocus.focus === 'function') {
+      stationInfoLastFocus.focus({ preventScroll: true });
+    }
+    stationInfoLastFocus = null;
+  }
+
+  function getGlobalValue(globals, key) {
+    if (!globals || typeof globals !== 'object') return undefined;
+    if (Object.prototype.hasOwnProperty.call(globals, key)) return globals[key];
+    if (key.includes(':')) {
+      const dotKey = key.replace(/:/g, '.');
+      if (Object.prototype.hasOwnProperty.call(globals, dotKey)) return globals[dotKey];
+    }
+    return undefined;
+  }
+
+  function updateStationInfoFromGlobals(globals) {
+    if (!globals || typeof globals !== 'object') return;
+    let changed = false;
+    const mapping = [
+      ['dist', 'station:dist:value'],
+      ['distUnit', 'station:dist:unit'],
+      ['altitude', 'station:altitude:value'],
+      ['altUnit', 'station:altitude:unit'],
+      ['lat', 'station:lat'],
+      ['lon', 'station:lon'],
+      ['version', 'station:version'],
+      ['heatmapZoom', 'station:heatmapzoom'],
+      ['stationName', 'station:me'],
+      ['stationUrl', 'station:myurl'],
+      ['motd', 'station:motd']
+    ];
+    for (const [stateKey, globalKey] of mapping) {
+      const raw = getGlobalValue(globals, globalKey);
+      if (raw === undefined || raw === '' || raw == null) continue;
+      const numeric = Number(raw);
+      const nextVal = Number.isFinite(numeric) ? numeric : String(raw);
+      if (stationInfoState[stateKey] === nextVal) continue;
+      stationInfoState[stateKey] = nextVal;
+      if (stateKey === 'version') {
+        updateFooterVersionText(nextVal);
+      }
+      changed = true;
+    }
+    if ('totallines' in globals) {
+      const tot = Number(globals.totallines);
+      if (Number.isFinite(tot) && stationInfoState.totalLines !== tot) {
+        stationInfoState.totalLines = tot;
+        changed = true;
+      }
+    }
+    updateHeatmapState(globals);
+    if (changed) {
+      refreshStationInfoContent();
+      updateStationHeadline();
+      updateStationMotd();
+    }
+  }
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeStationInfoModal();
+    } else if (ev.key === 'Escape' && heatmapModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeHeatmapModal();
+    } else if (ev.key === 'Escape' && photoModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closePhotoModal();
+    }
+  });
+
+
+  function updateNewUpdatesBanner(){
+    try {
+      if (!newUpdatesBtn) return;
+      const count = pendingNewIndices.size || 0;
+      if (count > 0) {
+        newUpdatesBtn.textContent = t('actions.newUpdates.count', { count }, `New updates (${count})`);
+      } else {
+        newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available');
+        newUpdatesBtn.style.display = 'none';
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Next-poll tracking (timestamp in ms)
+  let nextPollAt = null;
+  let countdownTimerId = null;
+
+  function startCountdown() {
+    if (!nextUpdateEl) return;
+    if (countdownTimerId) clearInterval(countdownTimerId);
+    countdownTimerId = setInterval(()=>{
+      if (!nextPollAt) { nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --'); return; }
+      const sec = Math.max(0, Math.round((nextPollAt - Date.now())/1000));
+      nextUpdateEl.textContent = t('status.nextUpdateCountdown', { seconds: sec }, `Next update: ${sec}s`);
+    }, 250);
+  }
+
+  function scheduleNextPoll(afterSec) {
+    nextPollAt = Date.now() + (afterSec * 1000);
+    startCountdown();
+  }
+
+  // Toggle countdown and manual update UI depending on polling configuration
+  if (!cfg.enablePoll) {
+    if (nextUpdateEl) nextUpdateEl.style.display = 'none';
+  }
+
+  // Expose a global rowCount helper so non-streaming code (poller, UI) can query
+  // current number of rows without depending on the streaming IIFE's local function.
+  function rowCount() {
+    try {
+      if (!table) return 0;
+      return Math.max(0, table.rows().count());
+    } catch (e) { return 0; }
+  }
+
+  function fmtInt(s){ const n = Number(s); return Number.isFinite(n)? n : null; }
+  function safe(s){ return String(s ?? ""); }
+  function isHttp(u){ return typeof u === 'string' && /^https?:\/\//i.test(u); }
+  function toFixed4(n){ const x = Number(n); return Number.isFinite(x)? x.toFixed(4) : ""; }
+  function degBucket10(n){
+    const num = Number(n);
+    if (!Number.isFinite(num)) return null;
+    const rounded = Math.round(num);
+    let b = Math.round(rounded/10)*10;
+    b = ((b % 360) + 360) % 360;
+    if (b === 360) b = 0;
+    return b;
+  }
+  function angleAssetName(deg, dark){
+    const b = degBucket10(deg);
+    if (b==null) return null;
+    return `arrow${b}_${dark? 'night':'day'}.png`;
+  }
+
+  // Swap existing angle image sources to match theme without re-rendering rows
+  function updateAngleImagesForTheme(dark){
+    const imgs = document.querySelectorAll('img.angle-img');
+    imgs.forEach(img => {
+      try {
+        const src = img.getAttribute('src') || '';
+        // Replace day/night suffix if present
+        const newSrc = src.replace(/arrow(\d{1,3})_(day|night)\.png$/i, (m, num) => `arrow${num}_${dark ? 'night':'day'}.png`);
+        if (newSrc !== src) img.setAttribute('src', newSrc);
+      } catch(e) { /* per-image ignore */ }
+    });
+  }
+
+  const tzAbbrev = (() => {
+    try {
+      const fmt = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' });
+      const parts = fmt.formatToParts(new Date());
+      const tzPart = parts.find(p => p.type === 'timeZoneName');
+      return tzPart ? tzPart.value : '';
+    } catch (e) {
+      return '';
+    }
+  })();
+
+  // 3) Seen rendering helpers
+  function formatRelativeOrDate(ts){
+    const num = Number(ts);
+    if (!Number.isFinite(num) || num <= 0) return '';
+    const nowMs = Date.now();
+    const tsMs = num * 1000;
+    const diffSec = Math.max(0, Math.floor((nowMs - tsMs) / 1000));
+    if (diffSec < 60) return t('time.secondsAgo', { value: diffSec }, `${diffSec}s ago`);
+    if (diffSec < 3600) return t('time.minutesAgo', { value: Math.floor(diffSec / 60) }, `${Math.floor(diffSec / 60)}m ago`);
+    if (diffSec < 86400) return t('time.hoursAgo', { value: Math.floor(diffSec / 3600) }, `${Math.floor(diffSec / 3600)}h ago`);
+    return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(tsMs));
+  }
+
+  function normalizeNoiseLink(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(?:[a-z]+:)?\/\//i.test(raw) || raw.startsWith('noise/')) return raw;
+    return `noise/${raw.replace(/^\/+/, '')}`;
+  }
+
+  function formatClockOrDate(ts){
+    const num = Number(ts);
+    if (!Number.isFinite(num) || num <= 0) return { text: '--', isTime: false };
+    const dt = new Date(num * 1000);
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dt >= todayStart) {
+      return {
+        text: new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(dt),
+        isTime: true
+      };
+    }
+    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(dt);
+    const day = String(dt.getDate()).padStart(2, '0');
+    return { text: `${month}-${day}`, isTime: false };
+  }
+
+  function formatSeen(firstTs, closestTs, lastTs, completeFlag){
+    const firstStr = formatRelativeOrDate(firstTs);
+    const closestStr = formatRelativeOrDate(closestTs);
+    const lastStr = formatRelativeOrDate(lastTs || closestTs || firstTs);
+    if (!firstStr && !closestStr && !lastStr) return '';
+    const closestPrimary = closestStr || lastStr || firstStr || '--';
+    const primary = t('time.closest', { value: closestPrimary }, `closest ${closestPrimary}`);
+    const firstLine = formatClockOrDate(firstTs);
+    const closestLine = formatClockOrDate(closestTs);
+    const lastLine = formatClockOrDate(lastTs || closestTs || firstTs);
+    const separator = t('time.separator', {}, ' / ');
+    const timelineCore = [firstLine.text, closestLine.text, lastLine.text].join(separator);
+    const hasTimeValue = firstLine.isTime || closestLine.isTime || lastLine.isTime;
+    const timeline = (tzAbbrev && hasTimeValue) ? `${timelineCore} ${tzAbbrev}` : timelineCore;
+    const updating = (String(completeFlag) !== 'true')
+      ? `<div class="still-updating">${t('time.stillUpdating', {}, 'still updating')}</div>` : '';
+    return `<div class="mono">${primary}</div><div class="mono">${timeline}</div>${updating}`;
+  }
+
+
+  function hasSound(r){
+    return r['sound:peak'] || r['sound:loudness'] || r['sound:color'] || r['noisegraph:link'];
+  }
+  function hasNotifications(r){
+    return r['discord:link'] || r['bsky:link'] || r['mastodon:link'] || r['telegram:link'] || r['mqtt:notified'] || r['mastodon:notified'];
+  }
+
+  // Normalize per-row values into typed fields so rendering is consistent
+  function normalizeRow(r) {
+    if (!r || typeof r !== 'object') return r;
+    const out = Object.assign({}, r);
+    out.HASNOISE = truthy(out.HASNOISE || out.hasOwnProperty('HASNOISE') && out.HASNOISE);
+    out.HASIMAGES = truthy(out.HASIMAGES || out.hasOwnProperty('HASIMAGES') && out.HASIMAGES);
+    out.HASROUTE = truthy(out.HASROUTE || out.hasOwnProperty('HASROUTE') && out.HASROUTE);
+    out.complete = String(out.complete) === 'true' || out.complete === true;
+    // Coerce notified flags
+    out['discord:notified'] = truthy(out['discord:notified']);
+    out['bsky:notified'] = truthy(out['bsky:notified']);
+    out['telegram:notified'] = truthy(out['telegram:notified']);
+    out['mastodon:notified'] = truthy(out['mastodon:notified']);
+    out['mqtt:notified'] = truthy(out['mqtt:notified']);
+    // Numeric conversions
+    out.index = Number(out.index);
+    out['time:lastseen'] = Number(out['time:lastseen']) || Number(out['time:firstseen']) || 0;
+    out['time:firstseen'] = Number(out['time:firstseen']) || 0;
+    out['time:time_at_mindist'] = Number(out['time:time_at_mindist']) || 0;
+    out['sound:peak'] = out['sound:peak'] !== '' ? out['sound:peak'] : null;
+    out['sound:loudness'] = out['sound:loudness'] !== '' ? out['sound:loudness'] : null;
+    return out;
+  }
+
+  // Small inline SVG icon helpers
+  // Graph icon for noisegraph PNG link
+  function iconNoise(){
+    return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M3 19h18v2H3z" opacity=".25"/><path d="M7 15h2v4H7v-4zm4-6h2v10h-2V9zm4 3h2v7h-2v-7zM3 12h2v10H3V12z"/></svg>`;
+  }
+  // Music/note icon for mp3 link
+  function iconMp3(){
+    return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`;
+  }
+  function iconSpectro(){ return `<svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M5 15h2V9H5v6zm3 3h2V6H8v12zm3-1h2V7h-2v10zm3-3h2V9h-2v5zm3 4h2V6h-2v12z"/></svg>` }
+  // Notifier icons (simple inline SVGs for Discord, Telegram, Bluesky)
+  function iconDiscord(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4a16 16 0 0 0-4-.9l-.2.3c1.6.4 2.8 1 3.7 1.7-1.6-.8-3.2-1.3-4.9-1.6a16.2 16.2 0 0 0-5 0C7 3.7 5.4 4.2 3.8 5c.9-.7 2.1-1.3 3.7-1.7L7.3 3A16 16 0 0 0 3 4.1C1 7 0 10 0 13.1c2.1 2.2 4.8 3.8 7.9 4.4l.6-.9c-1.7-.5-3.2-1.3-4.5-2.4 1.6 1.2 3.6 2.1 5.8 2.5a17.3 17.3 0 0 0 6.5-.1c2.2-.4 4.2-1.3 5.8-2.5-1.3 1.1-2.8 1.9-4.5 2.4l.6.9a16.8 16.8 0 0 0 7.9-4.4C24 10 23 7 21 4.1zM8.7 14.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>` }
+  function iconTelegram(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.036 15.803l-.376 5.3c.539 0 .771-.231 1.048-.508l2.515-2.41 5.213 3.81c.957.528 1.64.252 1.9-.887l3.447-16.128h.001c.306-1.424-.514-1.979-1.449-1.63L1.4 9.79c-1.371.532-1.35 1.297-.233 1.64l5.8 1.811 13.476-8.51c.635-.387 1.217-.173.74.214L9.036 15.803z"/></svg>` }
+  function iconBluesky(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 6c1.2-2 3.2-4 5.2-4 1.8 0 2.6 1.3 2.6 2.7 0 2.2-1.5 4.3-3.3 6 2.1-.5 4.5-1.7 5.5-3.4.6 3-2.2 5.4-5.5 6.7 2.8.7 5.1 2.1 5.1 4.2 0 1.4-1 2.2-2.4 2.2-2 0-4.2-1.9-6.2-4.2-2 2.4-4.2 4.2-6.2 4.2-1.4 0-2.4-.8-2.4-2.2 0-2.1 2.3-3.5 5.1-4.2-3.3-1.3-6.1-3.7-5.5-6.7 1 1.7 3.4 2.9 5.5 3.4-1.8-1.7-3.3-3.8-3.3-6C6.2 3.3 7 2 8.8 2 10.8 2 12.8 4 14 6h-2z"/></svg>` }
+  function iconMastodon(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-4.6 0-8.3 1.5-8.3 6.8 0 4.3-.1 9.7 5.4 10.9 2.1.5 3.9.6 5.9 0 1.3-.4 4.5-1 4.9-4.9.1-1 .1-2.8.1-4.1 0-5.3-3.7-6.8-8.3-6.8Zm4.1 8.5v4.9h-2.4v-4.7c0-1-.4-1.5-1.1-1.5-.8 0-1.2.5-1.2 1.6v4.6H8.8v-4.9c0-1-.4-1.5-1.1-1.5-.8 0-1.2.5-1.2 1.6v4.6H4.1V10c0-1 .2-1.7.5-2.3.6-1.2 2.1-1.9 3.7-1.9 1.7 0 2.9.6 3.7 1.9.8-1.3 2-1.9 3.7-1.9 1.6 0 3.1.7 3.7 1.9.4.6.5 1.3.5 2.3Z"/></svg>` }
+  function iconMQTT(){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v6h-2V7zm1 10a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>` }
+
+  // Helper to render notifier link with icon
+  function notifierLink(href, label, iconHtml){
+    const safeHref = String(href || '').replace(/"/g, '&quot;');
+    return `<a class="chip" href="${safeHref}" target="_blank" rel="noopener">${iconHtml || ''}${label}</a>`;
+  }
+
+  function flagInfoForIcao(icao){
+    try {
+      if (!icao || typeof findICAORange !== 'function') return null;
+      const clean = String(icao).trim();
+      if (!clean) return null;
+      const range = findICAORange(clean.toLowerCase());
+      if (!range || !range.country_code) return null;
+      return {
+        code: String(range.country_code).toLowerCase(),
+        name: range.country || ''
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderFlagIconForIcao(icao){
+    const info = flagInfoForIcao(icao);
+    if (!info) return '';
+    const title = info.name ? info.name.replace(/"/g, '&quot;') : '';
+    const src = `${FLAG_ICON_SRC_BASE}${info.code}.svg`;
+    return `<span class="aircraft-flag-icon" title="${title}" aria-label="${title}"><img src="${src}" alt="${title}"></span>`;
+  }
+
+  function renderOperatorFlagForCallsign(callsign){
+    try {
+      if (!callsign) return '';
+      const m = String(callsign).trim().match(/^([A-Za-z]{3})([^A-Za-z]|$)/);
+      if (!m) return '';
+      const op = m[1].toUpperCase();
+      if (!operatorFlagsLoaded && !operatorFlagsLoading) loadOperatorFlagsManifest();
+      if (!operatorFlagsSet.size) return '';
+      if (!operatorFlagsSet.has(op)) return '';
+      const src = `${cfg.mediaBase}operatorflags/${op}.bmp`;
+      return `<span class="operator-flag"><img src="${src}" alt=""><img class="op-flag-large" src="${src}" alt=""></span>`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function hostnameFromUrl(urlValue){
+    try {
+      if (!urlValue) return "";
+      const parsed = new URL(urlValue, location.href);
+      return parsed.hostname || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function planeAlertFaviconUrl(href){
+    const host = hostnameFromUrl(href);
+    if (!host) return null;
+    const lower = host.toLowerCase();
+    const faviconHost = lower === 'w.wiki' ? 'en.wikipedia.org' : host;
+    return `https://${faviconHost}/favicon.ico`;
+  }
+
+  // -------- Columns definition --------
+  const PLANE_ALERT_COL_KEY = 'planealert';
+  const viewCols = [
+    { key:"idx", titleKey:"table.headers.idx", width:"4%" },
+    { key:"thumb", titleKey:"table.headers.image", width:"6%" },
+    { key:"when", titleKey:"table.headers.when" },
+    { key:"aircraft", titleKey:"table.headers.aircraft", width:"22%" },
+    // Route column removed; route will be shown in Aircraft column after callsign
+    // Position column slightly narrower (~70% of previous). Previous was 16%.
+    { key:"position", titleKey:"table.headers.position", width:"11%" },
+    // Combined Alt/Spd column: both values shown on separate lines inside the same cell
+    // Make Alt/Spd (speed) about 50% of previous width
+    { key:"altspd", titleKey:"table.headers.altspd", width:"7%" },
+    { key:"trk", titleKey:"table.headers.track", width:"7%" },
+    { key:"squawk", titleKey:"table.headers.squawk", width:"8%" },
+    { key:"sound", titleKey:"table.headers.sound" },
+    { key: PLANE_ALERT_COL_KEY, titleKey:"table.headers.planeAlert", width:"12%" },
+    { key:"notify", titleKey:"table.headers.notify", width:"12%" }
+  ];
+
+  function columnIndexByKey(key){
+    return viewCols.findIndex(c => c.key === key);
+  }
+
+  function applyPlaneAlertColumnVisibility(){
+    try {
+      if (!table) return;
+      const planeAlertIdx = columnIndexByKey(PLANE_ALERT_COL_KEY);
+      const soundIdx = columnIndexByKey('sound');
+      const planeAlertVisible = isPlaneAlertMode();
+      const soundVisible = !isPlaneAlertMode() && hasNoiseAvailable;
+
+      if (planeAlertIdx !== -1) {
+        const col = table.column(planeAlertIdx);
+        if (col && col.visible() !== planeAlertVisible) col.visible(planeAlertVisible, false);
+      }
+      if (soundIdx !== -1) {
+        const colSound = table.column(soundIdx);
+        if (colSound && colSound.visible() !== soundVisible) colSound.visible(soundVisible, false);
+      }
+      table.columns().adjust();
+      table.draw(false);
+    } catch (e) { /* ignore visibility issues */ }
+  }
+
+  let table = null;
+  // Map of index -> DataTables row API for fast incremental updates
+  const rowByIndex = new Map();
+  // Map of index -> consecutive-miss count used to implement a grace period before purging
+  const missingCounts = new Map();
+  // Track indices added since last user-visible redraw. Used to highlight new rows.
+  const pendingNewIndices = new Set();
+
+  function resetTableState(){
+    try {
+      if (table) table.clear().draw(false);
+    } catch (e) { /* ignore */ }
+    rowByIndex.clear();
+    missingCounts.clear();
+    pendingNewIndices.clear();
+    updateNewUpdatesBanner();
+    if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
+    if (prog) prog.textContent = isPlaneAlertMode()
+      ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
+      : t('status.loading', {}, 'Loading...');
+  }
+
+  function highlightPendingNewRows(){
+    try {
+      if (!table) return;
+      pendingNewIndices.forEach(idx => {
+        const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+        if (tr) {
+          tr.classList.add('pf-new-row');
+          setTimeout(()=> tr.classList.remove('pf-new-row'), 2200);
+        }
+      });
+      pendingNewIndices.clear();
+    } catch (e) { /* ignore */ }
+  }
+
+  function redrawTable(forceFull=false){
+    try {
+      if (!table) return;
+      const info = table.page ? table.page.info() : null;
+      const onFirst = info && info.page === 0;
+      if (forceFull || onFirst) {
+        table.order([[0,'desc']]).page('first').draw(false);
+        highlightPendingNewRows();
+        if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
+      } else {
+        if (newUpdatesBtn) {
+          newUpdatesBtn.style.display = 'inline-block';
+          updateNewUpdatesBanner();
+        }
+        table.order([[0,'desc']]).draw(false);
+      }
+      try { lazyLoadImagesIn(document); } catch (e) { /* ignore lazy load errors */ }
+    } catch (e) { console.error('redraw error', e); }
+  }
+
+  // 2) DataTables init: numeric sort for idx, keep Seen desc
+ function columnTitle(c){
+   return c.titleHtml ?? t(c.titleKey || '', {}, c.title || '');
+ }
+
+ function buildHeader(){
+   if (!theadRow) theadRow = document.querySelector('#thead tr');
+   if (!theadRow) return;
+    theadRow.innerHTML = "";
+    for (const c of viewCols){
+      const th = document.createElement('th');
+      const headerHtml = columnTitle(c);
+      if (c.titleHtml) th.innerHTML = headerHtml;
+      else th.textContent = headerHtml;
+      if (c.width) th.style.width = c.width;
+      theadRow.appendChild(th);
+    }
+
+  // Replace Alt / Spd header content with clickable sort controls for numeric sorting
+  try {
+    const altIdx = viewCols.findIndex(v => v.key === 'altspd');
+    if (altIdx >= 0) {
+      const th = theadRow.children[altIdx];
+      if (th) {
+        const headerLabel = columnTitle({ titleKey: 'table.headers.altspd' });
+        th.innerHTML = `${headerLabel} <span style="margin-left:.5rem; font-size:0.85em; color:var(--muted);">` +
+          `<a href="#" id="sortAlt" title="${t('table.sort.alt')}" style="margin-right:.4rem;">${t('table.alt.label')}</a>` +
+          `<a href="#" id="sortSpd" title="${t('table.sort.spd')}">${t('table.speed.label')}</a>` +
+          ` <span id="sortDir" class="mono" aria-hidden="true" style="margin-left:.25rem;"></span>`+
+          `</span>`;
+        // Wire click handlers which compute the Alt/Spd column index at runtime,
+        // copy the chosen numeric attribute into data-order, and toggle
+        // ascending/descending on each click.
+        setTimeout(()=>{
+          const aAlt = document.getElementById('sortAlt');
+          const aSpd = document.getElementById('sortSpd');
+          // determine column index dynamically from the header cell position
+          const colIdx = (typeof th?.cellIndex === 'number') ? th.cellIndex : altIdx;
+
+          const copyAttrToDataOrder = (attrName) => {
+            try {
+              const nodes = table.column(colIdx, {order:'applied'}).nodes();
+              const arr = nodes.toArray ? nodes.toArray() : Array.from(nodes);
+              for (const td of arr) {
+                try {
+                  const inner = td.querySelector && (td.querySelector(`[data-${attrName}]`) || td.querySelector('[data-order]')) || td;
+                  if (inner && inner.setAttribute) {
+                    const v = inner.getAttribute && inner.getAttribute(`data-${attrName}`);
+                    if (v != null) inner.setAttribute('data-order', v);
+                  }
+                } catch(e) { /* per-cell ignore */ }
+              }
+            } catch(e) { console.warn('copyAttrToDataOrder failed', e); }
+          };
+
+          if (aAlt) aAlt.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            // Toggle direction state stored on the TH element
+            try {
+              const prev = th.dataset.altDir || 'desc';
+              const dir = prev === 'asc' ? 'desc' : 'asc';
+              th.dataset.altDir = dir;
+              copyAttrToDataOrder('order-alt');
+              table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              const dirSpan = document.getElementById('sortDir');
+              if (dirSpan) dirSpan.textContent = dir === 'asc' ? '▲' : '▼';
+              table.order([[colIdx, dir]]).draw(false);
+            } catch(e) { console.warn('sortAlt failed', e); }
+          });
+
+          if (aSpd) aSpd.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            try {
+              const prev = th.dataset.spdDir || 'desc';
+              const dir = prev === 'asc' ? 'desc' : 'asc';
+              th.dataset.spdDir = dir;
+              copyAttrToDataOrder('order-spd');
+              table.settings()[0].aoColumns[colIdx].orderDataType = 'dom-data-order';
+              const dirSpan = document.getElementById('sortDir');
+              if (dirSpan) dirSpan.textContent = dir === 'asc' ? '▲' : '▼';
+              table.order([[colIdx, dir]]).draw(false);
+            } catch(e) { console.warn('sortSpd failed', e); }
+          });
+        }, 0);
+      }
+    }
+  } catch (e) { /* ignore header wiring errors */ }
+
+ }
+
+  // Create DataTable and capture API
+  // Ordering plugin: read numeric value from an inner element's data-order attribute
+  // and use that as the sort key for the column. This ensures the index column
+  // sorts by the numeric index we embed in the rendered HTML.
+  jQuery.fn.dataTable.ext.order['dom-data-order'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        // If DataTables gives us an Element, query inside it
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order]');
+          if (el) {
+            const v = el.getAttribute('data-order');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        // Sometimes with deferRender DataTables may return a plain string for the cell.
+        // Handle that by parsing the HTML string for data-order instead of using querySelector.
+        if (typeof td === 'string') {
+          const m = td.match(/data-order="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      // fallback: parse numeric from text content (covers both Element and string)
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
+  // Ordering plugin for Altitude (reads numeric value from data-order-alt)
+  jQuery.fn.dataTable.ext.order['dom-data-order-alt'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order-alt]');
+          if (el) {
+            const v = el.getAttribute('data-order-alt');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        if (typeof td === 'string') {
+          const m = td.match(/data-order-alt="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
+  // Ordering plugin for Speed (reads numeric value from data-order-spd)
+  jQuery.fn.dataTable.ext.order['dom-data-order-spd'] = function(settings, col) {
+    return this.api().column(col, {order:'index'}).nodes().map(function(td){
+      try {
+        if (td && td.querySelector) {
+          const el = td.querySelector('[data-order-spd]');
+          if (el) {
+            const v = el.getAttribute('data-order-spd');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v;
+          }
+        }
+        if (typeof td === 'string') {
+          const m = td.match(/data-order-spd="(-?\d+)"/);
+          if (m) return Number(m[1]);
+        }
+      } catch (e) { /* ignore */ }
+      const txt = (td && td.textContent) ? td.textContent.trim() : (typeof td === 'string' ? td : '');
+      const n2 = Number(txt.replace(/[^0-9.\-]/g,''));
+      return Number.isFinite(n2) ? n2 : txt;
+    });
+  };
+
+  (async () => {
+    await i18nReady;
+    buildHeader();
+    const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 100;
+
+    const api = $('#t').DataTable({
+      dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
+      // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
+      deferRender: true,
+      pageLength: defaultPageLength,
+      lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', t('table.lengthAll')]],
+      responsive: true,
+    // Default ordering: newest (highest index) first
+    order: [[0, 'desc']],
+      language: {
+        emptyTable: t('table.empty'),
+        search: t('table.search'),
+        lengthMenu: t('table.lengthMenuLabel'),
+        info: t('table.info'),
+        infoEmpty: t('table.infoEmpty'),
+        zeroRecords: t('table.zeroRecords'),
+        paginate: {
+          first: t('table.paginate.first'),
+          previous: t('table.paginate.previous'),
+          next: t('table.paginate.next'),
+          last: t('table.paginate.last')
+        }
+      },
+      columns: viewCols.map(col => ({ title: columnTitle(col) })),
+      columnDefs: [
+        // Use our dom-data-order plugin for column 0 (index) so sorting honors
+        // the numeric value placed in the cell's data-order attribute.
+        {
+          targets: 0,
+          orderDataType: 'dom-data-order',
+          type: 'num',
+          // Ensure numeric sort even if the order plugin isn't engaged by parsing
+          // the data-order attribute or falling back to numeric text extraction.
+          render: {
+            _: function(data) { return data; },
+            sort: function(data) {
+              try {
+                const s = String(data || '');
+                const m = s.match(/data-order="(-?\d+)"/);
+                if (m) return Number(m[1]);
+                const n = Number(s.replace(/[^0-9.\-]/g, ''));
+                return Number.isFinite(n) ? n : 0;
+              } catch (e) { return 0; }
+            }
+          }
+        },
+        // For Alt/Spd column (index 5 in viewCols), allow numeric ordering by
+        // altitude or by speed via our custom orderDataType plugins. We'll
+        // wire header click handlers to call the appropriate ordering.
+        { targets: 5, orderDataType: 'dom-data-order-alt' },
+        { targets: "_all", render: (data)=>data }
+      ],
+      createdRow: function(row, data){
+        // Mark rows that are still updating
+        if ((data?.[2] || '').includes('still-updating')) {
+          row.classList.add('row-incomplete');
+        } else {
+          row.classList.remove('row-incomplete');
+        }
+
+        // Try to extract numeric index from the first-cell HTML and stash it on the TR.
+        try {
+          const first = data && data[0] ? String(data[0]) : '';
+          const m = first.match(/data-order="(-?\d+)"/);
+          if (m) {
+            const id = Number(m[1]);
+            row.dataset.idx = id;
+            // If the table API is available, store the API row reference for fast lookup
+            if (table) rowByIndex.set(id, table.row(row));
+          }
+        } catch (e) { /* ignore */ }
+      }
+    });
+
+    // Store globally if you need it
+    table = api;
+    window.table = api;
+  try { table.on('draw', ()=> lazyLoadImagesIn(document)); } catch (e) { /* ignore draw hook */ }
+  try { lazyLoadImagesIn(document); } catch (e) { /* ignore initial lazy load */ }
+
+    applyPlaneAlertColumnVisibility();
+
+  // Preserve top row when the page length changes: capture current display start
+  // and restore it after DataTables applies the new length. This keeps the
+  // same top row visible and lets additional rows appear below it.
+  try {
+    const lenSel = document.querySelector('#t_length select');
+    if (lenSel) {
+      let anchorIdx = null;
+      // On focus store the numeric index value from the first logical row using DOM if available.
+      // Using DOM is more robust now that deferRender is disabled; fallback to column data if needed.
+      lenSel.addEventListener('focus', ()=>{
+        try {
+          const info = table.page ? table.page.info() : null;
+          if (!info) return;
+          const start = info.start || 0;
+          // Prefer reading from the visible DOM row if present
+          const tr = document.querySelector('#t tbody tr');
+          if (tr && tr.dataset && tr.dataset.idx) {
+            anchorIdx = Number(tr.dataset.idx);
+            return;
+          }
+          // Fallback: use column data
+          const colData = table.column(0, {order: 'applied'}).data();
+          if (!colData || colData.length === 0) { anchorIdx = null; return; }
+          const cell = String(colData[start] || '');
+          const m = cell.match(/data-order="(-?\d+)"/);
+          anchorIdx = m ? Number(m[1]) : null;
+        } catch (e) { anchorIdx = null; }
+      });
+
+      lenSel.addEventListener('change', ()=>{
+        try {
+          if (anchorIdx == null) return;
+          // After the change, give DataTables a tick to reflow, then try to locate the
+          // same anchor index in the newly ordered column data. We aggressively
+          // invalidate rows to ensure data() returns DOM/HTML we can parse.
+          setTimeout(()=>{
+            try {
+              try { table.rows().invalidate(); } catch(e) { /* ignore */ }
+              const col = table.column(0, {order: 'applied'});
+              const colDataArr = col.data().toArray ? col.data().toArray() : Array.from(col.data());
+              const ids = colDataArr.map(c => {
+                const s = String(c || '');
+                const m = s.match(/data-order="(-?\d+)"/);
+                return m ? Number(m[1]) : null;
+              });
+              const pos = ids.indexOf(Number(anchorIdx));
+              if (pos >= 0) {
+                const newPage = Math.floor(pos / table.page.len());
+                table.page(newPage).draw(false);
+              } else {
+                // Fallback: go to first page so user sees newest rows
+                table.page('first').draw(false);
+              }
+            } catch (e) { console.warn('anchor restore failed', e); table.page('first').draw(false); }
+            anchorIdx = null;
+          }, 50);
+        } catch (e) { anchorIdx = null; }
+      });
+    }
+  } catch(e) { /* ignore */ }
+
+  // Populate rowByIndex for any rows DataTables already created during init
+  try {
+    api.rows().every(function(){
+      const tr = this.node();
+      if (!tr) return;
+      const d = this.data();
+      const first = d && d[0] ? String(d[0]) : '';
+      const m = first.match(/data-order="(-?\d+)"/);
+      if (m) {
+        const id = Number(m[1]);
+        tr.dataset.idx = id;
+        rowByIndex.set(id, api.row(tr));
+      }
+    });
+  } catch (e) { /* ignore */ }
+
+  // Bind draw handler AFTER api exists
+  api.on('draw', function(){
+    // Only rows in the current page are guaranteed to have nodes
+    api.rows({ page: 'current' }).every(function(){
+      const tr = this.node();
+      if (!tr) return; // node may be null when not in DOM
+      const seenCell = (this.data()?.[2] || '');
+      if (seenCell.includes('still-updating')) tr.classList.add('row-incomplete');
+      else tr.classList.remove('row-incomplete');
+    });
+  });
+
+// Helper: expand comma-separated discord links in the Notifications column.
+// If a cell contains a single anchor whose href contains commas (multiple URLs),
+// or if the cell has a data-discord-links attribute with comma-separated URLs,
+// create an anchor for each URL labeled 'Discord'. This runs after table draws
+// so it will affect both streaming and polled updates.
+function expandDiscordLinksInNotifications() {
+  try {
+    if (!table) return;
+    // Find all cells in the Notifications column (last column index)
+    const notifColIdx = viewCols.findIndex(c => c.key === 'notify');
+    if (notifColIdx === -1) return;
+    // For each visible row cell in the column
+    table.column(notifColIdx, {page: 'current'}).nodes().each(function(td){
+      try {
+        const cell = td instanceof Element ? td : (td && td.node) ? td.node : null;
+        if (!cell) return;
+
+        // First, check for a data attribute with comma-separated links
+        const dataVal = cell.getAttribute && cell.getAttribute('data-discord-links');
+        let links = null;
+        if (dataVal) {
+          links = dataVal.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          // Otherwise, if there's exactly one anchor, look at its raw attribute value
+          const anchors = cell.querySelectorAll && cell.querySelectorAll('a');
+          if (anchors && anchors.length === 1) {
+            const a = anchors[0];
+            const rawHref = a.getAttribute && a.getAttribute('href');
+            if (rawHref && rawHref.includes(',')) {
+              links = rawHref.split(',').map(s => s.trim()).filter(Boolean);
+            }
+          }
+          // If no anchors or single-anchor case didn't detect commas, also try plain text (comma-separated URLs)
+          if (!links) {
+            const txt = (cell.textContent || '').trim();
+            if (txt && txt.includes(',')) {
+              // Split and keep probable URLs (simple heuristic: starts with http or /)
+              const candidates = txt.split(',').map(s => s.trim()).filter(Boolean);
+              const probable = candidates.filter(s => /^https?:\/\//i.test(s) || s.startsWith('/'));
+              if (probable.length > 0) links = probable;
+            }
+          }
+        }
+
+        if (!links || links.length <= 1) return; // nothing to do
+
+        // Clear existing content and append an anchor per link, separated by middot
+        cell.innerHTML = '';
+        const multi = links.length > 1;
+        const labelBase = t('notify.discord', {}, 'Discord');
+        links.forEach((lnk, i) => {
+          const a = document.createElement('a');
+          a.href = lnk;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = multi
+            ? t('notify.discordIndexed', { index: i + 1 }, `Discord (${i+1})`)
+            : labelBase;
+          cell.appendChild(a);
+          if (i !== links.length - 1) cell.appendChild(document.createTextNode(' · '));
+        });
+      } catch (e) { /* per-cell ignore */ }
+    });
+  } catch (e) { console.warn('expandDiscordLinksInNotifications failed', e); }
+}
+
+// Hook into DataTables draw event so newly-rendered pages have expanded links
+if (typeof table !== 'undefined' && table) {
+  table.on && table.on('draw', expandDiscordLinksInNotifications);
+}
+
+// Also call once after initial setup if table exists
+setTimeout(()=> expandDiscordLinksInNotifications(), 150);
+
+    restartDataPipelines();
+  })();
+
+// 5) Render row with row class + position split link + numeric idx data source
+function renderRow(r) {
+  const idx = fmtInt(r.index) ?? safe(r.index);
+  const idxVal = fmtInt(r.index);
+  const idxCell = idxVal != null
+    ? `<span class="mono" data-order="${idxVal}">${idxVal}</span>`
+    : `<span class="mono">${safe(r.index)}</span>`;
+
+  // Seen
+  const firstSeen = r["time:firstseen"] || "";
+  const lastSeen = r["time:lastseen"] || "";
+  const atMindist = r["time:time_at_mindist"] || "";
+  const closestTs = atMindist || lastSeen || firstSeen;
+  const whenHtml = (closestTs || firstSeen || lastSeen)
+    ? formatSeen(firstSeen, closestTs, lastSeen, r.complete)
+    : "";
+
+  const icao = safe(r.icao);
+  const tail = safe(r.tail);
+  const cs = safe(r.callsign);
+  const typ = safe(r.type);
+  const owner = safe(r.owner);
+  const tailFaaLink = safe(r["link:faa"]);
+  const ownerFaLink = safe(r["link:fa"]);
+  const tailHtml = tail ? (isHttp(tailFaaLink) ? `<a href="${tailFaaLink}" target="_blank" rel="noopener">${tail}</a>` : tail) : "";
+  const ownerHtml = owner ? (isHttp(ownerFaLink) ? `<a href="${ownerFaLink}" target="_blank" rel="noopener">${owner}</a>` : owner) : "";
+  const ownerLine = ownerHtml ? `<span class="muted">${ownerHtml}</span>` : "";
+  // If a type is present, render it as a Skybrary link (lowercased). Encode the path component to be safe.
+  const typHtml = typ ? (() => {
+    try {
+      const typePath = encodeURIComponent(String(typ).toLowerCase());
+      const url = `https://skybrary.aero/aircraft/${typePath}`;
+      return `<a href="${url}" target="_blank" rel="noopener">${typ}</a>`;
+    } catch (e) { return typ; }
+  })() : '';
+  const route = safe(r.route);
+  // Show route after callsign in the same Aircraft cell, unless it's 'n/a'
+  const routeHtml = (route && route.toLowerCase() !== 'n/a') ? `<span class="route-chip">${route}</span>` : '';
+  // Right after the callsign, add the ICAO value when both exist
+  const csIcaoLine = cs
+    ? `${cs}${icao ? ' · ' + icao : ''}`
+    : `${icao}`;
+  const photoLabel = csIcaoLine || tail || icao || t('image.photo.alt', {}, 'Aircraft photo');
+  const photoCaption = escapeHtml(photoLabel);
+  const viewPhotoLabel = t('image.photo.view', {}, 'View larger aircraft photo');
+  const photoSourceUrl = r["image:link"];
+  const flagIcon = renderFlagIconForIcao(icao);
+  const operatorFlag = renderOperatorFlagForCallsign(cs);
+  const aircraftLines = [];
+  aircraftLines.push(`<div class="mono aircraft-main">${flagIcon ? flagIcon : ''}<span>${csIcaoLine}</span>${operatorFlag}</div>`);
+  if (routeHtml) aircraftLines.push(`<div>${routeHtml}</div>`);
+  const detailParts = [];
+  if (tailHtml) detailParts.push(tailHtml);
+  if (typHtml || typ) detailParts.push(typHtml || typ);
+  if (ownerLine) detailParts.push(ownerLine);
+  if (detailParts.length) aircraftLines.push(`<div>${detailParts.join(' · ')}</div>`);
+  const aircraft = aircraftLines.join('').trim();
+
+  // Position: coords link only; angle outside link; add N/E
+  const lat = r.lat, lon = r.lon;
+  const coordText = formatLatLon(lat, lon);
+  const map = safe(r["link:map"]);
+  const angleDegRaw = Number(r["angle:value"]);
+  const angleDegInt = Number.isFinite(angleDegRaw) ? Math.round(angleDegRaw) : null;
+  const angleDirCode = directionFromDegrees(angleDegRaw);
+  const angleDirLabel = angleDirCode ? directionLabel(angleDirCode) : '';
+  const angleLabel = angleDirLabel || (r["angle:name"] ? safe(r["angle:name"]) : "");
+  const angleName = angleLabel ? ` (${angleLabel})` : "";
+  const angleStr = angleDegInt != null ? `${angleDegInt}°${angleName}` : "";
+  const angleImg = (() => {
+    const a = angleAssetName(angleDegRaw, document.documentElement.classList.contains('dark'));
+    return a ? `<img class="angle-img" alt="" src="${cfg.mediaBase}${a}">` : "";
+  })();
+  const coordsHtml = coordText
+    ? (map ? `<a href="${map}" target="_blank" rel="noopener">${coordText}</a>` : coordText)
+    : "";
+  // Put coords on first line and angle (text + image) plus distance on the second line within the same cell.
+  const angleCombined = [angleStr, angleImg].filter(Boolean).join('');
+  // Distance + unit appended inline with the angle, separated by a middot
+  const distNum = Number(r["distance:value"]);
+  const distUnit = safe(r["distance:unit"] || "");
+  let distStr = "";
+  if (Number.isFinite(distNum)) {
+    const formatted = distNum < 10 ? distNum.toFixed(1) : Math.round(distNum).toString();
+    distStr = `${formatted} ${distUnit}`.trim();
+  } else if (r["distance:value"]) {
+    distStr = `${safe(r["distance:value"]) } ${distUnit}`.trim();
+  }
+  const angleLine = [angleCombined, distStr].filter(Boolean).join(' · ');
+  const positionInner = [
+    coordsHtml ? `<div>${coordsHtml}</div>` : '',
+    angleLine ? `<div>${angleLine}</div>` : ''
+  ].filter(Boolean).join('');
+  const position = positionInner ? `<div class="position-cell">${positionInner}</div>` : "";
+
+  const altRaw = Number(r["altitude:value"]);
+  const altVal = Number.isFinite(altRaw) ? `${safe(r["altitude:value"])} ${safe(r["altitude:unit"] || "ft")}` : "";
+  const spdNum = fmtInt(r["groundspeed:value"]);
+  const spdUnit = safe(r["groundspeed:unit"] || "kt");
+  const spdVal = spdNum != null ? `${spdNum} ${spdUnit}` : "";
+  // Choose numeric ordering priority: altitude (feet) if present, else groundspeed (kt), else 0
+  const numericOrder = Number.isFinite(altRaw) ? altRaw : (spdNum != null ? spdNum : 0);
+  // Combine altitude and speed into a single cell (altitude on first line, speed on second if present)
+  const altspdInner = [altVal ? `<div class="mono">${altVal}</div>` : '', spdVal ? `<div class="mono">${spdVal}</div>` : ''].filter(Boolean).join('');
+  // Include separate numeric attributes for altitude and speed to allow
+  // independent numeric sorting when a user clicks Alt or Spd in the header.
+  const altAttr = Number.isFinite(altRaw) ? altRaw : '';
+  const spdAttr = spdNum != null ? spdNum : '';
+  const altspd = `<div data-order-alt="${altAttr}" data-order-spd="${spdAttr}">${altspdInner}</div>`;
+
+  const trackDegRaw = Number(r["track:value"]);
+  const trackDegInt = Number.isFinite(trackDegRaw) ? Math.round(trackDegRaw) : null;
+  const trackDirCode = directionFromDegrees(trackDegRaw);
+  const trackDirLabel = trackDirCode ? directionLabel(trackDirCode) : '';
+  const trackNameRaw = r["track:name"]; // backend-provided text if any
+  const trackName = trackDirLabel ? ` (${trackDirLabel})` : (trackNameRaw ? ` (${safe(trackNameRaw)})` : "");
+  const trkStr = trackDegInt != null ? `${trackDegInt}°${trackName}` : "";
+  const trkImg = (() => {
+    const a = angleAssetName(trackDegRaw, document.documentElement.classList.contains('dark'));
+    return a ? `<img class="angle-img" alt="" src="${cfg.mediaBase}${a}">` : "";
+  })();
+  const trk = trkStr ? `${trkStr}${trkImg}` : "";
+
+  const thumbUrl = r["image:thumblink"];
+  const imageFile = safe(r["image:file"]);
+  const imageBasename = (() => {
+    if (!imageFile) return '';
+    const parts = String(imageFile).split('/').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : '';
+  })();
+  const fullImageLocal = imageBasename ? `./imgcache/${imageBasename}` : '';
+  let thumbEl = "";
+  if (isHttp(thumbUrl)) {
+    const thumbAttr = thumbUrl.replace(/"/g,'&quot;');
+    const viewerSrc = (fullImageLocal || thumbUrl).replace(/"/g,'&quot;');
+    const sourceAttr = photoSourceUrl ? photoSourceUrl.replace(/"/g,'&quot;') : '';
+    thumbEl = `<img class="thumb thumb-photo" loading="lazy" data-src="${thumbAttr}" data-fullsrc="${viewerSrc}" data-caption="${photoCaption}" data-sourcelink="${sourceAttr}" alt="${photoCaption}" tabindex="0" role="button" aria-label="${viewPhotoLabel}">`;
+  } else {
+    // Fallback: show silhouette based on aircraft type code (e.g., PC21.bmp) if available
+    const typCodeRaw = safe(r.type || '');
+    const code = typCodeRaw.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    if (code) {
+      const base = cfg.silhouetteDir || (cfg.mediaBase + 'silhouettes/');
+      const silSrc = `${base}${code}.bmp`;
+      // Hide the image if the silhouette is not found
+  thumbEl = `<img class="thumb thumb-sil" loading="lazy" data-src="${silSrc.replace(/"/g,'&quot;')}" alt="${t('image.silhouette.alt', { code }, `silhouette ${code}`)}" onerror="this.style.display='none'">`;
+    }
+  }
+
+  const spectro = safe(r["spectro:link"]);
+  const noise = safe(r["noisegraph:link"]);
+  const mp3 = safe(r["mp3:link"]);
+
+  const notifyLinks = [];
+  const discordLink = r["discord:link"];
+  const bskyLink = r["bsky:link"];
+  const mastodonLink = r["mastodon:link"];
+  const telegramLink = r["telegram:link"];
+  const mqttFlag = r["mqtt:notified"];
+  const discordNotified = truthy(r["discord:notified"]);
+  const bskyNotified = truthy(r["bsky:notified"]);
+  const mastodonNotified = truthy(r["mastodon:notified"]);
+  const telegramNotified = truthy(r["telegram:notified"]);
+  const mqttNotified = truthy(mqttFlag);
+  const labelDiscord = t('notify.discord', {}, 'Discord');
+  const labelDiscordIndexed = (index) => t('notify.discordIndexed', { index }, `Discord (${index})`);
+  const labelBluesky = t('notify.bluesky', {}, 'Bluesky');
+  const labelMastodon = t('notify.mastodon', {}, 'Mastodon');
+  const labelTelegram = t('notify.telegram', {}, 'Telegram');
+  const labelMqtt = t('notify.mqtt', {}, 'MQTT');
+
+  if (discordLink) {
+    // discord:link may be a comma-separated list of URLs; render each as its own anchor
+    const links = String(discordLink)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const multi = links.length > 1;
+    for (let i = 0; i < links.length; i++) {
+      const lnk = links[i];
+      const label = multi ? labelDiscordIndexed(i+1) : labelDiscord;
+      notifyLinks.push(notifierLink(lnk, label, iconDiscord()));
+    }
+  } else if (discordNotified) {
+    notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconDiscord()}<span class="label">${labelDiscord}</span></span>`);
+  }
+
+  if (bskyLink) notifyLinks.push(notifierLink(bskyLink, labelBluesky, iconBluesky()));
+  else if (bskyNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconBluesky()}<span class="label">${labelBluesky}</span></span>`);
+
+  if (mastodonLink) notifyLinks.push(notifierLink(mastodonLink, labelMastodon, iconMastodon()));
+  else if (mastodonNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconMastodon()}<span class="label">${labelMastodon}</span></span>`);
+
+  if (telegramLink) notifyLinks.push(notifierLink(telegramLink, labelTelegram, iconTelegram()));
+  else if (telegramNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconTelegram()}<span class="label">${labelTelegram}</span></span>`);
+
+  if (mqttNotified) notifyLinks.push(`<span class="chip muted has-tooltip" title="${t('notify.noLink', {}, "There's no link associated with this notification")}">${iconMQTT()}<span class="label">${labelMqtt}</span></span>`);
+
+  // Sound column: show a small chip with peak/loud info, and separate small clickable badges for noisegraph and mp3 if present.
+  let sound = "";
+  const parts = [];
+  if (hasSound(r)) {
+  const peak = r["sound:peak"] ? t('sound.peak', { value: safe(r["sound:peak"]) }, `Peak ${safe(r["sound:peak"]) } dbFS`) : "";
+  const loud = r["sound:loudness"] ? t('sound.loud', { value: safe(r["sound:loudness"]) }, `Loud ${safe(r["sound:loudness"]) } dB`) : "";
+  const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
+    const inner = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
+    parts.push(inner);
+  }
+  // Build Sound column in two lines: first Peak/Loudness, then the chip links below
+  let measurementChip = '';
+  if (hasSound(r)) {
+    const peak = r["sound:peak"] ? t('sound.peak', { value: safe(r["sound:peak"]) }, `Peak ${safe(r["sound:peak"]) } dbFS`) : "";
+    const loud = r["sound:loudness"] ? t('sound.loud', { value: safe(r["sound:loudness"]) }, `Loud ${safe(r["sound:loudness"]) } dB`) : "";
+    const dot = r["sound:color"] ? `<span class="dot" style="background:${safe(r["sound:color"]) }"></span>` : "";
+    measurementChip = `<span class="chip">${dot}${[peak, loud].filter(Boolean).join(' · ')}</span>`;
+  }
+  const linkChips = [];
+  // Noisegraph badge
+  if (noise) {
+    const nUrl = normalizeNoiseLink(noise).replace(/"/g,'&quot;');
+    const nBadge = iconNoise();
+    const labelNoise = t('sound.noisegraph.title', {}, 'Show noisegraph');
+    linkChips.push(`<a class="chip" href="${nUrl}" target="_blank" rel="noopener" title="${labelNoise}" aria-label="${labelNoise}">${nBadge}</a>`);
+  }
+  // Spectrogram badge (distinct icon)
+  if (spectro) {
+    const sUrl = normalizeNoiseLink(spectro).replace(/"/g,'&quot;');
+    const sBadge = iconSpectro();
+    const labelSpectro = t('sound.spectrogram.title', {}, 'Show spectrogram');
+    linkChips.push(`<a class="chip" href="${sUrl}" target="_blank" rel="noopener" title="${labelSpectro}" aria-label="${labelSpectro}">${sBadge}</a>`);
+  }
+  // MP3 badge
+  if (mp3) {
+    const mUrl = normalizeNoiseLink(mp3).replace(/"/g,'&quot;');
+    const mBadge = iconMp3();
+    const labelAudio = t('sound.audio.title', {}, 'Play audio');
+    linkChips.push(`<a class="chip" href="${mUrl}" target="_blank" rel="noopener" title="${labelAudio}" aria-label="${labelAudio}">${mBadge}</a>`);
+  }
+  if (measurementChip && linkChips.length) sound = `<div>${measurementChip}</div><div>${linkChips.join(' ')}</div>`;
+  else if (measurementChip) sound = measurementChip;
+  else if (linkChips.length) sound = `<div>${linkChips.join(' ')}</div>`;
+
+  const planeAlertCell = renderPlaneAlertCell(r);
+
+  const squawkVal = safe(r["squawk:value"]);
+  const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
+  const isEmerg = squawkVal === "7500" || squawkVal === "7600" || squawkVal === "7700";
+  const squawk = squawkVal ? `<span class="${isEmerg ? 'danger' : ''} mono">${squawkVal}</span>${squawkDesc}` : "";
+
+  return {
+    row: [
+    `${idxCell}`,
+    `${thumbEl}`,
+    `${whenHtml}`,
+  `${aircraft}`,
+  `${position}`,
+  `${altspd}`,
+    `${trk}`,
+    `${squawk}`,
+    `${sound}`,
+    `${planeAlertCell}`,
+    `${notifyLinks.join(' ')}`
+  ],
+    incomplete: String(r.complete) !== 'true'
+  };
+}
+
+function renderPlaneAlertCell(r){
+  if (!r || typeof r !== 'object') return '';
+  const pieces = [];
+  ['db:tag1','db:tag2','db:tag3'].forEach(key => {
+    const val = safe(r[key]).trim();
+    if (val) pieces.push(`<span class="mono">${val}</span>`);
+  });
+  const linkVal = safe(r['db:link']).trim();
+  if (linkVal) {
+    const href = linkVal.replace(/"/g, '&quot;');
+    const favicon = planeAlertFaviconUrl(linkVal);
+    const faviconImg = favicon ? `<img class="plane-alert-favicon" src="${favicon}" alt="">` : '';
+    pieces.push(`<a href="${href}" target="_blank" rel="noopener">${faviconImg}<span>${t('planeAlert.link', {}, 'Link')}</span></a>`);
+  }
+  return pieces.length ? `<div class="plane-alert-cell">${pieces.join(' · ')}</div>` : '';
+}
+
+
+// 6) Prepend newest-first during streaming and apply row class
+function addOrUpdateRow(r){
+  const rendered = renderRow(r);
+  const idxVal = fmtInt(r.index);
+  if (Number.isFinite(idxVal) && rowByIndex.has(idxVal)) {
+    try {
+      const apiRow = rowByIndex.get(idxVal);
+      apiRow.data(rendered.row);
+      return { api: apiRow, created: false, idx: idxVal };
+    } catch (e) {
+      console.warn('row update failed, falling back to add', e);
+      rowByIndex.delete(idxVal);
+    }
+  }
+
+  const apiRow = table.row.add(rendered.row);
+  try {
+    const first = rendered.row && rendered.row[0] ? String(rendered.row[0]) : '';
+    const m = first.match(/data-order="(-?\d+)"/);
+    const id = Number.isFinite(idxVal) ? idxVal : (m ? Number(m[1]) : null);
+    if (Number.isFinite(id)) {
+      const node = apiRow.node();
+      if (node) node.dataset.idx = id;
+      rowByIndex.set(id, apiRow);
+      return { api: apiRow, created: true, idx: id };
+    }
+  } catch (e) { /* ignore */ }
+  return { api: apiRow, created: true, idx: idxVal };
+}
+
+  // 4) Position: link only coords, add cardinal directions; angle outside link
+  function formatLatLon(lat, lon){
+    const latNum = Number(lat);
+    const lonNum = Number(lon);
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return "";
+    const latDir = latNum >= 0 ? 'n' : 's';
+    const lonDir = lonNum >= 0 ? 'e' : 'w';
+    const latStr = `${toFixed4(Math.abs(latNum))}&deg; ${directionLabel(latDir)}`;
+    const lonStr = `${toFixed4(Math.abs(lonNum))}&deg; ${directionLabel(lonDir)}`;
+    return `${latStr}, ${lonStr}`;
+  }
+
+  function applyMediaPrefixes(row){
+    if (!cfg.noisePrefix || !row || typeof row !== 'object') return;
+    const keys = ['noisegraph:link','spectro:link','mp3:link'];
+    const prefix = cfg.noisePrefix;
+    keys.forEach(key => {
+      const val = row[key];
+      if (val && !val.startsWith('http') && !val.startsWith(prefix)) {
+        row[key] = prefix + val;
+      }
+    });
+  }
+
+
+  async function startStreamReader(generation){
+    if (!cfg.enableStream) return;
+    stopStreamReader();
+    const controller = new AbortController();
+    streamAbortController = controller;
+    const modeForRun = dataMode;
+    try {
+      const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store', signal: controller.signal });
+      if (!resp.ok || !resp.body) { if (prog) prog.textContent = t('status.streamFailed', {}, 'Stream failed'); return; }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      let added = 0;
+      let seenHeader = false;
+      let streamGlobals = {};
+
+      function setStreamGlobals(g) {
+        streamGlobals = {};
+        if (!g || typeof g !== 'object') return;
+        streamGlobals.HASNOISE = truthy(g.HASNOISE || g.hasOwnProperty('HASNOISE') && g.HASNOISE);
+        streamGlobals.HASIMAGES = truthy(g.HASIMAGES || g.hasOwnProperty('HASIMAGES') && g.HASIMAGES);
+        streamGlobals.HASROUTE = truthy(g.HASROUTE || g.hasOwnProperty('HASROUTE') && g.HASROUTE);
+        streamGlobals.LASTUPDATE = Number(g.LASTUPDATE) || 0;
+        streamGlobals.maxindex = Number(g.maxindex) || 0;
+        for (const k of Object.keys(g)) if (!(k in streamGlobals)) streamGlobals[k] = g[k];
+        setHasNoiseAvailability(streamGlobals.HASNOISE);
+        updateStationInfoFromGlobals(streamGlobals);
+      }
+
+      while (true) {
+        if (generation !== modeGeneration || controller.signal.aborted) return;
+        const {value, done} = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, {stream:true});
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          if (generation !== modeGeneration || controller.signal.aborted) return;
+          const line = buf.slice(0, nl); buf = buf.slice(nl+1);
+          if (!line.trim()) continue;
+          let obj;
+          try { obj = JSON.parse(line); } catch(e){ console.error('Bad JSON:', e, line); continue; }
+          if (obj && obj.__globals) {
+            setStreamGlobals(obj.__globals || {});
+            if (streamGlobals.LASTUPDATE && Number.isFinite(streamGlobals.LASTUPDATE) && streamGlobals.LASTUPDATE > 0) {
+              const dt = new Date(streamGlobals.LASTUPDATE * 1000);
+              const hh = String(dt.getHours()).padStart(2,'0');
+              const mm = String(dt.getMinutes()).padStart(2,'0');
+              lastUpdateEl.textContent = t('status.lastUpdate', { time: `${hh}:${mm}` }, `Last update: ${hh}:${mm}`);
+            }
+            if (streamGlobals.maxindex && streamGlobals.maxindex > 0 && prog) {
+              prog.textContent = t('status.loadingZeroOfMax', { max: streamGlobals.maxindex }, `Loaded 0 / ${streamGlobals.maxindex}`);
+            }
+            continue;
+          }
+
+          if (!seenHeader && obj && obj.__columns) {
+            seenHeader = true;
+            continue;
+          }
+          if (obj && typeof obj === 'object' && Object.keys(obj).length === 1 && obj.error) {
+            if (prog) prog.textContent = t('status.errorPrefix', { message: obj.error }, `Error: ${obj.error}`);
+            continue;
+          }
+          const payload = (obj && typeof obj === 'object')
+            ? Object.assign({}, streamGlobals, obj)
+            : obj;
+
+          applyMediaPrefixes(payload);
+
+          const norm = normalizeRow(payload);
+          if (!norm || !norm.icao || String(norm.icao).trim() === '') {
+            continue;
+          }
+          const res = addOrUpdateRow(norm);
+          if (res.created && Number.isFinite(Number(res.idx))) {
+            pendingNewIndices.add(Number(res.idx));
+            updateNewUpdatesBanner();
+          }
+          added++;
+          if (added % 10 === 0) {
+            if (generation !== modeGeneration || controller.signal.aborted) return;
+            redrawTable(false);
+            if (prog) prog.textContent = t('status.loadingCount', { count: rowCount() }, `Loaded ${rowCount()}...`);
+          }
+        }
+      }
+
+      if (buf.trim()) {
+        try {
+          const last = JSON.parse(buf);
+          if (generation !== modeGeneration || controller.signal.aborted) return;
+          const res = addOrUpdateRow(last);
+          if (res.created && Number.isFinite(Number(res.idx))) {
+            pendingNewIndices.add(Number(res.idx));
+            updateNewUpdatesBanner();
+          }
+        } catch(e) { /* ignore parse */ }
+      }
+      if (generation !== modeGeneration || controller.signal.aborted) return;
+      redrawTable(true);
+      if (prog) prog.textContent = t('status.doneRows', { count: rowCount() }, `Done. Rows: ${rowCount()}`);
+    } catch (e) {
+      if (controller.signal.aborted || generation !== modeGeneration) return;
+      console.error('stream error', e);
+      if (prog) prog.textContent = t('status.streamError', {}, 'Stream error');
+    } finally {
+      if (streamAbortController === controller) streamAbortController = null;
+    }
+  }
+
+  function stopStreamReader(){
+    if (streamAbortController) {
+      try { streamAbortController.abort(); } catch (e) { /* ignore */ }
+      streamAbortController = null;
+    }
+  }
+
+// -------- Polling snapshot every 60s and apply incremental updates --------
+// Uses same endpoint (`./cgi/pfstream.sh`) which emits NDJSON (globals, schema, rows)
+// and updates existing rows (by index) or appends new rows. Does a single draw at end.
+async function pollAndMerge(modeForRun, generation) {
+  try {
+    if (generation !== modeGeneration) return;
+    const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store' });
+    if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
+    if (generation !== modeGeneration) return;
+    const txt = await resp.text();
+    if (generation !== modeGeneration) return;
+    if (!txt) return;
+
+    const lines = txt.split('\n');
+    let localGlobals = {};
+    let seenHeader = false;
+  const toAdd = [];
+  const toUpdate = [];
+  // Track which numeric indices were present in the latest snapshot so we can purge missing rows
+  const seenIndices = new Set();
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      let obj;
+      try { obj = JSON.parse(line); } catch (e) { console.warn('poll: bad json', e, line); continue; }
+      if (obj && obj.__globals) { localGlobals = obj.__globals || {};
+        updateStationInfoFromGlobals(localGlobals);
+        setHasNoiseAvailability(localGlobals.HASNOISE);
+        if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
+          const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
+          const hh = String(dt.getHours()).padStart(2,'0');
+          const mm = String(dt.getMinutes()).padStart(2,'0');
+          lastUpdateEl.textContent = t('status.lastUpdate', { time: `${hh}:${mm}` }, `Last update: ${hh}:${mm}`);
+        }
+        continue; }
+      if (!seenHeader && obj && obj.__columns) { seenHeader = true; continue; }
+      if (!obj || typeof obj !== 'object') continue;
+
+      const payload = Object.assign({}, localGlobals, obj);
+      applyMediaPrefixes(payload);
+
+  const norm = normalizeRow(payload);
+  // Ignore records without an ICAO value
+  if (!norm || !norm.icao || String(norm.icao).trim() === '') continue;
+      const rendered = renderRow(norm);
+
+      // Fast lookup: use rowByIndex map to find existing row by numeric index
+      const numericIdx = Number(norm.index);
+      if (Number.isFinite(numericIdx)) seenIndices.add(numericIdx);
+      const foundApi = Number.isFinite(numericIdx) ? rowByIndex.get(numericIdx) : null;
+      if (foundApi) {
+        // Existing row: update and clear any missing counter
+        toUpdate.push({ api: foundApi, row: rendered.row, idx: numericIdx });
+        missingCounts.delete(numericIdx);
+      } else {
+        // New row: add and clear any missing counter (might have been previously missing)
+        toAdd.push({ row: rendered.row, idx: numericIdx });
+        missingCounts.delete(numericIdx);
+      }
+    }
+
+    if (generation !== modeGeneration) return;
+
+    // Apply updates
+    for (const u of toUpdate) {
+      try {
+        // Prefer direct API update. Some API objects may be stale before a draw,
+        // so if this fails, fall back to locating the row node by data-idx.
+        u.api.data(u.row);
+      } catch(e) {
+        console.warn('poll: update failed via api, trying fallback', e, u && u.idx);
+        try {
+          if (Number.isFinite(u.idx)) {
+            const tr = document.querySelector(`tr[data-idx="${u.idx}"]`);
+            if (tr) table.row(tr).data(u.row);
+            else console.warn('poll: fallback row not found for idx', u.idx);
+          }
+        } catch (ee) { console.warn('poll: fallback update failed', ee); }
+      }
+    }
+    // Append new rows and register them in rowByIndex
+    for (const item of toAdd) {
+      const apiRow = table.row.add(item.row);
+      // If we know the numeric index, register the newly added row in the map
+      try {
+        if (Number.isFinite(item.idx)) {
+          const node = apiRow.node();
+          if (node) node.dataset.idx = item.idx;
+          rowByIndex.set(item.idx, apiRow);
+          // mark as pending so banner/highlight will show
+          pendingNewIndices.add(Number(item.idx));
+        } else {
+          // Fallback: attempt to parse from the first-cell HTML
+          const first = item.row && item.row[0] ? String(item.row[0]) : '';
+          const m = first.match(/data-order="(-?\d+)"/);
+          if (m) {
+            const id = Number(m[1]);
+            const node = apiRow.node();
+            if (node) node.dataset.idx = id;
+            rowByIndex.set(id, apiRow);
+            pendingNewIndices.add(Number(id));
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // After applying updates/adds, purge any rows not present in the snapshot.
+    // Purge rows that have been absent for at least 2 consecutive polls
+    let purged = 0;
+    try {
+      for (const [idx, apiRow] of rowByIndex.entries()) {
+        const nidx = Number(idx);
+        if (seenIndices.has(nidx)) continue; // present in this snapshot
+
+        // Increment miss counter
+  if (generation !== modeGeneration) return;
+
+        const prev = missingCounts.get(nidx) || 0;
+        const now = prev + 1;
+        missingCounts.set(nidx, now);
+
+        // If absent for 2 or more polls, purge it
+        if (now >= 2) {
+          try {
+            const node = apiRow.node();
+            if (node) table.row(node).remove();
+          } catch (e) { /* ignore per-row remove errors */ }
+          rowByIndex.delete(nidx);
+          missingCounts.delete(nidx);
+          purged++;
+        }
+      }
+    } catch (e) { console.warn('poll: purge failed', e); }
+
+    // Single redraw to refresh display (preserve paging)
+    if (toUpdate.length || toAdd.length || purged) {
+      redrawTable(false);
+      // After the draw, ensure any newly-created row nodes are registered in rowByIndex.
+      try {
+        table.rows().every(function(){
+          const tr = this.node();
+          if (!tr) return;
+          // If the TR already has an idx, ensure the map contains it
+          if (tr.dataset && tr.dataset.idx) {
+            const id = Number(tr.dataset.idx);
+            if (Number.isFinite(id) && !rowByIndex.has(id)) rowByIndex.set(id, table.row(tr));
+            return;
+          }
+          // Otherwise try to parse the first-cell HTML for data-order and set dataset
+          try {
+            const d = this.data();
+            const first = d && d[0] ? String(d[0]) : '';
+            const m = first.match(/data-order="(-?\d+)"/);
+            if (m) {
+              const id = Number(m[1]);
+              tr.dataset.idx = id;
+              if (Number.isFinite(id)) rowByIndex.set(id, table.row(tr));
+            }
+          } catch (e) { /* ignore per-row */ }
+        });
+      } catch (e) { console.warn('poll: post-draw registration failed', e); }
+  // If new rows were added during the poll, update the banner count.
+  if (toAdd.length) updateNewUpdatesBanner();
+  if (prog) prog.textContent = '';
+    }
+  } catch (e) {
+    console.error('pollAndMerge error', e);
+  }
+}
+
+  function stopPollingLoop(){
+    if (pollIntervalHandle) {
+      clearInterval(pollIntervalHandle);
+      pollIntervalHandle = null;
+    }
+    nextPollAt = null;
+    startCountdown();
+  }
+
+  function startPollingLoop(generation){
+    if (!cfg.enablePoll) return;
+    stopPollingLoop();
+    const intervalMs = (cfg.pollIntervalSec || 60) * 1000;
+    const runOnce = async ()=>{
+      const modeForRun = dataMode;
+      await pollAndMerge(modeForRun, generation);
+      if (generation === modeGeneration) scheduleNextPoll(cfg.pollIntervalSec || 60);
+    };
+    runOnce().catch(e => console.error('poll loop run', e));
+    pollIntervalHandle = setInterval(()=> runOnce().catch(e => console.error('poll loop run', e)), intervalMs);
+  }
+
+  function restartDataPipelines(){
+    modeGeneration++;
+    resetTableState();
+    stopStreamReader();
+    stopPollingLoop();
+    if (cfg.enableStream) startStreamReader(modeGeneration);
+    if (cfg.enablePoll) startPollingLoop(modeGeneration);
+  }
+
+</script>
+
+<script>
+// Lazy-load images using IntersectionObserver (thumb and spectro)
+function lazyLoadImagesIn(container){
+  try {
+    const root = container || document;
+    const imgs = root.querySelectorAll('img[data-src]');
+    if (!imgs || imgs.length === 0) return;
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries, obs)=>{
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            const img = e.target;
+            const src = img.getAttribute('data-src');
+            if (src) { img.src = src; img.removeAttribute('data-src'); }
+            obs.unobserve(img);
+          }
+        }
+      }, { root: null, rootMargin: '100px', threshold: 0.01 });
+      imgs.forEach(img => io.observe(img));
+    } else {
+      imgs.forEach(img => { const src = img.getAttribute('data-src'); if (src) { img.src = src; img.removeAttribute('data-src'); } });
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// Observe DataTables draws to (re)apply lazy loading
+document.addEventListener('DOMContentLoaded', ()=>{
+  try { lazyLoadImagesIn(document); } catch(e){}
+  try {
+    if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document));
+    else setTimeout(()=> { try { if (window.table) table.on('draw', ()=> lazyLoadImagesIn(document)); } catch(e){} }, 300);
+  } catch(e){}
+});
+</script>
+</body></html>
