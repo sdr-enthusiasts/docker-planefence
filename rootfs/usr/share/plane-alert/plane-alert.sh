@@ -916,6 +916,12 @@ EOF
 		sed -i "s|##MEGALINK##||g" "$TMPDIR"/plalert-index.tmp
 	fi
 
+	if [[ -f /usr/share/planefence/pf-run.sh ]]; then
+		sed -i 's|##STALE_WARNING##|   <hr><h3>Note - THIS PAGE IS NO LONGER UPDATED. Browse <a href='"${PF_LINK:-..}"'?mode=pa>here</a> for Plane-Alert</h3><hr>|g' "$TMPDIR"/plalert-index.tmp
+	else
+		sed -i "s|##STALE_WARNING##|   <hr>Note - soon, we will update Planefence to use a more modern web framework. Preview <a href=\"https://kx1t.com/planefence-dev\">here</a>. Feel free to provide feedback via <a href=\"https://discord.com/channels/734090820684349521/810227340344819733\">Discord</a> or <a href=\"http://sdr-e.com/docker-planefence/issues\">GitHub Issues</a>.<hr>|g" "$TMPDIR"/plalert-index.tmp
+	fi
+
 	#Finally, put the temp index into its place:
 	mv -f "$TMPDIR"/plalert-index.tmp "$WEBDIR"/index.html
 else
