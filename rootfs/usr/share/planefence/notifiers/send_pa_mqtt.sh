@@ -108,7 +108,7 @@ generate_mqtt() {
 	fi
 }
 
-log_print DEBUG "Starting generation of RSS feed"
+log_print DEBUG "Starting generation of MQTT notifications"
 
 
 
