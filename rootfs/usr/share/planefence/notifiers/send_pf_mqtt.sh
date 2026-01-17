@@ -53,7 +53,7 @@ generate_mqtt() {
 									done | jq -sc add)"
 
 		# prep the MQTT host, port, etc
-		unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
+		#unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
 		MQTT_HOST="${MQTT_URL##*:\/\/}"                                                     # strip protocol header (mqtt:// etc)
 		while [[ "${MQTT_HOST: -1}" == "/" ]]; do MQTT_HOST="${MQTT_HOST:0:-1}"; done       # remove any trailing / from the HOST
 		if [[ $MQTT_HOST == *"/"* ]]; then MQTT_TOPIC="${MQTT_TOPIC:-${MQTT_HOST#*\/}}"; fi # if there's no explicitly defined topic, then use the URL's topic if that exists
