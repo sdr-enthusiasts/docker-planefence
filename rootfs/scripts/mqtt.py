@@ -10,26 +10,37 @@
 #
 
 Send a message to a MQTT broker
-Syntax: mqtt.py --broker <broker_ip> [--port <port>] --topic <topic> --qos <qos> --client_id <client_id> --message <message>
+Syntax: mqtt.py --broker <broker_ip> [--port <port>] --topic <topic> --qos <qos> --client_id <client_id> --message <message> [--tls]
 where:
 --broker: The address of the MQTT broker.
---port: The port of the MQTT broker (default is 1883).
+--port: The port of the MQTT broker (default is 1883, use 8883 for TLS).
 --topic: The topic to which the message will be published.
 --qos: The Quality of Service level (0, 1, or 2).
 --message: The message payload to publish.
 --client_id: The MQTT client identifier.
+--tls: Enable TLS encryption.
 '''
 
 import argparse
+import ssl
 import paho.mqtt.client as mqtt # type: ignore
 
-def publish_message(broker, port, topic, qos, message, client_id, username=None, password=None):
+def publish_message(broker, port, topic, qos, message, client_id, username=None, password=None, tls=False):
     # Create an MQTT client instance
     client = mqtt.Client(client_id)
 
     # Set username and password if provided
     if username and password:
         client.username_pw_set(username, password)
+
+    # --- TLS Configuration ---
+    if tls or port == 8883:
+        try:
+            client.tls_set(tls_version=ssl.PROTOCOL_TLS)
+            
+        except Exception as e:
+            print(f"Failed to configure TLS: {e}")
+            return
 
     try:
         # Connect to the MQTT broker
@@ -46,14 +57,19 @@ def main():
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description="MQTT Publish Command Line Tool")
     parser.add_argument("--broker", required=True, help="MQTT broker address (e.g., 'localhost').")
-    parser.add_argument("--port", type=int, default=1883, help="MQTT broker port (default: 1883).")
+    parser.add_argument("--port", type=int, default=1883, help="MQTT broker port (default: 1883, use 8883 for TLS).")
     parser.add_argument("--topic", required=True, help="MQTT topic to publish to.")
     parser.add_argument("--qos", type=int, choices=[0, 1, 2], default=0, help="Quality of Service level (default: 0).")
     parser.add_argument("--message", required=True, help="Message to publish.")
     parser.add_argument("--client_id", default="mqtt_client", help="Client ID for MQTT connection (default: 'mqtt_client').")
     parser.add_argument("--username", help="Username for MQTT authentication.")
     parser.add_argument("--password", help="Password for MQTT authentication.")
+    parser.add_argument("--tls", action="store_true", help="Enable TLS encryption.")
+
     args = parser.parse_args()
+
+    # If port is 8883, assume TLS is wanted even if flag is missing
+    enable_tls = args.tls or args.port == 8883
 
     # Publish the message
     publish_message(
@@ -65,6 +81,7 @@ def main():
         client_id=args.client_id,
         username=args.username,
         password=args.password,
+        tls=enable_tls,
     )
 
 if __name__ == "__main__":

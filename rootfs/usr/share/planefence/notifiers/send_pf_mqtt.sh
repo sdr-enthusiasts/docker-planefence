@@ -73,6 +73,7 @@ generate_mqtt() {
 		log_print DEBUG "Attempting to send a MQTT notification for index $idx"
 		log_print DEBUG "MQTT Host: $MQTT_HOST"
 		log_print DEBUG "MQTT Port: ${MQTT_PORT:-1883}"
+		log_print DEBUG "MQTT TLS: $MQTT_TLS"
 		log_print DEBUG "MQTT Topic: $MQTT_TOPIC"
 		log_print DEBUG "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
 		if [[ -n "$MQTT_USERNAME" ]]; then log_print DEBUG "MQTT Username: $MQTT_USERNAME"; fi
@@ -83,6 +84,7 @@ generate_mqtt() {
 		# send the MQTT message:
 		mqtt_string=(--broker "$MQTT_HOST")
 		if [[ -n "$MQTT_PORT" ]]; then mqtt_string+=(--port "$MQTT_PORT"); fi
+		if [[ -n "$MQTT_TLS" ]]; then mqtt_string+=(--tls); fi
 		mqtt_string+=(--topic \""$MQTT_TOPIC"\")
 		if [[ -n "$MQTT_QOS" ]]; then mqtt_string+=(--qos "$MQTT_QOS"); fi
 		mqtt_string+=(--client_id \""${MQTT_CLIENT_ID:-$(hostname)}"\")
