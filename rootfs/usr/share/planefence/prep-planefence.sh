@@ -333,6 +333,7 @@ if chk_disabled "$PA_TRACK_FIRSTSEEN"; then configure_planealert "TRACK_FIRSTSEE
 #--------------------------------------------------------------------------------
 # Configure MQTT notifications for Planefence and plane-alert
 configure_planefence "MQTT_URL" "$PF_MQTT_URL"
+configure_planefence "MQTT_PORT" "$PF_MQTT_PORT"
 configure_planefence "MQTT_CLIENT_ID" "$PF_MQTT_CLIENT_ID"
 configure_planefence "MQTT_TOPIC" "$PF_MQTT_TOPIC"
 configure_planefence "MQTT_DATETIME_FORMAT" "$PF_MQTT_DATETIME_FORMAT"
@@ -342,6 +343,7 @@ configure_planefence "MQTT_QOS" "$PF_MQTT_QOS"
 configure_planefence "MQTT_FIELDS" "$PF_MQTT_FIELDS"
 
 configure_planealert "MQTT_URL" "$PA_MQTT_URL"
+configure_planealert "MQTT_PORT" "$PA_MQTT_PORT"
 configure_planealert "MQTT_CLIENT_ID" "$PA_MQTT_CLIENT_ID"
 configure_planealert "MQTT_TOPIC" "$PA_MQTT_TOPIC"
 configure_planealert "MQTT_DATETIME_FORMAT" "$PA_MQTT_DATETIME_FORMAT"
