@@ -509,7 +509,7 @@
   <div id="privacyBanner" class="privacy-banner hidden" role="region" aria-live="polite">
     <div class="privacy-banner__text">
       <div id="privacyBannerTitle" class="privacy-banner__title">We store only preference data in your browser.</div>
-      <div id="privacyBannerBody">Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
+      <div id="privacyBannerBody">Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
       <a id="privacyBannerLink" class="privacy-link" href="./privacy.html" target="_blank" rel="noreferrer noopener">Read the Privacy Statement</a>
     </div>
     <div class="privacy-banner__actions">
@@ -635,6 +635,14 @@
     fallbackStrings: (I18N_FALLBACK.languages?.[I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US']?.strings) || {},
     languages: I18N_FALLBACK.languages || {}
   };
+
+  function buildPrivacyUrl(lang){
+    const chosen = normalizeLang(lang || i18nState.lang || I18N_FALLBACK.defaultLanguage || 'en-US');
+    if (!chosen) return './privacy.html';
+    const params = new URLSearchParams();
+    params.set('lang', chosen);
+    return `./privacy.html?${params.toString()}`;
+  }
 
   async function loadOperatorFlagsManifest(){
     if (operatorFlagsLoaded || operatorFlagsLoading) return operatorFlagsSet;
@@ -825,7 +833,7 @@
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
     const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
     const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
-    const privacyLink = `<a href="./privacy.html" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
+    const privacyLink = `<a href="${buildPrivacyUrl(i18nState.lang)}" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
     const footerLicense = t('stationInfo.footer.license', { year: '{{year}}', version: '{{version}}', repoLink }, 'Planefence is (c) 2020-{{year}} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {{version}}');
     const footerContrib = t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Planefence is made possible thanks to our repo contributors and other external contributors.');
     const mapTitle = t('stationMap.label', {}, 'Station coverage map');
@@ -1125,16 +1133,13 @@ ${messagesDesc}
 
   function selectLanguage(code){
     const normalized = normalizeLang(code);
-    if (storageAllowed()) {
-      safeSetItem(LANGUAGE_STORAGE_KEY, normalized);
-      location.reload();
-      return;
-    }
     try {
       const url = new URL(window.location.href);
       if (normalized) url.searchParams.set('lang', normalized);
+      if (storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized);
       window.location.href = url.toString();
     } catch (e) {
+      if (storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized);
       location.reload();
     }
   }
@@ -1160,10 +1165,10 @@ ${messagesDesc}
     const acceptEl = document.getElementById('privacyAcceptBtn');
     const declineEl = document.getElementById('privacyDeclineBtn');
     if (titleEl) titleEl.textContent = t('privacy.banner.title', {}, 'We store only preference data in your browser.');
-    if (bodyEl) bodyEl.textContent = t('privacy.banner.body', {}, 'Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
+    if (bodyEl) bodyEl.textContent = t('privacy.banner.body', {}, 'Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
     if (linkEl) {
       linkEl.textContent = t('privacy.banner.more', {}, 'Read the Privacy Statement');
-      linkEl.href = './privacy.html';
+      linkEl.href = buildPrivacyUrl(i18nState.lang);
     }
     if (acceptEl) acceptEl.textContent = t('privacy.banner.accept', {}, 'Allow preference storage');
     if (declineEl) declineEl.textContent = t('privacy.banner.decline', {}, 'Continue without saving');
@@ -1249,7 +1254,7 @@ ${messagesDesc}
     const repoLink = `<a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
     const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
     const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
-    const privacyLink = `<a href="./privacy.html" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
+    const privacyLink = `<a href="${buildPrivacyUrl(i18nState.lang)}" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
     const copyrightText = t('footer.copyright', { year: yearSpan }, `(c) 2020-${yearSpan} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see`);
     const versionHtml = `<span id="appVersionText">${t('footer.version.placeholder', {}, 'Version --')}</span>`;
     footerSmall.innerHTML = `${copyrightText} ${repoLink}. ${t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Thanks to our repo contributors and other external contributors.')}. ${privacyLink}. ${versionHtml}`;

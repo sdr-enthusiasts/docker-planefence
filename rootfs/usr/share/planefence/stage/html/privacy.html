@@ -100,7 +100,7 @@
   <div id="privacyBanner" class="privacy-banner hidden" role="region" aria-live="polite">
     <div class="privacy-banner__text">
       <div id="privacyBannerTitle" class="privacy-banner__title">We store only preference data in your browser.</div>
-      <div id="privacyBannerBody">Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
+      <div id="privacyBannerBody">Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
       <a id="privacyBannerLink" class="privacy-link" href="./privacy.html" target="_blank" rel="noreferrer noopener">Read the Privacy Statement</a>
     </div>
     <div class="privacy-banner__actions">
@@ -181,7 +181,7 @@
 <p>We may update this Privacy Statement from time to time, for example, if we change how we store preferences or if we begin processing personal information in the future. When we make changes, we will update the "Last updated" date at the top of this page, and post the revised Privacy Statement on this page. If we ever begin collecting personal information, we will update this Privacy Statement before such collection begins and, where required, obtain your consent.</p>
 <h2>9. Contact Us</h2>
 <p>If you have any questions about this Privacy Statement or believe that we may have inadvertently collected personal information, you can contact us at:</p>
-<p>Email: planefence@kx1t.com<br>Postal address: PO Box 11, Belmont, MA 02478, USA</p>
+<p>Email: planefence (at) kx1t (dot) com<br>Postal address: PO Box 11, Belmont, MA 02478, USA</p>
 <p>We will review and respond in accordance with applicable privacy laws.</p>
 `;
   const PRIVACY_I18N_FALLBACK = {
@@ -240,6 +240,22 @@
 
   const i18nState = { lang: I18N_FALLBACK.defaultLanguage || 'en-US', strings: I18N_FALLBACK.languages?.['en-US']?.strings || {}, fallbackStrings: I18N_FALLBACK.languages?.['en-US']?.strings || {}, languages: I18N_FALLBACK.languages || {} };
   const privacyState = { lang: PRIVACY_I18N_FALLBACK.defaultLanguage || 'en-US', strings: PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {}, fallbackStrings: PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {}, languages: PRIVACY_I18N_FALLBACK.languages || {} };
+
+  function buildPrivacyUrl(lang){
+    const chosen = normalizeLang(lang || privacyState.lang || i18nState.lang || 'en-US');
+    if (!chosen) return './privacy.html';
+    const params = new URLSearchParams();
+    params.set('lang', chosen);
+    return `./privacy.html?${params.toString()}`;
+  }
+
+  function buildIndexUrlWithLang(lang){
+    const chosen = normalizeLang(lang || i18nState.lang || 'en-US');
+    if (!chosen) return './index.html';
+    const params = new URLSearchParams();
+    params.set('lang', chosen);
+    return `./index.html?${params.toString()}`;
+  }
 
   async function loadI18n(){
     let config = I18N_FALLBACK;
@@ -316,7 +332,7 @@
     }
   }
   function toggleLanguageMenu(force){ const menu=document.getElementById('languageMenu'); const btn=document.getElementById('languageButton'); if(!menu||!btn) return; const next=typeof force==='boolean'?force:!menu.classList.contains('open'); menu.classList.toggle('open', next); btn.setAttribute('aria-expanded', next?'true':'false'); }
-  function selectLanguage(code){ const normalized=normalizeLang(code); if(storageAllowed()){ safeSetItem(LANGUAGE_STORAGE_KEY, normalized); location.reload(); return; } try{ const url=new URL(window.location.href); if(normalized) url.searchParams.set('lang', normalized); window.location.href=url.toString(); }catch(e){ location.reload(); } }
+  function selectLanguage(code){ const normalized=normalizeLang(code); try{ const url=new URL(window.location.href); if(normalized) url.searchParams.set('lang', normalized); if(storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized); window.location.href=url.toString(); }catch(e){ if(storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized); location.reload(); } }
 
   function applyTheme(theme){ const dark=theme==='dark'; document.documentElement.classList.toggle('dark', dark); safeSetItem(THEME_KEY, theme); }
   function currentTheme(){ const saved=safeGetItem(THEME_KEY); if(saved==='dark' || saved==='light') return saved; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
@@ -329,8 +345,8 @@
     const acceptEl=document.getElementById('privacyAcceptBtn');
     const declineEl=document.getElementById('privacyDeclineBtn');
     if(titleEl) titleEl.textContent=t('privacy.banner.title', {}, 'We store only preference data in your browser.');
-    if(bodyEl) bodyEl.textContent=t('privacy.banner.body', {}, 'Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
-    if(linkEl){ linkEl.textContent=t('privacy.banner.more', {}, 'Read the Privacy Statement'); linkEl.href='./privacy.html'; }
+    if(bodyEl) bodyEl.textContent=t('privacy.banner.body', {}, 'Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
+    if(linkEl){ linkEl.textContent=t('privacy.banner.more', {}, 'Read the Privacy Statement'); linkEl.href=buildPrivacyUrl(i18nState.lang); }
     if(acceptEl) acceptEl.textContent=t('privacy.banner.accept', {}, 'Allow preference storage');
     if(declineEl) declineEl.textContent=t('privacy.banner.decline', {}, 'Continue without saving');
   }
@@ -352,6 +368,8 @@
     await loadPrivacyStrings(i18nState.lang);
     renderLanguageSelector();
     toggleLanguageMenu(false);
+    const backLink=document.querySelector('.back-link');
+    if(backLink) backLink.href=buildIndexUrlWithLang(i18nState.lang);
     document.getElementById('pageHeading').textContent = tp('privacy.title', {}, 'Privacy Statement');
     document.title = tp('privacy.title', {}, 'Privacy Statement');
     document.getElementById('lastUpdated').textContent = tp('privacy.lastUpdated', {}, 'Last updated: 18-Jan-2026');
