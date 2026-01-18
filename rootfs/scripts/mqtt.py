@@ -23,35 +23,7 @@ where:
 
 import argparse
 import ssl
-import paho.mqtt.client as mqtt # type: ignore
-
-def publish_message(broker, port, topic, qos, message, client_id, username=None, password=None, tls=False):
-    # Create an MQTT client instance
-    client = mqtt.Client(client_id)
-
-    # Set username and password if provided
-    if username and password:
-        client.username_pw_set(username, password)
-
-    # --- TLS Configuration ---
-    if tls or port == 8883:
-        try:
-            client.tls_set(tls_version=ssl.PROTOCOL_TLS)
-            
-        except Exception as e:
-            print(f"Failed to configure TLS: {e}")
-            return
-
-    try:
-        # Connect to the MQTT broker
-        client.connect(broker, port)
-        # Publish the message
-        client.publish(topic, payload=message, qos=qos, retain=True)
-        print(f"Message '{message}' published to topic '{topic}' with QoS {qos}.")
-        # Disconnect from the broker
-        client.disconnect()
-    except Exception as e:
-        print(f"Failed to publish message: {e}")
+import paho.mqtt.publish as publish
 
 def main():
     # Set up command-line arguments
@@ -72,17 +44,11 @@ def main():
     enable_tls = args.tls or args.port == 8883
 
     # Publish the message
-    publish_message(
-        broker=args.broker,
-        port=args.port,
-        topic=args.topic,
-        qos=args.qos,
-        message=args.message,
-        client_id=args.client_id,
-        username=args.username,
-        password=args.password,
-        tls=enable_tls,
-    )
+    try:
+        publish.single(topic=args.topic, payload=args.message, qos=args.qos, retain=True, hostname=args.broker, port=args.port, client_id=args.client_id, **({"auth":{'username':args.username, 'password':args.password}} if not args.username or args.password else {}), **({"tls":ssl.create_default_context()} if args.tls else {}))
+        print(f"Message '{args.message}' published to topic '{args.topic}' with QoS {args.qos}.")
+    except Exception as e:
+        print(f"Failure in publishing message!")
 
 if __name__ == "__main__":
     main()
