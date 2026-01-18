@@ -386,6 +386,17 @@
   .station-map-frame,
   .heatmap-frame { min-height: clamp(260px, 50vh, 520px); }
 
+  .privacy-banner { position: fixed; inset: auto 1rem 1rem 1rem; z-index: 1200; background: var(--soft); color: var(--fg); border: 1px solid var(--muted); border-radius: .75rem; padding: .85rem 1rem; box-shadow: 0 12px 36px rgba(0,0,0,0.22); display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  html.dark .privacy-banner { border-color: rgba(255,255,255,0.12); box-shadow: 0 12px 36px rgba(0,0,0,0.45); }
+  .privacy-banner.hidden { display: none; }
+  .privacy-banner__text { flex: 1; min-width: 240px; }
+  .privacy-banner__title { font-weight: 700; margin-bottom: .25rem; }
+  .privacy-banner__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { opacity: .92; }
+  .btn-secondary { background: transparent; border-color: var(--muted); color: var(--fg); }
+  .privacy-link { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; }
+
   @media (max-width: 960px) {
     :root { --header-height: 4.25rem; }
     header { flex-wrap: wrap; }
@@ -433,6 +444,7 @@
       border-radius: min(1rem, 4vw);
     }
     .photo-frame img { max-width: 100%; max-height: 100%; }
+    .privacy-banner { inset: auto .75rem .75rem .75rem; }
   }
 
   @media (max-width: 480px) {
@@ -494,6 +506,18 @@
     <div id="stationMotd" class="station-motd station-motd-empty" aria-live="polite"></div>
   </header>
 
+  <div id="privacyBanner" class="privacy-banner hidden" role="region" aria-live="polite">
+    <div class="privacy-banner__text">
+      <div id="privacyBannerTitle" class="privacy-banner__title">We store only preference data in your browser.</div>
+      <div id="privacyBannerBody">Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
+      <a id="privacyBannerLink" class="privacy-link" href="./privacy.html" target="_blank" rel="noreferrer noopener">Read the Privacy Statement</a>
+    </div>
+    <div class="privacy-banner__actions">
+      <button type="button" id="privacyAcceptBtn" class="btn btn-primary">Allow preference storage</button>
+      <button type="button" id="privacyDeclineBtn" class="btn btn-secondary">Continue without saving</button>
+    </div>
+  </div>
+
   <div id="stationInfoModal" class="station-info-modal" role="dialog" aria-modal="true" aria-labelledby="stationInfoTitle" aria-hidden="true">
     <div class="station-info-card">
       <button type="button" id="stationInfoClose" class="station-info-close" aria-label="Close station information">&times;</button>
@@ -531,7 +555,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; 2020-<span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <span id="appVersionText">Version --</span></small>
+    <small class="muted">&copy; 2020-<span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <a href="./privacy.html" target="_blank" rel="noreferrer noopener">Privacy</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -570,11 +594,34 @@
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
 
   const LANGUAGE_STORAGE_KEY = 'pf-language';
+  const PRIVACY_CONSENT_KEY = 'pf-privacy-consent';
   const I18N_FALLBACK = window.I18N_FALLBACK || {
     defaultLanguage: 'en-US',
     fallbackLanguage: 'en-US',
     languages: {}
   };
+
+  function readStoredConsent(){
+    try { return localStorage.getItem(PRIVACY_CONSENT_KEY) === 'granted'; } catch (e) { return false; }
+  }
+  let preferenceStorageAllowed = readStoredConsent();
+  function storageAllowed(){ return preferenceStorageAllowed === true; }
+  function allowPreferenceStorage(){
+    preferenceStorageAllowed = true;
+    try { localStorage.setItem(PRIVACY_CONSENT_KEY, 'granted'); } catch (e) { /* ignore */ }
+  }
+  function safeGetItem(key){
+    if (!storageAllowed()) return null;
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeSetItem(key, value){
+    if (!storageAllowed()) return;
+    try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+  }
+  function safeRemoveItem(key){
+    if (!storageAllowed()) return;
+    try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+  }
 
   // Operator flag manifest (generated by get-silhouettes.sh). Avoids 404s for missing flags.
   const OPERATOR_FLAGS_MANIFEST_URL = './assets/operatorflags/index.json';
@@ -646,7 +693,7 @@
   }
 
   function getStoredLanguage(){
-    try { return localStorage.getItem(LANGUAGE_STORAGE_KEY); } catch (e) { return null; }
+    return safeGetItem(LANGUAGE_STORAGE_KEY);
   }
 
   function findLanguageMatch(requested, available){
@@ -672,12 +719,36 @@
     return null;
   }
 
+  async function fetchJsonSequential(paths){
+    for (const path of paths){
+      try {
+        const resp = await fetch(path, { cache: 'no-store' });
+        if (resp.ok) return await resp.json();
+      } catch (e) {
+        /* try next */
+      }
+    }
+    return null;
+  }
+
+  function languageFromQuery(available){
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const raw = params.get('lang');
+      if (!raw) return null;
+      return findLanguageMatch(raw, available);
+    } catch (e) {
+      return null;
+    }
+  }
+
   function pickLanguage(available, fallbackLang){
     const fallback = normalizeLang(fallbackLang || I18N_FALLBACK.fallbackLanguage || I18N_FALLBACK.defaultLanguage || 'en-US');
+    const fromQuery = languageFromQuery(available);
     const storedRaw = getStoredLanguage();
     const stored = findLanguageMatch(storedRaw, available);
     const browser = detectBrowserLanguage(available);
-    const chain = [stored, browser, fallback];
+    const chain = [fromQuery, stored, browser, fallback];
     for (const cand of chain) {
       const matched = findLanguageMatch(cand, available);
       if (matched) return matched;
@@ -688,21 +759,18 @@
 
   async function loadI18n(){
     let config = I18N_FALLBACK;
-    try {
-      const resp = await fetch('./locales/strings.json', { cache: 'no-store' });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.languages) config = data;
-      }
-    } catch (e) {
-      console.warn('i18n load failed; falling back to built-in strings', e);
-    }
+    const data = await fetchJsonSequential(['./locales/strings.json','../locales/strings.json','/locales/strings.json']);
+    if (data && data.languages) config = data;
     const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
     Object.entries(rawLanguages).forEach(([code, meta]) => {
       const norm = normalizeLang(code);
       if (norm) normalizedLanguages[norm] = meta;
     });
+    if (!Object.keys(normalizedLanguages).length) {
+      const fallbackCode = normalizeLang(config.defaultLanguage || 'en-US') || 'en-US';
+      normalizedLanguages[fallbackCode] = { name: 'English (US)', flag: 'us', flag_path: '', strings: {} };
+    }
     const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
     const chosen = pickLanguage(normalizedLanguages, fallbackLang);
     i18nState.lang = chosen;
@@ -757,6 +825,7 @@
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
     const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
     const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const privacyLink = `<a href="./privacy.html" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
     const footerLicense = t('stationInfo.footer.license', { year: '{{year}}', version: '{{version}}', repoLink }, 'Planefence is (c) 2020-{{year}} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {{version}}');
     const footerContrib = t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Planefence is made possible thanks to our repo contributors and other external contributors.');
     const mapTitle = t('stationMap.label', {}, 'Station coverage map');
@@ -774,6 +843,7 @@ ${messagesDesc}
 <footer>
 <p>${footerLicense}</p>
 <p>${footerContrib}</p>
+<p>${privacyLink}</p>
 </footer>`;
   }
 
@@ -807,16 +877,12 @@ ${messagesDesc}
       }
     }
     function currentDataMode(){
-      try {
-        const saved = localStorage.getItem(DATA_MODE_KEY);
-        return saved === DATA_MODES.PLANE_ALERT ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
-      } catch (e) {
-        return DATA_MODES.PLANEFENCE;
-      }
+      const saved = safeGetItem(DATA_MODE_KEY);
+      return saved === DATA_MODES.PLANE_ALERT ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
     }
     const presetMode = modeFromQuery();
-    if (presetMode) {
-      try { localStorage.setItem(DATA_MODE_KEY, presetMode); } catch (e) { /* ignore */ }
+    if (presetMode && storageAllowed()) {
+      safeSetItem(DATA_MODE_KEY, presetMode);
     }
     let dataMode = presetMode || currentDataMode();
     function isPlaneAlertMode(){
@@ -859,7 +925,7 @@ ${messagesDesc}
       toggle.addEventListener('change', ()=>{
         const newMode = toggle.checked ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
         if (newMode === dataMode) return;
-        try { localStorage.setItem(DATA_MODE_KEY, newMode); } catch (e) { /* ignore */ }
+        safeSetItem(DATA_MODE_KEY, newMode);
         dataMode = newMode;
         applyDataModeUI();
         applyPlaneAlertColumnVisibility();
@@ -880,12 +946,12 @@ ${messagesDesc}
       toggle.setAttribute('aria-label', label);
       try { toggle.checked = dark; } catch(e) { /* ignore */ }
     }
-    localStorage.setItem(THEME_KEY, theme);
+    safeSetItem(THEME_KEY, theme);
     // After theme flip, update arrow images to day/night variants without full re-render
     try { updateAngleImagesForTheme(dark); } catch(e) { /* ignore */ }
   }
   function currentTheme(){
-    const saved = localStorage.getItem(THEME_KEY);
+    const saved = safeGetItem(THEME_KEY);
     if (saved === 'dark' || saved === 'light') return saved;
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
@@ -938,6 +1004,7 @@ ${messagesDesc}
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
     setupLanguageSelector();
     applyTranslationsToDom();
+    setupPrivacyBanner();
     renderFooterText();
     updateFooterVersionText('');
     refreshStationInfoContent();
@@ -1057,8 +1124,19 @@ ${messagesDesc}
   }
 
   function selectLanguage(code){
-    try { localStorage.setItem(LANGUAGE_STORAGE_KEY, code); } catch (e) { /* ignore */ }
-    location.reload();
+    const normalized = normalizeLang(code);
+    if (storageAllowed()) {
+      safeSetItem(LANGUAGE_STORAGE_KEY, normalized);
+      location.reload();
+      return;
+    }
+    try {
+      const url = new URL(window.location.href);
+      if (normalized) url.searchParams.set('lang', normalized);
+      window.location.href = url.toString();
+    } catch (e) {
+      location.reload();
+    }
   }
 
   function setupLanguageSelector(){
@@ -1071,6 +1149,32 @@ ${messagesDesc}
       if (menu.contains(ev.target) || btn.contains(ev.target)) return;
       toggleLanguageMenu(false);
     });
+  }
+
+  function updatePrivacyBannerTexts(){
+    const banner = document.getElementById('privacyBanner');
+    if (!banner) return;
+    const titleEl = document.getElementById('privacyBannerTitle');
+    const bodyEl = document.getElementById('privacyBannerBody');
+    const linkEl = document.getElementById('privacyBannerLink');
+    const acceptEl = document.getElementById('privacyAcceptBtn');
+    const declineEl = document.getElementById('privacyDeclineBtn');
+    if (titleEl) titleEl.textContent = t('privacy.banner.title', {}, 'We store only preference data in your browser.');
+    if (bodyEl) bodyEl.textContent = t('privacy.banner.body', {}, 'Allow us to remember language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
+    if (linkEl) {
+      linkEl.textContent = t('privacy.banner.more', {}, 'Read the Privacy Statement');
+      linkEl.href = './privacy.html';
+    }
+    if (acceptEl) acceptEl.textContent = t('privacy.banner.accept', {}, 'Allow preference storage');
+    if (declineEl) declineEl.textContent = t('privacy.banner.decline', {}, 'Continue without saving');
+  }
+
+  function persistCurrentPreferences(){
+    try {
+      safeSetItem(THEME_KEY, document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+      safeSetItem(DATA_MODE_KEY, dataMode);
+      safeSetItem(LANGUAGE_STORAGE_KEY, i18nState.lang);
+    } catch (e) { /* ignore */ }
   }
 
   function applyTranslationsToDom(){
@@ -1114,6 +1218,27 @@ ${messagesDesc}
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
+    updatePrivacyBannerTexts();
+  }
+
+  function setupPrivacyBanner(){
+    const banner = document.getElementById('privacyBanner');
+    if (!banner) return;
+    const acceptEl = document.getElementById('privacyAcceptBtn');
+    const declineEl = document.getElementById('privacyDeclineBtn');
+    const syncVisibility = () => {
+      const shouldHide = storageAllowed();
+      banner.classList.toggle('hidden', shouldHide);
+    };
+    syncVisibility();
+    acceptEl?.addEventListener('click', () => {
+      allowPreferenceStorage();
+      persistCurrentPreferences();
+      syncVisibility();
+    });
+    declineEl?.addEventListener('click', () => {
+      banner.classList.add('hidden');
+    });
   }
 
   function renderFooterText(){
@@ -1124,9 +1249,10 @@ ${messagesDesc}
     const repoLink = `<a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
     const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
     const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
+    const privacyLink = `<a href="./privacy.html" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy')}</a>`;
     const copyrightText = t('footer.copyright', { year: yearSpan }, `(c) 2020-${yearSpan} Ramon F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see`);
     const versionHtml = `<span id="appVersionText">${t('footer.version.placeholder', {}, 'Version --')}</span>`;
-    footerSmall.innerHTML = `${copyrightText} ${repoLink}. ${t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Thanks to our repo contributors and other external contributors.')}. ${versionHtml}`;
+    footerSmall.innerHTML = `${copyrightText} ${repoLink}. ${t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Thanks to our repo contributors and other external contributors.')}. ${privacyLink}. ${versionHtml}`;
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear') || footerSmall.querySelector('#footerYear');
   }
@@ -2218,17 +2344,17 @@ ${messagesDesc}
     // Default ordering: newest (highest index) first
     order: [[0, 'desc']],
       language: {
-        emptyTable: t('table.empty'),
-        search: t('table.search'),
-        lengthMenu: t('table.lengthMenuLabel'),
-        info: t('table.info'),
-        infoEmpty: t('table.infoEmpty'),
-        zeroRecords: t('table.zeroRecords'),
+        emptyTable: t('table.empty', {}, 'Waiting for aircraft... Data will appear as it arrives.'),
+        search: t('table.search', {}, 'Search:'),
+        lengthMenu: t('table.lengthMenuLabel', {}, 'Show _MENU_ entries'),
+        info: t('table.info', {}, 'Showing _START_ to _END_ of _TOTAL_ entries'),
+        infoEmpty: t('table.infoEmpty', {}, 'Showing 0 to 0 of 0 entries'),
+        zeroRecords: t('table.zeroRecords', {}, 'No matching records found'),
         paginate: {
-          first: t('table.paginate.first'),
-          previous: t('table.paginate.previous'),
-          next: t('table.paginate.next'),
-          last: t('table.paginate.last')
+          first: t('table.paginate.first', {}, 'First'),
+          previous: t('table.paginate.previous', {}, 'Previous'),
+          next: t('table.paginate.next', {}, 'Next'),
+          last: t('table.paginate.last', {}, 'Last')
         }
       },
       columns: viewCols.map(col => ({ title: columnTitle(col) })),
