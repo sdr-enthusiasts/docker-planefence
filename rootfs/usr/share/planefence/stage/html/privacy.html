@@ -222,11 +222,41 @@
   function resolveFlagSrc(flagPath, flagCode, fallbackCode){ const custom=(flagPath||'').trim(); if(custom) return custom; const code=flagCode||fallbackCode||'un'; return `${FLAG_ICON_SRC_BASE}${code}.svg`; }
   function t(key, params, fallback){ const primary=i18nState.strings?.[key]; const fb=i18nState.fallbackStrings?.[key]; const chosen = (primary ?? fb ?? fallback ?? key); return applyParams(String(chosen), params); }
   function findLanguageMatch(requested, available){ if(!available) return null; const norm=normalizeLang(requested); if(!norm) return null; if(available[norm]) return norm; const base=norm.split('-')[0]; const baseExact=Object.keys(available).find(k=>normalizeLang(k)===base); if(baseExact) return normalizeLang(baseExact); const prefixed=Object.keys(available).find(k=>normalizeLang(k).startsWith(`${base}-`)); if(prefixed) return normalizeLang(prefixed); return null; }
+  function buildNearbyLocalesPath(filename){
+    try {
+      const url = new URL(window.location.href);
+      const segments = url.pathname.split('/');
+      segments.pop();
+      const base = segments.join('/') || '/';
+      return `${base}/${filename}`.replace(/\/+/g, '/');
+    } catch (e) {
+      return filename;
+    }
+  }
+
+  function parseJsonSafely(text){
+    if (typeof text !== 'string') return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      /* try again after stripping control characters (e.g., broken line wraps) */
+      try {
+        const sanitized = text.replace(/[\u0000-\u001F]+/g, '');
+        return JSON.parse(sanitized);
+      } catch (e2) {
+        return null;
+      }
+    }
+  }
+
   async function fetchJsonSequential(paths){
     for (const path of paths){
       try {
         const resp = await fetch(path, { cache: 'no-store' });
-        if (resp.ok) return await resp.json();
+        if (!resp.ok) continue;
+        const text = await resp.text();
+        const parsed = parseJsonSafely(text);
+        if (parsed) return parsed;
       } catch (e) {
         /* ignore and try next */
       }
@@ -259,7 +289,11 @@
 
   async function loadI18n(){
     let config = I18N_FALLBACK;
-    const data = await fetchJsonSequential(['./locales/strings.json','../locales/strings.json','/locales/strings.json']);
+    const data = await fetchJsonSequential([
+      buildNearbyLocalesPath('locales/strings.json'),
+      './locales/strings.json',
+      './locales/strings.json'
+    ]);
     if (data && data.languages) config = data;
     const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
@@ -280,7 +314,10 @@
 
   async function loadPrivacyStrings(preferredLanguage){
     let config = PRIVACY_I18N_FALLBACK;
-    const data = await fetchJsonSequential(['./locales/privacy.json','../locales/privacy.json','/locales/privacy.json']);
+    const data = await fetchJsonSequential([
+      buildNearbyLocalesPath('locales/privacy.json'),
+      './locales/privacy.json'
+    ]);
     if (data && data.languages) config = data;
     const rawLanguages = config.languages || PRIVACY_I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
