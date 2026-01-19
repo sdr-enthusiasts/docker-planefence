@@ -555,7 +555,7 @@
   </main>
 
   <footer>
-    <small class="muted">&copy; 2020-<span id="footerYear">2025</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <a href="./privacy.html" target="_blank" rel="noreferrer noopener">Privacy Policy</a>. <span id="appVersionText">Version --</span></small>
+    <small class="muted">&copy; 2020-<span id="footerYear">2026</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <a href="./privacy.html" target="_blank" rel="noreferrer noopener">Privacy Policy</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
@@ -1251,7 +1251,7 @@ ${messagesDesc}
     if (!footerSmall) return;
     const year = String(new Date().getFullYear());
     const yearSpan = `<span id="footerYear">${year}</span>`;
-    const repoLink = `<a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
+    const repoLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
     const repoContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">${t('footer.contributors', {}, 'repo contributors')}</a>`;
     const externalContribLink = `<a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">${t('footer.externalContributors', {}, 'contributors')}</a>`;
     const privacyLink = `<a href="${buildPrivacyUrl(i18nState.lang)}" target="_blank" rel="noreferrer noopener">${t('footer.privacy', {}, 'Privacy Policy')}</a>`;
