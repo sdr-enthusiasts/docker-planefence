@@ -146,7 +146,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacy Policy"
       }
     },
     "es-ES": {
@@ -293,7 +293,7 @@
         "privacy.banner.accept": "Permitir guardar preferencias",
         "privacy.banner.decline": "Seguir sin guardar",
         "privacy.banner.more": "Leer la Declaración de Privacidad",
-        "footer.privacy": "Privacidad"
+        "footer.privacy": "Política de privacidad"
       }
     },
     "ca-ES": {
@@ -440,7 +440,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Política de privacitat"
       }
     },
     "eu-ES": {
@@ -587,7 +587,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Pribatutasun politika"
       }
     },
     "gl-ES": {
@@ -734,13 +734,13 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Política de privacidade"
       }
     },
     "qu-PE": {
       "name": "Quechua",
       "flag": "pe",
-      "flag_path": "",
+      "flag_path": "./assets/flags/Wiphala.jpg",
       "strings": {
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
@@ -881,7 +881,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Política de privacidad"
       }
     },
     "nl-NL": {
@@ -1028,7 +1028,7 @@
         "privacy.banner.accept": "Voorkeuren opslaan toestaan",
         "privacy.banner.decline": "Doorgaan zonder op te slaan",
         "privacy.banner.more": "Lees de privacyverklaring",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacybeleid"
       }
     },
     "fy-NL": {
@@ -1175,7 +1175,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacybelied"
       }
     },
     "li-NL": {
@@ -1322,7 +1322,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacybeleid"
       }
     },
     "de-DE": {
@@ -1469,7 +1469,7 @@
         "privacy.banner.accept": "Einstellungen speichern erlauben",
         "privacy.banner.decline": "Ohne Speichern fortfahren",
         "privacy.banner.more": "Datenschutzerklärung lesen",
-        "footer.privacy": "Datenschutz"
+        "footer.privacy": "Datenschutzrichtlinie"
       }
     },
     "de-CH": {
@@ -1616,7 +1616,7 @@
         "privacy.banner.accept": "Einstellungen speichern erlauben",
         "privacy.banner.decline": "Ohne Speichern fortfahren",
         "privacy.banner.more": "Datenschutzerklärung lesen",
-        "footer.privacy": "Datenschutz"
+        "footer.privacy": "Datenschutzrichtlinie"
       }
     },
     "fr-FR": {
@@ -1759,7 +1759,7 @@
         "privacy.banner.accept": "Autoriser le stockage des préférences",
         "privacy.banner.decline": "Continuer sans enregistrer",
         "privacy.banner.more": "Lire la déclaration de confidentialité",
-        "footer.privacy": "Confidentialité"
+        "footer.privacy": "Politique de confidentialité"
       }
     },
     "it-IT": {
@@ -1906,7 +1906,7 @@
         "privacy.banner.accept": "Consenti salvataggio preferenze",
         "privacy.banner.decline": "Continua senza salvare",
         "privacy.banner.more": "Leggi l’informativa sulla privacy",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Informativa sulla privacy"
       }
     },
     "la": {
@@ -2053,7 +2053,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacy Policy"
       }
     },
     "fi-FI": {
@@ -2200,7 +2200,7 @@
         "privacy.banner.accept": "Salli asetusten tallennus",
         "privacy.banner.decline": "Jatka tallentamatta",
         "privacy.banner.more": "Lue tietosuojaseloste",
-        "footer.privacy": "Tietosuoja"
+        "footer.privacy": "Tietosuojakäytäntö"
       }
     },
     "sv-SE": {
@@ -2347,7 +2347,7 @@
         "privacy.banner.accept": "Tillåt lagring av preferenser",
         "privacy.banner.decline": "Fortsätt utan att spara",
         "privacy.banner.more": "Läs integritetspolicyn",
-        "footer.privacy": "Integritet"
+        "footer.privacy": "Integritetspolicy"
       }
     },
     "pt-BR": {
@@ -2494,7 +2494,7 @@
         "privacy.banner.accept": "Permitir salvar preferências",
         "privacy.banner.decline": "Continuar sem salvar",
         "privacy.banner.more": "Ler a Declaração de Privacidade",
-        "footer.privacy": "Privacidade"
+        "footer.privacy": "Política de privacidade"
       }
     },
     "fr-CJ": {
@@ -2641,7 +2641,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Politique de confidentialité"
       }
     },
     "pap-CW": {
@@ -2788,7 +2788,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Politika di privasidat"
       }
     },
     "jam-JM": {
@@ -2935,7 +2935,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Privacy Policy"
       }
     },
     "uk-UA": {
@@ -3082,7 +3082,7 @@
         "privacy.banner.accept": "Дозволити зберігання налаштувань",
         "privacy.banner.decline": "Продовжити без збереження",
         "privacy.banner.more": "Прочитати політику конфіденційності",
-        "footer.privacy": "Конфіденційність"
+        "footer.privacy": "Політика конфіденційності"
       }
     },
     "en-PI": {
@@ -3229,7 +3229,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Ivacypray Olicypay"
       }
     },
     "en-PT": {
@@ -3376,7 +3376,7 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy"
+        "footer.privacy": "Code o' Privacy"
       }
     }
   }
