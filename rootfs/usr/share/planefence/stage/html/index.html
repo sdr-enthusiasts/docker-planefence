@@ -979,8 +979,7 @@ ${messagesDesc}
   })();
 
   // -------- Helpers --------
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    await i18nReady;
+  document.addEventListener('DOMContentLoaded', ()=>{
     prog = document.getElementById('progress');
     if (prog) prog.textContent = isPlaneAlertMode()
       ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
@@ -1010,15 +1009,8 @@ ${messagesDesc}
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
-    setupLanguageSelector();
-    applyTranslationsToDom();
-    setupPrivacyBanner();
-    renderFooterText();
-    updateFooterVersionText('');
-    refreshStationInfoContent();
-    updateStationHeadline();
-    updateStationMotd();
-    updateHeatmapButtonState();
+
+    // Wire up interactive controls immediately so they respond even while data loads.
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
     stationInfoModal?.addEventListener('click', (ev) => {
@@ -1047,6 +1039,22 @@ ${messagesDesc}
         newUpdatesBtn.style.display = 'none';
       } catch (e) { console.error('newUpdates click', e); }
     });
+
+    // Defer translation-dependent work until i18n is ready without blocking interactivity.
+    i18nReady.then(() => {
+      setupLanguageSelector();
+      applyTranslationsToDom();
+      setupPrivacyBanner();
+      renderFooterText();
+      updateFooterVersionText('');
+      refreshStationInfoContent();
+      updateStationHeadline();
+      updateStationMotd();
+      updateHeatmapButtonState();
+      if (prog) prog.textContent = isPlaneAlertMode()
+        ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
+        : t('status.loading', {}, 'Loading...');
+    }).catch((e) => console.error('i18n init failed', e));
   }, { once: true });
 
   const stationInfoState = {
