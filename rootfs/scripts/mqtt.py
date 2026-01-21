@@ -45,7 +45,7 @@ def main():
 
     # Publish the message
     try:
-        publish.single(topic=args.topic, payload=args.message, qos=args.qos, retain=True, hostname=args.broker, port=args.port, client_id=args.client_id, **({"auth":{'username':args.username, 'password':args.password}} if not args.username or args.password else {}), **({"tls":ssl.create_default_context()} if args.tls else {}))
+        publish.single(topic=args.topic, payload=args.message, qos=args.qos, retain=True, hostname=args.broker, port=args.port, client_id=args.client_id, **({"auth": {'username': args.username, 'password': args.password}} if args.username and args.password else {}), **({"tls": ssl.create_default_context()} if args.tls else {}))
         print(f"Message '{args.message}' published to topic '{args.topic}' with QoS {args.qos}.")
     except Exception as e:
         print(f"Failure in publishing message!")
