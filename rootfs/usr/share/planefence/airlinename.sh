@@ -40,7 +40,7 @@
 # -----------------------------------------------------------------------------------
 #
 
-source /scripts/common
+source /scripts/pf-common
 
 CACHEFILE="/usr/share/planefence/persist/.internal/planeownerscache.txt"
 
@@ -124,7 +124,7 @@ fi
 
 # Nothing? Then do an FAA DB lookup
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "N" ]]; then
-  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" 2>/dev/null | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g; s/[[:space:]]\+$//')"
+  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=$a" 2>/dev/null | grep 'data-label=\"Name\"'|head -1 | sed 's|.*>\(.*\)<.*|\1|g; s/[[:space:]]\+$//')"  || true
   # If we got something, make sure it will get added to the cache:
   if [[ -n "$b" ]]; then
     MUSTCACHE=1
@@ -136,7 +136,7 @@ fi
 if [[ -z "$b" ]] && [[ "${a:0:1}" == "C" ]]; then
   a_clean="${a//-/}"     # remove any -
   a_clean="${a_clean:1}" # remove the leading C
-  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" 2>/dev/null | hxnormalize -x)"
+  b="$(timeout 3 curl --compressed -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0" "https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${a_clean}%7c" 2>/dev/null | hxnormalize -x)" || true
   name="$(hxselect -i -c div#divTradeName div.col-md-7 <<< "$b" | xargs)"
   if [[ -z "$name" ]]; then
     name="$(hxselect -c 'div#dvOwnerName > div.col-md-6.mrgn-bttm-md' <<< "$b" | xargs)"
@@ -180,12 +180,12 @@ fi
 
 # Still nothing - if it looks like an flight number, then try the Planefence server as a last resort
 if chk_enabled "$CHECKREMOTEDB" && [[ -z "$b" ]] && [[ "$(echo "$a" | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null ; echo $?)" == "0" ]]; then
-    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)"
+    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)" || true
     if [[ "${b:0:1}" == "#" ]]; then b="#NOTFOUND"; fi # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
 elif chk_enabled "$CHECKREMOTEDB" && [[ -z "$b" ]] && [[ "${a:0:4}" == "HMED" ]]
 then
-    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)"
+    b="$(curl -sSL "$REMOTEURL/?flight=$a&icao=$c" 2>/dev/null)" || true
     if [[ "${b:0:1}" == "#" ]]; then b="#NOTFOUND"; fi # results starting with # are errors or not-founds
     MUSTCACHE=2 # 2 means only cache the airline prefix
     if [[ -n "$b" ]]; then

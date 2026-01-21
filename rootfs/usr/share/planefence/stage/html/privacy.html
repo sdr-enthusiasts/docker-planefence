@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privacy Statement</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666;
+      --soft: #f5f5f5;
+      --accent: #0b5fff;
+      --link: #0b5fff;
+      --link-visited: #5a32a3;
+    }
+    html.dark {
+      --bg: #0f1115;
+      --fg: #e6e6e6;
+      --muted: #9aa0a6;
+      --soft: #1a1d23;
+      --accent: #6ca0ff;
+      --link: #8fb1ff;
+      --link-visited: #c6a6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header, footer {
+      padding: 1rem 1.25rem;
+      background: var(--soft);
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    header { position: sticky; top: 0; z-index: 40; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 1.25rem; }
+    .spacer { flex: 1; }
+    a { color: var(--link); text-decoration: none; }
+    a:visited { color: var(--link-visited); }
+    main { flex: 1; width: min(960px, 95vw); margin: 1.5rem auto 2rem; padding: 0 1rem; }
+    h2 { margin-top: 1.75rem; }
+    ul { padding-left: 1.25rem; }
+    .language-toggle { position: relative; display: flex; align-items: center; }
+    .language-button { display: inline-flex; align-items: center; gap: .35rem; background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer; }
+    .language-button:hover { border-color: var(--fg); }
+    .language-flag { width: 1.25rem; height: .95rem; object-fit: cover; border-radius: 2px; box-shadow: 0 0 1px rgba(0,0,0,0.35); }
+    .language-label { font-size: .9rem; }
+    .language-menu { position: absolute; top: calc(100% + .35rem); right: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--soft); border-radius: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: .35rem 0; min-width: 11rem; z-index: 60; display: none; }
+    html.dark .language-menu { border-color: rgba(255,255,255,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.55); }
+    .language-menu.open { display: block; }
+    .language-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
+    .language-menu button:hover, .language-menu button:focus-visible { background: var(--soft); outline: none; }
+    button, .btn { background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer; }
+    button:hover, .btn:hover { border-color: var(--fg); }
+    .back-link { font-weight: 600; }
+    .eyebrow { color: var(--muted); margin: 0 0 .25rem 0; font-size: .95rem; }
+    .card { background: var(--bg); color: var(--fg); border: 1px solid rgba(0,0,0,0.08); border-radius: 1rem; padding: 1.25rem; box-shadow: 0 12px 36px rgba(0,0,0,0.10); }
+    html.dark .card { border-color: rgba(255,255,255,0.12); box-shadow: 0 12px 36px rgba(0,0,0,0.25); }
+    .privacy-banner { position: fixed; inset: auto 1rem 1rem 1rem; z-index: 1200; background: var(--soft); color: var(--fg); border: 1px solid var(--muted); border-radius: .75rem; padding: .85rem 1rem; box-shadow: 0 12px 36px rgba(0,0,0,0.22); display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    html.dark .privacy-banner { border-color: rgba(255,255,255,0.12); box-shadow: 0 12px 36px rgba(0,0,0,0.45); }
+    .privacy-banner.hidden { display: none; }
+    .privacy-banner__text { flex: 1; min-width: 240px; }
+    .privacy-banner__title { font-weight: 700; margin-bottom: .25rem; }
+    .privacy-banner__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { opacity: .92; }
+    .btn-secondary { background: transparent; border-color: var(--muted); color: var(--fg); }
+    .privacy-link { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; }
+    @media (max-width: 640px) {
+      .language-menu { left: 50%; right: auto; transform: translateX(-50%); min-width: max(11rem, 70vw); max-width: calc(100vw - 1.25rem); }
+      .privacy-banner { inset: auto .75rem .75rem .75rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="pageHeading">Privacy Statement</h1>
+    <div class="spacer"></div>
+    <div class="language-toggle" id="languageSelector" aria-label="Language selector">
+      <button id="languageButton" class="language-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <img id="languageButtonFlag" class="language-flag" alt="" src="" />
+        <span id="languageButtonLabel" class="language-label"></span>
+      </button>
+      <div id="languageMenu" class="language-menu" role="listbox" aria-label="Languages"></div>
+    </div>
+    <a class="back-link" href="./index.html">Back</a>
+  </header>
+
+  <div id="privacyBanner" class="privacy-banner hidden" role="region" aria-live="polite">
+    <div class="privacy-banner__text">
+      <div id="privacyBannerTitle" class="privacy-banner__title">We store only preference data in your browser.</div>
+      <div id="privacyBannerBody">Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.</div>
+      <a id="privacyBannerLink" class="privacy-link" href="./privacy.html" target="_blank" rel="noreferrer noopener">Read the Privacy Statement</a>
+    </div>
+    <div class="privacy-banner__actions">
+      <button type="button" id="privacyAcceptBtn" class="btn btn-primary">Allow preference storage</button>
+      <button type="button" id="privacyDeclineBtn" class="btn btn-secondary">Continue without saving</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="card">
+      <p class="eyebrow" id="lastUpdated">Last updated: 18-Jan-2026</p>
+      <div id="privacyContent"></div>
+    </div>
+  </main>
+
+  <footer>
+    <small class="muted">&copy; 2020-<span id="footerYear"></span> Ram&oacute;n F. Kolb, kx1t. <a href="https://github.com/kx1t/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>.</small>
+  </footer>
+
+<script>
+  const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
+  const LANGUAGE_STORAGE_KEY = 'pf-language';
+  const PRIVACY_CONSENT_KEY = 'pf-privacy-consent';
+  const THEME_KEY = 'pf-theme';
+  const I18N_FALLBACK = window.I18N_FALLBACK || { defaultLanguage: 'en-US', fallbackLanguage: 'en-US', languages: {} };
+  const PRIVACY_FULLTEXT_FALLBACK = `
+<p>Planefence ("we," "us," or "our") is committed to protecting your privacy. This Privacy Statement explains how we handle information when you use our website.</p>
+<h2>1. No Personal Information Collected</h2>
+<p>We designed this website so that we do not collect, store, or process personal information within the meaning of the EU/UK General Data Protection Regulation ("GDPR"), the California Consumer Privacy Act and California Privacy Rights Act ("CCPA/CPRA"), and Brazil's Lei Geral de Protecao de Dados Pessoais ("LGPD"). Note that your access request may pass through other web servers before it reaches us, and that these servers may handle your data differently. We have no knowledge of these, and they are outside of our span of control; you should manage your privacy requirements directly with these services if needed.</p>
+<p>We do not collect, store, or process any information that identifies or can reasonably be linked to an individual ("personal information" or "personal data"), such as:</p>
+<ul>
+<li>Names, email addresses, phone numbers, or postal addresses</li>
+<li>User accounts or login details</li>
+<li>IP addresses linked to individuals</li>
+<li>Online identifiers or profiling data</li>
+<li>Location data</li>
+<li>Payment or transaction information</li>
+</ul>
+<p>We also do not use analytics, advertising cookies, tracking pixels, or similar technologies that would allow us or third parties to identify or track individual users over time.</p>
+<p>Because we do not collect personal information, we:</p>
+<ul>
+<li>Do not sell, share, or disclose personal information to third parties</li>
+<li>Do not use personal information for advertising, profiling, or marketing</li>
+<li>Do not conduct automated decision-making or profiling based on personal data</li>
+</ul>
+<h2>2. Information Stored in Your Browser (Local Storage / Cookies)</h2>
+<p>The website stores a very small amount of information only in your browser, solely to remember your preferences. This information is not sent to our servers and is not accessible to us in a form that identifies you.</p>
+<p>We may store preference data in your browser (via local storage, cookies, or similar technologies), included but not limited to:</p>
+<ul>
+<li>Theme preference: whether you prefer dark mode or light mode</li>
+<li>Last viewed page: whether you last visited the "planefence" or "plane-alert" page</li>
+<li>Language preference: your selected language for the website</li>
+<li>Consent record (if opted in): whether you consented to us storing these preferences in your browser</li>
+</ul>
+<p>These preference values:</p>
+<ul>
+<li>Are used only to improve your experience (e.g., remembering your chosen theme, language, and last page)</li>
+<li>Are stored locally in your browser and are not transmitted to us as personal data</li>
+<li>Do not contain your name, email, IP address, or any other personal identifier</li>
+</ul>
+<p>If you choose not to allow this preference storage, you can still use the website, but you may have to re-select your preferences each time you visit.</p>
+<h2>3. Legal Basis and Compliance (GDPR, CCPA/CPRA, LGPD)</h2>
+<p>Under the GDPR and LGPD, we do not process personal data. The limited preference information stored in your browser is either necessary for providing the website's basic functionality and user experience (e.g., keeping your language selection), or stored with your consent where applicable. You may disable this storage at any time through your browser settings or by adjusting the preferences available on our website (if provided).</p>
+<p>For California residents: We do not collect, sell, or share "personal information" as defined by the CCPA/CPRA. We do not disclose personal information to third parties for monetary or other valuable consideration. We do not use or disclose "sensitive personal information." Because we do not collect personal information, the typical CCPA/CPRA rights (such as the right to access, delete, or correct personal information, and the right to opt out of sale or sharing) are generally not applicable to our website. If you believe that we may have inadvertently collected personal information, please contact us using the details below, and we will address your request in accordance with applicable law.</p>
+<h2>4. Your Choices and Control</h2>
+<p>You can control how preference information is stored in your browser in the following ways:</p>
+<ul>
+<li><strong>Browser settings:</strong> You can block or delete cookies and local storage data through your browser's privacy or security settings. If you do so, the website may no longer remember your dark/light mode, last visited page, language, or consent status.</li>
+<li><strong>On-site settings (if provided):</strong> We may offer an in-page control (e.g., a toggle or banner) allowing you to opt in or out of storing preferences. If you opt out, we will attempt to stop storing new preference data in your browser, but your browser may still retain existing data until you clear it.</li>
+</ul>
+<h2>5. Children's Privacy</h2>
+<p>Our website is not directed to children under the age of 13 (or a higher age as defined by local law), and we do not knowingly collect personal information from children. Since we do not collect personal information at all, we do not create profiles of children or target them for any purposes.</p>
+<h2>6. Third-Party Services</h2>
+<p>We design our website not to incorporate third-party analytics, advertising, or tracking services that collect personal information. If in the future we integrate any third-party content or tools that could process personal information, we will update this Privacy Statement, and provide clear information and controls consistent with applicable privacy laws.</p>
+<h2>7. International Users</h2>
+<p>Our website may be accessed from different countries, but our practices are designed so that we do not collect personal information from any user, regardless of location. To the extent any privacy law (such as the GDPR or LGPD) applies, our approach is to minimize data collection to non-personal preference data stored locally in your browser only.</p>
+<h2>8. Changes to This Privacy Statement</h2>
+<p>We may update this Privacy Statement from time to time, for example, if we change how we store preferences or if we begin processing personal information in the future. When we make changes, we will update the "Last updated" date at the top of this page, and post the revised Privacy Statement on this page. If we ever begin collecting personal information, we will update this Privacy Statement before such collection begins and, where required, obtain your consent.</p>
+<h2>9. Contact Us</h2>
+<p>If you have any questions about this Privacy Statement or believe that we may have inadvertently collected personal information, you can contact us at:</p>
+<p>Email: planefence (at) kx1t (dot) com<br>Postal address: PO Box 11, Belmont, MA 02478, USA</p>
+<p>We will review and respond in accordance with applicable privacy laws.</p>
+`;
+  const PRIVACY_I18N_FALLBACK = {
+    defaultLanguage: 'en-US',
+    fallbackLanguage: 'en-US',
+    languages: {
+      'en-US': {
+        name: 'English (US)',
+        flag: 'us',
+        flag_path: '',
+        strings: {
+          'privacy.title': 'Privacy Statement',
+          'privacy.lastUpdated': 'Last updated: 18-Jan-2026',
+          'privacy.fullText': PRIVACY_FULLTEXT_FALLBACK
+        }
+      }
+    }
+  };
+
+  function readStoredConsent(){ try { return localStorage.getItem(PRIVACY_CONSENT_KEY) === 'granted'; } catch (e) { return false; } }
+  let preferenceStorageAllowed = readStoredConsent();
+  function storageAllowed(){ return preferenceStorageAllowed === true; }
+  function allowPreferenceStorage(){ preferenceStorageAllowed = true; try { localStorage.setItem(PRIVACY_CONSENT_KEY, 'granted'); } catch (e) {} }
+  function safeGetItem(key){ if (!storageAllowed()) return null; try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function safeSetItem(key, value){ if (!storageAllowed()) return; try { localStorage.setItem(key, value); } catch (e) {} }
+
+  function normalizeLang(code){
+    const raw = (code || '').replace(/_/g, '-').trim();
+    if (!raw) return '';
+    const parts = raw.split('-');
+    const base = parts.shift()?.toLowerCase() || '';
+    const region = parts.shift();
+    const regionPart = region ? region.toUpperCase() : '';
+    const rest = parts.length ? `-${parts.join('-')}` : '';
+    return regionPart ? `${base}-${regionPart}${rest}` : `${base}${rest}`;
+  }
+  function applyParams(template, params){ if (!params) return template; return template.replace(/\{(\w+)\}/g, (m, key) => (params[key] ?? m)); }
+  function resolveFlagSrc(flagPath, flagCode, fallbackCode){ const custom=(flagPath||'').trim(); if(custom) return custom; const code=flagCode||fallbackCode||'un'; return `${FLAG_ICON_SRC_BASE}${code}.svg`; }
+  function t(key, params, fallback){ const primary=i18nState.strings?.[key]; const fb=i18nState.fallbackStrings?.[key]; const chosen = (primary ?? fb ?? fallback ?? key); return applyParams(String(chosen), params); }
+  function findLanguageMatch(requested, available){ if(!available) return null; const norm=normalizeLang(requested); if(!norm) return null; if(available[norm]) return norm; const base=norm.split('-')[0]; const baseExact=Object.keys(available).find(k=>normalizeLang(k)===base); if(baseExact) return normalizeLang(baseExact); const prefixed=Object.keys(available).find(k=>normalizeLang(k).startsWith(`${base}-`)); if(prefixed) return normalizeLang(prefixed); return null; }
+  function buildNearbyLocalesPath(filename){
+    try {
+      const url = new URL(window.location.href);
+      const segments = url.pathname.split('/');
+      segments.pop();
+      const base = segments.join('/') || '/';
+      return `${base}/${filename}`.replace(/\/+/g, '/');
+    } catch (e) {
+      return filename;
+    }
+  }
+
+  function parseJsonSafely(text){
+    if (typeof text !== 'string') return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      /* try again after stripping control characters (e.g., broken line wraps) */
+      try {
+        const sanitized = text.replace(/[\u0000-\u001F]+/g, '');
+        return JSON.parse(sanitized);
+      } catch (e2) {
+        return null;
+      }
+    }
+  }
+
+  async function fetchJsonSequential(paths){
+    for (const path of paths){
+      try {
+        const resp = await fetch(path, { cache: 'no-store' });
+        if (!resp.ok) continue;
+        const text = await resp.text();
+        const parsed = parseJsonSafely(text);
+        if (parsed) return parsed;
+      } catch (e) {
+        /* ignore and try next */
+      }
+    }
+    return null;
+  }
+  function detectBrowserLanguage(available){ if(!available) return null; const langs=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language]).filter(Boolean); for(const raw of langs){ const match=findLanguageMatch(raw, available); if(match) return match; } return null; }
+  function languageFromQuery(available){ try{ const params=new URLSearchParams(window.location.search||''); const raw=params.get('lang'); if(!raw) return null; return findLanguageMatch(raw, available); }catch(e){ return null; } }
+  function getStoredLanguage(){ return safeGetItem(LANGUAGE_STORAGE_KEY); }
+  function pickLanguage(available, fallbackLang){ const fallback=normalizeLang(fallbackLang||I18N_FALLBACK.fallbackLanguage||I18N_FALLBACK.defaultLanguage||'en-US'); const fromQuery=languageFromQuery(available); const stored=findLanguageMatch(getStoredLanguage(), available); const browser=detectBrowserLanguage(available); const chain=[fromQuery, stored, browser, fallback]; for(const cand of chain){ const matched=findLanguageMatch(cand, available); if(matched) return matched; } const any=Object.keys(available)[0]; return any || fallback || 'en-US'; }
+
+  const i18nState = { lang: I18N_FALLBACK.defaultLanguage || 'en-US', strings: I18N_FALLBACK.languages?.['en-US']?.strings || {}, fallbackStrings: I18N_FALLBACK.languages?.['en-US']?.strings || {}, languages: I18N_FALLBACK.languages || {} };
+  const privacyState = { lang: PRIVACY_I18N_FALLBACK.defaultLanguage || 'en-US', strings: PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {}, fallbackStrings: PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {}, languages: PRIVACY_I18N_FALLBACK.languages || {} };
+
+  function buildPrivacyUrl(lang){
+    const chosen = normalizeLang(lang || privacyState.lang || i18nState.lang || 'en-US');
+    if (!chosen) return './privacy.html';
+    const params = new URLSearchParams();
+    params.set('lang', chosen);
+    return `./privacy.html?${params.toString()}`;
+  }
+
+  function buildIndexUrlWithLang(lang){
+    const chosen = normalizeLang(lang || i18nState.lang || 'en-US');
+    if (!chosen) return './index.html';
+    const params = new URLSearchParams();
+    params.set('lang', chosen);
+    return `./index.html?${params.toString()}`;
+  }
+
+  async function loadI18n(){
+    let config = I18N_FALLBACK;
+    const data = await fetchJsonSequential([
+      buildNearbyLocalesPath('locales/strings.json'),
+      './locales/strings.json',
+      './locales/strings.json'
+    ]);
+    if (data && data.languages) config = data;
+    const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
+    const normalizedLanguages = {};
+    Object.entries(rawLanguages).forEach(([code, meta]) => { const norm = normalizeLang(code); if (norm) normalizedLanguages[norm] = meta; });
+    if (!Object.keys(normalizedLanguages).length) {
+      const fallbackCode = normalizeLang(config.defaultLanguage || 'en-US') || 'en-US';
+      normalizedLanguages[fallbackCode] = { name: 'English (US)', flag: 'us', flag_path: '', strings: {} };
+    }
+    const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
+    const chosen = pickLanguage(normalizedLanguages, fallbackLang);
+    i18nState.lang = chosen;
+    i18nState.languages = normalizedLanguages;
+    i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || {};
+    i18nState.strings = (normalizedLanguages[chosen]?.strings) || i18nState.fallbackStrings;
+    try { document.documentElement.lang = chosen; } catch (e) {}
+    return i18nState;
+  }
+
+  async function loadPrivacyStrings(preferredLanguage){
+    let config = PRIVACY_I18N_FALLBACK;
+    const data = await fetchJsonSequential([
+      buildNearbyLocalesPath('locales/privacy.json'),
+      './locales/privacy.json'
+    ]);
+    if (data && data.languages) config = data;
+    const rawLanguages = config.languages || PRIVACY_I18N_FALLBACK.languages || {};
+    const normalizedLanguages = {};
+    Object.entries(rawLanguages).forEach(([code, meta]) => { const norm = normalizeLang(code); if (norm) normalizedLanguages[norm] = meta; });
+    if (!Object.keys(normalizedLanguages).length) {
+      const fallbackCode = normalizeLang(config.defaultLanguage || 'en-US') || 'en-US';
+      normalizedLanguages[fallbackCode] = { name: 'English (US)', flag: 'us', flag_path: '', strings: PRIVACY_FULLTEXT_FALLBACK ? { 'privacy.fullText': PRIVACY_FULLTEXT_FALLBACK, 'privacy.title': 'Privacy Statement', 'privacy.lastUpdated': 'Last updated: 18-Jan-2026' } : {} };
+    }
+    const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
+    const preferred = findLanguageMatch(preferredLanguage || i18nState.lang, normalizedLanguages);
+    const chosen = preferred || findLanguageMatch(fallbackLang, normalizedLanguages) || Object.keys(normalizedLanguages)[0] || 'en-US';
+    privacyState.lang = chosen;
+    privacyState.languages = normalizedLanguages;
+    privacyState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {};
+    privacyState.strings = (normalizedLanguages[chosen]?.strings) || privacyState.fallbackStrings;
+    return privacyState;
+  }
+
+  function languageMeta(code){ const normalized=normalizeLang(code||i18nState.lang); const meta=i18nState.languages?.[normalized]; if(meta) return { code: normalized, name: meta.name, flag: meta.flag, flag_path: meta.flag_path }; return { code: normalized||'en-US', name: 'English (US)', flag: 'us', flag_path: '' }; }
+  function availableLanguages(){ const langs=i18nState.languages||{}; return Object.entries(langs).map(([code, meta]) => ({ code, name: meta?.name || code, flag: meta?.flag || code, flag_path: meta?.flag_path || '' })); }
+  function tp(key, params, fallback){ const primary=privacyState.strings?.[key]; const fb=privacyState.fallbackStrings?.[key]; const chosen=(primary ?? fb ?? fallback ?? key); return applyParams(String(chosen), params); }
+
+  function renderLanguageSelector(){
+    const btn=document.getElementById('languageButton');
+    const flagImg=document.getElementById('languageButtonFlag');
+    const labelEl=document.getElementById('languageButtonLabel');
+    const menu=document.getElementById('languageMenu');
+    if(!btn||!flagImg||!labelEl||!menu) return;
+    btn.setAttribute('aria-label', t('language.button.aria', {}, 'Change language'));
+    const meta=languageMeta();
+    const code=meta.code||'en';
+    const flag=meta.flag||code;
+    flagImg.src=resolveFlagSrc(meta.flag_path, flag, code);
+    flagImg.alt=meta.name || code.toUpperCase();
+    labelEl.textContent = meta.name || code.toUpperCase();
+    menu.setAttribute('aria-label', t('language.menu.label', {}, 'Select language'));
+    menu.innerHTML='';
+    const langs=availableLanguages();
+    for(const lang of langs){
+      const item=document.createElement('button');
+      item.type='button';
+      item.setAttribute('role','option');
+      item.setAttribute('data-lang', lang.code);
+      const label=lang.name || lang.code.toUpperCase();
+      const flagSrc=resolveFlagSrc(lang.flag_path, lang.flag, lang.code);
+      item.innerHTML=`<img class="language-flag" alt="" src="${flagSrc}"><span>${label}</span>`;
+      item.addEventListener('click', ()=> selectLanguage(lang.code));
+      menu.appendChild(item);
+    }
+  }
+  function toggleLanguageMenu(force){ const menu=document.getElementById('languageMenu'); const btn=document.getElementById('languageButton'); if(!menu||!btn) return; const next=typeof force==='boolean'?force:!menu.classList.contains('open'); menu.classList.toggle('open', next); btn.setAttribute('aria-expanded', next?'true':'false'); }
+  function selectLanguage(code){ const normalized=normalizeLang(code); try{ const url=new URL(window.location.href); if(normalized) url.searchParams.set('lang', normalized); if(storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized); window.location.href=url.toString(); }catch(e){ if(storageAllowed()) safeSetItem(LANGUAGE_STORAGE_KEY, normalized); location.reload(); } }
+
+  function applyTheme(theme){ const dark=theme==='dark'; document.documentElement.classList.toggle('dark', dark); safeSetItem(THEME_KEY, theme); }
+  function currentTheme(){ const saved=safeGetItem(THEME_KEY); if(saved==='dark' || saved==='light') return saved; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+
+  function updatePrivacyBannerTexts(){
+    const banner=document.getElementById('privacyBanner'); if(!banner) return;
+    const titleEl=document.getElementById('privacyBannerTitle');
+    const bodyEl=document.getElementById('privacyBannerBody');
+    const linkEl=document.getElementById('privacyBannerLink');
+    const acceptEl=document.getElementById('privacyAcceptBtn');
+    const declineEl=document.getElementById('privacyDeclineBtn');
+    if(titleEl) titleEl.textContent=t('privacy.banner.title', {}, 'We store only preference data in your browser.');
+    if(bodyEl) bodyEl.textContent=t('privacy.banner.body', {}, 'Allow us to remember things like language, theme, and last viewed page in your browser storage. Nothing is sent to our servers.');
+    if(linkEl){ linkEl.textContent=t('privacy.banner.more', {}, 'Read the Privacy Statement'); linkEl.href=buildPrivacyUrl(i18nState.lang); }
+    if(acceptEl) acceptEl.textContent=t('privacy.banner.accept', {}, 'Allow preference storage');
+    if(declineEl) declineEl.textContent=t('privacy.banner.decline', {}, 'Continue without saving');
+  }
+  function persistCurrentPreferences(){ try { safeSetItem(THEME_KEY, document.documentElement.classList.contains('dark') ? 'dark' : 'light'); safeSetItem(LANGUAGE_STORAGE_KEY, i18nState.lang); } catch (e) {} }
+  function setupPrivacyBanner(){
+    const banner=document.getElementById('privacyBanner');
+    if(!banner) return;
+    const acceptEl=document.getElementById('privacyAcceptBtn');
+    const declineEl=document.getElementById('privacyDeclineBtn');
+    const sync=()=>{ banner.classList.toggle('hidden', storageAllowed()); };
+    sync();
+    acceptEl?.addEventListener('click', ()=>{ allowPreferenceStorage(); persistCurrentPreferences(); sync(); });
+    declineEl?.addEventListener('click', ()=>{ banner.classList.add('hidden'); });
+  }
+
+  async function init(){
+    applyTheme(currentTheme());
+    await loadI18n();
+    await loadPrivacyStrings(i18nState.lang);
+    renderLanguageSelector();
+    toggleLanguageMenu(false);
+    const backLink=document.querySelector('.back-link');
+    if(backLink) backLink.href=buildIndexUrlWithLang(i18nState.lang);
+    document.getElementById('pageHeading').textContent = tp('privacy.title', {}, 'Privacy Statement');
+    document.title = tp('privacy.title', {}, 'Privacy Statement');
+    document.getElementById('lastUpdated').textContent = tp('privacy.lastUpdated', {}, 'Last updated: 18-Jan-2026');
+    const content = document.getElementById('privacyContent');
+    if (content) content.innerHTML = tp('privacy.fullText', {}, PRIVACY_FULLTEXT_FALLBACK);
+    const footerYear = document.getElementById('footerYear');
+    if (footerYear) footerYear.textContent = String(new Date().getFullYear());
+    updatePrivacyBannerTexts();
+    setupPrivacyBanner();
+    const btn=document.getElementById('languageButton');
+    const menu=document.getElementById('languageMenu');
+    btn?.addEventListener('click', ev=>{ ev.preventDefault(); toggleLanguageMenu(); });
+    document.addEventListener('click', ev=>{ if(!menu||!btn) return; if(menu.contains(ev.target)||btn.contains(ev.target)) return; toggleLanguageMenu(false); });
+  }
+  document.addEventListener('DOMContentLoaded', init, { once: true });
+</script>
+</body>
+</html>

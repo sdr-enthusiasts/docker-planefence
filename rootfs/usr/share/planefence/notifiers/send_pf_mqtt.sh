@@ -53,7 +53,7 @@ generate_mqtt() {
 									done | jq -sc add)"
 
 		# prep the MQTT host, port, etc
-		unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
+		#unset MQTT_TOPIC MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_HOST
 		MQTT_HOST="${MQTT_URL##*:\/\/}"                                                     # strip protocol header (mqtt:// etc)
 		while [[ "${MQTT_HOST: -1}" == "/" ]]; do MQTT_HOST="${MQTT_HOST:0:-1}"; done       # remove any trailing / from the HOST
 		if [[ $MQTT_HOST == *"/"* ]]; then MQTT_TOPIC="${MQTT_TOPIC:-${MQTT_HOST#*\/}}"; fi # if there's no explicitly defined topic, then use the URL's topic if that exists
@@ -73,6 +73,7 @@ generate_mqtt() {
 		log_print DEBUG "Attempting to send a MQTT notification for index $idx"
 		log_print DEBUG "MQTT Host: $MQTT_HOST"
 		log_print DEBUG "MQTT Port: ${MQTT_PORT:-1883}"
+		log_print DEBUG "MQTT TLS: $MQTT_TLS"
 		log_print DEBUG "MQTT Topic: $MQTT_TOPIC"
 		log_print DEBUG "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
 		if [[ -n "$MQTT_USERNAME" ]]; then log_print DEBUG "MQTT Username: $MQTT_USERNAME"; fi
@@ -83,9 +84,10 @@ generate_mqtt() {
 		# send the MQTT message:
 		mqtt_string=(--broker "$MQTT_HOST")
 		if [[ -n "$MQTT_PORT" ]]; then mqtt_string+=(--port "$MQTT_PORT"); fi
-		mqtt_string+=(--topic \""$MQTT_TOPIC"\")
+		if [[ -n "$MQTT_TLS" ]]; then mqtt_string+=(--tls); fi
+		mqtt_string+=(--topic "$MQTT_TOPIC")
 		if [[ -n "$MQTT_QOS" ]]; then mqtt_string+=(--qos "$MQTT_QOS"); fi
-		mqtt_string+=(--client_id \""${MQTT_CLIENT_ID:-$(hostname)}"\")
+		mqtt_string+=(--client_id "${MQTT_CLIENT_ID:-$(hostname)}")
 		if [[ -n "$MQTT_USERNAME" ]]; then mqtt_string+=(--username "$MQTT_USERNAME"); fi
 		if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
 		mqtt_string+=(--message "'${MQTT_JSON}'")
@@ -103,7 +105,7 @@ generate_mqtt() {
 	fi
 }
 
-log_print DEBUG "Starting generation of RSS feed"
+log_print DEBUG "Starting generation of MQTT notifications"
 
 
 
