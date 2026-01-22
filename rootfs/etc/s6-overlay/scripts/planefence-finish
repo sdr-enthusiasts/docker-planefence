@@ -4,7 +4,7 @@ set -euo pipefail
 
 source /scripts/pf-common
 # Persist the latest Planefence artifacts when the service stops.
-"${s6wrap[@]}" echo "Pbacking up data before exit"
+"${s6wrap[@]}" echo "Backing up data before exit"
 TODAY="${TODAY:-$(date +%y%m%d)}"
 RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
 RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
@@ -12,6 +12,7 @@ RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
 # Copy the most recent compressed records back to the persistent store.
 if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then
   cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"
+  "${s6wrap[@]}" echo "backed up ${RECORDSFILE##*/}"
 fi
 
 # Sync the day’s Planefence and Plane-Alert outputs to the HTML directory.
