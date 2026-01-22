@@ -1550,6 +1550,7 @@ records["station:heatmapzoom"]="$HEATMAPZOOM"
 records["station:me"]="$MY"
 records["station:myurl"]="$MYURL"
 records["station:motd"]="$PF_MOTD"
+records["station:histtime"]="$HISTTIME"
 records["LASTUPDATE"]="$NOWTIME"
 
 pa_records["station:dist:value"]="${DIST:-}"
