@@ -27,6 +27,7 @@
         "status.nextUpdate": "Next update: {value}",
         "status.nextUpdateCountdown": "Next update: {seconds}s",
         "status.lastUpdate": "Last update: {time}",
+        "status.historicData": "Historic data: {date}",
         "status.streamFailed": "Stream failed",
         "status.streamError": "Stream error",
         "status.doneRows": "Done. Rows: {count}",
@@ -42,6 +43,11 @@
         "actions.newUpdates": "New updates available",
         "actions.newUpdates.count": "New updates ({count})",
         "actions.newUpdates.title": "Show new updates",
+        "actions.history": "History",
+        "actions.today": "Today",
+        "history.menu.title": "Select a date",
+        "history.menu.aria": "History dates",
+        "history.empty": "No history available",
         "stationInfo.close": "Close station information",
         "heatmap.modal.label": "Planefence heatmap",
         "heatmap.modal.close": "Close heatmap",
@@ -174,6 +180,7 @@
         "status.nextUpdate": "Próxima actualización: {value}",
         "status.nextUpdateCountdown": "Próxima actualización: {seconds}s",
         "status.lastUpdate": "Última actualización: {time}",
+        "status.historicData": "Datos historicos: {date}",
         "status.streamFailed": "Flujo fallido",
         "status.streamError": "Error de flujo",
         "status.doneRows": "Listo. Filas: {count}",
@@ -189,6 +196,11 @@
         "actions.newUpdates": "Nuevas actualizaciones disponibles",
         "actions.newUpdates.count": "Nuevas actualizaciones ({count})",
         "actions.newUpdates.title": "Mostrar nuevas actualizaciones",
+        "actions.history": "Historial",
+        "actions.today": "Hoy",
+        "history.menu.title": "Selecciona una fecha",
+        "history.menu.aria": "Fechas del historial",
+        "history.empty": "No hay historial disponible",
         "stationInfo.close": "Cerrar información de la estación",
         "heatmap.modal.label": "Mapa de calor Planefence",
         "heatmap.modal.close": "Cerrar mapa de calor",
@@ -321,6 +333,7 @@
         "status.nextUpdate": "Pròxima actualització: {value}",
         "status.nextUpdateCountdown": "Pròxima actualització: {seconds}s",
         "status.lastUpdate": "Darrera actualització: {time}",
+        "status.historicData": "Dades historiques: {date}",
         "status.streamFailed": "Flux fallit",
         "status.streamError": "Error de flux",
         "status.doneRows": "Fet. Files: {count}",
@@ -336,6 +349,11 @@
         "actions.newUpdates": "Novetats disponibles",
         "actions.newUpdates.count": "Novetats ({count})",
         "actions.newUpdates.title": "Mostrar novetats",
+        "actions.history": "Historic",
+        "actions.today": "Avui",
+        "history.menu.title": "Selecciona una data",
+        "history.menu.aria": "Dates de l'historic",
+        "history.empty": "No hi ha historic disponible",
         "stationInfo.close": "Tancar informació de l'estació",
         "heatmap.modal.label": "Mapa de calor Planefence",
         "heatmap.modal.close": "Tancar mapa de calor",
@@ -587,7 +605,13 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Pribatutasun politika"
+        "footer.privacy": "Pribatutasun politika",
+        "status.historicData": "Datu historikoak: {date}",
+        "actions.history": "Historia",
+        "actions.today": "Gaur",
+        "history.menu.title": "Hautatu data bat",
+        "history.menu.aria": "Historia datak",
+        "history.empty": "Ez dago historiarik eskuragarri"
       }
     },
     "gl-ES": {
@@ -734,7 +758,13 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Política de privacidade"
+        "footer.privacy": "Política de privacidade",
+        "status.historicData": "Datos historicos: {date}",
+        "actions.history": "Historial",
+        "actions.today": "Hoxe",
+        "history.menu.title": "Escolle unha data",
+        "history.menu.aria": "Datas do historial",
+        "history.empty": "Non hai historial dispoñible"
       }
     },
     "qu-PE": {
@@ -881,7 +911,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Política de privacidad"
+        "footer.privacy": "Política de privacidad",
+        "status.historicData": "Historia willakuykuna: {date}",
+        "actions.history": "Historia",
+        "actions.today": "Kunan",
+        "history.menu.title": "Aklla p'unchawta",
+        "history.menu.aria": "Historia p'unchawkuna",
+        "history.empty": "Historia mana kanchu",
+        "history.locale": "es-PE"
       }
     },
     "nl-NL": {
@@ -1028,7 +1065,13 @@
         "privacy.banner.accept": "Voorkeuren opslaan toestaan",
         "privacy.banner.decline": "Doorgaan zonder op te slaan",
         "privacy.banner.more": "Lees de privacyverklaring",
-        "footer.privacy": "Privacybeleid"
+        "footer.privacy": "Privacybeleid",
+        "status.historicData": "Historische data: {date}",
+        "actions.history": "Geschiedenis",
+        "actions.today": "Vandaag",
+        "history.menu.title": "Kies een datum",
+        "history.menu.aria": "Historie datums",
+        "history.empty": "Geen geschiedenis beschikbaar"
       }
     },
     "fy-NL": {
@@ -1175,7 +1218,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacybelied"
+        "footer.privacy": "Privacybelied",
+        "status.historicData": "Histaryske gegevens: {date}",
+        "actions.history": "Skiednis",
+        "actions.today": "Hjoed",
+        "history.menu.title": "Kies in datum",
+        "history.menu.aria": "Skiednisdatums",
+        "history.empty": "Gjin skiednis beskikber",
+        "history.locale": "nl-NL"
       }
     },
     "li-NL": {
@@ -1322,7 +1372,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacybeleid"
+        "footer.privacy": "Privacybeleid",
+        "status.historicData": "Historische gegeves: {date}",
+        "actions.history": "Gesjiedenis",
+        "actions.today": "Vandaog",
+        "history.menu.title": "Kees ein datum",
+        "history.menu.aria": "Gesjiedenis-datums",
+        "history.empty": "Gein gesjiedenis besjikbaar",
+        "history.locale": "nl-NL"
       }
     },
     "de-DE": {
@@ -1469,7 +1526,13 @@
         "privacy.banner.accept": "Einstellungen speichern erlauben",
         "privacy.banner.decline": "Ohne Speichern fortfahren",
         "privacy.banner.more": "Datenschutzerklärung lesen",
-        "footer.privacy": "Datenschutzrichtlinie"
+        "footer.privacy": "Datenschutzrichtlinie",
+        "status.historicData": "Historische Daten: {date}",
+        "actions.history": "Verlauf",
+        "actions.today": "Heute",
+        "history.menu.title": "Datum auswahlen",
+        "history.menu.aria": "Verlaufsdaten",
+        "history.empty": "Kein Verlauf verfugbar"
       }
     },
     "de-CH": {
@@ -1616,7 +1679,13 @@
         "privacy.banner.accept": "Einstellungen speichern erlauben",
         "privacy.banner.decline": "Ohne Speichern fortfahren",
         "privacy.banner.more": "Datenschutzerklärung lesen",
-        "footer.privacy": "Datenschutzrichtlinie"
+        "footer.privacy": "Datenschutzrichtlinie",
+        "status.historicData": "Historischi Date: {date}",
+        "actions.history": "Verlouf",
+        "actions.today": "Hut",
+        "history.menu.title": "Datum uswahle",
+        "history.menu.aria": "Verlouf-Date",
+        "history.empty": "Kei Verlouf verfugbar"
       }
     },
     "fr-FR": {
@@ -1759,7 +1828,13 @@
         "privacy.banner.accept": "Autoriser le stockage des préférences",
         "privacy.banner.decline": "Continuer sans enregistrer",
         "privacy.banner.more": "Lire la déclaration de confidentialité",
-        "footer.privacy": "Politique de confidentialité"
+        "footer.privacy": "Politique de confidentialité",
+        "status.historicData": "Donnees historiques : {date}",
+        "actions.history": "Historique",
+        "actions.today": "Aujourd'hui",
+        "history.menu.title": "Choisir une date",
+        "history.menu.aria": "Dates de l'historique",
+        "history.empty": "Aucun historique disponible"
       }
     },
     "it-IT": {
@@ -1906,7 +1981,13 @@
         "privacy.banner.accept": "Consenti salvataggio preferenze",
         "privacy.banner.decline": "Continua senza salvare",
         "privacy.banner.more": "Leggi l’informativa sulla privacy",
-        "footer.privacy": "Informativa sulla privacy"
+        "footer.privacy": "Informativa sulla privacy",
+        "status.historicData": "Dati storici: {date}",
+        "actions.history": "Cronologia",
+        "actions.today": "Oggi",
+        "history.menu.title": "Seleziona una data",
+        "history.menu.aria": "Date cronologia",
+        "history.empty": "Cronologia non disponibile"
       }
     },
     "la": {
@@ -2053,7 +2134,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy Policy"
+        "footer.privacy": "Privacy Policy",
+        "status.historicData": "Data historica: {date}",
+        "actions.history": "Historia",
+        "actions.today": "Hodie",
+        "history.menu.title": "Elige diem",
+        "history.menu.aria": "Dies historiae",
+        "history.empty": "Historia non praesto est",
+        "history.locale": "en"
       }
     },
     "fi-FI": {
@@ -2200,7 +2288,13 @@
         "privacy.banner.accept": "Salli asetusten tallennus",
         "privacy.banner.decline": "Jatka tallentamatta",
         "privacy.banner.more": "Lue tietosuojaseloste",
-        "footer.privacy": "Tietosuojakäytäntö"
+        "footer.privacy": "Tietosuojakäytäntö",
+        "status.historicData": "Historialliset tiedot: {date}",
+        "actions.history": "Historia",
+        "actions.today": "Tanaan",
+        "history.menu.title": "Valitse paivamaara",
+        "history.menu.aria": "Historian paivamaarat",
+        "history.empty": "Historiaa ei ole saatavilla"
       }
     },
     "sv-SE": {
@@ -2347,7 +2441,13 @@
         "privacy.banner.accept": "Tillåt lagring av preferenser",
         "privacy.banner.decline": "Fortsätt utan att spara",
         "privacy.banner.more": "Läs integritetspolicyn",
-        "footer.privacy": "Integritetspolicy"
+        "footer.privacy": "Integritetspolicy",
+        "status.historicData": "Historiska data: {date}",
+        "actions.history": "Historik",
+        "actions.today": "Idag",
+        "history.menu.title": "Valj ett datum",
+        "history.menu.aria": "Historikdatum",
+        "history.empty": "Ingen historik tillganglig"
       }
     },
     "pt-BR": {
@@ -2494,7 +2594,13 @@
         "privacy.banner.accept": "Permitir salvar preferências",
         "privacy.banner.decline": "Continuar sem salvar",
         "privacy.banner.more": "Ler a Declaração de Privacidade",
-        "footer.privacy": "Política de privacidade"
+        "footer.privacy": "Política de privacidade",
+        "status.historicData": "Dados historicos: {date}",
+        "actions.history": "Historico",
+        "actions.today": "Hoje",
+        "history.menu.title": "Selecione uma data",
+        "history.menu.aria": "Datas do historico",
+        "history.empty": "Nenhum historico disponivel"
       }
     },
     "fr-CJ": {
@@ -2641,7 +2747,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Politique de confidentialité"
+        "footer.privacy": "Politique de confidentialité",
+        "status.historicData": "Donees historiques : {date}",
+        "actions.history": "Historique",
+        "actions.today": "Aujourdhui",
+        "history.menu.title": "Choisir une date",
+        "history.menu.aria": "Dates de l'historique",
+        "history.empty": "Aucun historique disponible",
+        "history.locale": "fr-FR"
       }
     },
     "pap-CW": {
@@ -2788,7 +2901,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Politika di privasidat"
+        "footer.privacy": "Politika di privasidat",
+        "status.historicData": "Datos historiko: {date}",
+        "actions.history": "Historia",
+        "actions.today": "Awe",
+        "history.menu.title": "Skohé un fecha",
+        "history.menu.aria": "Fecha di historia",
+        "history.empty": "No tin historia disponibel",
+        "history.locale": "pap"
       }
     },
     "jam-JM": {
@@ -2935,7 +3055,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Privacy Policy"
+        "footer.privacy": "Privacy Policy",
+        "status.historicData": "Past data: {date}",
+        "actions.history": "Istri",
+        "actions.today": "Tudeh",
+        "history.menu.title": "Pick a date",
+        "history.menu.aria": "Istri dates",
+        "history.empty": "No istrih deh ya",
+        "history.locale": "en"
       }
     },
     "uk-UA": {
@@ -3082,7 +3209,13 @@
         "privacy.banner.accept": "Дозволити зберігання налаштувань",
         "privacy.banner.decline": "Продовжити без збереження",
         "privacy.banner.more": "Прочитати політику конфіденційності",
-        "footer.privacy": "Політика конфіденційності"
+        "footer.privacy": "Політика конфіденційності",
+        "status.historicData": "Istorychni dani: {date}",
+        "actions.history": "Istoriya",
+        "actions.today": "Sogodni",
+        "history.menu.title": "Oberit datu",
+        "history.menu.aria": "Dati istoriyi",
+        "history.empty": "Istoriya nedostupna"
       }
     },
     "en-PI": {
@@ -3229,7 +3362,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Ivacypray Olicypay"
+        "footer.privacy": "Ivacypray Olicypay",
+        "status.historicData": "Historic booty: {date}",
+        "actions.history": "History",
+        "actions.today": "Today",
+        "history.menu.title": "Pick a date",
+        "history.menu.aria": "History dates",
+        "history.empty": "No history fer ye",
+        "history.locale": "en"
       }
     },
     "en-PT": {
@@ -3376,7 +3516,14 @@
         "privacy.banner.accept": "Allow preference storage",
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
-        "footer.privacy": "Code o' Privacy"
+        "footer.privacy": "Code o' Privacy",
+        "status.historicData": "Historic data: {date}",
+        "actions.history": "History",
+        "actions.today": "Today",
+        "history.menu.title": "Select a date",
+        "history.menu.aria": "History dates",
+        "history.empty": "No history available",
+        "history.locale": "en"
       }
     }
   }

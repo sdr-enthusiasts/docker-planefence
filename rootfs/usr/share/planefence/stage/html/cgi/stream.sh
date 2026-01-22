@@ -17,7 +17,15 @@ printf '\r\n'
 
 choose_json() {
   local mode="${1:-planefence}"
+  local req_date="${2:-}"
   local cand
+
+  if [[ -n "${req_date}" ]]; then
+    cand="${DOCROOT}/${mode}-${req_date}.json"
+    [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
+    printf ''
+    return
+  fi
 
   cand="${DOCROOT}/${mode}-${utc_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
@@ -36,22 +44,41 @@ choose_json() {
 
 # get env var from http GET
 method="${REQUEST_METHOD:-GET}"
+FILTER_MODE="planefence"
+REQUESTED_DATE=""
 
-if [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=planefence" ]]; then
-  FILTER_MODE="planefence"
-elif [[ "$method" == "GET" ]] && [[ "$QUERY_STRING"  == "mode=plane-alert" ]]; then
-  FILTER_MODE="plane-alert"
+if [[ "$method" == "GET" && -n "${QUERY_STRING:-}" ]]; then
+  IFS='&' read -ra pf_qs <<< "${QUERY_STRING}"
+  for pair in "${pf_qs[@]}"; do
+    key="${pair%%=*}"
+    val="${pair#*=}"
+    [[ "$pair" == "$key" ]] && val=""
+    case "$key" in
+      mode)
+        [[ "$val" == "plane-alert" ]] && FILTER_MODE="plane-alert"
+        [[ "$val" == "planefence" ]] && FILTER_MODE="planefence"
+        ;;
+      date)
+        if [[ "$val" =~ ^([0-9]{6})$ ]]; then
+          REQUESTED_DATE="${BASH_REMATCH[1]}"
+        fi
+        ;;
+    esac
+  done
 elif [[ "$1" == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
-else
-  FILTER_MODE="planefence"
 fi
 
-JSONFILE="$(choose_json "$FILTER_MODE" || true)"
+JSONFILE="$(choose_json "$FILTER_MODE" "$REQUESTED_DATE" || true)"
 if [[ -z "${JSONFILE:-}" ]]; then
-  printf '{"error":"missing or unreadable: %s and %s"}\n' \
-    "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_today}.json" | sed 's/"/\\"/g')" \
-    "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_yday}.json" | sed 's/"/\\"/g')"
+  if [[ -n "${REQUESTED_DATE:-}" ]]; then
+    printf '{"error":"missing or unreadable: %s"}\n' \
+      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${REQUESTED_DATE}.json" | sed 's/"/\\"/g')"
+  else
+    printf '{"error":"missing or unreadable: %s and %s"}\n' \
+      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_today}.json" | sed 's/"/\\"/g')" \
+      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_yday}.json" | sed 's/"/\\"/g')"
+  fi
   exit 0
 fi
 

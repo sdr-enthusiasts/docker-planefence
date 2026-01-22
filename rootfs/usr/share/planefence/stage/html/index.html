@@ -362,8 +362,18 @@
   .language-menu.open { display: block; }
   .language-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
   .language-menu button:hover, .language-menu button:focus-visible { background: var(--soft); outline: none; }
+  .history-toggle { position: relative; display: flex; align-items: center; }
+  .history-button { display: inline-flex; align-items: center; gap: .35rem; background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .35rem .6rem; border-radius: .5rem; cursor: pointer; }
+  .history-button:hover { border-color: var(--fg); }
+  .history-menu { position: absolute; top: calc(100% + .35rem); right: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--soft); border-radius: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: .35rem 0; min-width: 11rem; z-index: 60; display: none; max-height: 50vh; overflow-y: auto; }
+  html.dark .history-menu { border-color: rgba(255,255,255,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.55); }
+  .history-menu.open { display: block; }
+  .history-menu button { width: 100%; background: none; border: none; text-align: left; padding: .5rem .85rem; display: flex; align-items: center; gap: .65rem; color: inherit; cursor: pointer; }
+  .history-menu button:hover, .history-menu button:focus-visible { background: var(--soft); outline: none; }
+  .history-menu .history-empty { padding: .5rem .85rem; color: var(--muted); }
   @media (max-width: 640px) {
     .language-menu { left: 50%; right: auto; transform: translateX(-50%); min-width: max(11rem, 70vw); max-width: calc(100vw - 1.25rem); }
+    .history-menu { position: fixed; top: calc(var(--header-height, 4.25rem) + .6rem); left: 50%; right: auto; transform: translateX(-50%); min-width: min(420px, 92vw); max-width: calc(100vw - 1.25rem); max-height: 60vh; }
   }
   .toggle-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .header-divider { width: 1px; height: 1.5rem; background: var(--muted); opacity: .5; margin: 0 .75rem; }
@@ -495,6 +505,10 @@
             <div id="languageMenu" class="language-menu" role="listbox" aria-label="Languages"></div>
           </div>
           <div class="header-actions">
+            <div id="historyControl" class="history-toggle" style="display:none;">
+              <button id="historyButton" class="history-button" type="button" aria-haspopup="listbox" aria-expanded="false">History</button>
+              <div id="historyMenu" class="history-menu" role="listbox" aria-label="History dates"></div>
+            </div>
             <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
             <button id="stationInfoBtn" title="Show station information">Station Info</button>
             <button id="reload" title="Update data">Update</button>
@@ -806,6 +820,7 @@
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
+  let historyButtonEl, historyMenuEl, historyControlEl;
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -914,16 +929,21 @@ ${messagesDesc}
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
         body.classList.toggle('mode-planefence', !isPlaneAlertMode());
       }
+      updateHistorySupport();
       updateHeatmapButtonState();
     }
     applyDataModeUI();
     let modeGeneration = 0;
     let streamAbortController = null;
     let pollIntervalHandle = null;
-    function buildStreamUrl(mode){
-      const base = './cgi/stream.sh';
-      return mode === DATA_MODES.PLANE_ALERT ? `${base}?mode=plane-alert` : base;
-    }
+    function buildStreamUrl(mode, dateKey){
+        const base = './cgi/stream.sh';
+        const params = new URLSearchParams();
+        params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
+        if (dateKey) params.set('date', dateKey);
+        const qs = params.toString();
+        return qs ? `${base}?${qs}` : base;
+      }
     function currentStreamUrl(){
       return buildStreamUrl(dataMode);
     }
@@ -1008,6 +1028,9 @@ ${messagesDesc}
     photoModalCaption = document.getElementById('photoModalCaption');
     appVersionEl = document.getElementById('appVersionText');
     footerYearEl = document.getElementById('footerYear');
+    historyButtonEl = document.getElementById('historyButton');
+    historyMenuEl = document.getElementById('historyMenu');
+    historyControlEl = document.getElementById('historyControl');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
 
     // Wire up interactive controls immediately so they respond even while data loads.
@@ -1040,6 +1063,30 @@ ${messagesDesc}
       } catch (e) { console.error('newUpdates click', e); }
     });
 
+    historyButtonEl?.addEventListener('click', ()=>{
+      if (historyMenuOpen) closeHistoryMenu();
+      else openHistoryMenu();
+    });
+
+    historyMenuEl?.addEventListener('click', (ev)=>{
+      const btn = ev.target && ev.target.closest ? ev.target.closest('button[data-date]') : null;
+      if (!btn) return;
+      const dateKey = btn.dataset.date;
+      if (!dateKey) return;
+      if (dateKey === 'today') {
+        switchToToday();
+      } else {
+        loadHistoryDate(dateKey, btn.textContent || '');
+      }
+    });
+
+    document.addEventListener('click', (ev)=>{
+      if (!historyMenuEl || !historyButtonEl) return;
+      const withinMenu = historyMenuEl.contains(ev.target);
+      const withinBtn = historyButtonEl.contains(ev.target);
+      if (!withinMenu && !withinBtn) closeHistoryMenu();
+    });
+
     // Defer translation-dependent work until i18n is ready without blocking interactivity.
     i18nReady.then(() => {
       setupLanguageSelector();
@@ -1051,6 +1098,7 @@ ${messagesDesc}
       updateStationHeadline();
       updateStationMotd();
       updateHeatmapButtonState();
+      updateHistorySupport();
       if (prog) prog.textContent = isPlaneAlertMode()
         ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
         : t('status.loading', {}, 'Loading...');
@@ -1069,8 +1117,12 @@ ${messagesDesc}
     heatmapZoom: null,
     stationName: '',
     stationUrl: '',
-    motd: ''
+    motd: '',
+    histtime: null
   };
+  let historyDate = null; // YYMMDD string when viewing historical data
+  let historyDateLabel = '';
+  let historyMenuOpen = false;
   let stationInfoLastFocus = null;
   let heatmapLastFocus = null;
   let photoModalLastFocus = null;
@@ -1731,6 +1783,162 @@ ${messagesDesc}
     }
   }
 
+  function isHistoryMode(){
+    return !!historyDate;
+  }
+
+  function utcToday(){
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  }
+
+  function toYYMMDD(dateObj){
+    const y = String(dateObj.getUTCFullYear() % 100).padStart(2, '0');
+    const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getUTCDate()).padStart(2, '0');
+    return `${y}${m}${d}`;
+  }
+
+  function formatHistoryDateDisplay(dateObj){
+    try {
+      const langRaw = (i18nState.lang || '').toLowerCase();
+      const lang = t('history.locale', {}, langRaw).toLowerCase();
+      const fmt = new Intl.DateTimeFormat(lang || undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+      let out = fmt.format(dateObj);
+      if (langRaw.startsWith('es')) {
+        out = out.replace(/ de (\d{4})$/, ' del $1');
+      }
+      return out;
+    } catch (e) {
+      return dateObj.toISOString().slice(0, 10);
+    }
+  }
+
+  function historyDateFromKey(key){
+    if (!key || key.length !== 6) return null;
+    const yy = Number(key.slice(0, 2));
+    const mm = Number(key.slice(2, 4));
+    const dd = Number(key.slice(4, 6));
+    if (!Number.isFinite(yy) || !Number.isFinite(mm) || !Number.isFinite(dd)) return null;
+    const fullYear = 2000 + yy;
+    return new Date(Date.UTC(fullYear, mm - 1, dd));
+  }
+
+  function availableHistoryDates(){
+    const maxDays = Number(stationInfoState.histtime);
+    if (!Number.isFinite(maxDays) || maxDays < 1) return [];
+    const today = utcToday();
+    const dates = [];
+    for (let i = 1; i <= maxDays; i++) {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - i);
+      dates.push({ key: toYYMMDD(d), label: formatHistoryDateDisplay(d) });
+    }
+    return dates;
+  }
+
+  function updateHistoryButtonLabel(){
+    if (!historyButtonEl) return;
+    const label = t('actions.history', {}, 'History');
+    historyButtonEl.textContent = label;
+    historyButtonEl.setAttribute('aria-label', label);
+    historyButtonEl.setAttribute('aria-expanded', historyMenuOpen ? 'true' : 'false');
+  }
+
+  function updateHistorySupport(){
+    if (!historyControlEl || !historyButtonEl) return;
+    const supported = Number.isFinite(Number(stationInfoState.histtime)) && Number(stationInfoState.histtime) > 0;
+    historyControlEl.style.display = supported || isHistoryMode() ? 'flex' : 'none';
+    historyButtonEl.disabled = !supported && !isHistoryMode();
+    updateHistoryButtonLabel();
+  }
+
+  function renderHistoryMenu(){
+    if (!historyMenuEl) return;
+    historyMenuEl.setAttribute('aria-label', t('history.menu.aria', {}, 'History dates'));
+    const dates = availableHistoryDates();
+    historyMenuEl.innerHTML = '';
+    const title = document.createElement('div');
+    title.className = 'history-empty';
+    title.textContent = t('history.menu.title', {}, 'Select a date');
+    historyMenuEl.appendChild(title);
+
+    const todayBtn = document.createElement('button');
+    todayBtn.type = 'button';
+    todayBtn.dataset.date = 'today';
+    todayBtn.textContent = t('actions.today', {}, 'Today');
+    historyMenuEl.appendChild(todayBtn);
+
+    if (!dates.length) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = t('history.empty', {}, 'No history available');
+      historyMenuEl.appendChild(empty);
+      return;
+    }
+
+    dates.forEach((d) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.date = d.key;
+      btn.textContent = d.label;
+      historyMenuEl.appendChild(btn);
+    });
+  }
+
+  function openHistoryMenu(){
+    if (!historyMenuEl || !historyButtonEl) return;
+    renderHistoryMenu();
+    historyMenuEl.classList.add('open');
+    historyMenuOpen = true;
+    historyButtonEl.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeHistoryMenu(){
+    if (!historyMenuEl || !historyButtonEl) return;
+    historyMenuEl.classList.remove('open');
+    historyMenuOpen = false;
+    historyButtonEl.setAttribute('aria-expanded', 'false');
+  }
+
+  function setHistoricStatus(dateLabel){
+    if (lastUpdateEl) lastUpdateEl.textContent = t('status.historicData', { date: dateLabel }, `Historic data: ${dateLabel}`);
+    if (nextUpdateEl) nextUpdateEl.textContent = '';
+    stopCountdown();
+  }
+
+  function setLiveStatusPlaceholders(){
+    if (lastUpdateEl) lastUpdateEl.textContent = t('status.lastUpdate', { time: t('status.placeholder', {}, '--') }, 'Last update: --');
+    if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
+    startCountdown();
+  }
+
+  function ensurePlanefenceMode(){
+    if (isPlaneAlertMode()) {
+      dataMode = DATA_MODES.PLANEFENCE;
+      safeSetItem(DATA_MODE_KEY, DATA_MODES.PLANEFENCE);
+      applyDataModeUI();
+      applyPlaneAlertColumnVisibility();
+    }
+  }
+
+  function switchToToday(){
+    historyDate = null;
+    historyDateLabel = '';
+    closeHistoryMenu();
+    updateHistoryButtonLabel();
+    setLiveStatusPlaceholders();
+    restartDataPipelines();
+  }
+
+  function loadHistoryDate(dateKey, displayLabel){
+    historyDate = dateKey;
+    historyDateLabel = displayLabel || formatHistoryDateDisplay(historyDateFromKey(dateKey) || utcToday());
+    updateHistoryButtonLabel();
+    closeHistoryMenu();
+    restartDataPipelines();
+  }
+
   function openStationInfoModal() {
     if (!stationInfoModal) return;
     refreshStationInfoContent();
@@ -1776,7 +1984,8 @@ ${messagesDesc}
       ['heatmapZoom', 'station:heatmapzoom'],
       ['stationName', 'station:me'],
       ['stationUrl', 'station:myurl'],
-      ['motd', 'station:motd']
+      ['motd', 'station:motd'],
+      ['histtime', 'station:histtime']
     ];
     for (const [stateKey, globalKey] of mapping) {
       const raw = getGlobalValue(globals, globalKey);
@@ -1802,6 +2011,7 @@ ${messagesDesc}
       refreshStationInfoContent();
       updateStationHeadline();
       updateStationMotd();
+      updateHistorySupport();
     }
   }
 
@@ -1844,6 +2054,11 @@ ${messagesDesc}
       const sec = Math.max(0, Math.round((nextPollAt - Date.now())/1000));
       nextUpdateEl.textContent = t('status.nextUpdateCountdown', { seconds: sec }, `Next update: ${sec}s`);
     }, 250);
+  }
+
+  function stopCountdown(){
+    if (countdownTimerId) clearInterval(countdownTimerId);
+    countdownTimerId = null;
   }
 
   function scheduleNextPoll(afterSec) {
@@ -1932,17 +2147,10 @@ ${messagesDesc}
     const num = Number(ts);
     if (!Number.isFinite(num) || num <= 0) return { text: '--', isTime: false };
     const dt = new Date(num * 1000);
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (dt >= todayStart) {
-      return {
-        text: new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(dt),
-        isTime: true
-      };
-    }
-    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(dt);
-    const day = String(dt.getDate()).padStart(2, '0');
-    return { text: `${month}-${day}`, isTime: false };
+    return {
+      text: new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(dt),
+      isTime: true
+    };
   }
 
   function formatSeen(firstTs, closestTs, lastTs, completeFlag){
@@ -3058,10 +3266,10 @@ function addOrUpdateRow(r){
 // -------- Polling snapshot every 60s and apply incremental updates --------
 // Uses same endpoint (`./cgi/pfstream.sh`) which emits NDJSON (globals, schema, rows)
 // and updates existing rows (by index) or appends new rows. Does a single draw at end.
-async function pollAndMerge(modeForRun, generation) {
+async function pollAndMerge(modeForRun, generation, opts = {}) {
   try {
     if (generation !== modeGeneration) return;
-    const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store' });
+    const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate), { cache: 'no-store' });
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
     if (generation !== modeGeneration) return;
     const txt = await resp.text();
@@ -3083,7 +3291,7 @@ async function pollAndMerge(modeForRun, generation) {
       if (obj && obj.__globals) { localGlobals = obj.__globals || {};
         updateStationInfoFromGlobals(localGlobals);
         setHasNoiseAvailability(localGlobals.HASNOISE);
-        if (localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
+        if (!opts.isHistory && localGlobals.LASTUPDATE && Number.isFinite(Number(localGlobals.LASTUPDATE)) && Number(localGlobals.LASTUPDATE) > 0) {
           const dt = new Date(Number(localGlobals.LASTUPDATE) * 1000);
           const hh = String(dt.getHours()).padStart(2,'0');
           const mm = String(dt.getMinutes()).padStart(2,'0');
@@ -3192,6 +3400,9 @@ async function pollAndMerge(modeForRun, generation) {
     // Single redraw to refresh display (preserve paging)
     if (toUpdate.length || toAdd.length || purged) {
       redrawTable(false);
+      if (opts.isHistory && table) {
+        try { table.order([[0, 'desc']]).draw(false); } catch (e) { /* ignore */ }
+      }
       // After the draw, ensure any newly-created row nodes are registered in rowByIndex.
       try {
         table.rows().every(function(){
@@ -3252,6 +3463,14 @@ async function pollAndMerge(modeForRun, generation) {
     resetTableState();
     stopStreamReader();
     stopPollingLoop();
+    if (isHistoryMode()) {
+      try { if (table) table.order([[0, 'desc']]).draw(); } catch (e) { /* ignore */ }
+      const label = historyDateLabel || formatHistoryDateDisplay(historyDateFromKey(historyDate) || utcToday());
+      setHistoricStatus(label);
+      pollAndMerge(dataMode, modeGeneration, { historyDate: historyDate, isHistory: true, historyLabel: label });
+      return;
+    }
+    setLiveStatusPlaceholders();
     if (cfg.enableStream) startStreamReader(modeGeneration);
     if (cfg.enablePoll) startPollingLoop(modeGeneration);
   }
