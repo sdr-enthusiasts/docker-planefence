@@ -49,13 +49,18 @@ NOWTIME="$(date +%s)"
 TODAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort | head -n 1)"
 YESTERDAYFILE="$(find /run/socket30003 -type f -name "dump1090-*-${YESTERDAY}.txt" -print | sort | head -n 1)"
 
-RECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${TODAY}.gz"
-YESTERDAYRECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${YESTERDAY}.gz"
+# RECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${TODAY}.gz"
+# YESTERDAYRECORDSFILE="/usr/share/planefence/persist/records/planefence-records-${YESTERDAY}.gz"
 
-CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
-PA_CSVOUT="$HTMLDIR/plane-alert-${TODAY}.csv"
-JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
-PA_JSONOUT="$HTMLDIR/plane-alert-${TODAY}.json"
+# CSVOUT="$HTMLDIR/planefence-${TODAY}.csv"
+# PA_CSVOUT="$HTMLDIR/plane-alert-${TODAY}.csv"
+# JSONOUT="$HTMLDIR/planefence-${TODAY}.json"
+# PA_JSONOUT="$HTMLDIR/plane-alert-${TODAY}.json"
+
+CSVOUT="/run/planefence/planefence-${TODAY}.csv"
+PA_CSVOUT="/run/planefence/plane-alert-${TODAY}.csv"
+JSONOUT="/run/planefence/planefence-${TODAY}.json"
+PA_JSONOUT="/run/planefence/plane-alert-${TODAY}.json"
 
 VERSION="${VERSION}${VERSION:+-}"
 if [[ -s "/.VERSION" ]]; then
@@ -996,19 +1001,12 @@ log_print INFO "Hello. Starting $0"
 # Prep-work:
 # ==========================
 
-if [[ "$1" == "reset" ]]; then
-  log_print INFO "Resetting records"
-  rm -f "$RECORDSFILE" "$CSVOUT" "$JSONOUT" "/tmp/.records.lock"
-  unset records
-  declare -A records
-  records[maxindex]="-1"
-fi
 
-log_print DEBUG "Getting $RECORDSFILE"
+log_print DEBUG "Getting RECORDSFILE"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 
-log_print DEBUG "Got $RECORDSFILE. Getting ignorelist"
+log_print DEBUG "Got RECORDSFILE. Getting ignorelist"
 if [[ -f "$IGNORELIST" ]]; then
     sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
 else
@@ -1038,6 +1036,7 @@ if [[ "$(date -d "${lastdate:-@0}" +%y%m%d)" == "$TODAY" ]]; then
   nowlines="$(grep -A9999999 -F "$LASTPROCESSEDLINE" "$TODAYFILE" | wc -l)" || true
   records[totallines]="$(( records[totallines] + nowlines ))"
 elif [[ -f "$TODAYFILE" ]]; then
+  # shellcheck disable=SC2002
   records[totallines]="$(cat "$TODAYFILE" | wc -l)"
   nowlines="${records[totallines]}"
 else
@@ -1574,7 +1573,7 @@ log_print INFO "Processing complete. Now writing results to disk..."
 # Save state
 # ==========================
 { WRITE_RECORDS ignore-lock
-  log_print DEBUG "Wrote $RECORDSFILE"
+  log_print DEBUG "Wrote RECORDSFILE"
 } &
 
 # ==========================

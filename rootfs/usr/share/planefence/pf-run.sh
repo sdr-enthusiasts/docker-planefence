@@ -33,15 +33,36 @@ PA_PATH="/usr/share/planefence"
 NOTIFY_PATH="$PF_PATH/notifiers"
 DELETEAFTER="10"  # minutes
 
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+BACKUPTIME=600  # seconds
+
+# shellcheck disable=SC2174
+mkdir -p -m 0777 /run/planefence
+
 # -----------------------------------------------------------------------------------
 #       SETTINGS STUFF
 # -----------------------------------------------------------------------------------
 set -eo pipefail
 shopt -s nullglob
 
-#DEBUG=true
+cp -n "$RECORDSFILE" "/run/planefence/"
+if [[ ! -f "/run/planefence/planefence.json" && -f "/usr/share/planefence/html/planefence-${TODAY}.json" ]]; then
+  cp -n "/usr/share/planefence/html/planefence-${TODAY}.json" "/run/planefence/planefence.json"
+fi
 
+if [[ ! -f "/run/planefence/plane-alert.json" && -f "/usr/share/planefence/html/plane-alert-${TODAY}.json" ]]; then
+  cp -n "/usr/share/planefence/html/plane-alert-${TODAY}.json" "/run/planefence/plane-alert.json"
+fi
 
+if [[ ! -f /tmp/.pf-lastrun ]] || (( $(date +%s) - $(stat -c %Y /tmp/.pf-lastrun) > BACKUPTIME )); then
+  # Must back up the data files!
+  backup_data_files=true
+  touch /tmp/.pf-lastrun
+else
+  backup_data_files=false
+fi
 
 # -----------------------------------------------------------------------------------
 #      RUN PLANEFENCE
@@ -59,7 +80,8 @@ pid=$!
 echo "$pid" > /run/pf-process_sbs.pid
 wait "$pid" &>/dev/null || true
 rm -f "/run/pf-process_sbs.pid" "/tmp/.records.lock"
-# Limit depth to prevent descending into other directories.
+
+# Remove noisecache
 find /tmp -maxdepth 1 -mindepth 1 \
   \( -name '.pf-noisecache-*' -o -name 'tmp.*' -o -name 'pa_key_*' \) \
   -mmin +"${DELETEAFTER}" \
@@ -71,4 +93,13 @@ if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
       bash "$script" || true &  
   done <<< "$script_array"
 fi
-wait # wait for all background processes to finish
+wait # wait for all notifier background processes to finish
+
+# Backup data files if needed
+if [[ "$backup_data_files" == true ]]; then
+  if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then  cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"; fi
+  if [[ -f "/run/planefence/planefence.json" ]]; then  cp -f "/run/planefence/planefence.json" "/usr/share/planefence/html/planefence-${TODAY}.json"; fi
+  if [[ -f "/run/planefence/plane-alert.json" ]]; then  cp -f "/run/planefence/plane-alert.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"; fi
+  if [[ -f "/run/planefence/planefence.csv" ]]; then  cp -f "/run/planefence/planefence.csv" "/usr/share/planefence/html/planefence-${TODAY}.csv"; fi
+  if [[ -f "/run/planefence/plane-alert.csv" ]]; then  cp -f "/run/planefence/plane-alert.csv" "/usr/share/planefence/html/plane-alert-${TODAY}.csv"; fi
+fi
