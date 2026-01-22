@@ -48,12 +48,12 @@ set -eo pipefail
 shopt -s nullglob
 
 cp -n "$RECORDSFILE" "/run/planefence/"
-if [[ ! -f "/run/planefence/planefence.json" && -f "/usr/share/planefence/html/planefence-${TODAY}.json" ]]; then
-  cp -n "/usr/share/planefence/html/planefence-${TODAY}.json" "/run/planefence/planefence.json"
+if [[ ! -f "/run/planefence/planefence-${TODAY}.json" && -f "/usr/share/planefence/html/planefence-${TODAY}.json" ]]; then
+  cp -n "/usr/share/planefence/html/planefence-${TODAY}.json" "/run/planefence/planefence-${TODAY}.json"
 fi
 
-if [[ ! -f "/run/planefence/plane-alert.json" && -f "/usr/share/planefence/html/plane-alert-${TODAY}.json" ]]; then
-  cp -n "/usr/share/planefence/html/plane-alert-${TODAY}.json" "/run/planefence/plane-alert.json"
+if [[ ! -f "/run/planefence/plane-alert-${TODAY}.json" && -f "/usr/share/planefence/html/plane-alert-${TODAY}.json" ]]; then
+  cp -n "/usr/share/planefence/html/plane-alert-${TODAY}.json" "/run/planefence/plane-alert-${TODAY}.json"
 fi
 
 if [[ ! -f /tmp/.pf-lastrun ]] || (( $(date +%s) - $(stat -c %Y /tmp/.pf-lastrun) > BACKUPTIME )); then
@@ -98,8 +98,8 @@ wait # wait for all notifier background processes to finish
 # Backup data files if needed
 if [[ "$backup_data_files" == true ]]; then
   if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then  cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"; fi
-  if [[ -f "/run/planefence/planefence.json" ]]; then  cp -f "/run/planefence/planefence.json" "/usr/share/planefence/html/planefence-${TODAY}.json"; fi
-  if [[ -f "/run/planefence/plane-alert.json" ]]; then  cp -f "/run/planefence/plane-alert.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"; fi
-  if [[ -f "/run/planefence/planefence.csv" ]]; then  cp -f "/run/planefence/planefence.csv" "/usr/share/planefence/html/planefence-${TODAY}.csv"; fi
-  if [[ -f "/run/planefence/plane-alert.csv" ]]; then  cp -f "/run/planefence/plane-alert.csv" "/usr/share/planefence/html/plane-alert-${TODAY}.csv"; fi
+  if [[ -f "/run/planefence/planefence-${TODAY}.json" ]]; then  cp -f "/run/planefence/planefence-${TODAY}.json" "/usr/share/planefence/html/planefence-${TODAY}.json"; fi
+  if [[ -f "/run/planefence/plane-alert-${TODAY}.json" ]]; then  cp -f "/run/planefence/plane-alert-${TODAY}.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"; fi
+  if [[ -f "/run/planefence/planefence-${TODAY}.csv" ]]; then  cp -f "/run/planefence/planefence-${TODAY}.csv" "/usr/share/planefence/html/planefence-${TODAY}.csv"; fi
+  if [[ -f "/run/planefence/plane-alert-${TODAY}.csv" ]]; then  cp -f "/run/planefence/plane-alert-${TODAY}.csv" "/usr/share/planefence/html/plane-alert-${TODAY}.csv"; fi
 fi
