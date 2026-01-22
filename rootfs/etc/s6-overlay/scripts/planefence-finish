@@ -1,0 +1,31 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash disable=SC1091,SC2154
+set -euo pipefail
+
+source /scripts/pf-common
+# Persist the latest Planefence artifacts when the service stops.
+"${s6wrap[@]}" echo "Planefence finish: backing up data before exit"
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
+# Copy the most recent compressed records back to the persistent store.
+if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then
+  cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"
+fi
+
+# Sync the day’s Planefence and Plane-Alert outputs to the HTML directory.
+if [[ -f "/run/planefence/planefence-${TODAY}.json" ]]; then
+  cp -f "/run/planefence/planefence-${TODAY}.json" "/usr/share/planefence/html/planefence-${TODAY}.json"
+fi
+if [[ -f "/run/planefence/plane-alert-${TODAY}.json" ]]; then
+  cp -f "/run/planefence/plane-alert-${TODAY}.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"
+fi
+if [[ -f "/run/planefence/planefence-${TODAY}.csv" ]]; then
+  cp -f "/run/planefence/planefence-${TODAY}.csv" "/usr/share/planefence/html/planefence-${TODAY}.csv"
+fi
+if [[ -f "/run/planefence/plane-alert-${TODAY}.csv" ]]; then
+  cp -f "/run/planefence/plane-alert-${TODAY}.csv" "/usr/share/planefence/html/plane-alert-${TODAY}.csv"
+fi
+
+"${s6wrap[@]}" echo "Planefence finish: data backup complete"
