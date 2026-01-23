@@ -1829,7 +1829,7 @@
         "privacy.banner.decline": "Continuer sans enregistrer",
         "privacy.banner.more": "Lire la déclaration de confidentialité",
         "footer.privacy": "Politique de confidentialité",
-        "status.historicData": "Donnees historiques : {date}",
+        "status.historicData": "Données historiques : {date}",
         "actions.history": "Historique",
         "actions.today": "Aujourd'hui",
         "history.menu.title": "Choisir une date",
