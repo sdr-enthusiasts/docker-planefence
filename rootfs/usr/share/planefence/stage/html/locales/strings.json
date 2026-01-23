@@ -1530,7 +1530,7 @@
         "status.historicData": "Historische Daten: {date}",
         "actions.history": "Verlauf",
         "actions.today": "Heute",
-        "history.menu.title": "Datum auswahlen",
+        "history.menu.title": "Datum auswählen",
         "history.menu.aria": "Verlaufsdaten",
         "history.empty": "Kein Verlauf verfugbar"
       }
