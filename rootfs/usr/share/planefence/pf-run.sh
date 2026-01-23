@@ -39,7 +39,7 @@ RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
 BACKUPTIME=600  # seconds
 
 # shellcheck disable=SC2174
-mkdir -p -m 0777 /run/planefence
+mkdir -p -m 0750 /run/planefence
 
 # -----------------------------------------------------------------------------------
 #       SETTINGS STUFF

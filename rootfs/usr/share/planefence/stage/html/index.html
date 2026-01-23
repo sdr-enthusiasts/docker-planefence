@@ -1913,15 +1913,6 @@ ${messagesDesc}
     startCountdown();
   }
 
-  function ensurePlanefenceMode(){
-    if (isPlaneAlertMode()) {
-      dataMode = DATA_MODES.PLANEFENCE;
-      safeSetItem(DATA_MODE_KEY, DATA_MODES.PLANEFENCE);
-      applyDataModeUI();
-      applyPlaneAlertColumnVisibility();
-    }
-  }
-
   function switchToToday(){
     historyDate = null;
     historyDateLabel = '';
