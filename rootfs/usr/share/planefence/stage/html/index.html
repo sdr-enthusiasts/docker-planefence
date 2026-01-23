@@ -1913,15 +1913,6 @@ ${messagesDesc}
     startCountdown();
   }
 
-  function ensurePlanefenceMode(){
-    if (isPlaneAlertMode()) {
-      dataMode = DATA_MODES.PLANEFENCE;
-      safeSetItem(DATA_MODE_KEY, DATA_MODES.PLANEFENCE);
-      applyDataModeUI();
-      applyPlaneAlertColumnVisibility();
-    }
-  }
-
   function switchToToday(){
     historyDate = null;
     historyDateLabel = '';
@@ -2825,7 +2816,9 @@ function renderRow(r) {
   const icao = safe(r.icao);
   const tail = safe(r.tail);
   const cs = safe(r.callsign);
-  const typ = safe(r.type);
+  const typRaw = safe(r.type).trim();
+  // Treat the literal string "null" the same as an absent type
+  const typ = typRaw && typRaw.toLowerCase() === 'null' ? '' : typRaw;
   const owner = safe(r.owner);
   const tailFaaLink = safe(r["link:faa"]);
   const ownerFaLink = safe(r["link:fa"]);

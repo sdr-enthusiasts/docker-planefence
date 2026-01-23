@@ -180,7 +180,7 @@
         "status.nextUpdate": "Próxima actualización: {value}",
         "status.nextUpdateCountdown": "Próxima actualización: {seconds}s",
         "status.lastUpdate": "Última actualización: {time}",
-        "status.historicData": "Datos historicos: {date}",
+        "status.historicData": "Datos históricos: {date}",
         "status.streamFailed": "Flujo fallido",
         "status.streamError": "Error de flujo",
         "status.doneRows": "Listo. Filas: {count}",
@@ -333,7 +333,7 @@
         "status.nextUpdate": "Pròxima actualització: {value}",
         "status.nextUpdateCountdown": "Pròxima actualització: {seconds}s",
         "status.lastUpdate": "Darrera actualització: {time}",
-        "status.historicData": "Dades historiques: {date}",
+        "status.historicData": "Dades històriques: {date}",
         "status.streamFailed": "Flux fallit",
         "status.streamError": "Error de flux",
         "status.doneRows": "Fet. Files: {count}",
@@ -759,7 +759,7 @@
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
         "footer.privacy": "Política de privacidade",
-        "status.historicData": "Datos historicos: {date}",
+        "status.historicData": "Datos históricos: {date}",
         "actions.history": "Historial",
         "actions.today": "Hoxe",
         "history.menu.title": "Escolle unha data",
@@ -1530,7 +1530,7 @@
         "status.historicData": "Historische Daten: {date}",
         "actions.history": "Verlauf",
         "actions.today": "Heute",
-        "history.menu.title": "Datum auswahlen",
+        "history.menu.title": "Datum auswählen",
         "history.menu.aria": "Verlaufsdaten",
         "history.empty": "Kein Verlauf verfugbar"
       }
@@ -1685,7 +1685,7 @@
         "actions.today": "Hut",
         "history.menu.title": "Datum uswahle",
         "history.menu.aria": "Verlouf-Date",
-        "history.empty": "Kei Verlouf verfugbar"
+        "history.empty": "Kei Verlouf verfügbar"
       }
     },
     "fr-FR": {
@@ -1829,7 +1829,7 @@
         "privacy.banner.decline": "Continuer sans enregistrer",
         "privacy.banner.more": "Lire la déclaration de confidentialité",
         "footer.privacy": "Politique de confidentialité",
-        "status.historicData": "Donnees historiques : {date}",
+        "status.historicData": "Données historiques : {date}",
         "actions.history": "Historique",
         "actions.today": "Aujourd'hui",
         "history.menu.title": "Choisir une date",
@@ -2291,9 +2291,9 @@
         "footer.privacy": "Tietosuojakäytäntö",
         "status.historicData": "Historialliset tiedot: {date}",
         "actions.history": "Historia",
-        "actions.today": "Tanaan",
-        "history.menu.title": "Valitse paivamaara",
-        "history.menu.aria": "Historian paivamaarat",
+        "actions.today": "Tänään",
+        "history.menu.title": "Valitse päivämäärä",
+        "history.menu.aria": "Historian päivämäärät",
         "history.empty": "Historiaa ei ole saatavilla"
       }
     },
@@ -2445,9 +2445,9 @@
         "status.historicData": "Historiska data: {date}",
         "actions.history": "Historik",
         "actions.today": "Idag",
-        "history.menu.title": "Valj ett datum",
+        "history.menu.title": "Välj ett datum",
         "history.menu.aria": "Historikdatum",
-        "history.empty": "Ingen historik tillganglig"
+        "history.empty": "Ingen historik tillgänglig"
       }
     },
     "pt-BR": {
@@ -2595,12 +2595,12 @@
         "privacy.banner.decline": "Continuar sem salvar",
         "privacy.banner.more": "Ler a Declaração de Privacidade",
         "footer.privacy": "Política de privacidade",
-        "status.historicData": "Dados historicos: {date}",
-        "actions.history": "Historico",
+        "status.historicData": "Dados históricos: {date}",
+        "actions.history": "Histórico",
         "actions.today": "Hoje",
         "history.menu.title": "Selecione uma data",
-        "history.menu.aria": "Datas do historico",
-        "history.empty": "Nenhum historico disponivel"
+        "history.menu.aria": "Datas do histórico",
+        "history.empty": "Nenhum histórico disponível"
       }
     },
     "fr-CJ": {
@@ -2748,7 +2748,7 @@
         "privacy.banner.decline": "Continue without saving",
         "privacy.banner.more": "Read the Privacy Statement",
         "footer.privacy": "Politique de confidentialité",
-        "status.historicData": "Donees historiques : {date}",
+        "status.historicData": "Données historiques : {date}",
         "actions.history": "Historique",
         "actions.today": "Aujourdhui",
         "history.menu.title": "Choisir une date",
@@ -3210,12 +3210,12 @@
         "privacy.banner.decline": "Продовжити без збереження",
         "privacy.banner.more": "Прочитати політику конфіденційності",
         "footer.privacy": "Політика конфіденційності",
-        "status.historicData": "Istorychni dani: {date}",
-        "actions.history": "Istoriya",
-        "actions.today": "Sogodni",
-        "history.menu.title": "Oberit datu",
-        "history.menu.aria": "Dati istoriyi",
-        "history.empty": "Istoriya nedostupna"
+        "status.historicData": "Історичні дані: {date}",
+        "actions.history": "Історія",
+        "actions.today": "Сьогодні",
+        "history.menu.title": "Оберіть дату",
+        "history.menu.aria": "Дати історії",
+        "history.empty": "Історія недоступна"
       }
     },
     "en-PI": {
