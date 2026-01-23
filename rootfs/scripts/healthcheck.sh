@@ -1,7 +1,7 @@
-#!/usr/bin/bash
+#!/command/with-contenv bash
 
 # Exit abnormally for any error
-set -eo pipefail
+set -o pipefail
 
 # Set default exit code
 EXITCODE=0
