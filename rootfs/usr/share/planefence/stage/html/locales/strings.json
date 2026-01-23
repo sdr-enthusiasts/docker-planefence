@@ -2595,7 +2595,7 @@
         "privacy.banner.decline": "Continuar sem salvar",
         "privacy.banner.more": "Ler a Declaração de Privacidade",
         "footer.privacy": "Política de privacidade",
-        "status.historicData": "Dados historicos: {date}",
+        "status.historicData": "Dados históricos: {date}",
         "actions.history": "Historico",
         "actions.today": "Hoje",
         "history.menu.title": "Selecione uma data",
