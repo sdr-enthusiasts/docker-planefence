@@ -47,7 +47,9 @@ mkdir -p -m 0750 /run/planefence
 set -eo pipefail
 shopt -s nullglob
 
-cp -n "$RECORDSFILE" "/run/planefence/"
+if [[ -f "$RECORDSFILE" ]]; then
+  cp -n "$RECORDSFILE" "/run/planefence/"
+fi
 if [[ ! -f "/run/planefence/planefence-${TODAY}.json" && -f "/usr/share/planefence/html/planefence-${TODAY}.json" ]]; then
   cp -n "/usr/share/planefence/html/planefence-${TODAY}.json" "/run/planefence/planefence-${TODAY}.json"
 fi
