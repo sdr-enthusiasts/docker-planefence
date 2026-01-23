@@ -105,7 +105,7 @@ READ_RECORDS() {
   local RECORDSDIR="${RECORDSDIR:-/run/planefence}"
   local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
   local YESTERDAY="${YESTERDAY:-$(date -d 'yesterday' +%y%m%d)}"
-  local YESTERDAYRECORDSFILE="${YESTERDAYRECORDSFILE:-$/usr/share/planefence/html/planefence-records-${YESTERDAY}.gz}"
+  local YESTERDAYRECORDSFILE="${YESTERDAYRECORDSFILE:-/usr/share/planefence/html/planefence-records-${YESTERDAY}.gz}"
   local plane_alert_conf="/usr/share/planefence/plane-alert.conf"
 
   if [[ ! -f "$RECORDSFILE" ]]; then 
