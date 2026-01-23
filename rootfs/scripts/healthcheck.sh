@@ -7,8 +7,8 @@ set -o pipefail
 EXITCODE=0
 
 # see if planefence actually responds in an expected manner
-# (originally I only checked to see if someething listens on port 80,
-# this check is a little more sophisticaed and checks that we actually
+# (originally I only checked to see if something listens on port 80,
+# this check is a little more sophisticated and checks that we actually
 # get a 200 OK response from the service.
 #
 PLANEFENCE_EXPECTED_STATUS="200"
