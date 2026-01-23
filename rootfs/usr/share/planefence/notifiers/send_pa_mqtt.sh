@@ -90,7 +90,7 @@ generate_mqtt() {
 		mqtt_string+=(--client_id "${MQTT_CLIENT_ID:-$(hostname)}")
 		if [[ -n "$MQTT_USERNAME" ]]; then mqtt_string+=(--username "$MQTT_USERNAME"); fi
 		if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
-		mqtt_string+=(--message "'${MQTT_JSON}'")
+		mqtt_string+=(--message "${MQTT_JSON}")
 
 		outputmsg="$(printf '%s\0' "${mqtt_string[@]}" | xargs -0 mqtt)"
 		exitstatus=$?
