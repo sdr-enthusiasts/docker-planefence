@@ -2445,7 +2445,7 @@
         "status.historicData": "Historiska data: {date}",
         "actions.history": "Historik",
         "actions.today": "Idag",
-        "history.menu.title": "Valj ett datum",
+        "history.menu.title": "Välj ett datum",
         "history.menu.aria": "Historikdatum",
         "history.empty": "Ingen historik tillganglig"
       }
