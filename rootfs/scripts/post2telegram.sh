@@ -209,7 +209,7 @@ if (( image_count == 0 )); then
       # Generate link only for channels/groups (private chats don't have public links)
       if [[ "$IS_PRIVATE_CHAT" == "true" ]]; then
         log_print DEBUG "Text message sent successfully to Telegram (private chat, message_id: ${message_id})"
-        echo ""
+        echo "private"
       else
         # For channels, strip the -100 prefix for the link if present
         link_chat_id="${TELEGRAM_CHAT_ID#-100}"

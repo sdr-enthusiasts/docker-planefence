@@ -178,6 +178,9 @@ for idx in "${!link[@]}"; do
   if [[ "${link[idx]:0:4}" == "http" ]]; then
     pa_records["$idx":telegram:notified]=true
     pa_records["$idx":telegram:link]="${link[idx]}"
+  elif [[ "${link[idx]}" == "private" ]]; then
+    pa_records["$idx":telegram:notified]=true
+    pa_records["$idx":telegram:link]=""
   else
     pa_records["$idx":telegram:notified]="error"
   fi
