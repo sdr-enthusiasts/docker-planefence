@@ -60,7 +60,7 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	source /usr/share/planefence/persist/planefence.config
 	set +o allexport
 else
-	cp -n /usr/share/planefence/stage/persist/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
+	cp -Rn /usr/share/planefence/stage/persist/* /usr/share/planefence/persist/
 	chmod -f a+rw /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
 fi
 ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache
