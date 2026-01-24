@@ -32,15 +32,14 @@ declare -a link
 
 SPACE=$'\x1F'   # "special" space
 
-log_print INFO "Hello. Starting Bluesky notification run"
-
-
 # Load a bunch of stuff and determine if we should notify
 
 if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
-  log_print INFO "Bluesky notifications not enabled. Exiting."
-  exit
+  log_print DEBUG "Bluesky notifications not enabled. Exiting."
+  exit 0
 fi
+
+log_print INFO "Hello. Starting Bluesky notification run"
 
 if [[ -f "/usr/share/planefence/notifiers/bluesky.pf.template" ]]; then
   template_clean="$(</usr/share/planefence/notifiers/bluesky.pf.template)"

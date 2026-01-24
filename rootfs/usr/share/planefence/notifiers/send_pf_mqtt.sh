@@ -105,14 +105,13 @@ generate_mqtt() {
 	fi
 }
 
-log_print DEBUG "Starting generation of MQTT notifications"
-
-
 
 if [[ -z "$MQTT_URL" ]]; then
   log_print DEBUG "MQTT notifications are disabled - exiting"
   exit 0
 fi
+
+log_print DEBUG "Starting generation of MQTT notifications"
 
 # read the records file
 READ_RECORDS

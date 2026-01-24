@@ -26,14 +26,15 @@ DEBUG=false
 
 declare -a INDEX STALE link delivery_errors link
 
-log_print INFO "Hello. Starting Discord notification run"
-
 # Load a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$PA_DISCORD"; then
-  log_print INFO "Discord notifications not enabled. Exiting."
-  exit
+  log_print DEBUG "Discord notifications not enabled. Exiting."
+  exit 0
 fi
+
+log_print INFO "Hello. Starting Discord notification run"
+
 if [[ -z "$PA_DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."
   exit 1
