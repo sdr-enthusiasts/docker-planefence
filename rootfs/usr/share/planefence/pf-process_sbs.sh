@@ -97,6 +97,17 @@ PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
 PA_RANGE="$(sed -n 's/\(^\s*RANGE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_RANGE="${PA_RANGE%%#*}"
+PA_RANGE="${PA_RANGE//[\"\'[:space:]]/}"
+if [[ -z "$PA_RANGE" ]]; then
+  PA_RANGE=999999
+elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  log_print WARN "Invalid PA_RANGE '$PA_RANGE' in plane-alert.conf; defaulting to 999999"
+  PA_RANGE=999999
+fi
+log_print DEBUG "PA_RANGE=$PA_RANGE"
+
+
 
 PF_MOTD="$(awk -F'=' '/^\s*PF_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
 PA_MOTD="$(awk -F'=' '/^\s*PA_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/plane-alert.conf)"
@@ -1022,7 +1033,7 @@ if [[ -n $REMOTENOISE ]]; then
 fi
 
 if chk_enabled "$PLANEALERT"; then
-  awk -F',' '{print "^" $1 "," }' "$PA_FILE" > /tmp/pa_keys_$$ 2>/dev/null || touch /tmp/pa_keys_$$
+  awk -F',' 'NR>1 {print "^" $1 "," }' "$PA_FILE" > /tmp/pa_keys_$$ 2>/dev/null || touch /tmp/pa_keys_$$
 fi
 
 # ==========================
