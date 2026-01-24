@@ -102,7 +102,7 @@ PA_RANGE="${PA_RANGE//[\"\'[:space:]]/}"
 if [[ -z "$PA_RANGE" ]]; then
   PA_RANGE=999999
 elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-  log_print WARN "Invalid PA_RANGE '$PA_RANGE' in plane-alert.conf; defaulting to 999999"
+  log_print WARN "Invalid PA_RANGE '$PA_RANGE' in plane-alert.conf; defaulting to infinite"
   PA_RANGE=999999
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
@@ -1577,7 +1577,11 @@ pa_records["station:myurl"]="$MYURL"
 pa_records["station:me"]="$MY"
 pa_records["station:myurl"]="$MYURL"
 pa_records["station:motd"]="$PA_MOTD"
-
+if [[ "$PA_RANGE" != "999999" ]]; then 
+  pa_records["station:range"]="$PA_RANGE"
+else 
+  pa_records["station:range"]="-1"; 
+fi
 pa_records["LASTUPDATE"]="$NOWTIME"
 
 log_print INFO "Processing complete. Now writing results to disk..."

@@ -121,6 +121,10 @@
   </footer>
 
 <script>
+  const DEBUG_PRIVACY_LOG = false; // silence debug logs now that parsing is stable
+  function logDebug(...args){ if (DEBUG_PRIVACY_LOG) console.debug('[privacy-debug]', ...args); }
+  function logWarn(...args){ if (DEBUG_PRIVACY_LOG) console.warn('[privacy-debug]', ...args); }
+  function safeSnippet(text, max=400){ if (typeof text !== 'string') return ''; return text.length > max ? `${text.slice(0, max)}...[truncated ${text.length - max}]` : text; }
   const FLAG_ICON_SRC_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/flags/4x3/';
   const LANGUAGE_STORAGE_KEY = 'pf-language';
   const PRIVACY_CONSENT_KEY = 'pf-privacy-consent';
@@ -228,37 +232,153 @@
       const segments = url.pathname.split('/');
       segments.pop();
       const base = segments.join('/') || '/';
-      return `${base}/${filename}`.replace(/\/+/g, '/');
+      return `${base}/${filename}`.replace(/\/+/, '/');
     } catch (e) {
       return filename;
     }
   }
 
+  function buildLocaleCandidatePaths(filename){
+    const ordered = [];
+    try { ordered.push(new URL(`./${filename}`, window.location.href).toString()); } catch (e) {}
+    try { ordered.push(buildNearbyLocalesPath(filename)); } catch (e) {}
+    try { ordered.push(new URL(filename, window.location.href).toString()); } catch (e) {}
+    try { ordered.push(filename); } catch (e) {}
+    const seen = new Set();
+    return ordered.filter(p => { if (!p || seen.has(p)) return false; seen.add(p); return true; });
+  }
+
   function parseJsonSafely(text){
     if (typeof text !== 'string') return null;
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      /* try again after stripping control characters (e.g., broken line wraps) */
-      try {
-        const sanitized = text.replace(/[\u0000-\u001F]+/g, '');
-        return JSON.parse(sanitized);
-      } catch (e2) {
-        return null;
+    const attempts = [];
+    const raw = text;
+    const escapeControlsInStrings = (str)=>{
+      if (typeof str !== 'string') return str;
+      let out = '';
+      let inString = false;
+      let quote = '';
+      let escaped = false;
+      for (let i = 0; i < str.length; i++){
+        const ch = str[i];
+        if (escaped) {
+          out += ch;
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\' && inString){
+          out += ch;
+          escaped = true;
+          continue;
+        }
+        if ((ch === '"' || ch === "'") && !inString){
+          inString = true; quote = ch; out += ch; continue;
+        }
+        if (inString && ch === quote){
+          inString = false; quote = ''; out += ch; continue;
+        }
+        if (inString){
+          const code = ch.charCodeAt(0);
+          if (ch === '\n') { out += '\\n'; continue; }
+          if (ch === '\r') { out += '\\r'; continue; }
+          if (ch === '\t') { out += '\\t'; continue; }
+          if (code < 32){ out += `\\u${code.toString(16).padStart(4, '0')}`; continue; }
+        }
+        out += ch;
+      }
+      return out;
+    };
+    const scanControlChars = (str)=>{
+      if (typeof str !== 'string') return [];
+      const out = [];
+      for (let i = 0; i < str.length; i++){
+        const code = str.charCodeAt(i);
+        if (code < 32){
+          out.push({ idx: i, code, hex: `0x${code.toString(16)}`, context: safeSnippet(str.slice(Math.max(0, i-40), i+40), 160) });
+          if (out.length > 32) break; // cap to avoid noise
+        }
+      }
+      return out;
+    };
+    const mkMeta = (label, candidate)=>({ label, length: candidate?.length || 0, startsWith: candidate?.slice(0, 40) || '', looksHtml: /^\s*</.test(candidate || ''), gzipSignature: candidate && candidate.charCodeAt(0) === 0x1f && candidate.charCodeAt(1) === 0x8b });
+    attempts.push(raw);
+    const repairUnescapedQuotes = (str)=>{
+      if (typeof str !== 'string') return str;
+      let out=''; let inString=false; let quote=''; let escaped=false;
+      for(let i=0;i<str.length;i++){
+        const ch=str[i];
+        if(escaped){ out+=ch; escaped=false; continue; }
+        if(ch==='\\'){ out+=ch; escaped=true; continue; }
+        if(!inString && (ch==='"'||ch==="'")){ inString=true; quote=ch; out+=ch; continue; }
+        if(inString && ch===quote){
+          const rest=str.slice(i+1);
+          const m=rest.match(/\S/);
+          const next=m?m[0]:'';
+          if(next===','||next==='}'||next===']'||next===':'){ inString=false; quote=''; out+=ch; continue; }
+          out+='\\"';
+          continue;
+        }
+        if(inString){
+          const code=ch.charCodeAt(0);
+          if(ch==='\n'){ out+='\\n'; continue; }
+          if(ch==='\r'){ out+='\\r'; continue; }
+          if(ch==='\t'){ out+='\\t'; continue; }
+          if(code<32){ out+=`\\u${code.toString(16).padStart(4,'0')}`; continue; }
+        }
+        out+=ch;
+      }
+      return out;
+    };
+    const escapedRaw = escapeControlsInStrings(raw);
+    attempts.push(escapedRaw);
+    const repairedQuotes = repairUnescapedQuotes(raw);
+    attempts.push(repairedQuotes);
+    const noCtrl = raw.replace(/[\u0000-\u001F]+/g, '');
+    attempts.push(noCtrl);
+    const noBom = attempts.at(-1).replace(/^\uFEFF/, '');
+    attempts.push(noBom);
+    const noComments = attempts.at(-1).replace(/\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, '').replace(/(^|\n)\s*\/\/.*$/gm, '');
+    attempts.push(noComments);
+    const noTrailingCommas = attempts.at(-1).replace(/,\s*([}\]])/g, '$1');
+    attempts.push(noTrailingCommas);
+    const escapedInStrings = escapeControlsInStrings(attempts.at(-1));
+    attempts.push(escapedInStrings);
+    const repairedEscaped = repairUnescapedQuotes(escapedInStrings);
+    attempts.push(repairedEscaped);
+    const slicedObject = (()=>{
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      if (start >= 0 && end > start) return raw.slice(start, end + 1);
+      return null;
+    })();
+    if (slicedObject) attempts.push(slicedObject);
+    for (const [idx, candidate] of attempts.entries()){
+      try { return JSON.parse(candidate); }
+      catch (e) {
+        if (DEBUG_PRIVACY_LOG) logWarn('parseJsonSafely failed attempt', idx, mkMeta(`attempt-${idx}`, candidate), e?.message || e);
       }
     }
+    if (DEBUG_PRIVACY_LOG) {
+      const ctrls = scanControlChars(raw);
+      const aroundErr = raw.slice(Math.max(0, 4350), 4440);
+      logWarn('parseJsonSafely exhausted attempts', { firstChars: safeSnippet(raw, 200), controlChars: ctrls.slice(0, 12), controlCount: ctrls.length, window: aroundErr });
+    }
+    return null;
   }
 
   async function fetchJsonSequential(paths){
     for (const path of paths){
       try {
+        logDebug('fetchJsonSequential: start', path);
         const resp = await fetch(path, { cache: 'no-store' });
-        if (!resp.ok) continue;
+        if (!resp.ok) { logWarn('fetch failed', path, resp.status, resp.statusText); continue; }
+        const ctype = resp.headers?.get ? resp.headers.get('content-type') : undefined;
         const text = await resp.text();
+        logDebug('fetchJsonSequential: response', { path, status: resp.status, ctype, length: text?.length, bodyPreview: safeSnippet(text) });
         const parsed = parseJsonSafely(text);
-        if (parsed) return parsed;
+        if (parsed) { console.info('[privacy] loaded locales from', path); return parsed; }
+        logWarn('parse failed', path, { ctype, len: text?.length, preview: safeSnippet(text, 500) });
       } catch (e) {
-        /* ignore and try next */
+        logWarn('fetch error', path, e?.message || e);
       }
     }
     return null;
@@ -289,11 +409,7 @@
 
   async function loadI18n(){
     let config = I18N_FALLBACK;
-    const data = await fetchJsonSequential([
-      buildNearbyLocalesPath('locales/strings.json'),
-      './locales/strings.json',
-      './locales/strings.json'
-    ]);
+    const data = await fetchJsonSequential(buildLocaleCandidatePaths('locales/strings.json'));
     if (data && data.languages) config = data;
     const rawLanguages = config.languages || I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
@@ -304,20 +420,19 @@
     }
     const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
     const chosen = pickLanguage(normalizedLanguages, fallbackLang);
+    logDebug('i18n load complete', { chosen, fallbackLang, available: Object.keys(normalizedLanguages), source: data ? 'remote' : 'fallback' });
     i18nState.lang = chosen;
     i18nState.languages = normalizedLanguages;
     i18nState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || {};
     i18nState.strings = (normalizedLanguages[chosen]?.strings) || i18nState.fallbackStrings;
+    if (!data || !data.languages) console.warn('[privacy] Falling back to bundled strings.json');
     try { document.documentElement.lang = chosen; } catch (e) {}
     return i18nState;
   }
 
   async function loadPrivacyStrings(preferredLanguage){
     let config = PRIVACY_I18N_FALLBACK;
-    const data = await fetchJsonSequential([
-      buildNearbyLocalesPath('locales/privacy.json'),
-      './locales/privacy.json'
-    ]);
+    const data = await fetchJsonSequential(buildLocaleCandidatePaths('locales/privacy.json'));
     if (data && data.languages) config = data;
     const rawLanguages = config.languages || PRIVACY_I18N_FALLBACK.languages || {};
     const normalizedLanguages = {};
@@ -329,10 +444,12 @@
     const fallbackLang = normalizeLang(config.fallbackLanguage || config.defaultLanguage || 'en-US');
     const preferred = findLanguageMatch(preferredLanguage || i18nState.lang, normalizedLanguages);
     const chosen = preferred || findLanguageMatch(fallbackLang, normalizedLanguages) || Object.keys(normalizedLanguages)[0] || 'en-US';
+    logDebug('privacy load complete', { chosen, preferredLanguage, fallbackLang, available: Object.keys(normalizedLanguages), source: data ? 'remote' : 'fallback' });
     privacyState.lang = chosen;
     privacyState.languages = normalizedLanguages;
     privacyState.fallbackStrings = (normalizedLanguages[fallbackLang]?.strings) || PRIVACY_I18N_FALLBACK.languages?.['en-US']?.strings || {};
     privacyState.strings = (normalizedLanguages[chosen]?.strings) || privacyState.fallbackStrings;
+    if (!data || !data.languages) console.warn('[privacy] Falling back to bundled privacy.json');
     return privacyState;
   }
 
