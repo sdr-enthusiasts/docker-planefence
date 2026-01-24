@@ -33,6 +33,11 @@
             "inline": true
           },
           {
+            "name": "Min dist",
+            "value": "||DISTANCE|| ",
+            "inline": true
+          },
+          {
             "name": "Gnd Speed",
             "value": "||GROUNDSPEED|| ",
             "inline": true
