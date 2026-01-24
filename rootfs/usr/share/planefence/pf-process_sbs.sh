@@ -96,6 +96,8 @@ fi
 PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
+PA_RANGE="$(sed -n 's/\(^\s*RANGE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+
 PF_MOTD="$(awk -F'=' '/^\s*PF_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
 PA_MOTD="$(awk -F'=' '/^\s*PA_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/plane-alert.conf)"
 
@@ -1076,13 +1078,13 @@ log_print DEBUG "Collected new records into /tmp/filtered_records_$$"
 LASTPROCESSEDLINE="$(head -n2 /tmp/filtered_records_$$ | tail -1 || true)"
 
 # Create pf_socketrecords array
-readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }')
+readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }' || true)
 log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
 
 # Create pa_socketrecords array
 if chk_enabled "$PLANEALERT" && (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
   # Patterns in /tmp/pa_keys_$$ are regular expressions anchored with ^, so use regex grep
-  readarray -t pa_socketrecords < <(grep -E -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null || true)
+  readarray -t pa_socketrecords < <(grep -E -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$PA_RANGE" '$8 <= dist && NF==12 { print }' || true)
   rm -f /tmp/pa_keys_$$
   log_print DEBUG "Created pa_socketrecords array with ${#pa_socketrecords[@]} entries"
 else
