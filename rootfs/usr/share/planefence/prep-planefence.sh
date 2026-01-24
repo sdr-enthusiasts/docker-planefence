@@ -48,7 +48,6 @@ function configure_both() {
 # then export all of those variables as well
 mkdir -p -m 0777 /usr/share/planefence/persist/.internal
 mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
-mkdir -p -m 0777 /usr/share/planefence/html/plane-alert/silhouettes
 mkdir -p -m 0777 /usr/share/planefence/html/assets/images
 mkdir -p -m 0777 /usr/share/planefence/html/noise
 chmod -f a=rwx /usr/share/planefence/persist
@@ -62,7 +61,7 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set +o allexport
 else
 	cp -n /usr/share/planefence/stage/persist/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
-	chmod -f a+rw /usr/share/planefence/persist/planefence.config
+	chmod -f a+rw /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
 fi
 ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache
 

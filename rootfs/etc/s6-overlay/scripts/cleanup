@@ -29,12 +29,8 @@ CACHETIME="${LOOPTIME//h/ hours}"
 CACHETIME="${CACHETIME//m/ minutes}"
 CACHETIME="${CACHETIME//s/ seconds}"
 
-if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
-  source /usr/share/planefence/persist/planefence.config
-else
-  "${s6wrap[@]}" echo "[ERROR] - Can't find /usr/share/planefence/persist/planefence.config which is needed for this app to run"
-  exit 1
-fi
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
+source /usr/share/planefence/persist/planefence.config
 
 OLDERTHAN=${PF_DELETEAFTER:-14}
 #

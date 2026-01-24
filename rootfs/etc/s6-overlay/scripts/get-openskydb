@@ -13,6 +13,8 @@
 # IT SHOULD RUN AS A ONESHOT SERVICE IN PARALLEL WITH OTHER SERVICES
 
 source "/scripts/common"
+
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 source "/usr/share/planefence/persist/planefence.config"
 
 if chk_disabled "${OPENSKYDB_DOWNLOAD:-enabled}"; then

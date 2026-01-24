@@ -2,6 +2,8 @@
 #shellcheck shell=bash disable=SC1091,SC2154
 
 source /scripts/common
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
+
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Get-PA-Alertlist started as an s6 service"; fi
 

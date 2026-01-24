@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /etc/s6-overlay/scripts/00-container-startup
