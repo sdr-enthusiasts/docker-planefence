@@ -76,6 +76,11 @@ generate_rss() {
   local last_build_date
   last_build_date=$(date -R)
 
+  # Ensure site_link has trailing slash if it's set (defensive check, already done at line 43)
+  if [[ -n "$site_link" ]] && [[ "${site_link: -1}" != "/" ]]; then
+    site_link="${site_link}/"
+  fi
+
   # Handle URL defaults and fallbacks
   # Priority: Use configured values, fall back to constructing from each other, then use placeholders
   if [[ -z "$feed_link" ]] && [[ -z "$site_link" ]]; then
@@ -83,7 +88,7 @@ generate_rss() {
     feed_link="http://example.com/${rss_file##*/}"
     site_link="http://example.com/"
   elif [[ -z "$feed_link" ]]; then
-    # feed_link not set, construct from site_link (which already has trailing slash)
+    # feed_link not set, construct from site_link (which has trailing slash)
     feed_link="${site_link}${rss_file##*/}"
   elif [[ -z "$site_link" ]]; then
     # site_link not set, derive from feed_link
