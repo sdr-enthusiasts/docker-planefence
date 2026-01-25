@@ -92,8 +92,8 @@ mkdir -p /run/planefence
 # Check if planefence.config exists
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured planefence.config."
-	"${s6wrap[@]}" echo "Rename the sample file in your config directory to planefenc.config"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured planefence.config."
+	"${s6wrap[@]}" echo "Rename the sample file in your config directory to planefence.config"
 	"${s6wrap[@]}" echo "and edit it to set the values for your station "
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
