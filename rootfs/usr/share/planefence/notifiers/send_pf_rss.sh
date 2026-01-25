@@ -73,7 +73,7 @@ generate_rss() {
   local last_build_date
   last_build_date=$(date -R)
 
-  # Ensure site_link has trailing slash if it's set (defensive check, already done at line 43)
+  # Ensure site_link has trailing slash if it's set (defensive check)
   if [[ -n "$site_link" ]] && [[ "${site_link: -1}" != "/" ]]; then
     site_link="${site_link}/"
   fi
