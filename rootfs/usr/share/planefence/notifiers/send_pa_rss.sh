@@ -32,7 +32,8 @@ TODAY=$(date --date="today" '+%y%m%d')
 # Site configuration - you can modify these
 SITE_TITLE="Plane-Alert Aircraft Detections"
 SITE_DESC="Interesting aircraft detected within range of our ADS-B receiver"
-SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
+SITE_LINK="${RSS_SITELINK}"  # Base URL for your site
+FEED_LINK="${RSS_FEEDLINK}"  # Full URL to the RSS feed itself
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
 #rss_file="${OUTFILEDIR:-/usr/share/planefence/html}/plane-alert-$TODAY.rss"
 rss_file="/run/planefence/plane-alert-$TODAY.rss"
@@ -67,12 +68,28 @@ generate_rss() {
   READ_RECORDS
 
   # Precompute some values to avoid repeated expansions
-  local site_link="${SITE_LINK:-.}"
+  local site_link="${SITE_LINK}"
+  local feed_link="${FEED_LINK}"
   local site_title="${SITE_TITLE:-Plane-Alert Aircraft Detections}"
   local site_desc="${SITE_DESC:-Interesting aircraft detected within range of our ADS-B receiver}"
   local site_image="$SITE_IMAGE"
   local last_build_date
   last_build_date=$(date -R)
+
+  # If feed_link is not set, construct it from site_link + filename
+  # If site_link is also not set, use a placeholder that will fail validation
+  if [[ -z "$feed_link" ]]; then
+    if [[ -n "$site_link" ]]; then
+      feed_link="${site_link}${rss_file##*/}"
+    else
+      feed_link="http://example.com/${rss_file##*/}"
+    fi
+  fi
+
+  # If site_link is not set, use feed_link without the filename
+  if [[ -z "$site_link" ]]; then
+    site_link="${feed_link%/*}/"
+  fi
 
   # Write header once using printf to avoid many subshells
   {
@@ -90,7 +107,7 @@ generate_rss() {
       printf '  <link>%s</link>\n' "$site_link"
       printf '</image>\n'
     fi
-    printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "${site_link}${rss_file##*/}")"
+    printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "$feed_link")"
   } > "$rss_file"
 
   # Cache max index
@@ -134,7 +151,7 @@ generate_rss() {
       printf '<item>\n'
       printf '  <title>%s</title>\n' "$(xml_escape "$title")"
       printf '  <description>%s</description>\n' "$(xml_escape "$desc")"
-      printf '  <link>%s</link>\n' "$ITEM_LINK"
+      printf '  <link>%s</link>\n' "$(xml_escape "$ITEM_LINK")"
       printf '  <guid isPermaLink="false">%s</guid>\n' "$guid"
       printf '  <pubDate>%s</pubDate>\n' "$pubdate"
       printf '</item>\n'
