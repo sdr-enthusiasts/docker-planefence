@@ -1,7 +1,8 @@
 #PlaneAlert ||EMERGENCY||#ICAO: #||ICAO||
 ||OWNER||
-Flt: #||CALLSIGN|| ||TAIL|| #||TYPE|| ||ROUTE||
+Flt: #||CALLSIGN|| ||TAIL|| ||TYPE|| ||ROUTE||
 Time: ||TIME||
 Min Alt: ||ALT||
-||SQUAWK||||LOUDNESS||
+Min Dist: ||DIST||
+||SQUAWK||
 ||ATTRIB||||LINKS||

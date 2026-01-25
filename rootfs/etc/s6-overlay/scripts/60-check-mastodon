@@ -12,6 +12,8 @@ source /scripts/common
 # -----------------------------------------------------------------------------------
 #
 
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
+
 "${s6wrap[@]}" echo "Checking Mastodon server and access token"
 
 source /usr/share/planefence/persist/planefence.config

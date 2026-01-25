@@ -48,7 +48,6 @@ function configure_both() {
 # then export all of those variables as well
 mkdir -p -m 0777 /usr/share/planefence/persist/.internal
 mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
-mkdir -p -m 0777 /usr/share/planefence/html/plane-alert/silhouettes
 mkdir -p -m 0777 /usr/share/planefence/html/assets/images
 mkdir -p -m 0777 /usr/share/planefence/html/noise
 chmod -f a=rwx /usr/share/planefence/persist
@@ -61,8 +60,8 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	source /usr/share/planefence/persist/planefence.config
 	set +o allexport
 else
-	cp -n /usr/share/planefence/stage/persist/planefence.config /usr/share/planefence/persist/planefence.config-RENAME-and-EDIT-me
-	chmod -f a+rw /usr/share/planefence/persist/planefence.config
+	cp -Rn /usr/share/planefence/stage/persist/* /usr/share/planefence/persist/
+	chmod -f a+rw /usr/share/planefence/persist/planefence.config.RENAME-and-EDIT-me
 fi
 ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/imgcache
 
@@ -82,12 +81,7 @@ if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/p
 # only called synchronously from planefence (if enabled)
 #
 # LOOPTIME is the time between two runs of Planefence (in seconds)
-if [[ -n "$PF_INTERVAL" ]]; then
-	export LOOPTIME=$PF_INTERVAL
-
-else
-	export LOOPTIME=120
-fi
+export LOOPTIME=${PF_INTERVAL:-120}
 #
 # PLANEFENCEDIR contains the directory where planefence.sh is location
 
@@ -95,17 +89,26 @@ fi
 # Make sure the /run directory exists
 mkdir -p /run/planefence
 # -----------------------------------------------------------------------------------
-# Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
-if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
-	sleep 10s
+# Check if planefence.config exists
+if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
-	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
-	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured planefence.config."
+	"${s6wrap[@]}" echo "Rename the sample file in your config directory to planefence.config"
+	"${s6wrap[@]}" echo "and edit it to set the values for your station "
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	stop_service
+	exec sleep infinity
+fi
+# -----------------------------------------------------------------------------------
+# Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
+if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
+	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
+	"${s6wrap[@]}" echo "Edit planefence.config to set this and other parameters for your station "
+	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	exec sleep infinity
 fi
 
 #

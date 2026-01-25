@@ -19,6 +19,7 @@
 # can't be exported back to parent processes.
 
 source /scripts/pf-common
+source /usr/share/planefence/prep-planefence.sh
 
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"
@@ -30,15 +31,6 @@ if [[ "$LOGLEVEL" != "ERROR" ]]; then
     "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
 fi
 
-source /usr/share/planefence/prep-planefence.sh
-
-# Add VERSION info to footer of HTML files
-if [[ -f /.VERSION ]]; then
-    VERSION="$(cat /.VERSION)"
-    sed -i "s/##VERSION##/${VERSION}/g" /usr/share/planefence/html/index.html
-else
-    sed -i "s/##VERSION##/unknown/g" /usr/share/planefence/html/index.html
-fi
 #--------------------------------------------------------------------------------
 # Now loop forever, after waiting for 1 cycle. The wait is so socket30003 can actually collect some data before we try to call Planefence
 # We are randomizing the initial looptime in case there are multiple Planefence instances running. That way the load will be spread out a bit

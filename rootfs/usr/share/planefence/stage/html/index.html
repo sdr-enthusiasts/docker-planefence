@@ -843,6 +843,15 @@
       if (swapped !== planeAlertBase) return swapped;
       return `${planeAlertBase} ${watchlistLink}`;
     })();
+    const planeAlertRangeNote = (() => {
+      const rangeVal = Number(stationInfoState.range);
+      if (!Number.isFinite(rangeVal) || rangeVal <= 0) return '';
+      const rangeStr = formatStationDistance(rangeVal);
+      const distUnit = escapeHtml(stationInfoState.distUnit || '--');
+      const tpl = t('stationInfo.planeAlert.rangeNote', { range: rangeStr, distUnit }, 'Plane-Alert only displays those aircraft that are within {range} {distUnit} of the station.');
+      return applyParams(tpl, { range: rangeStr, distUnit });
+    })();
+    const planeAlertSection = [planeAlertDesc, planeAlertRangeNote].filter(Boolean).join(' ');
     const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
     const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
@@ -860,7 +869,7 @@ ${pfDesc}
   <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>
 </div>
 <h1>${planeAlertHeading}</h1>
-${planeAlertDesc}
+${planeAlertSection}
 <h1>${messagesHeading}</h1>
 ${messagesDesc}
 <footer>
@@ -1107,6 +1116,7 @@ ${messagesDesc}
 
   const stationInfoState = {
     dist: null,
+    range: null,
     distUnit: '',
     altitude: null,
     altUnit: '',
@@ -1966,6 +1976,7 @@ ${messagesDesc}
     let changed = false;
     const mapping = [
       ['dist', 'station:dist:value'],
+      ['range', 'station:range'],
       ['distUnit', 'station:dist:unit'],
       ['altitude', 'station:altitude:value'],
       ['altUnit', 'station:altitude:unit'],

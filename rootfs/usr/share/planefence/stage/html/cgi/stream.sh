@@ -2,6 +2,7 @@
 set -eo pipefail
 
 DOCROOT="/usr/share/planefence/html"
+RUNROOT="/run/planefence"
 
 # UTC dates to avoid TZ drift
 utc_today="$(date -u +%y%m%d)"
@@ -21,15 +22,21 @@ choose_json() {
   local cand
 
   if [[ -n "${req_date}" ]]; then
+    cand="${RUNROOT}/${mode}-${req_date}.json"
+    [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
     cand="${DOCROOT}/${mode}-${req_date}.json"
     [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
     printf ''
     return
   fi
 
+  cand="${RUNROOT}/${mode}-${utc_today}.json"
+  [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
   cand="${DOCROOT}/${mode}-${utc_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
+  cand="${RUNROOT}/${mode}-${utc_yday}.json"
+  [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
   cand="${DOCROOT}/${mode}-${utc_yday}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 

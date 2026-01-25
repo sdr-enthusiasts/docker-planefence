@@ -549,6 +549,7 @@ PA_BLUESKY_ENABLED=""
 #
 # TELEGRAM_BOT_TOKEN should look like "123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ"
 # PF_TELEGRAM_CHAT_ID / PA_TELEGRAM_CHAT_ID can be a numeric ID (for private channels) or a public channel name like "@yourchannel"
+# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: if set to dm, private, or user thena DM is sent and no link is retained
 #
 # IMPORTANT: you must add your newly created Bot as an Administrator of your channel. You can only do this if you
 #            yourself are an Administrator of the channel. 
@@ -561,6 +562,8 @@ PF_TELEGRAM_CHAT_ID=""
 PA_TELEGRAM_CHAT_ID=""
 PF_TELEGRAM_ENABLED=false
 PA_TELEGRAM_ENABLED=false
+PF_TELEGRAM_CHAT_TYPE=
+PA_TELEGRAM_CHAT_TYPE=
 #
 # ---------------------------------------------------------------------
 # These are optional parameters related to downloading the OpenSky database.

@@ -33,15 +33,14 @@ declare -a link
 #SPACE=$'\x1F'   # "special" space
 SPACE="_"   # Mastodon does not allow special spaces in hashtags, so use underscore instead
 
-log_print INFO "Hello. Starting Mastodon notification run"
-
-
 # Load a bunch of stuff and determine if we should notify
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" || -z "$MASTODON_SERVER" ]]; then
-  log_print INFO "Mastodon notifications not enabled. Exiting."
-  exit
+  log_print DEBUG "Mastodon notifications not enabled. Exiting."
+  exit 0
 fi
+
+log_print INFO "Hello. Starting Mastodon notification run"
 
 if [[ -f "/usr/share/planefence/notifiers/mastodon.pf.template" ]]; then
   template_clean="$(</usr/share/planefence/notifiers/mastodon.pf.template)"

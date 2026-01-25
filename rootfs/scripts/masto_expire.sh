@@ -31,7 +31,7 @@ delete_toot() {
 }
 
 if chk_disabled "$MASTODON_RETENTION_TIME"; then
-    log_print ERR "MASTODON_RETENTION_TIME is set to $MASTODON_RETENTION_TIME (disabled); nothing to do!"
+    log_print INFO "MASTODON_RETENTION_TIME is set to $MASTODON_RETENTION_TIME (disabled); nothing to do!"
     exit 0
 fi
 
@@ -40,13 +40,13 @@ if [[ -z "$MASTODON_RETENTION_TIME" ]]; then
 fi
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]]; then
-    log_print ERR "MASTODON_ACCESS_TOKEN not set. Exiting."
-    exit 1
+    log_print INFO "MASTODON_ACCESS_TOKEN not set. Exiting."
+    exit 0
 fi
 
 if [[ -z "$MASTODON_SERVER" ]]; then
-    log_print ERR "MASTODON_SERVER not set. Exiting."
-    exit 1
+    log_print INFO "MASTODON_SERVER not set. Exiting."
+    exit 0
 fi
 
 if [[ "${1,,}" != "delete" ]]; then

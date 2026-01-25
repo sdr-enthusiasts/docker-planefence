@@ -33,6 +33,11 @@
             "inline": true
           },
           {
+            "name": "Min dist",
+            "value": "||DISTANCE|| ",
+            "inline": true
+          },
+          {
             "name": "Gnd Speed",
             "value": "||GROUNDSPEED|| ",
             "inline": true
@@ -46,7 +51,12 @@
             "name": "Route",
             "value": "||ROUTE||",
             "inline": true
-          }
+          }||NOISE--,
+          {
+            "name": "Loudness",
+            "value": "||LOUDNESS|| ",
+            "inline": true
+          }--NOISE||
         ],
         "timestamp": "||TIMESTAMP||",
         ||THUMBNAIL--"thumbnail":
@@ -55,7 +65,7 @@
         },--THUMBNAIL||
         "footer":
         {
-          "text": "Plane-Alert © ||YEAR|| by kx1t"
+          "text": "Planefence © ||YEAR|| by kx1t"
         }||IMAGE--,
         "image":
         {
@@ -63,7 +73,7 @@
         }--IMAGE||,
         "author":
         {
-          "name": "Plane-Alert",
+          "name": "Planefence",
           "url": "https://sdr-e.com/docker-planefence"
         }
       }

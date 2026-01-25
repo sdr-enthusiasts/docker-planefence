@@ -19,6 +19,7 @@
 # can't be exported back to parent processes.
 
 source /scripts/pf-common
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 
 LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
 LOOPTIME="${LOOPTIME:-60}"

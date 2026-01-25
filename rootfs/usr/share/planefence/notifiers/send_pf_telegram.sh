@@ -32,13 +32,14 @@ declare -a link
 
 SPACE="_"   # "special" space replacement character for hashtagged items
 
-log_print INFO "Hello. Starting Telegram notification run"
-
 # Check a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$TELEGRAM_ENABLED"; then
-  log_print INFO "Telegram is not enabled. Exiting."
+  log_print DEBUG "Telegram is not enabled. Exiting."
+  exit 0
 fi
+
+log_print INFO "Hello. Starting Telegram notification run"
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
   log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
@@ -183,6 +184,9 @@ for idx in "${!link[@]}"; do
   if [[ "${link[idx]:0:4}" == "http" ]]; then
     records["$idx":telegram:notified]=true
     records["$idx":telegram:link]="${link[idx]}"
+  elif [[ "${link[idx]}" == "private" ]]; then
+    records["$idx":telegram:notified]=true
+    records["$idx":telegram:link]=""
   else
     records["$idx":telegram:notified]="error"
   fi
