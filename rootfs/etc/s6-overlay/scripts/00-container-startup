@@ -13,7 +13,6 @@
 source /scripts/common
 
 "${s6wrap[@]}" echo "Initial Planefence check..."
-Checking Mastodon server and access token"
 
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
     /usr/share/planefence/prep-planefence.sh
