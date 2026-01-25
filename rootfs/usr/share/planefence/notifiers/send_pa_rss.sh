@@ -33,7 +33,6 @@ TODAY=$(date --date="today" '+%y%m%d')
 SITE_TITLE="Plane-Alert Aircraft Detections"
 SITE_DESC="Interesting aircraft detected within range of our ADS-B receiver"
 SITE_LINK="${RSS_SITELINK}"  # Base URL for your site
-FEED_LINK="${RSS_FEEDLINK}"  # Full URL to the RSS feed itself
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
 #rss_file="${OUTFILEDIR:-/usr/share/planefence/html}/plane-alert-$TODAY.rss"
 rss_file="/run/planefence/plane-alert-$TODAY.rss"
@@ -69,7 +68,7 @@ generate_rss() {
 
   # Precompute some values to avoid repeated expansions
   local site_link="${SITE_LINK}"
-  local feed_link="${FEED_LINK}"
+  local feed_link
   local site_title="${SITE_TITLE:-Plane-Alert Aircraft Detections}"
   local site_desc="${SITE_DESC:-Interesting aircraft detected within range of our ADS-B receiver}"
   local site_image="$SITE_IMAGE"
@@ -81,25 +80,15 @@ generate_rss() {
     site_link="${site_link}/"
   fi
 
-  # Handle URL defaults and fallbacks
-  # Priority: Use configured values, fall back to constructing from each other, then use placeholders
-  if [[ -z "$feed_link" ]] && [[ -z "$site_link" ]]; then
-    # Neither is set, use placeholders
-    feed_link="http://example.com/${rss_file##*/}"
-    site_link="http://example.com/"
-  elif [[ -z "$feed_link" ]]; then
-    # feed_link not set, construct from site_link (which has trailing slash)
-    feed_link="${site_link}${rss_file##*/}"
-  elif [[ -z "$site_link" ]]; then
-    # site_link not set, derive from feed_link
-    # Extract everything before the last slash and add trailing slash
-    if [[ "$feed_link" =~ ^([^/]+//[^/]+)(/.*)$ ]]; then
-      # feed_link has a path component
-      site_link="${feed_link%/*}/"
-    else
-      # feed_link is just protocol://host, add trailing slash
-      site_link="${feed_link}/"
-    fi
+  # Always derive FEED_LINK from SITE_LINK
+  # If SITE_LINK is not set, use relative path from docroot
+  if [[ -n "$site_link" ]]; then
+    # Construct full URL: SITE_LINK + filename
+    feed_link="${site_link}plane-alert.rss"
+  else
+    # Default to docroot (relative path) - use "/" for channel link
+    site_link="/"
+    feed_link="/plane-alert.rss"
   fi
 
   # Write header once using printf to avoid many subshells

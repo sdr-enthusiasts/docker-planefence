@@ -518,14 +518,9 @@ PA_MQTT_PASSWORD=""
 #
 # ---------------------------------------------------------------------
 # The following are optional RSS related parameters for Planefence and Plane-Alert
-# PF_RSS_SITELINK: The base URL for your site (e.g., "http://mysite.com" or "http://192.168.1.100:8088")
-# PF_RSS_FEEDLINK: The full URL to your RSS feed (e.g., "http://mysite.com/planefence.rss")
-# PF_RSS_FAVICONLINK: Optional URL to favicon/logo image
 PF_RSS_SITELINK=""
-PF_RSS_FEEDLINK=""
 PF_RSS_FAVICONLINK=""
 PA_RSS_SITELINK=""
-PA_RSS_FEEDLINK=""
 PA_RSS_FAVICONLINK=""
 #
 # ---------------------------------------------------------------------

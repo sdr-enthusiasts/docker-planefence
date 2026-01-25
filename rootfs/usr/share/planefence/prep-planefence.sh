@@ -360,10 +360,8 @@ configure_planealert "MQTT_FIELDS" "$PA_MQTT_FIELDS"
 #--------------------------------------------------------------------------------
 # RSS related parameters:
 configure_planefence "RSS_SITELINK" "$PF_RSS_SITELINK"
-configure_planefence "RSS_FEEDLINK" "$PF_RSS_FEEDLINK"
 configure_planefence "RSS_FAVICONLINK" "$PF_RSS_FAVICONLINK"
 configure_planealert "RSS_SITELINK" "$PA_RSS_SITELINK"
-configure_planealert "RSS_FEEDLINK" "$PA_RSS_FEEDLINK"
 configure_planealert "RSS_FAVICONLINK" "$PA_RSS_FAVICONLINK"
 #
 #--------------------------------------------------------------------------------
