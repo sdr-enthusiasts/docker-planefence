@@ -97,12 +97,11 @@ if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 	"${s6wrap[@]}" echo "and edit it to set the values for your station "
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	stop_service
+	exec sleep infinity
 fi
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
-	sleep 10s
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	"${s6wrap[@]}" echo "!!! STOP !!!! You haven\'t configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
 	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
@@ -110,7 +109,7 @@ if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
 	"${s6wrap[@]}" echo "sudo nano -l ~/.planefence/planefence.config"
 	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	stop_service
+	exec sleep infinity
 fi
 
 #
