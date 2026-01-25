@@ -517,7 +517,11 @@ PA_MQTT_USERNAME=""
 PA_MQTT_PASSWORD=""
 #
 # ---------------------------------------------------------------------
-# The following are optional RSS related parameters for Planefence and Plane-Alert
+# The following are RSS related parameters for Planefence and Plane-Alert
+# Note - if you use RSS, in order for the RSS feed to validate correctly, you
+# MUST add a sitelink URL, which is the base URL for the location on which
+# planefence.rss and plane-alert.rss will be available.
+# If you don't use RSS, you can leave these empty.
 PF_RSS_SITELINK=""
 PF_RSS_FAVICONLINK=""
 PA_RSS_SITELINK=""
