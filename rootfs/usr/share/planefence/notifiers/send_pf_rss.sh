@@ -73,19 +73,25 @@ generate_rss() {
   local last_build_date
   last_build_date=$(date -R)
 
-  # If feed_link is not set, construct it from site_link + filename
-  # If site_link is also not set, use a placeholder that will fail validation
-  if [[ -z "$feed_link" ]]; then
-    if [[ -n "$site_link" ]]; then
-      feed_link="${site_link}${rss_file##*/}"
+  # Handle URL defaults and fallbacks
+  # Priority: Use configured values, fall back to constructing from each other, then use placeholders
+  if [[ -z "$feed_link" ]] && [[ -z "$site_link" ]]; then
+    # Neither is set, use placeholders
+    feed_link="http://example.com/${rss_file##*/}"
+    site_link="http://example.com/"
+  elif [[ -z "$feed_link" ]]; then
+    # feed_link not set, construct from site_link (which already has trailing slash)
+    feed_link="${site_link}${rss_file##*/}"
+  elif [[ -z "$site_link" ]]; then
+    # site_link not set, derive from feed_link
+    # Extract everything before the last slash and add trailing slash
+    if [[ "$feed_link" =~ ^([^/]+//[^/]+)(/.*)$ ]]; then
+      # feed_link has a path component
+      site_link="${feed_link%/*}/"
     else
-      feed_link="http://example.com/${rss_file##*/}"
+      # feed_link is just protocol://host, add trailing slash
+      site_link="${feed_link}/"
     fi
-  fi
-
-  # If site_link is not set, use feed_link without the filename
-  if [[ -z "$site_link" ]]; then
-    site_link="${feed_link%/*}/"
   fi
 
   # Write header once using printf to avoid many subshells
