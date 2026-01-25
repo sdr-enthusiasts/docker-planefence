@@ -101,7 +101,7 @@ generate_rss() {
       printf '<image>\n'
       printf '  <url>%s</url>\n' "$(xml_escape "$site_image")"
       printf '  <title>%s</title>\n' "$(xml_escape "$site_title")"
-      printf '  <link>%s</link>\n' "$site_link"
+      printf '  <link>%s</link>\n' "$(xml_escape "$site_link")"
       printf '</image>\n'
     fi
     printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "$feed_link")"
