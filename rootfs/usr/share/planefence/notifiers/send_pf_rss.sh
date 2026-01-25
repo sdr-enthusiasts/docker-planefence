@@ -32,7 +32,7 @@ TODAY=$(date --date="today" '+%y%m%d')
 # Site configuration - you can modify these
 SITE_TITLE="Planefence Aircraft Detections"
 SITE_DESC="Recent aircraft detected within range of our ADS-B receiver"
-SITE_LINK="${RSS_SITELINK}"  # Replace with your actual URL
+SITE_LINK="${RSS_SITELINK}"  # Base URL for your site
 SITE_IMAGE="${RSS_FAVICONLINK}"  # Optional site image
 #rss_file="${OUTFILEDIR:-/usr/share/planefence/html}/planefence-$TODAY.rss"
 rss_file="/run/planefence/planefence-$TODAY.rss"
@@ -64,12 +64,29 @@ generate_rss() {
   READ_RECORDS
 
   # Precompute some values to avoid repeated expansions
-  local site_link="${SITE_LINK:-.}"
+  local site_link="${SITE_LINK}"
+  local feed_link
   local site_title="${SITE_TITLE:-Planefence Aircraft Detections}"
   local site_desc="${SITE_DESC:-Recent aircraft detected within range of our ADS-B receiver}"
   local site_image="$SITE_IMAGE"
   local last_build_date
   last_build_date=$(date -R)
+
+  # Ensure site_link has trailing slash if it's set (defensive check)
+  if [[ -n "$site_link" ]] && [[ "${site_link: -1}" != "/" ]]; then
+    site_link="${site_link}/"
+  fi
+
+  # Always derive FEED_LINK from SITE_LINK
+  # If SITE_LINK is not set, use relative path from docroot
+  if [[ -n "$site_link" ]]; then
+    # Construct full URL: SITE_LINK + filename
+    feed_link="${site_link}planefence.rss"
+  else
+    # Default to docroot (relative path) - use "/" for channel link
+    site_link="/"
+    feed_link="/planefence.rss"
+  fi
 
   # Write header once using printf to avoid many subshells
   {
@@ -84,10 +101,10 @@ generate_rss() {
       printf '<image>\n'
       printf '  <url>%s</url>\n' "$(xml_escape "$site_image")"
       printf '  <title>%s</title>\n' "$(xml_escape "$site_title")"
-      printf '  <link>%s</link>\n' "$site_link"
+      printf '  <link>%s</link>\n' "$(xml_escape "$site_link")"
       printf '</image>\n'
     fi
-    printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "${site_link}${rss_file##*/}")"
+    printf '<atom:link href="%s" rel="self" type="application/rss+xml" />\n' "$(xml_escape "$feed_link")"
   } > "$rss_file"
 
   # Cache max index
@@ -131,7 +148,7 @@ generate_rss() {
       printf '<item>\n'
       printf '  <title>%s</title>\n' "$(xml_escape "$title")"
       printf '  <description>%s</description>\n' "$(xml_escape "$desc")"
-      printf '  <link>%s</link>\n' "$ITEM_LINK"
+      printf '  <link>%s</link>\n' "$(xml_escape "$ITEM_LINK")"
       printf '  <guid isPermaLink="false">%s</guid>\n' "$guid"
       printf '  <pubDate>%s</pubDate>\n' "$pubdate"
       printf '</item>\n'
