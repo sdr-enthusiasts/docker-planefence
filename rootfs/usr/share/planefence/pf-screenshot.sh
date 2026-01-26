@@ -46,7 +46,6 @@ DEBUG=false
 # ==========================
 SCREENFILEDIR="/usr/share/planefence/persist/planepix/cache"
 MAXSCREENSHOTSPERRUN=5   # max number of screenshots to attempt per run, to ensure we can batch-process them
-SCREENSHOT_TIMEOUT=60  # max seconds to wait for screenshot retrieval
 
 # ==========================
 # Functions
@@ -325,14 +324,21 @@ persist_screenshot_updates() {
 log_print INFO "Hello. Starting screenshot run"
 
 if ! CHK_NOTIFICATIONS_ENABLED; then
-  log_print ERR "No notifications enabled, exiting"
-  exit 0
+  source /usr/share/planefence/plane-alert.conf
+  if ! CHK_NOTIFICATIONS_ENABLED; then
+    log_print ERR "No notifications enabled, exiting"
+    exit 0
+  fi
 fi
 
 if ! CHK_SCREENSHOT_ENABLED; then
   log_print ERR "Screenshots disabled or screenshot container cannot be reached, exiting"
   exit 0
 fi
+
+SCREENSHOT_TIMEOUT="${SCREENSHOT_TIMEOUT:-60}"
+# max seconds to wait for screenshot retrieval
+
 
 log_print DEBUG "Getting RECORDSFILE"
 READ_RECORDS ignore-lock
