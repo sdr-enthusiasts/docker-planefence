@@ -29,7 +29,7 @@ declare -a INDEX STALE link delivery_errors link
 # Load a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$PA_DISCORD"; then
-  log_print DEBUG "Discord notifications not enabled. Exiting."
+  log_print DEBUG "Discord notifications not enabled."
   exit 0
 fi
 
@@ -76,7 +76,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Discord notification. Exiting."
+  log_print INFO "No records eligible for Discord notification."
   exit 0
 fi
 

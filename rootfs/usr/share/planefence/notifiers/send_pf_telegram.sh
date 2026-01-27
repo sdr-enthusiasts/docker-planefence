@@ -35,7 +35,7 @@ SPACE="_"   # "special" space replacement character for hashtagged items
 # Check a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$TELEGRAM_ENABLED"; then
-  log_print DEBUG "Telegram is not enabled. Exiting."
+  log_print DEBUG "Telegram is not enabled."
   exit 0
 fi
 
@@ -78,7 +78,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Telegram notification. Exiting."
+  log_print INFO "No records eligible for Telegram notification."
   exit 0
 fi
 

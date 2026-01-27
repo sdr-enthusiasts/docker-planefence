@@ -372,7 +372,7 @@ else
 fi
 
 if (( any_candidates == 0 )); then
-  log_print INFO "No records eligible for screenshotting. Exiting."
+  log_print INFO "No records eligible for screenshotting."
   exit 0
 fi
 

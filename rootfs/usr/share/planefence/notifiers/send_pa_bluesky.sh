@@ -35,7 +35,7 @@ SPACE=$'\x1F'   # "special" space
 # Load a bunch of stuff and determine if we should notify
 
 if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
-  log_print DEBUG "Bluesky notifications not enabled. Exiting."
+  log_print DEBUG "Bluesky notifications not enabled."
   exit 0
 fi
 
@@ -73,7 +73,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bluesky notification. Exiting."
+  log_print INFO "No records eligible for Bluesky notification."
   exit 0
 fi
 
