@@ -39,7 +39,7 @@ if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
   exit 0
 fi
 
-log_print INFO "Hello. Starting Bluesky notification run"
+log_print DEBUG "Hello. Starting Bluesky notification run"
 
 if [[ -f "/usr/share/planefence/notifiers/bluesky.pf.template" ]]; then
   template_clean="$(</usr/share/planefence/notifiers/bluesky.pf.template)"

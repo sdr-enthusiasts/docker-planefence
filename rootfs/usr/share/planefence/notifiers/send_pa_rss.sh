@@ -167,7 +167,7 @@ generate_rss() {
   chmod u=rw,go=r "$rss_file"
 }
 
-log_print INFO "Starting generation of RSS feed"
+log_print DEBUG "Hello. Starting generation of RSS feed"
 
 # Create/update symlink for today's feed
 if generate_rss; then

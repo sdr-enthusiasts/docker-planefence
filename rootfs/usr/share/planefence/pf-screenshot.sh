@@ -321,7 +321,7 @@ persist_screenshot_updates() {
 # ==========================
 # Main code
 # ==========================
-log_print INFO "Hello. Starting screenshot run"
+log_print DEBUG "Hello. Starting screenshot run"
 
 if ! CHK_NOTIFICATIONS_ENABLED; then
   source /usr/share/planefence/plane-alert.conf

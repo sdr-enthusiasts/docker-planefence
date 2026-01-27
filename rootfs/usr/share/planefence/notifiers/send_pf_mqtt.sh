@@ -111,7 +111,7 @@ if [[ -z "$MQTT_URL" ]]; then
   exit 0
 fi
 
-log_print DEBUG "Starting generation of MQTT notifications"
+log_print DEBUG "Hello. Starting generation of MQTT notifications"
 
 # read the records file
 READ_RECORDS

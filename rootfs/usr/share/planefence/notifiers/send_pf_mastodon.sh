@@ -40,7 +40,7 @@ if [[ -z "$MASTODON_ACCESS_TOKEN" || -z "$MASTODON_SERVER" ]]; then
   exit 0
 fi
 
-log_print INFO "Hello. Starting Mastodon notification run"
+log_print DEBUG "Hello. Starting Mastodon notification run"
 
 if [[ -f "/usr/share/planefence/notifiers/mastodon.pf.template" ]]; then
   template_clean="$(</usr/share/planefence/notifiers/mastodon.pf.template)"

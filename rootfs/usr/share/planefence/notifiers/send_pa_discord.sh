@@ -33,7 +33,7 @@ if ! chk_enabled "$PA_DISCORD"; then
   exit 0
 fi
 
-log_print INFO "Hello. Starting Discord notification run"
+log_print DEBUG "Hello. Starting Discord notification run"
 
 if [[ -z "$PA_DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."

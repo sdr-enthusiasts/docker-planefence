@@ -39,7 +39,7 @@ if ! chk_enabled "$TELEGRAM_ENABLED"; then
   exit 0
 fi
 
-log_print INFO "Hello. Starting Telegram notification run"
+log_print DEBUG "Hello. Starting Telegram notification run"
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
   log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
