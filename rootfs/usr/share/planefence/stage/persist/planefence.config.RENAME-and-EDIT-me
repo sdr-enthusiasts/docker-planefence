@@ -380,9 +380,9 @@ DISCORD_MEDIA=
 #
 # PA/PF_DISCORD_COLOR controls the highlight color of the Plane-Alert message in Discord. 
 # Colors can be:
-# -a common color name (red green blue yellow orange 
-#  purple pink cyan aqua teal lime navy black white grey gray
-#  silver maroon olive gold burple darkburple)
+# - a common color name (red green blue yellow orange 
+#   purple pink cyan aqua teal lime navy black white grey gray
+#   silver maroon olive gold burple darkburple)
 # - RGB hexadecimal color value starting with 0x or #
 # - RGB decimal color value (digits only)
 # The default value is 0xf2e718, which is a bright yellow. You can use any color you'd like,
