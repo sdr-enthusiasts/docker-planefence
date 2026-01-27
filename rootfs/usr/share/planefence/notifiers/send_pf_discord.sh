@@ -87,17 +87,25 @@ template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
 
 color="$(convert_color "${PF_DISCORD_COLOR}" || true)"
 color="${color:-0xf2e718}"
-
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
 
   # reset the template cleanly after each notification
   template="$template_clean"
 
+  # recolor to red if squawk in 7500|7600|7700:
+  emergency=false
+  case "${records["$idx":squawk:value]}" in
+    7500|7600|7700)
+      color="$(convert_color red)"
+      emergency=true
+    ;;
+  esac
+
   # Set strings:
   template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base ${records["$idx":link:map]})](${records["$idx":link:map]})" "$template")"
+  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${records["$idx":link:map]}")](${records["$idx":link:map]})" "$template")"
   template="$(template_replace "||COLOR||" "$color" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
@@ -117,7 +125,7 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace '"avatar_url": "||AVATAR||",' "" "$template")"
   fi
 
-  #Do a few more complex replacements:
+  # Do a few more complex replacements:
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||NOISE--" "" "$template")"
     template="$(template_replace "--NOISE||" "" "$template")"
@@ -126,6 +134,20 @@ for idx in "${INDEX[@]}"; do
     template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
 
+  if chk_enabled "$emergency"; then
+    template="$(template_replace "||EMERGENCY||" "Emergency: Squawk ${records["$idx":squawk:value]} - " "$template")"
+  else
+    template="$(template_replace "||EMERGENCY||" "" "$template")"
+  fi
+  if [[ -n "${records["$idx":squawk:value]}" ]]; then
+    template="$(template_replace "||SQUAWK--" "" "$template")"
+    template="$(template_replace "--SQUAWK||" "" "$template")"
+    template="$(template_replace "||SQUAWKSTRING||" "${records["$idx":squawk:value]}${records["$idx":squawk:description]:+ (}${records["$idx":squawk:description]}${records["$idx":squawk:description]:+)}" "$template")"
+  else
+    template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
+  fi
+
+  # Handle media attachments
   image=""; thumb=""; curlfile=""
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
@@ -141,13 +163,13 @@ for idx in "${INDEX[@]}"; do
       ;;
     "screenshot+photo")
       thumb="${records["$idx":image:thumblink]}"
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+      if chk_enabled $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot")
-      if chk_enabled$screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
+      if chk_enabled $screenshots && [[ -f "${records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${records["$idx":screenshot:file]}"
       fi

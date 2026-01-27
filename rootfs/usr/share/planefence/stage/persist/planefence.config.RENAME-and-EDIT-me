@@ -383,8 +383,8 @@ DISCORD_MEDIA=
 # -a common color name (red green blue yellow orange 
 #  purple pink cyan aqua teal lime navy black white grey gray
 #  silver maroon olive gold burple darkburple)
-# RGB hexadecimal format starting with 0x or #
-# RGB decimal 
+# - RGB hexadecimal color value starting with 0x or #
+# - RGB decimal color value (digits only)
 # The default value is 0xf2e718, which is a bright yellow. You can use any color you'd like,
 # but be aware that red (0xff0000) is used for planes in emergencies, i.e. with squawks 7500, 7600, and 7700. 
 # Some example colors might be 0x09cc09 (green), 0x1d79d1 (blue), 0x800080 (purple), 0x16dde7 (teal), 0xED01DB (pink).
