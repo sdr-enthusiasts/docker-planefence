@@ -92,7 +92,7 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
-  template="$(template_replace "||COLOR|" "$(convert_color "${PA_DISCORD_COLOR:-0xf2e718}")" "$template")"
+  template="$(template_replace "||COLOR||" "$(convert_color "${PA_DISCORD_COLOR:-0xf2e718}")" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
