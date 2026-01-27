@@ -85,6 +85,9 @@ fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
 
+color="$(convert_color "${PF_DISCORD_COLOR}" || true)"
+color="${color:-0xf2e718}"
+
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
 
@@ -95,7 +98,7 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||TITLE||" "${records["$idx":owner]:-${records["$idx":callsign]}} (${records["$idx":tail]}) is at ${records["$idx":altitude:value]} $ALTUNIT above ${records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base ${records["$idx":link:map]})](${records["$idx":link:map]})" "$template")"
-  template="$(template_replace "||COLOR||" "$(convert_color "${PF_DISCORD_COLOR:-0xf2e718}")" "$template")"
+  template="$(template_replace "||COLOR||" "$color" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx:type"]}" "$template")"
