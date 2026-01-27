@@ -17,7 +17,11 @@ set -eo pipefail
 LC_ALL=C
 
 MAXWAITTIME=300   # max time we'll wait for the records lock to expire
-CONTAINERSTARTTIME="$(< /run/.CONTAINER-START-TIME)"
+
+# Container Start Time is used to determine whether a record is "new" or "stale"
+# we'll use 30 mins before the actual container start time to allow for container restarts
+# or we'll use the last hour as a fallback if the file is not found
+CONTAINERSTARTTIME="$(( $(< /run/.CONTAINER-START-TIME) - 1800 ))"  || CONTAINERSTARTTIME="$(( $(date +%s) - 3600 ))"
 NEWLINE="
 "
 
