@@ -4,4 +4,5 @@ Flt: #||CALLSIGN|| ||TAIL|| ||TYPE|| ||ROUTE||
 Time: ||TIME||
 Min Alt: ||ALT||
 ||SQUAWK||
+||TAG1|| ||TAG2|| ||TAG3||
 ||ATTRIB||||LINKS||
