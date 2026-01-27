@@ -378,7 +378,7 @@ DISCORD_FEEDER_NAME=
 #       Same as "screenshot"
 DISCORD_MEDIA=
 #
-# PA_DISCORD_COLOR controls the highlight color of the Plane-Alert message in Discord. Colors must be in hexadecimal
+# PA/PF_DISCORD_COLOR controls the highlight color of the Plane-Alert message in Discord. Colors must be in hexadecimal
 # RGB format with a leading "0x" rather than a "#" (e.g. 0xf2e718). It is case insensitive.
 # The default value is 0xf2e718, which is a bright yellow. You can use any color you'd like,
 # but be aware that red (0xff0000) is used for planes in emergencies, i.e. with squawks 7500, 7600, and 7700. 
@@ -387,6 +387,7 @@ DISCORD_MEDIA=
 # If you make a mistake it should go with the default color of 0xf2e718, but there may be creative ways to break it,
 # so if you aren't seeing Discord messages, check the logs.
 PA_DISCORD_COLOR=0xf2e718
+PF_DISCORD_COLOR=0xf2e718
 # ---------------------------------------------------------------------
 # NOTIFICATION_SERVER contains the address (hostname or IP address) to the Notification Server.
 # If omitted, "planefence-notifier" will be assumed, which is the default name for the Planefence
