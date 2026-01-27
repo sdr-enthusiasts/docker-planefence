@@ -125,12 +125,12 @@ build_index_and_stale INDEX STALE mqtt pa
 if (( ${#INDEX[@]} )); then
   log_print DEBUG "Records ready for MQTT notification: ${INDEX[*]}"
 else
-  log_print DEBUG "No records ready for MQTT notification"
+  log_print DEBUG "No records ready for MQTT notification."
 fi
 if (( ${#STALE[@]} )); then
-  log_print DEBUG "Stale records (no MQTT notification will be sent): ${STALE[*]}"
+  log_print INFO "Stale records (no MQTT notification will be sent): ${STALE[*]}"
 else
-  log_print DEBUG "No stale records for MQTT notification"
+  log_print DEBUG "No stale records for MQTT notification."
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
   log_print INFO "No records eligible for MQTT notification."
