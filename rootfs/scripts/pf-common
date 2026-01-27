@@ -160,6 +160,71 @@ WRITE_RECORDS() {
   if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
 
+# convert_color <color>
+# Accepts:
+#   - Named colors:  red, green, blue, gold, blurple, etc.
+#   - Hex with '#':  "#FF0000"
+#   - Hex with 0x:   "0xFF0000" or "0XFF0000"
+#   - Plain hex:     "FF0000"
+#   - Decimal:       "16711680" (echoed back unchanged)
+# Outputs:
+#   - Decimal value suitable for Discord embed "color"
+convert_color() {
+  local input="$1"
+  local hex=""
+
+  # If it's already a decimal integer, just echo it back
+  if [[ "$input" =~ ^[0-9]+$ ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  # Normalize non-decimal input to lowercase using bash string manipulation
+  # Requires bash 4+ for ,,
+  input="${input,,}"
+
+  # 1) Named colors → hex (extend as needed)
+  case "$input" in
+    red)          hex="ff0000" ;;
+    green)        hex="00ff00" ;;
+    blue)         hex="0000ff" ;;
+    yellow)       hex="ffff00" ;;
+    orange)       hex="ffa500" ;;
+    purple)       hex="800080" ;;
+    pink)         hex="ffc0cb" ;;
+    cyan|aqua)    hex="00ffff" ;;
+    teal)         hex="008080" ;;
+    lime)         hex="00ff00" ;;
+    navy)         hex="000080" ;;
+    black)        hex="000000" ;;
+    white)        hex="ffffff" ;;
+    gray|grey)    hex="808080" ;;
+    silver)       hex="c0c0c0" ;;
+    maroon)       hex="800000" ;;
+    olive)        hex="808000" ;;
+    gold)         hex="ffd700" ;;
+    blurple)      hex="5865f2" ;;
+    darkblurple)  hex="4e5d94" ;;
+    *)
+      # 2) Hex formats
+      if [[ "$input" =~ ^\#?[0-9a-f]{6}$ ]]; then
+        # "#rrggbb" or "rrggbb"
+        hex="${input#\#}"
+      elif [[ "$input" =~ ^0x[0-9a-f]{6}$ ]]; then
+        # "0xrrggbb"
+        hex="${input#0x}"
+      else
+        echo "Error: unsupported color format: $1" >&2
+        return 1
+      fi
+      ;;
+  esac
+
+  # 3) Convert hex → decimal
+  printf '%d\n' "0x$hex"
+}
+
+
 # Function to encode special characters for XML
 xml_encode() {
     echo "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g'
