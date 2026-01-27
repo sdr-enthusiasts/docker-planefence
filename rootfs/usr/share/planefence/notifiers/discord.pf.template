@@ -9,7 +9,7 @@
         "type": "rich",
         "title": "||TITLE||",
         "description": "||DESCRIPTION|| ",
-        "color": "16711680",
+        "color": "||COLOR||",
         "fields":
         [
           {
