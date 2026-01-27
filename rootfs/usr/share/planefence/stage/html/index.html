@@ -949,7 +949,9 @@ ${messagesDesc}
         const base = './cgi/stream.sh';
         const params = new URLSearchParams();
         params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
-        if (dateKey) params.set('date', dateKey);
+        const wantsAllPlaneAlert = mode === DATA_MODES.PLANE_ALERT && (dateKey === undefined || dateKey === null || dateKey === '');
+        const dateParam = wantsAllPlaneAlert ? 'all' : dateKey;
+        if (dateParam) params.set('date', dateParam);
         const qs = params.toString();
         return qs ? `${base}?${qs}` : base;
       }
@@ -1857,9 +1859,12 @@ ${messagesDesc}
 
   function updateHistorySupport(){
     if (!historyControlEl || !historyButtonEl) return;
-    const supported = Number.isFinite(Number(stationInfoState.histtime)) && Number(stationInfoState.histtime) > 0;
-    historyControlEl.style.display = supported || isHistoryMode() ? 'flex' : 'none';
-    historyButtonEl.disabled = !supported && !isHistoryMode();
+    const histVal = Number(stationInfoState.histtime);
+    const supported = Number.isFinite(histVal) && histVal > 0;
+    const showForMode = isPlaneAlertMode(); // ensure Plane-Alert shows history control on first load
+    const show = supported || isHistoryMode() || showForMode;
+    historyControlEl.style.display = show ? 'flex' : 'none';
+    historyButtonEl.disabled = !(supported || isHistoryMode() || showForMode);
     updateHistoryButtonLabel();
   }
 
@@ -2333,6 +2338,8 @@ ${messagesDesc}
   }
 
   let table = null;
+  let userOrderOverride = false;
+  let userPageOverride = false;
   // Map of index -> DataTables row API for fast incremental updates
   const rowByIndex = new Map();
   // Map of index -> consecutive-miss count used to implement a grace period before purging
@@ -2347,6 +2354,8 @@ ${messagesDesc}
     rowByIndex.clear();
     missingCounts.clear();
     pendingNewIndices.clear();
+    userOrderOverride = false;
+    userPageOverride = false;
     updateNewUpdatesBanner();
     if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
     if (prog) prog.textContent = isPlaneAlertMode()
@@ -2374,7 +2383,9 @@ ${messagesDesc}
       const info = table.page ? table.page.info() : null;
       const onFirst = info && info.page === 0;
       if (forceFull || onFirst) {
-        table.order([[0,'desc']]).page('first').draw(false);
+        if (!userOrderOverride) table.order([[0,'desc']]);
+        if (!userPageOverride) table.page('first');
+        table.draw(false);
         highlightPendingNewRows();
         if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
       } else {
@@ -2382,7 +2393,8 @@ ${messagesDesc}
           newUpdatesBtn.style.display = 'inline-block';
           updateNewUpdatesBanner();
         }
-        table.order([[0,'desc']]).draw(false);
+        if (!userOrderOverride) table.order([[0,'desc']]);
+        table.draw(false);
       }
       try { lazyLoadImagesIn(document); } catch (e) { /* ignore lazy load errors */ }
     } catch (e) { console.error('redraw error', e); }
@@ -2636,6 +2648,9 @@ ${messagesDesc}
     // Store globally if you need it
     table = api;
     window.table = api;
+
+    table.on('order', () => { userOrderOverride = true; });
+    table.on('page', () => { userPageOverride = true; });
   try { table.on('draw', ()=> lazyLoadImagesIn(document)); } catch (e) { /* ignore draw hook */ }
   try { lazyLoadImagesIn(document); } catch (e) { /* ignore initial lazy load */ }
 
