@@ -35,11 +35,11 @@ SPACE="_"   # "special" space replacement character for hashtagged items
 # Check a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$TELEGRAM_ENABLED"; then
-  log_print DEBUG "Telegram is not enabled. Exiting."
+  log_print DEBUG "Telegram is not enabled."
   exit 0
 fi
 
-log_print INFO "Hello. Starting Telegram notification run"
+log_print DEBUG "Hello. Starting Telegram notification run"
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
   log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
@@ -78,7 +78,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Telegram notification. Exiting."
+  log_print INFO "No records eligible for Telegram notification."
   exit 0
 fi
 
@@ -121,6 +121,9 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ALT||" "${pa_records["$idx":altitude:value]} $ALTUNIT" "$template")"
   template="$(template_replace "||DIST||" "${pa_records["$idx":distance:value]} $DISTUNIT (${pa_records["$idx":angle:value]}° ${pa_records["$idx":angle:name]})" "$template")"
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
+  template="$(template_replace "||TAG1||" "${pa_records["$idx":db:tag1]:+#}${pa_records["$idx":db:tag1]// /}" "$template")"
+  template="$(template_replace "||TAG2||" "${pa_records["$idx":db:tag2]:+#}${pa_records["$idx":db:tag2]// /}" "$template")"
+  template="$(template_replace "||TAG3||" "${pa_records["$idx":db:tag3]:+#}${pa_records["$idx":db:tag3]// /}" "$template")"
 
   links=""
   if [[ -n "${pa_records["$idx":link:map]}" ]]; then links+="•<a href=\"${pa_records["$idx":link:map]}\">$(extract_base "${pa_records["$idx":link:map]}")</a>"; fi

@@ -111,7 +111,7 @@ if [[ -z "$MQTT_URL" ]]; then
   exit 0
 fi
 
-log_print DEBUG "Starting generation of MQTT notifications"
+log_print DEBUG "Hello. Starting generation of MQTT notifications"
 
 # read the records file
 READ_RECORDS
@@ -123,15 +123,15 @@ build_index_and_stale INDEX STALE mqtt pf
 if (( ${#INDEX[@]} )); then
   log_print INFO "Records ready for MQTT notification: ${INDEX[*]}"
 else
-  log_print INFO "No records ready for MQTT notification"
+  log_print DEBUG "No records ready for MQTT notification."
 fi
 if (( ${#STALE[@]} )); then
   log_print INFO "Stale records (no MQTT notification will be sent): ${STALE[*]}"
 else
-  log_print INFO "No stale records for MQTT notification"
+  log_print DEBUG "No stale records for MQTT notification."
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for MQTT notification. Exiting."
+  log_print INFO "No records eligible for MQTT notification."
   exit 0
 fi
 

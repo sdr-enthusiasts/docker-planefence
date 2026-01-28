@@ -35,11 +35,11 @@ SPACE=$'\x1F'   # "special" space
 # Load a bunch of stuff and determine if we should notify
 
 if [[ -z "$BLUESKY_HANDLE" || -z "$BLUESKY_APP_PASSWORD" ]]; then
-  log_print DEBUG "Bluesky notifications not enabled. Exiting."
+  log_print DEBUG "Bluesky notifications not enabled."
   exit 0
 fi
 
-log_print INFO "Hello. Starting Bluesky notification run"
+log_print DEBUG "Hello. Starting Bluesky notification run"
 
 if [[ -f "/usr/share/planefence/notifiers/bluesky.pa.template" ]]; then
   template_clean="$(</usr/share/planefence/notifiers/bluesky.pa.template)"
@@ -73,7 +73,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bluesky notification. Exiting."
+  log_print INFO "No records eligible for Bluesky notification."
   exit 0
 fi
 

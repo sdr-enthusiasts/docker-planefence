@@ -7,9 +7,9 @@
       {
         "tts": false,
         "type": "rich",
-        "title": "||TITLE||",
+        "title": "||EMERGENCY||||TITLE||",
         "description": "||DESCRIPTION|| ",
-        "color": "16711680",
+        "color": "||COLOR||",
         "fields":
         [
           {
@@ -27,6 +27,12 @@
             "value": "||CALLSIGN|| ",
             "inline": true
           },
+          ||SQUAWK--
+          {
+            "name": "Squawk",
+            "value": "||SQUAWKSTRING|| ",
+            "inline": true
+          },--SQUAWK||
           {
             "name": "Type",
             "value": "||TYPE|| ",

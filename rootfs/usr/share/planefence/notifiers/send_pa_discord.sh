@@ -29,11 +29,11 @@ declare -a INDEX STALE link delivery_errors link
 # Load a bunch of stuff and determine if we should notify
 
 if ! chk_enabled "$PA_DISCORD"; then
-  log_print DEBUG "Discord notifications not enabled. Exiting."
+  log_print DEBUG "Discord notifications not enabled."
   exit 0
 fi
 
-log_print INFO "Hello. Starting Discord notification run"
+log_print DEBUG "Hello. Starting Discord notification run"
 
 if [[ -z "$PA_DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."
@@ -76,11 +76,14 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Discord notification. Exiting."
+  log_print INFO "No records eligible for Discord notification."
   exit 0
 fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pa.template)"
+
+color="$(convert_color "${PA_DISCORD_COLOR}" || true)"
+color="${color:-0xf2e718}"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${pa_records["$idx":tail]}"
@@ -88,10 +91,20 @@ for idx in "${INDEX[@]}"; do
   # reset the template cleanly after each notification
   template="$template_clean"
 
+  # recolor to red if squawk in 7500|7600|7700:
+  emergency=false
+  case "${pa_records["$idx":squawk:value]}" in
+    7500|7600|7700)
+      color="$(convert_color red)"
+      emergency=true
+    ;;
+  esac
+
   # Set strings:
   template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
+  template="$(template_replace "||COLOR||" "$color" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
@@ -119,6 +132,20 @@ for idx in "${INDEX[@]}"; do
     template="$(sed -z 's/||NOISE--.*--NOISE||//g' <<< "$template")"
   fi
 
+  if chk_enabled "$emergency"; then
+    template="$(template_replace "||EMERGENCY||" "Emergency: Squawk ${pa_records["$idx":squawk:value]} - " "$template")"
+  else
+    template="$(template_replace "||EMERGENCY||" "" "$template")"
+  fi
+
+  if [[ -n "${pa_records["$idx":squawk:value]}" ]]; then
+    template="$(template_replace "||SQUAWK--" "" "$template")"
+    template="$(template_replace "--SQUAWK||" "" "$template")"
+    template="$(template_replace "||SQUAWKSTRING||" "${pa_records["$idx":squawk:value]}${pa_records["$idx":squawk:description]:+ (}${pa_records["$idx":squawk:description]}${pa_records["$idx":squawk:description]:+)}" "$template")"
+  else
+    template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
+  fi
+
   image=""; thumb=""; curlfile=""
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
@@ -134,13 +161,13 @@ for idx in "${INDEX[@]}"; do
       ;;
     "screenshot+photo")
       thumb="${pa_records["$idx":image:thumblink]}"
-      if chk_enabled$screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
+      if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
       fi
       ;;
     "screenshot")
-      if chk_enabled$screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
+      if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
         curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
       fi
