@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Planefence</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-buttons-dt/css/buttons.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css">
   <!-- 1) CSS: row dim + small updater + dark zebra fix -->
   <style>
@@ -386,6 +387,9 @@
   .pf-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
   .pf-controls .pf-left { display: flex; align-items: center; }
   .pf-controls .pf-right { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; }
+  .pf-controls .dt-buttons { display: flex; align-items: center; gap: .18rem; flex-wrap: wrap; margin: 0; }
+  .pf-controls .dt-buttons .dt-button { background: transparent; border: 1px solid var(--muted); color: var(--fg); padding: .3rem .5rem; border-radius: .5rem; cursor: pointer; }
+  .pf-controls .dt-buttons .dt-button:hover { border-color: var(--fg); background: var(--soft); }
   .pf-controls .pf-right .dataTables_filter { margin: 0; }
   .pf-controls .pf-right .dataTables_filter label { display: flex; align-items: center; gap: .35rem; margin: 0; }
   .pf-controls .pf-right .dataTables_info { margin: 0; white-space: nowrap; }
@@ -574,6 +578,29 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/datatables.net@2/js/dataTables.min.js"></script>
+  <script>
+    // Shim DataTables 1.x style feature registration if needed (Buttons v2 expects register)
+    (function(){
+      try {
+        var dt = $.fn && $.fn.dataTable;
+        if (dt && dt.ext) {
+          if (!dt.ext.features || typeof dt.ext.features.push !== 'function') {
+            dt.ext.features = [];
+          }
+          if (typeof dt.ext.features.register !== 'function') {
+            dt.ext.features.register = function(feature){ dt.ext.features.push(feature); return dt.ext.features.length - 1; };
+          }
+        }
+      } catch(e){ /* ignore */ }
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net-buttons@2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net-buttons-dt@2/js/buttons.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2/build/pdfmake.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2/build/vfs_fonts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net-buttons@2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net-buttons@2/js/buttons.print.min.js"></script>
   <script src="./js/flags.js"></script>
 
   <script>
@@ -2179,6 +2206,173 @@ ${messagesDesc}
     return `<div class="mono">${primary}</div><div class="mono">${timeline}</div>${updating}`;
   }
 
+  // Helpers for CSV export
+  function stripHtml(value){
+    return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function parseIdxFromRowData(rowData, rowNode){
+    try {
+      if (rowNode && rowNode.dataset && rowNode.dataset.idx) {
+        const n = Number(rowNode.dataset.idx);
+        if (Number.isFinite(n)) return n;
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      const first = rowData && rowData[0] ? String(rowData[0]) : '';
+      const m = first.match(/data-order="(-?\d+)"/);
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n)) return n;
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  const CSV_HEADERS = [
+    '#', 'Closest (relative)', 'First Seen', 'Closest Seen', 'Last Seen',
+    'Callsign', 'ICAO', 'Tail', 'Type', 'Owner',
+    'Latitude', 'Longitude', 'Heading',
+    'Altitude (ft)', 'Speed (kt)',
+    'Track', 'Squawk', 'Sound', 'Plane-Alert Tags'
+  ];
+
+  function formatDateTimeCsv(ts){
+    const n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, timeZoneName: 'short'
+      }).format(new Date(n * 1000));
+    } catch (e) {
+      const d = new Date(n * 1000);
+      return d.toISOString();
+    }
+  }
+
+  function formatRelativeWithDate(ts){
+    const abs = formatDateTimeCsv(ts);
+    const rel = formatRelativeOrDate(ts);
+    if (rel && abs) return `${rel} (${abs})`;
+    return abs || rel;
+  }
+
+  function buildSoundText(rec){
+    const parts = [];
+    if (rec.soundPeak) parts.push(`Peak ${rec.soundPeak} dbFS`);
+    if (rec.soundLoud) parts.push(`Loud ${rec.soundLoud} dB`);
+    if (rec.soundLinks && rec.soundLinks.noise) parts.push(`Noisegraph: ${rec.soundLinks.noise}`);
+    if (rec.soundLinks && rec.soundLinks.spectro) parts.push(`Spectrogram: ${rec.soundLinks.spectro}`);
+    if (rec.soundLinks && rec.soundLinks.mp3) parts.push(`Audio: ${rec.soundLinks.mp3}`);
+    return parts.join(' | ');
+  }
+
+  function buildPlaneAlertText(rec){
+    const tags = (rec.dbTags || []).filter(Boolean).join(' | ');
+    const link = rec.dbLink ? `Link: ${rec.dbLink}` : '';
+    return [tags, link].filter(Boolean).join(' | ');
+  }
+
+  function buildCsvRowFromRecord(rec){
+    if (!rec) return new Array(CSV_HEADERS.length).fill('');
+    const closestTs = Number(rec.closestTs) || Number(rec.lastTs) || Number(rec.firstTs);
+    const closestRel = formatRelativeWithDate(closestTs);
+    const firstSeen = formatDateTimeCsv(rec.firstTs);
+    const closestSeen = formatDateTimeCsv(rec.closestTs);
+    const lastSeen = formatDateTimeCsv(rec.lastTs);
+    const trackText = (() => {
+      if (rec.trackDeg == null && rec.trackDir == null) return '';
+      const degPart = rec.trackDeg != null ? `${rec.trackDeg}°` : '';
+      return rec.trackDir ? `${degPart} (${rec.trackDir})` : degPart;
+    })();
+    const planeAlertText = buildPlaneAlertText(rec);
+    const soundText = buildSoundText(rec);
+    return [
+      rec.idx ?? '',
+      closestRel,
+      firstSeen,
+      closestSeen,
+      lastSeen,
+      rec.callsign || '',
+      rec.icao || '',
+      rec.tail || '',
+      rec.type || '',
+      rec.owner || '',
+      rec.lat ?? '',
+      rec.lon ?? '',
+      rec.heading ?? '',
+      rec.altitude ?? '',
+      rec.speed ?? '',
+      trackText,
+      rec.squawk || '',
+      soundText,
+      planeAlertText
+    ];
+  }
+
+  function buildCsvExportData(){
+    if (!table) return { header: CSV_HEADERS, body: [] };
+    const body = [];
+    table.rows({ search: 'applied', order: 'applied' }).every(function(){
+      const rowData = this.data();
+      const rowNode = this.node();
+      const idx = parseIdxFromRowData(rowData, rowNode);
+      const rec = idx != null ? exportRowByIndex.get(idx) : null;
+      body.push(buildCsvRowFromRecord(rec));
+    });
+    return { header: CSV_HEADERS, body };
+  }
+
+  const FORCE_QUOTE_COLS = new Set([CSV_HEADERS.length - 1]);
+
+  function escapeCsvField(v, forceQuote){
+    const s = v == null ? '' : String(v);
+    const needsQuote = forceQuote || /["]/.test(s) || s.includes(',') || s.includes('\n') || s.includes('\r');
+    if (needsQuote) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function buildCsvString(data){
+    const rows = [data.header || [], ...(data.body || [])];
+    return rows.map((row, idxRow) => {
+      const forceQuoteCols = idxRow === 0 ? new Set() : FORCE_QUOTE_COLS; // header: no force
+      return (row || []).map((cell, idxCol) => escapeCsvField(cell, forceQuoteCols.has(idxCol))).join(',');
+    }).join('\n');
+  }
+
+  function exportFilenameBase(){
+    return isPlaneAlertMode() ? 'plane-alert' : 'planefence';
+  }
+
+  function exportCsv(dt, buttonConfig){
+    try {
+      const built = buildCsvExportData();
+      const csv = buildCsvString(built);
+      const filename = (buttonConfig && buttonConfig.filename) || exportFilenameBase();
+      const extension = (buttonConfig && buttonConfig.extension) || '.csv';
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const saver = ($.fn && $.fn.dataTable && $.fn.dataTable.fileSave) ? $.fn.dataTable.fileSave : (window.DataTable && window.DataTable.fileSave);
+      if (typeof saver === 'function') {
+        saver(blob, filename + extension);
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename + extension;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.warn('CSV export failed', e);
+    }
+  }
+
 
   function hasSound(r){
     return r['sound:peak'] || r['sound:loudness'] || r['sound:color'] || r['noisegraph:link'];
@@ -2342,6 +2536,8 @@ ${messagesDesc}
   let userPageOverride = false;
   // Map of index -> DataTables row API for fast incremental updates
   const rowByIndex = new Map();
+  // Map of index -> normalized data used for CSV export
+  const exportRowByIndex = new Map();
   // Map of index -> consecutive-miss count used to implement a grace period before purging
   const missingCounts = new Map();
   // Track indices added since last user-visible redraw. Used to highlight new rows.
@@ -2352,6 +2548,7 @@ ${messagesDesc}
       if (table) table.clear().draw(false);
     } catch (e) { /* ignore */ }
     rowByIndex.clear();
+    exportRowByIndex.clear();
     missingCounts.clear();
     pendingNewIndices.clear();
     userOrderOverride = false;
@@ -2569,15 +2766,16 @@ ${messagesDesc}
   (async () => {
     await i18nReady;
     buildHeader();
-    const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 100;
+    const defaultPageLength = window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 25 : 50;
 
     const api = $('#t').DataTable({
-      dom: '<"pf-controls"<"pf-left"l><"pf-right"fip>>rt',
+      dom: '<"pf-controls"<"pf-left"l><"pf-right"Bfip>>rt',
       // Enable deferRender for performance; ordering reads sort keys from data-order attributes with fallbacks.
       deferRender: true,
       pageLength: defaultPageLength,
       lengthMenu: [[25, 50, 100, -1], ['25', '50', '100', t('table.lengthAll')]],
-      responsive: true,
+      autoWidth: false,
+      responsive: window.matchMedia && window.matchMedia('(max-width: 960px)').matches,
     // Default ordering: newest (highest index) first
     order: [[0, 'desc']],
       language: {
@@ -2595,6 +2793,18 @@ ${messagesDesc}
         }
       },
       columns: viewCols.map(col => ({ title: columnTitle(col) })),
+      buttons: [
+        { extend: 'copyHtml5', text: 'Copy', className: 'dt-button' },
+        { text: 'CSV', className: 'dt-button',
+          action: function(e, dt, button, config){
+            config = Object.assign({}, config, { filename: exportFilenameBase(), extension: '.csv' });
+            exportCsv(dt, config);
+          }
+        },
+        { extend: 'pdfHtml5', text: 'PDF', className: 'dt-button', filename: exportFilenameBase,
+          orientation: 'landscape', pageSize: 'A4' },
+        { extend: 'print', text: 'Print', className: 'dt-button', title: exportFilenameBase }
+      ],
       columnDefs: [
         // Use our dom-data-order plugin for column 0 (index) so sorting honors
         // the numeric value placed in the cell's data-order attribute.
@@ -3073,6 +3283,45 @@ function renderRow(r) {
   const isEmerg = squawkVal === "7500" || squawkVal === "7600" || squawkVal === "7700";
   const squawk = squawkVal ? `<span class="${isEmerg ? 'danger' : ''} mono">${squawkVal}</span>${squawkDesc}` : "";
 
+  // Capture normalized fields for CSV export (no HTML)
+  const tsFirst = Number(r["time:firstseen"]);
+  const tsClosest = Number(atMindist || r["time:lastseen"]);
+  const tsLast = Number(r["time:lastseen"] || atMindist || r["time:firstseen"]);
+  const exportRec = {
+    idx: Number.isFinite(idxVal) ? idxVal : null,
+    firstTs: Number.isFinite(tsFirst) ? tsFirst : null,
+    closestTs: Number.isFinite(tsClosest) ? tsClosest : null,
+    lastTs: Number.isFinite(tsLast) ? tsLast : null,
+    callsign: cs || '',
+    icao: icao || '',
+    tail: tail || '',
+    type: typ || '',
+    owner: owner || '',
+    lat: Number.isFinite(Number(lat)) ? Number(lat) : '',
+    lon: Number.isFinite(Number(lon)) ? Number(lon) : '',
+    heading: Number.isFinite(Number(angleDegRaw)) ? Math.round(Number(angleDegRaw)) : '',
+    altitude: Number.isFinite(altRaw) ? Math.round(altRaw) : '',
+    speed: Number.isFinite(spdNum) ? spdNum : '',
+    trackDeg: Number.isFinite(trackDegInt) ? trackDegInt : (Number.isFinite(trackDegRaw) ? Number(trackDegRaw) : ''),
+    trackDir: trackDirLabel || (trackNameRaw ? safe(trackNameRaw) : ''),
+    squawk: squawkVal || '',
+    soundPeak: r["sound:peak"] ? safe(r["sound:peak"]) : '',
+    soundLoud: r["sound:loudness"] ? safe(r["sound:loudness"]) : '',
+    soundLinks: { noise: noise || '', spectro: spectro || '', mp3: mp3 || '' },
+    dbTags: [safe(r['db:tag1']).trim(), safe(r['db:tag2']).trim(), safe(r['db:tag3']).trim()],
+    dbLink: safe(r['db:link']).trim(),
+    notifications: (() => {
+      const list = [];
+      if (discordLink || discordNotified) list.push('Discord');
+      if (bskyLink || bskyNotified) list.push('Bluesky');
+      if (mastodonLink || mastodonNotified) list.push('Mastodon');
+      if (telegramLink || telegramNotified) list.push('Telegram');
+      if (mqttNotified) list.push('MQTT');
+      return list;
+    })()
+  };
+  if (Number.isFinite(idxVal)) exportRowByIndex.set(idxVal, exportRec);
+
   return {
     row: [
     `${idxCell}`,
@@ -3410,6 +3659,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
             if (node) table.row(node).remove();
           } catch (e) { /* ignore per-row remove errors */ }
           rowByIndex.delete(nidx);
+          exportRowByIndex.delete(nidx);
           missingCounts.delete(nidx);
           purged++;
         }
