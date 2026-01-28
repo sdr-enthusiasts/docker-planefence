@@ -1,4 +1,19 @@
-#!/usr/bin/env bash
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2174,SC2015,SC2154,SC2001
+# -----------------------------------------------------------------------------------
+# Copyright 2022-2026 Ramon F. Kolb, kx1t - licensed under the terms and conditions
+# of GPLv3. The terms and conditions of this license are included with the Github
+# distribution of this package, and are also available here:
+# https://github.com/kx1t/docker-planefence/
+#
+# This package may incorporate other software and license terms.
+# -----------------------------------------------------------------------------------
+# This script streams planefence or plane-alert JSON records via CGI
+# Usage:
+#   stream.sh [mode=planefence|plane-alert] [date=YYMMDD|all]
+#   or via HTTP GET with query string parameters:
+#   http://<server>/cgi/stream.sh?mode=planefence|plane-alert[&date=YYMMDD|all]
+# -----------------------------------------------------------------------------------
 set -eo pipefail
 
 DOCROOT="/usr/share/planefence/html"
@@ -41,6 +56,18 @@ choose_json_for_date() {
 
   printf ''
 }
+
+extract_station_version() {
+  local file="${1:-}" val
+  [[ -n "$file" ]] || { printf ''; return; }
+  val="$(jq -r '
+    if (type=="array") and (.[0]|type=="object") and (.[0]|has("index")|not) then
+      (.[0]["station:version"] // .[0]["station.version"] // "")
+    else "" end
+  ' "$file" 2>/dev/null || true)"
+  [[ "$val" == "null" ]] && val=""
+  printf '%s' "$val"
+ }
 
 build_plane_alert_all_json() {
   local hist_days files=() tmp mode="plane-alert" MAX_ROWS=500
@@ -205,6 +232,16 @@ else
   JSONFILE="$(choose_json "$FILTER_MODE" "$REQUESTED_DATE" || true)"
 fi
 
+TODAYS_VERSION_SOURCE=""
+TODAYS_VERSION=""
+TODAYS_VERSION_SOURCE="$(choose_json_for_date "$FILTER_MODE" "$utc_today" || true)"
+if [[ -n "$TODAYS_VERSION_SOURCE" ]]; then
+  TODAYS_VERSION="$(extract_station_version "$TODAYS_VERSION_SOURCE" || true)"
+fi
+if [[ -z "$TODAYS_VERSION" && -n "$JSONFILE" ]]; then
+  TODAYS_VERSION="$(extract_station_version "$JSONFILE" || true)"
+fi
+
 if [[ -n "$TMP_ALL_FILE" ]]; then
   cleanup_all_tmp() { [[ -n "$TMP_ALL_FILE" ]] && rm -f "$TMP_ALL_FILE"; }
   trap cleanup_all_tmp EXIT
@@ -224,7 +261,7 @@ if [[ -z "${JSONFILE:-}" ]]; then
 fi
 
 # Stream schema then rows
-if ! jq -r '
+if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" '
   def pri: [
     "index","icao","tail","callsign","type","owner","route","nominatim",
     "time:firstseen","time:time_at_mindist","time:lastseen","distance:value","distance:unit","complete",
@@ -264,8 +301,11 @@ if ! jq -r '
   else
     # Detect globals in first element (must be object and not have "index")
     ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
-    | ( if $has_globals then .[0] else {} end ) as $globals
-  | ( if $has_globals then .[1:] else . end ) as $rows
+    | ( if $has_globals then .[0] else {} end ) as $raw_globals
+    | ( if ($todays_version|length)>0
+        then $raw_globals + {"station:version":$todays_version, "station.version":$todays_version}
+        else $raw_globals end ) as $globals
+    | ( if $has_globals then .[1:] else . end ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})
     | ({__globals: $globals} | tojson),

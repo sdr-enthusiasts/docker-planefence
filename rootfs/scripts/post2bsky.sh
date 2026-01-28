@@ -18,6 +18,17 @@ shopt -s extglob
 
 SPACE=$'\x1F'   # "special" space
 
+# helpers to keep facet offsets correct when the text contains multi-byte characters
+function utf8_byte_len() {
+  LC_ALL=C printf '%s' "$1" | wc -c | tr -d '[:space:]'
+}
+
+function utf8_first_byte_offset() {
+  local haystack="$1" needle="$2" out
+  out="$(grep -b -o -m1 -- "$needle" <<< "$haystack" 2>/dev/null)" || { printf '%s\n' -1; return; }
+  printf '%s\n' "${out%%:*}"
+}
+
 if (( ${#@} < 1 )); then
   log_print ERR "Usage: $0 [pf|pa] <text> [image1] [image2] ..."
   exit 1
@@ -127,8 +138,8 @@ fi
 bsky_auth
 
 # send pictures to Bluesky
-unset cid size mimetype tagstart tagend urlstart urlend urluri
-declare -A size mimetype tagstart tagend urlstart urlend urluri
+unset cid size mimetype tagstart tagend urlstart urlend urluri urllabel
+declare -A size mimetype tagstart tagend urlstart urlend urluri urllabel
 
 for image in "${IMAGES[@]}"; do
   # skip if the image is not a file that exists or if it's greater than 1MB (max file size for BlueSky)
@@ -194,24 +205,20 @@ readarray -t urls <<< "$(grep -ioE 'https?://\S*' <<< "${TEXT}")"   # extract UR
 post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove URLs and empty lines
 post_text="${post_text%%+([[:space:]])}"  # trim trailing spaces
 
-# extract hashtags, store them, and find their start/end positions.
-# This is necessary because BSky tags text portions as Facets, with a start/end position
-readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null | sed 's/^\(.*\)[^[:alnum:]]\+$/\1/g' 2>/dev/null)"
+# extract hashtags (raw, with #)
+readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null)"
 
 # ${SPACE} is used as a token instead of spaces inside hashtags. Replace all ${SPACE} with a space
 post_text="${post_text//${SPACE}/ }"
 
-# Iterate through hashtags to get their position and length and remove the "#" symbol
+# Remove the # symbol from hashtags in the text (first occurrence of each)
 for tag in "${hashtags[@]}"; do
   tag="${tag//${SPACE}/ }"
   tag_key="${tag:1}"
   [[ -z "$tag_key" ]] && continue
-  if [[ -z "${tagstart[$tag_key]+x}" ]]; then
-    # first occurrence of the tag in the string
-    tagstart[$tag_key]="$(($(awk -v a="$post_text" -v b="$tag" 'BEGIN{print index(a,b)}') - 1))"   # get the position of the tag
-    tagend[$tag_key]="$((${tagstart[$tag_key]} + ${#tag} - 1))" # get the length of the tag without the "#" symbol
-  fi
-  post_text="$(sed "0,/${tag}/s//$tag_key/" <<< "$post_text")"    # remove the "#" symbol (from the first occurrence only)
+  # escape tag for safe sed replacement
+  esc_tag="$(printf '%s\n' "$tag" | sed 's/[.[\*^$]/\\&/g')"
+  post_text="$(sed "0,/${esc_tag}/s//${tag_key}/" <<< "$post_text")"
 done
 
 
@@ -226,14 +233,43 @@ for url in "${urls[@]}"; do
     if [[ -z "$basetext" ]]; then basetext="link"; fi 
     post_text+="•$basetext"
     index="link$((linkcounter++))"
-    urlstart["$index"]="$((${#post_text} - ${#basetext}))"
-    urlend["$index"]="${#post_text}"
+    urllabel["$index"]="•$basetext"
     urluri["$index"]="$url"
   fi
 done
 
 post_text="${post_text:0:$BLUESKY_MAXLENGTH}"      # limit to 300 characters
 post_text="${post_text//[[:cntrl:]]/\\n}"
+
+# Recalculate facets on the finalized post_text (byte offsets, UTF-8 safe)
+unset tagstart tagend urlstart urlend
+declare -A tagstart tagend urlstart urlend
+post_len_bytes="$(utf8_byte_len "$post_text")"
+
+for tag in "${hashtags[@]}"; do
+  tag="${tag//${SPACE}/ }"
+  tag_key="${tag:1}"
+  [[ -z "$tag_key" ]] && continue
+  [[ -n "${tagstart[$tag_key]+x}" ]] && continue
+  start_pos="$(utf8_first_byte_offset "$post_text" "$tag_key")"
+  [[ "$start_pos" -lt 0 ]] && continue
+  end_pos="$((start_pos + $(utf8_byte_len "$tag_key")))"
+  (( end_pos > post_len_bytes )) && continue
+  tagstart[$tag_key]="$start_pos"
+  tagend[$tag_key]="$end_pos"
+done
+
+for url in "${!urllabel[@]}"; do
+  label="${urllabel[$url]}"
+  basetext="${label#•}"
+  start_label="$(utf8_first_byte_offset "$post_text" "$label")"
+  if (( start_label < 0 )); then continue; fi
+  start_pos="$((start_label + $(utf8_byte_len "•")))"
+  end_pos="$((start_pos + $(utf8_byte_len "$basetext")))"
+  (( end_pos > post_len_bytes )) && continue
+  urlstart[$url]="$start_pos"
+  urlend[$url]="$end_pos"
+done
 
 # Prepare the post data
 if (( ${#cid[@]} == 0 )); then
@@ -385,3 +421,13 @@ else
   log_print ERR "BlueSky Posting Error: $ratelimit_str; response was (original had http instead of hxttp):\n${response//http/hxttp}\nOriginal:\n${post_data//http/hxttp}"
   exit 1
 fi
+
+
+#debug:
+{
+  echo "---------------------"
+  echo "POST DATA SENT TO BLUESKY:"
+  echo "$post_data"
+  echo "RESPONSE FROM BLUESKY:"
+  echo "$response"
+} >> /tmp/bsky.debug
