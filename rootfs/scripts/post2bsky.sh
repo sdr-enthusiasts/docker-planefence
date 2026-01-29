@@ -18,6 +18,8 @@ shopt -s extglob
 
 SPACE=$'\x1F'   # "special" space
 
+DEBUG=true   # set to true to enable debug output to /tmp/bsky.debug
+
 # helpers to keep facet offsets correct when the text contains multi-byte characters
 function utf8_byte_len() {
   LC_ALL=C printf '%s' "$1" | wc -c | tr -d '[:space:]'
@@ -239,19 +241,20 @@ for url in "${urls[@]}"; do
 done
 
 post_text="${post_text:0:$BLUESKY_MAXLENGTH}"      # limit to 300 characters
+post_text_raw="$post_text"                        # keep unescaped text for facet math
 post_text="${post_text//[[:cntrl:]]/\\n}"
 
 # Recalculate facets on the finalized post_text (byte offsets, UTF-8 safe)
 unset tagstart tagend urlstart urlend
 declare -A tagstart tagend urlstart urlend
-post_len_bytes="$(utf8_byte_len "$post_text")"
+post_len_bytes="$(utf8_byte_len "$post_text_raw")"
 
 for tag in "${hashtags[@]}"; do
   tag="${tag//${SPACE}/ }"
   tag_key="${tag:1}"
   [[ -z "$tag_key" ]] && continue
   [[ -n "${tagstart[$tag_key]+x}" ]] && continue
-  start_pos="$(utf8_first_byte_offset "$post_text" "$tag_key")"
+  start_pos="$(utf8_first_byte_offset "$post_text_raw" "$tag_key")"
   [[ "$start_pos" -lt 0 ]] && continue
   end_pos="$((start_pos + $(utf8_byte_len "$tag_key")))"
   (( end_pos > post_len_bytes )) && continue
@@ -262,7 +265,7 @@ done
 for url in "${!urllabel[@]}"; do
   label="${urllabel[$url]}"
   basetext="${label#•}"
-  start_label="$(utf8_first_byte_offset "$post_text" "$label")"
+  start_label="$(utf8_first_byte_offset "$post_text_raw" "$label")"
   if (( start_label < 0 )); then continue; fi
   start_pos="$((start_label + $(utf8_byte_len "•")))"
   end_pos="$((start_pos + $(utf8_byte_len "$basetext")))"
@@ -424,10 +427,12 @@ fi
 
 
 #debug:
-{
-  echo "---------------------"
-  echo "POST DATA SENT TO BLUESKY:"
-  echo "$post_data"
-  echo "RESPONSE FROM BLUESKY:"
-  echo "$response"
-} >> /tmp/bsky.debug
+if chk_enabled "$DEBUG"; then
+  {
+    echo "---------------------"
+    echo "POST DATA SENT TO BLUESKY:"
+    echo "$post_data"
+    echo "RESPONSE FROM BLUESKY:"
+    echo "$response"
+  } >> /tmp/bsky.debug
+fi
