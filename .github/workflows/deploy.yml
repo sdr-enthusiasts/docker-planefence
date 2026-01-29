@@ -55,7 +55,7 @@ jobs:
       ghcr_repo: ${{ github.repository }}
       # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
-      docker_latest_tag: trixie-latest
+      docker_latest_tag: latest
       build_baseimage_test: true
       build_baseimage_url: docker-baseimage:planefence_base/docker-baseimage:trixie-planefence_base
     secrets:
