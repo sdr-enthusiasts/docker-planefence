@@ -1,11 +1,11 @@
-name: Deploy Trixie Test
+name: Deploy
 
 on:
   # Build and deploy the image on pushes to main branch
   workflow_dispatch:
     inputs:
       reason:
-        required: true
+        required: false
         description: "Reason for running this workflow"
       use_test_image:
         required: false
