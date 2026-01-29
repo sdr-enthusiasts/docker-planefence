@@ -1,11 +1,11 @@
-name: Deploy
+name: Deploy Trixie Test
 
 on:
   # Build and deploy the image on pushes to main branch
   workflow_dispatch:
     inputs:
       reason:
-        required: false
+        required: true
         description: "Reason for running this workflow"
       use_test_image:
         required: false
@@ -55,7 +55,7 @@ jobs:
       ghcr_repo: ${{ github.repository }}
       # set build_latest to true if github.event.inputs.use_test_image is false
       build_latest: true
-      docker_latest_tag: latest
+      docker_latest_tag: trixie-latest
       build_baseimage_test: true
       build_baseimage_url: docker-baseimage:planefence_base/docker-baseimage:trixie-planefence_base
     secrets:
