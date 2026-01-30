@@ -890,6 +890,7 @@
     const mapTitle = t('stationMap.label', {}, 'Station coverage map');
     return `
 <h1 class="station-welcome-title">${welcome}</h1>
+{{introductionSection}}
 <h1 id="stationInfoTitle">${pfHeading}</h1>
 ${pfDesc}
 <div class="station-map-wrapper">
@@ -972,11 +973,12 @@ ${messagesDesc}
     let modeGeneration = 0;
     let streamAbortController = null;
     let pollIntervalHandle = null;
-    function buildStreamUrl(mode, dateKey){
+    function buildStreamUrl(mode, dateKey, opts = {}){
         const base = './cgi/stream.sh';
         const params = new URLSearchParams();
         params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
-        const wantsAllPlaneAlert = mode === DATA_MODES.PLANE_ALERT && (dateKey === undefined || dateKey === null || dateKey === '');
+        const allowDefaultAll = opts.allowPlaneAlertDefaultAll !== false;
+        const wantsAllPlaneAlert = allowDefaultAll && mode === DATA_MODES.PLANE_ALERT && (dateKey === undefined || dateKey === null || dateKey === '');
         const dateParam = wantsAllPlaneAlert ? 'all' : dateKey;
         if (dateParam) params.set('date', dateParam);
         const qs = params.toString();
@@ -995,6 +997,7 @@ ${messagesDesc}
         dataMode = newMode;
         applyDataModeUI();
         applyPlaneAlertColumnVisibility();
+        applyDefaultHistoryForMode(dataMode, { skipRestart: true });
         restartDataPipelines();
       });
     })();
@@ -1046,6 +1049,7 @@ ${messagesDesc}
     nextUpdateEl = document.getElementById('nextupdate');
     theadRow = document.querySelector('#thead tr');
     reloadBtn = document.getElementById('reload');
+    if (reloadBtn) reloadBtn.style.display = 'none';
     reloadBtn?.addEventListener('click', () => location.reload());
     newUpdatesBtn = document.getElementById('newUpdates');
     heatmapBtn = document.getElementById('heatmapBtn');
@@ -1101,9 +1105,11 @@ ${messagesDesc}
       } catch (e) { console.error('newUpdates click', e); }
     });
 
-    historyButtonEl?.addEventListener('click', ()=>{
-      if (historyMenuOpen) closeHistoryMenu();
-      else openHistoryMenu();
+    historyButtonEl?.addEventListener('click', async ()=>{
+      try {
+        if (historyMenuOpen) closeHistoryMenu();
+        else await openHistoryMenu();
+      } catch (e) { console.error('history toggle failed', e); }
     });
 
     historyMenuEl?.addEventListener('click', (ev)=>{
@@ -1111,11 +1117,8 @@ ${messagesDesc}
       if (!btn) return;
       const dateKey = btn.dataset.date;
       if (!dateKey) return;
-      if (dateKey === 'today') {
-        switchToToday();
-      } else {
-        loadHistoryDate(dateKey, btn.textContent || '');
-      }
+      if (isLiveHistoryKey(dateKey)) switchToLiveHistoryKey(dateKey);
+      else loadHistoryDate(dateKey, btn.textContent || '');
     });
 
     document.addEventListener('click', (ev)=>{
@@ -1162,6 +1165,11 @@ ${messagesDesc}
   let historyDate = null; // YYMMDD string when viewing historical data
   let historyDateLabel = '';
   let historyMenuOpen = false;
+  const historyDatesCache = {
+    [DATA_MODES.PLANEFENCE]: null,
+    [DATA_MODES.PLANE_ALERT]: null
+  };
+  const historyProbePromises = {};
   let stationInfoLastFocus = null;
   let heatmapLastFocus = null;
   let photoModalLastFocus = null;
@@ -1754,6 +1762,18 @@ ${messagesDesc}
     return t('status.placeholder', {}, '--');
   }
 
+  function buildStationIntroSection() {
+    const introHeading = t('stationInfo.heading.introduction', {}, 'Introduction');
+    const motdHtml = (() => {
+      const raw = stationInfoState.motd;
+      if (raw === undefined || raw === null) return '';
+      const str = String(raw).trim();
+      return str ? str : '';
+    })();
+    if (!motdHtml) return '';
+    return `<h1>${introHeading}</h1>\n<div class="station-intro">${motdHtml}</div>`;
+  }
+
   function buildStationInfoHtml() {
     const replacements = {
       '{{stationName}}': escapeHtml(stationInfoState.stationName || t('stationInfo.defaultName', {}, 'this station')),
@@ -1766,7 +1786,8 @@ ${messagesDesc}
       '{{lonCardinal}}': formatStationCardinalCoord(stationInfoState.lon, 'lon'),
       '{{totalLines}}': formatStationTotal(stationInfoState.totalLines),
       '{{year}}': String(new Date().getFullYear()),
-      '{{version}}': escapeHtml(stationInfoState.version || '--')
+      '{{version}}': escapeHtml(stationInfoState.version || '--'),
+      '{{introductionSection}}': buildStationIntroSection()
     };
     return replaceTemplatePlaceholders(stationInfoTemplate(), replacements);
   }
@@ -1823,7 +1844,17 @@ ${messagesDesc}
   }
 
   function isHistoryMode(){
-    return !!historyDate;
+    return !!historyDate && historyDate !== 'all' && historyDate !== 'today';
+  }
+
+  function isLiveHistoryKey(key){
+    return !key || key === 'today' || key === 'all';
+  }
+
+  function effectiveHistoryParam(){
+    if (!historyDate) return null;
+    if (historyDate === 'today') return null;
+    return historyDate;
   }
 
   function utcToday(){
@@ -1863,8 +1894,65 @@ ${messagesDesc}
     return new Date(Date.UTC(fullYear, mm - 1, dd));
   }
 
+  function historyLabelForKey(key){
+    if (key === 'all') return t('actions.all', {}, 'All');
+    if (key === 'today' || !key) return t('actions.today', {}, 'Today');
+    const d = historyDateFromKey(key) || utcToday();
+    return formatHistoryDateDisplay(d);
+  }
+
+  function historyDayLimit(){
+    const histVal = Number(stationInfoState.histtime);
+    if (Number.isFinite(histVal) && histVal > 0) return histVal;
+    const cfgVal = Number(cfg.historyProbeDays || cfg.historyDays || cfg.maxHistoryDays);
+    if (Number.isFinite(cfgVal) && cfgVal > 0) return cfgVal;
+    return 14; // sensible fallback when station info is missing
+  }
+
+  function cachedHistoryDatesForMode(mode){
+    const cache = historyDatesCache[mode];
+    return Array.isArray(cache) ? cache : null;
+  }
+
+  async function discoverHistoryDatesForMode(mode){
+    const key = mode || dataMode;
+    if (!key) return [];
+    if (historyProbePromises[key]) return historyProbePromises[key];
+    historyProbePromises[key] = (async ()=>{
+      const dates = [];
+      const maxDays = historyDayLimit();
+      if (!maxDays || maxDays < 1) { historyDatesCache[key] = dates; return dates; }
+      const today = utcToday();
+      let foundAny = false;
+      for (let i = 1; i <= maxDays; i++) {
+        const d = new Date(today);
+        d.setUTCDate(d.getUTCDate() - i);
+        const keyStr = toYYMMDD(d);
+        try {
+          const resp = await fetch(buildStreamUrl(key, keyStr), { method: 'HEAD', cache: 'no-store' });
+          if (resp && resp.ok) {
+            dates.push({ key: keyStr, label: formatHistoryDateDisplay(d) });
+            foundAny = true;
+          }
+        } catch (e) { /* ignore probe errors */ }
+      }
+      if (foundAny) historyDatesCache[key] = dates;
+      return dates;
+    })();
+    try {
+      const res = await historyProbePromises[key];
+      updateHistorySupport();
+      return res;
+    } catch (e) {
+      console.error('history probe failed', e);
+      return [];
+    }
+  }
+
   function availableHistoryDates(){
-    const maxDays = Number(stationInfoState.histtime);
+    const cached = cachedHistoryDatesForMode(dataMode);
+    if (cached) return cached;
+    const maxDays = historyDayLimit();
     if (!Number.isFinite(maxDays) || maxDays < 1) return [];
     const today = utcToday();
     const dates = [];
@@ -1874,6 +1962,12 @@ ${messagesDesc}
       dates.push({ key: toYYMMDD(d), label: formatHistoryDateDisplay(d) });
     }
     return dates;
+  }
+
+  function applyDefaultHistoryForMode(mode, opts = {}){
+    const target = mode === DATA_MODES.PLANE_ALERT ? 'all' : 'today';
+    if (target === 'all') switchToLiveHistoryKey('all', { skipRestart: opts.skipRestart });
+    else switchToToday({ skipRestart: opts.skipRestart });
   }
 
   function updateHistoryButtonLabel(){
@@ -1886,13 +1980,18 @@ ${messagesDesc}
 
   function updateHistorySupport(){
     if (!historyControlEl || !historyButtonEl) return;
-    const histVal = Number(stationInfoState.histtime);
-    const supported = Number.isFinite(histVal) && histVal > 0;
+    const histDays = historyDayLimit();
+    const cached = cachedHistoryDatesForMode(dataMode);
+    const hasCached = Array.isArray(cached) && cached.length > 0;
+    const supported = Number.isFinite(histDays) && histDays > 0;
     const showForMode = isPlaneAlertMode(); // ensure Plane-Alert shows history control on first load
-    const show = supported || isHistoryMode() || showForMode;
+    const show = supported || isHistoryMode() || showForMode || hasCached;
     historyControlEl.style.display = show ? 'flex' : 'none';
-    historyButtonEl.disabled = !(supported || isHistoryMode() || showForMode);
+    historyButtonEl.disabled = !(supported || isHistoryMode() || showForMode || hasCached);
     updateHistoryButtonLabel();
+    if (supported && !hasCached && !historyProbePromises[dataMode]) {
+      discoverHistoryDatesForMode(dataMode).catch(()=>{});
+    }
   }
 
   function renderHistoryMenu(){
@@ -1911,6 +2010,12 @@ ${messagesDesc}
     todayBtn.textContent = t('actions.today', {}, 'Today');
     historyMenuEl.appendChild(todayBtn);
 
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.dataset.date = 'all';
+    allBtn.textContent = t('actions.all', {}, 'All');
+    historyMenuEl.appendChild(allBtn);
+
     if (!dates.length) {
       const empty = document.createElement('div');
       empty.className = 'history-empty';
@@ -1928,8 +2033,9 @@ ${messagesDesc}
     });
   }
 
-  function openHistoryMenu(){
+  async function openHistoryMenu(){
     if (!historyMenuEl || !historyButtonEl) return;
+    await discoverHistoryDatesForMode(dataMode);
     renderHistoryMenu();
     historyMenuEl.classList.add('open');
     historyMenuOpen = true;
@@ -1955,13 +2061,27 @@ ${messagesDesc}
     startCountdown();
   }
 
-  function switchToToday(){
-    historyDate = null;
-    historyDateLabel = '';
+  function switchToToday(opts = {}){
+    historyDate = 'today';
+    historyDateLabel = historyLabelForKey('today');
     closeHistoryMenu();
     updateHistoryButtonLabel();
     setLiveStatusPlaceholders();
-    restartDataPipelines();
+    if (!opts.skipRestart) restartDataPipelines();
+  }
+
+  function switchToLiveHistoryKey(key, opts = {}){
+    if (key === 'all') {
+      historyDate = 'all';
+      historyDateLabel = historyLabelForKey('all');
+    } else {
+      historyDate = 'today';
+      historyDateLabel = historyLabelForKey('today');
+    }
+    closeHistoryMenu();
+    updateHistoryButtonLabel();
+    setLiveStatusPlaceholders();
+    if (!opts.skipRestart) restartDataPipelines();
   }
 
   function loadHistoryDate(dateKey, displayLabel){
@@ -3029,6 +3149,7 @@ if (typeof table !== 'undefined' && table) {
 // Also call once after initial setup if table exists
 setTimeout(()=> expandDiscordLinksInNotifications(), 150);
 
+    applyDefaultHistoryForMode(dataMode, { skipRestart: true });
     restartDataPipelines();
   })();
 
@@ -3413,14 +3534,14 @@ function addOrUpdateRow(r){
   }
 
 
-  async function startStreamReader(generation){
+  async function startStreamReader(generation, opts = {}){
     if (!cfg.enableStream) return;
     stopStreamReader();
     const controller = new AbortController();
     streamAbortController = controller;
     const modeForRun = dataMode;
     try {
-      const resp = await fetch(buildStreamUrl(modeForRun), { cache: 'no-store', signal: controller.signal });
+      const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store', signal: controller.signal });
       if (!resp.ok || !resp.body) { if (prog) prog.textContent = t('status.streamFailed', {}, 'Stream failed'); return; }
 
       const reader = resp.body.getReader();
@@ -3537,7 +3658,7 @@ function addOrUpdateRow(r){
 async function pollAndMerge(modeForRun, generation, opts = {}) {
   try {
     if (generation !== modeGeneration) return;
-    const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate), { cache: 'no-store' });
+    const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store' });
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
     if (generation !== modeGeneration) return;
     const txt = await resp.text();
@@ -3714,13 +3835,13 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
     startCountdown();
   }
 
-  function startPollingLoop(generation){
+  function startPollingLoop(generation, opts = {}){
     if (!cfg.enablePoll) return;
     stopPollingLoop();
     const intervalMs = (cfg.pollIntervalSec || 60) * 1000;
     const runOnce = async ()=>{
       const modeForRun = dataMode;
-      await pollAndMerge(modeForRun, generation);
+      await pollAndMerge(modeForRun, generation, { historyDate: opts.historyDate, allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll });
       if (generation === modeGeneration) scheduleNextPoll(cfg.pollIntervalSec || 60);
     };
     runOnce().catch(e => console.error('poll loop run', e));
@@ -3740,8 +3861,10 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       return;
     }
     setLiveStatusPlaceholders();
-    if (cfg.enableStream) startStreamReader(modeGeneration);
-    if (cfg.enablePoll) startPollingLoop(modeGeneration);
+    const liveHistoryParam = effectiveHistoryParam();
+    const allowPlaneAlertDefaultAll = isPlaneAlertMode() && historyDate !== 'today';
+    if (cfg.enableStream) startStreamReader(modeGeneration, { historyDate: liveHistoryParam, allowPlaneAlertDefaultAll });
+    if (cfg.enablePoll) startPollingLoop(modeGeneration, { historyDate: liveHistoryParam, allowPlaneAlertDefaultAll });
   }
 
 </script>

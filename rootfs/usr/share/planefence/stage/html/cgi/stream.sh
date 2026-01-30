@@ -70,7 +70,7 @@ extract_station_version() {
  }
 
 build_plane_alert_all_json() {
-  local hist_days files=() tmp mode="plane-alert" MAX_ROWS=500
+  local mode="${1:-plane-alert}" hist_days files=() tmp MAX_ROWS=500
   hist_days="$(plane_alert_hist_days)"
 
   # Walk days from today backwards (UTC), collect newest files first until we satisfy MAX_ROWS or HISTTIME
@@ -133,7 +133,10 @@ build_plane_alert_all_json() {
     | .rows = [ range(0; (.rows|length)) as $i | (.rows[$i] // {}) + {index:$i} ]
     | .rows = (.rows | reverse)                             # emit newest-first
     | .globals.maxindex = ((.rows|length) - 1)
-    | .globals.totallines = (.rows|length)
+    | .globals.totallines = (
+      if (.today_globals|has("totallines")) then .today_globals.totallines
+      elif (.globals|has("totallines")) then .globals.totallines
+      else (.rows|length) end)
     | .globals.LASTUPDATE = (
       if ($today_lastupdate|length) > 0 then $today_lastupdate
       elif (.today_globals|has("LASTUPDATE")) then .today_globals.LASTUPDATE
@@ -225,8 +228,8 @@ elif [[ "$1" == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
 fi
 
-if [[ "$FILTER_MODE" == "plane-alert" && "$REQUESTED_DATE" == "all" ]]; then
-  TMP_ALL_FILE="$(build_plane_alert_all_json || true)"
+if [[ "$REQUESTED_DATE" == "all" ]]; then
+  TMP_ALL_FILE="$(build_plane_alert_all_json "$FILTER_MODE" || true)"
   JSONFILE="$TMP_ALL_FILE"
 else
   JSONFILE="$(choose_json "$FILTER_MODE" "$REQUESTED_DATE" || true)"
