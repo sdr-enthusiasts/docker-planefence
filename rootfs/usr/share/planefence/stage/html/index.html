@@ -890,6 +890,7 @@
     const mapTitle = t('stationMap.label', {}, 'Station coverage map');
     return `
 <h1 class="station-welcome-title">${welcome}</h1>
+{{introductionSection}}
 <h1 id="stationInfoTitle">${pfHeading}</h1>
 ${pfDesc}
 <div class="station-map-wrapper">
@@ -1761,6 +1762,18 @@ ${messagesDesc}
     return t('status.placeholder', {}, '--');
   }
 
+  function buildStationIntroSection() {
+    const introHeading = t('stationInfo.heading.introduction', {}, 'Introduction');
+    const motdHtml = (() => {
+      const raw = stationInfoState.motd;
+      if (raw === undefined || raw === null) return '';
+      const str = String(raw).trim();
+      return str ? str : '';
+    })();
+    if (!motdHtml) return '';
+    return `<h1>${introHeading}</h1>\n<div class="station-intro">${motdHtml}</div>`;
+  }
+
   function buildStationInfoHtml() {
     const replacements = {
       '{{stationName}}': escapeHtml(stationInfoState.stationName || t('stationInfo.defaultName', {}, 'this station')),
@@ -1773,7 +1786,8 @@ ${messagesDesc}
       '{{lonCardinal}}': formatStationCardinalCoord(stationInfoState.lon, 'lon'),
       '{{totalLines}}': formatStationTotal(stationInfoState.totalLines),
       '{{year}}': String(new Date().getFullYear()),
-      '{{version}}': escapeHtml(stationInfoState.version || '--')
+      '{{version}}': escapeHtml(stationInfoState.version || '--'),
+      '{{introductionSection}}': buildStationIntroSection()
     };
     return replaceTemplatePlaceholders(stationInfoTemplate(), replacements);
   }
