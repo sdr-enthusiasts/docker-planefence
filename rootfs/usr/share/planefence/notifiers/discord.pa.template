@@ -80,7 +80,7 @@
           },--TAG3||
           ||LINK--
           {
-            "Name": "Link",
+            "name": "Link",
             "value": "[||LINKTITLE||](||LINKURL||)",
             "inline": true
           },--LINK||
