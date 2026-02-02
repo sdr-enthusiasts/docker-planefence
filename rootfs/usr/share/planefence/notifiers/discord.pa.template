@@ -80,8 +80,8 @@
           },--TAG3||
           ||LINK--
           {
-            "title": "||LINKTITLE||",
-            "url": "||LINKURL||",
+            "Name": "Link",
+            "value": "[||LINKTITLE||](||LINKURL||)",
             "inline": true
           },--LINK||
           ||FIRSTSEEN--
