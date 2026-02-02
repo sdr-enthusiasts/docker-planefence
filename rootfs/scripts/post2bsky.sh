@@ -235,7 +235,7 @@ for url in "${urls[@]}"; do
     # We have a generic link. Add it to the post text
     basetext="$(extract_base "$url")"
     if [[ -z "$basetext" ]]; then basetext="link"; fi 
-    post_text+="•$basetext"
+    post_text+=" $basetext"
     index="link$((linkcounter++))"
     urllabel["$index"]=" $basetext"
     urluri["$index"]="$url"
@@ -265,7 +265,7 @@ done
 
 for url in "${!urllabel[@]}"; do
   label="${urllabel[$url]}"
-  basetext="${label#•}"
+  basetext="${label# }"
   start_label="$(utf8_first_byte_offset "$post_text_raw" "$label")"
   if (( start_label < 0 )); then continue; fi
   start_pos="$((start_label + $(utf8_byte_len "-")))"
