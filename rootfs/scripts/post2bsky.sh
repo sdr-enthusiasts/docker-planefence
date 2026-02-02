@@ -18,7 +18,7 @@ shopt -s extglob
 
 SPACE=$'\x1F'   # "special" space
 
-DEBUG=true   # set to true to enable debug output to /tmp/bsky.debug
+DEBUG=false   # set to true to enable debug output to /tmp/bsky.debug
 
 # helpers to keep facet offsets correct when the text contains multi-byte characters
 function utf8_byte_len() {
