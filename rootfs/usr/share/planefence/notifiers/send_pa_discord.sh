@@ -112,7 +112,6 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ALTITUDE||" "${pa_records["$idx:altitude:value"]} $ALTUNIT" "$template")"
   template="$(template_replace "||GROUNDSPEED||" "${pa_records["$idx:groundspeed:value"]} $SPEEDUNIT" "$template")"
   template="$(template_replace "||TAIL||" "${pa_records["$idx:tail"]}" "$template")"
-  template="$(template_replace "||ROUTE||" "${pa_records["$idx:route"]:-n/a}" "$template")"
   template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
   template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:firstseen"]}" +'%H:%M:%S lt')" "$template")"  
@@ -146,6 +145,14 @@ for idx in "${INDEX[@]}"; do
   else
     template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
   fi
+
+  if [[ -n "${pa_records["$idx":route]}" && "${pa_records["$idx":route]}" != "n/a" ]]; then
+    template="$(template_replace "||ROUTE--" "" "$template")"
+    template="$(template_replace "--ROUTE||" "" "$template")"
+    template="$(template_replace "||ROUTE||" "${pa_records["$idx":route]}" "$template")"
+  else
+    template="$(sed -z 's/||ROUTE--.*--ROUTE||//g' <<< "$template")"
+  fi    
 
   if [[ -n "${pa_records["$idx":db:category]}" ]]; then
     template="$(template_replace "||CATEGORY--" "" "$template")"
