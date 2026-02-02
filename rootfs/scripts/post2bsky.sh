@@ -136,6 +136,9 @@ if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
     exit 1
 fi
 
+# Normalize the text so it's all 1-byte characters:
+TEXT="$(printf '%b\n' "$TEXT" | awk '{ for(i=1; i<=length($0); i++) printf("%c", substr($0,i,1)); printf("\n") }')"
+
 # Authenticate with BlueSky
 bsky_auth
 
@@ -235,7 +238,7 @@ for url in "${urls[@]}"; do
     if [[ -z "$basetext" ]]; then basetext="link"; fi 
     post_text+="•$basetext"
     index="link$((linkcounter++))"
-    urllabel["$index"]="•$basetext"
+    urllabel["$index"]=" $basetext"
     urluri["$index"]="$url"
   fi
 done

@@ -86,7 +86,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
+    template="$(template_replace "||SQUAWK||" "Squawk: #$squawk " "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
       template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
     else
@@ -105,8 +105,8 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
   template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]}" || true)" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
-  if [[ "${records["$idx":route]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
+  if [[ -n "${records["$idx":route]}" && "${records["$idx":route]}" != "n/a" ]]; then 
+    template="$(template_replace "||ROUTE||" "#${records["$idx":route]//-/-#}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
