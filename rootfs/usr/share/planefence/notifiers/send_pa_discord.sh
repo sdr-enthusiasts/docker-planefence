@@ -114,7 +114,6 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||TAIL||" "${pa_records["$idx:tail"]}" "$template")"
   template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
-  template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:firstseen"]}" +'%H:%M:%S lt')" "$template")"  
   template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
   
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
@@ -190,6 +189,14 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||LINKTITLE||" "$(extract_base "${pa_records["$idx":db:link]}")" "$template")"
   else
     template="$(sed -z 's/||LINK--.*--LINK||//g' <<< "$template")"
+  fi
+
+  if [[ -n "${pa_records["$idx":time:firstseen]}" ]]; then
+    template="$(template_replace "||FIRSTSEEN--" "" "$template")"
+    template="$(template_replace "--FIRSTSEEN||" "" "$template")"
+    template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:time:firstseen"]}" +'%H:%M:%S lt')" "$template")"
+  else
+    template="$(sed -z 's/||FIRSTSEEN--.*--FIRSTSEEN||//g' <<< "$template")"
   fi
 
   #################################
