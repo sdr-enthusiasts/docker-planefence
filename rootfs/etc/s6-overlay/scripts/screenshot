@@ -25,7 +25,7 @@ LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/pers
 LOOPTIME="${LOOPTIME:-60}"
 
 ## Debug:
-LOOPTIME=120  # for testing only - set to 120 secs
+#LOOPTIME=120  # for testing only - set to 120 secs
 
 PLANEFENCEDIR=/usr/share/planefence
 
@@ -49,7 +49,7 @@ do
     continue
   fi
   starttime=$(date +%s)
-  $PLANEFENCEDIR/pf-screenshot.sh
+  $PLANEFENCEDIR/screenshot.sh
   endtime=$(date +%s)
   # [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Screenshot ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) )." || true
   if (( starttime + LOOPTIME > endtime )); then

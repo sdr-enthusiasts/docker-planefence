@@ -20,17 +20,6 @@ SPACE=$'\x1F'   # "special" space
 
 DEBUG=false   # set to true to enable debug output to /tmp/bsky.debug
 
-# helpers to keep facet offsets correct when the text contains multi-byte characters
-function utf8_byte_len() {
-  LC_ALL=C printf '%s' "$1" | wc -c | tr -d '[:space:]'
-}
-
-function utf8_first_byte_offset() {
-  local haystack="$1" needle="$2" out
-  out="$(grep -b -o -m1 -- "$needle" <<< "$haystack" 2>/dev/null)" || { printf '%s\n' -1; return; }
-  printf '%s\n' "${out%%:*}"
-}
-
 if (( ${#@} < 1 )); then
   log_print ERR "Usage: $0 [pf|pa] <text> [image1] [image2] ..."
   exit 1
@@ -136,8 +125,17 @@ if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
     exit 1
 fi
 
-# Normalize the text so it's all 1-byte characters:
-TEXT="$(printf '%b\n' "$TEXT" | awk '{ for(i=1; i<=length($0); i++) printf("%c", substr($0,i,1)); printf("\n") }')"
+# Preprocess text:
+# - Replace UTF-8 2-byte characters with a space
+# - Replace actual newlines with literal \n and trim any spaces after \n
+# Replace UTF-8 2-byte sequences ([\xC2-\xDF][\x80-\xBF]) with a space
+TEXT="$(sed -r 's/[\xC2-\xDF][\x80-\xBF]/ /g' <<< "$TEXT")"
+
+# Replace actual newlines with literal \n
+TEXT="${TEXT//$'\n'/\\n}"
+
+# Trim any spaces after a literal \n
+TEXT="$(sed -E 's/\\n[[:space:]]+/\\n/g' <<< "$TEXT")"
 
 # Authenticate with BlueSky
 bsky_auth
@@ -206,13 +204,27 @@ log_print DEBUG "TEXT before cleanup: $TEXT"
 
 # Clean up the text
 # Extract and remove any URLs
-readarray -t urls <<< "$(grep -ioE 'https?://\S*' <<< "${TEXT}")"   # extract URLs
-post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove URLs and empty lines
+post_text="${TEXT}"
+post_text="${post_text//[[:cntrl:]]/}"  # remove control characters
+post_text="${post_text//°/deg}"  # replace ° by deg
+readarray -t urls <<< "$(grep -ioE 'https?://\S*' <<< "${post_text}")"   # extract URLs
+post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$post_text")"  # remove URLs and empty lines
 post_text="${post_text%%+([[:space:]])}"  # trim trailing spaces
-post_text="${post_text//[[:cntrl:]]/\\n}"  # replace control characters with newlines
 
-# extract hashtags (raw, with #)
-readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null)"
+
+# extract hashtags (raw, with #) from both original TEXT and cleaned post_text, then deduplicate
+# Replace literal \n with spaces in TEXT before hashtag grep to avoid spanning across lines
+text_for_tags="${TEXT//\\n/ }"
+# Treat '-' as a separator for tags (exclude '-' from hashtag characters)
+readarray -t hashtags_src1 <<< "$(grep -oE '#[[:alnum:]_]+' <<< "$text_for_tags" 2>/dev/null)"
+readarray -t hashtags_src2 <<< "$(grep -oE '#[[:alnum:]_]+' <<< "$post_text" 2>/dev/null)"
+unset hashtags htset
+declare -A htset
+for tag in "${hashtags_src1[@]}" "${hashtags_src2[@]}"; do
+  [[ -z "$tag" ]] && continue
+  htset["$tag"]=1
+done
+hashtags=("${!htset[@]}")
 
 # ${SPACE} is used as a token instead of spaces inside hashtags. Replace all ${SPACE} with a space
 post_text="${post_text//${SPACE}/ }"
@@ -231,6 +243,9 @@ done
 linkcounter=0
 
 for url in "${urls[@]}"; do
+  # Skip empty or non-http(s) URLs
+  [[ -z "$url" ]] && continue
+  [[ "$url" != http* ]] && continue
   if (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )); then
     # We have a generic link. Add it to the post text
     basetext="$(extract_base "$url")"
@@ -243,22 +258,38 @@ for url in "${urls[@]}"; do
 done
 
 post_text="${post_text:0:$BLUESKY_MAXLENGTH}"      # limit to 300 characters
+# Final newline sanitization: ensure no actual newlines remain in JSON
+post_text="${post_text//$'\n'/\\n}"
+post_text="$(sed -E 's/\\n[[:space:]]+/\\n/g' <<< "$post_text")"
 post_text_raw="$post_text"                        # keep unescaped text for facet math
+
+# For facet offsets, treat literal \n as a single newline character
+facet_text="${post_text_raw//\\n/$'\n'}"
 
 # Recalculate facets on the finalized post_text (byte offsets, UTF-8 safe)
 unset tagstart tagend urlstart urlend
 declare -A tagstart tagend urlstart urlend
-post_len_bytes="$(utf8_byte_len "$post_text_raw")"
+post_len_bytes="${#facet_text}"
 
-for tag in "${hashtags[@]}"; do
+# Sort hashtags by descending length to prefer longer matches, then avoid overlapping facets
+mapfile -t hashtags_sorted < <(for t in "${hashtags[@]}"; do printf '%d:%s\n' "${#t}" "$t"; done | sort -t: -k1,1nr | cut -d: -f2)
+for tag in "${hashtags_sorted[@]}"; do
   tag="${tag//${SPACE}/ }"
   tag_key="${tag:1}"
   [[ -z "$tag_key" ]] && continue
   [[ -n "${tagstart[$tag_key]+x}" ]] && continue
-  start_pos="$(utf8_first_byte_offset "$post_text_raw" "$tag_key")"
-  [[ "$start_pos" -lt 0 ]] && continue
-  end_pos="$((start_pos + $(utf8_byte_len "$tag_key")))"
+  prefix="${facet_text%%"$tag_key"*}"
+  [[ "$prefix" == "$facet_text" ]] && continue
+  start_pos="${#prefix}"
+  end_pos="$((start_pos + ${#tag_key}))"
   (( end_pos > post_len_bytes )) && continue
+  # skip if this tag's range would overlap with an existing tag facet
+  overlap=false
+  for existing in "${!tagstart[@]}"; do
+    es="${tagstart[$existing]}"; ee="${tagend[$existing]}"
+    if (( start_pos < ee && end_pos > es )); then overlap=true; break; fi
+  done
+  $overlap && continue
   tagstart[$tag_key]="$start_pos"
   tagend[$tag_key]="$end_pos"
 done
@@ -266,14 +297,42 @@ done
 for url in "${!urllabel[@]}"; do
   label="${urllabel[$url]}"
   basetext="${label# }"
-  start_label="$(utf8_first_byte_offset "$post_text_raw" "$label")"
-  if (( start_label < 0 )); then continue; fi
-  start_pos="$((start_label + $(utf8_byte_len "-")))"
-  end_pos="$((start_pos + $(utf8_byte_len "$basetext")))"
+  prefix="${facet_text%%"$label"*}"
+  [[ "$prefix" == "$facet_text" ]] && continue
+  start_pos="$(( ${#prefix} + 1 ))"  # skip the leading space in label
+  end_pos="$((start_pos + ${#basetext}))"
   (( end_pos > post_len_bytes )) && continue
   urlstart[$url]="$start_pos"
   urlend[$url]="$end_pos"
 done
+
+# Debug dump of facet calculations (if enabled)
+if chk_enabled "$DEBUG"; then
+  {
+    echo "---------------------"
+    echo "FACET CALCULATION SNAPSHOT:"
+    echo "Sanitized TEXT: $TEXT"
+    echo "Post text (JSON-safe): $post_text"
+    echo "Facet text (\\n -> newline, for offsets):"
+    printf '%s\n' "$facet_text"
+    echo "Hashtags detected: ${hashtags[*]}"
+    echo "Tag facets (start-end):"
+    for tag in "${!tagstart[@]}"; do
+      echo "  $tag: ${tagstart[$tag]}-${tagend[$tag]}"
+    done
+    echo "Missing tag facets:"
+    for rawtag in "${hashtags[@]}"; do
+      tk="${rawtag#\#}"
+      [[ -z "$tk" ]] && continue
+      [[ -z "${tagstart[$tk]+x}" ]] && echo "  $rawtag"
+    done
+    echo "Link labels (label, uri, start-end):"
+    for u in "${!urllabel[@]}"; do
+      echo "  $u: label='${urllabel[$u]}', uri='${urluri[$u]}', offs=${urlstart[$u]}-${urlend[$u]}"
+    done
+    echo "Post length used for facets: $post_len_bytes"
+  } >> /tmp/bsky.debug
+fi
 
 # Prepare the post data
 if (( ${#cid[@]} == 0 )); then

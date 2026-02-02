@@ -112,7 +112,7 @@ for idx in "${INDEX[@]}"; do
   fi
   template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
   template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
+  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}deg ${records["$idx":angle:name]})" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
   else
