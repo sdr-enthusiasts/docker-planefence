@@ -115,6 +115,7 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ROUTE||" "${pa_records["$idx:route"]:-n/a}" "$template")"
   template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
+  template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:firstseen"]}" +'%H:%M:%S lt')" "$template")"  
   template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
   
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
@@ -146,6 +147,45 @@ for idx in "${INDEX[@]}"; do
     template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
   fi
 
+  if [[ -n "${pa_records["$idx":db:category]}" ]]; then
+    template="$(template_replace "||CATEGORY--" "" "$template")"
+    template="$(template_replace "--CATEGORY||" "" "$template")"
+    template="$(template_replace "||CATEGORY||" "${pa_records["$idx":db:category]}" "$template")"
+  else
+    template="$(sed -z 's/||CATEGORY--.*--CATEGORY||//g' <<< "$template")"
+  fi
+
+  if [[ -n "${pa_records["$idx":db:tag1]}" ]]; then
+    template="$(template_replace "||TAG1--" "" "$template")"
+    template="$(template_replace "--TAG1||" "" "$template")"
+    template="$(template_replace "||TAG1||" "${pa_records["$idx":db:tag1]}" "$template")"
+  else
+    template="$(sed -z 's/||TAG1--.*--TAG1||//g' <<< "$template")"
+  fi
+  if [[ -n "${pa_records["$idx":db:tag2]}" ]]; then
+    template="$(template_replace "||TAG2--" "" "$template")"
+    template="$(template_replace "--TAG2||" "" "$template")"
+    template="$(template_replace "||TAG2||" "${pa_records["$idx":db:tag2]}" "$template")"
+  else
+    template="$(sed -z 's/||TAG2--.*--TAG2||//g' <<< "$template")"
+  fi
+  if [[ -n "${pa_records["$idx":db:tag3]}" ]]; then
+    template="$(template_replace "||TAG3--" "" "$template")"
+    template="$(template_replace "--TAG3||" "" "$template")"
+    template="$(template_replace "||TAG3||" "${pa_records["$idx":db:tag3]}" "$template")"
+  else
+    template="$(sed -z 's/||TAG3--.*--TAG3||//g' <<< "$template")"
+  fi
+  if [[ -n "${pa_records["$idx":db:link]}" ]]; then
+    template="$(template_replace "||LINK--" "" "$template")"
+    template="$(template_replace "--LINK||" "" "$template")"
+    template="$(template_replace "||LINKURL||" "${pa_records["$idx":db:link]}" "$template")"
+    template="$(template_replace "||LINKTITLE||" "$(extract_base "${pa_records["$idx":db:link]}")" "$template")"
+  else
+    template="$(sed -z 's/||LINK--.*--LINK||//g' <<< "$template")"
+  fi
+
+  #################################
   image=""; thumb=""; curlfile=""
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in

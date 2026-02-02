@@ -48,11 +48,48 @@
             "value": "||TRACK||",
             "inline": true
           },
+          ||ROUTE--
           {
             "name": "Route",
             "value": "||ROUTE||",
             "inline": true
-          }
+          },--ROUTE||
+          ||CATEGORY--
+          {
+            "name": "Category",
+            "value": "||CATEGORY||",
+            "inline": true
+          },--CATEGORY||
+          ||TAG1--
+          {
+            "name": "Tag",
+            "value": "||TAG1||",
+            "inline": true
+          },--TAG1||
+          ||TAG2--
+          {
+            "name": "Tag",
+            "value": "||TAG2||",
+            "inline": true
+          },--TAG2||
+          ||TAG3--
+          {
+            "name": "Tag",
+            "value": "||TAG3||",
+            "inline": true
+          },--TAG3||
+          ||LINK--
+          {
+            "title": "||LINKTITLE||",
+            "url": "||LINKURL||",
+            "inline": true
+          },--LINK||
+          ||FIRSTSEEN--
+          {
+            "name": "First Seen",
+            "value": "||FIRSTSEEN||",
+            "inline": true
+          }--FIRSTSEEN||
         ],
         "timestamp": "||TIMESTAMP||",
         ||THUMBNAIL--"thumbnail":
