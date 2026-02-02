@@ -209,6 +209,7 @@ log_print DEBUG "TEXT before cleanup: $TEXT"
 readarray -t urls <<< "$(grep -ioE 'https?://\S*' <<< "${TEXT}")"   # extract URLs
 post_text="$(sed -e 's|http[s]\?://\S*||g' -e '/^$/d' <<< "$TEXT")"  # remove URLs and empty lines
 post_text="${post_text%%+([[:space:]])}"  # trim trailing spaces
+post_text="${post_text//[[:cntrl:]]/\\n}"  # replace control characters with newlines
 
 # extract hashtags (raw, with #)
 readarray -t hashtags <<< "$(grep -o '#[^[:space:]#]*' <<< "$post_text" 2>/dev/null)"
@@ -225,8 +226,6 @@ for tag in "${hashtags[@]}"; do
   esc_tag="$(printf '%s\n' "$tag" | sed 's/[.[\*^$]/\\&/g')"
   post_text="$(sed "0,/${esc_tag}/s//${tag_key}/" <<< "$post_text")"
 done
-
-
 
 # add links
 linkcounter=0
@@ -245,7 +244,6 @@ done
 
 post_text="${post_text:0:$BLUESKY_MAXLENGTH}"      # limit to 300 characters
 post_text_raw="$post_text"                        # keep unescaped text for facet math
-post_text="${post_text//[[:cntrl:]]/\\n}"
 
 # Recalculate facets on the finalized post_text (byte offsets, UTF-8 safe)
 unset tagstart tagend urlstart urlend
@@ -270,7 +268,7 @@ for url in "${!urllabel[@]}"; do
   basetext="${label#•}"
   start_label="$(utf8_first_byte_offset "$post_text_raw" "$label")"
   if (( start_label < 0 )); then continue; fi
-  start_pos="$((start_label + $(utf8_byte_len "•")))"
+  start_pos="$((start_label + $(utf8_byte_len "-")))"
   end_pos="$((start_pos + $(utf8_byte_len "$basetext")))"
   (( end_pos > post_len_bytes )) && continue
   urlstart[$url]="$start_pos"
