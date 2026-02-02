@@ -74,6 +74,7 @@ while true; do
 		"${s6wrap[@]}" echo "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
 		"${s6wrap[@]}" echo "If this error keeps on repeating, please make sure that"
 		"${s6wrap[@]}" echo "readsb/dump1090[-fa]/ultrafeeder is running and producing SBS data on port $PF_SOCK30003PORT!"
+		sleep $LOOPTIME & wait
 	else
 		# clean up logs
 		for f in /run/socket30003/*.txt; do

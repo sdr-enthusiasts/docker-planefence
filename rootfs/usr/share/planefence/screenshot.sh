@@ -188,7 +188,7 @@ process_dataset_for_screenshots() {
   build_index_and_stale_for_screenshot INDEX STALE "$dataset_name"
 
   if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-    log_print INFO "${dataset_label}: no records eligible for screenshotting."
+    log_print DEBUG "${dataset_label}: no records eligible for screenshotting."
     return 0
   fi
 
@@ -372,7 +372,7 @@ else
 fi
 
 if (( any_candidates == 0 )); then
-  log_print INFO "No records eligible for screenshotting."
+  log_print DEBUG "No records eligible for screenshotting."
   exit 0
 fi
 

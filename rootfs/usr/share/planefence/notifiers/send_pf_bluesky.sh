@@ -73,7 +73,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Bluesky notification."
+  log_print DEBUG "No records eligible for Bluesky notification."
   exit 0
 fi
 
@@ -86,7 +86,7 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
+    template="$(template_replace "||SQUAWK||" "Squawk: #$squawk " "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
       template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
     else
@@ -105,14 +105,14 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]}" "$template")"
   template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]}" || true)" "$template")"
   template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
-  if [[ "${records["$idx":route]}" != "n/a" ]]; then 
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
+  if [[ -n "${records["$idx":route]}" && "${records["$idx":route]}" != "n/a" ]]; then 
+    template="$(template_replace "||ROUTE||" "#${records["$idx":route]//-/-#}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"
   fi
   template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
   template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
+  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}deg ${records["$idx":angle:name]})" "$template")"
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
     template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
   else

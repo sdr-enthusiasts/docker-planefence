@@ -172,7 +172,7 @@ log_print DEBUG "Hello. Starting generation of RSS feed"
 # Create/update symlink for today's feed
 if generate_rss; then
   ln -sf "$rss_file" "$OUTFILEDIR/plane-alert.rss"
-  log_print INFO "RSS feed generated at $rss_file"
+  log_print DEBUG "RSS feed generated at $rss_file"
 else
   log_print ERR "RSS feed generation failed!"
 fi
