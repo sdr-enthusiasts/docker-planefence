@@ -79,7 +79,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Discord notification."
+  log_print DEBUG "No records eligible for Discord notification."
   exit 0
 fi
 

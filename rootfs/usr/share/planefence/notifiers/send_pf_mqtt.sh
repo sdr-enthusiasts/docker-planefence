@@ -131,7 +131,7 @@ else
   log_print DEBUG "No stale records for MQTT notification."
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for MQTT notification."
+  log_print DEBUG "No records eligible for MQTT notification."
   exit 0
 fi
 

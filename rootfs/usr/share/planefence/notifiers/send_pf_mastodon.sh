@@ -74,7 +74,7 @@ else
   log_print DEBUG "No stale records"
 fi
 if (( ${#INDEX[@]} == 0 && ${#STALE[@]} == 0 )); then
-  log_print INFO "No records eligible for Mastodon notification."
+  log_print DEBUG "No records eligible for Mastodon notification."
   exit 0
 fi
 
