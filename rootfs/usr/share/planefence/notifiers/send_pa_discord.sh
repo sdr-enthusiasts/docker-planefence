@@ -207,7 +207,7 @@ for idx in "${INDEX[@]}"; do
   if [[ -n "${pa_records["$idx":time:firstseen]}" ]]; then
     template="$(template_replace "||FIRSTSEEN--" "" "$template")"
     template="$(template_replace "--FIRSTSEEN||" "" "$template")"
-    template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:time:firstseen"]}" +'%H:%M:%S lt')" "$template")"
+    template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:time:firstseen"]}" +'%H:%M:%S %Z')" "$template")"
   else
     template="$(sed -z 's/||FIRSTSEEN--.*--FIRSTSEEN||//g' <<< "$template")"
   fi

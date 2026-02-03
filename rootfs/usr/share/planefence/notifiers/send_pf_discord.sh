@@ -159,6 +159,13 @@ for idx in "${INDEX[@]}"; do
   else
     template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
   fi
+  if [[ -n "${pa_records["$idx":time:firstseen]}" ]]; then
+    template="$(template_replace "||FIRSTSEEN--" "" "$template")"
+    template="$(template_replace "--FIRSTSEEN||" "" "$template")"
+    template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:time:firstseen"]}" +'%H:%M:%S %Z')" "$template")"
+  else
+    template="$(sed -z 's/||FIRSTSEEN--.*--FIRSTSEEN||//g' <<< "$template")"
+  fi
 
   # Handle media attachments
   image=""; thumb=""; curlfile=""
