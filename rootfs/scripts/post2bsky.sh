@@ -297,9 +297,14 @@ done
 for url in "${!urllabel[@]}"; do
   label="${urllabel[$url]}"
   basetext="${label# }"
-  prefix="${facet_text%%"$label"*}"
-  [[ "$prefix" == "$facet_text" ]] && continue
-  start_pos="$(( ${#prefix} + 1 ))"  # skip the leading space in label
+  # Try match with leading space
+  prefix="${facet_text%%" $basetext"*}"
+  if [[ "$prefix" == "$facet_text" ]]; then
+    # Fallback: match at start of line (after newline)
+    prefix="${facet_text%%$'\n'"$basetext"*}"
+    [[ "$prefix" == "$facet_text" ]] && continue
+  fi
+  start_pos="$(( ${#prefix} + 1 ))"  # skip the leading space or newline
   end_pos="$((start_pos + ${#basetext}))"
   (( end_pos > post_len_bytes )) && continue
   urlstart[$url]="$start_pos"
