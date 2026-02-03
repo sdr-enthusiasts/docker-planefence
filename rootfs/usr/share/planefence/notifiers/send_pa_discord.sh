@@ -45,7 +45,7 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
   exit 1
 fi
 
-LC_ALL=C
+export LC_ALL=C
 DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^$'\x00'-$'\x7F']/}"
 
 if [[ -f "/usr/share/planefence/notifiers/discord.pa.template" ]]; then
