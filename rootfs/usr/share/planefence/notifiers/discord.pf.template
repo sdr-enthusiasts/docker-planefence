@@ -71,7 +71,7 @@
         },--THUMBNAIL||
         "footer":
         {
-          "text": "Planefence © ||YEAR|| by kx1t"
+          "text": "Planefence ||VERSION|| © ||YEAR|| by kx1t"
         }||IMAGE--,
         "image":
         {

@@ -327,6 +327,10 @@ extract_base() {
     BEGIN {
       split("co.uk|ac.uk|gov.uk|co.jp|com.au|net.au|org.au|co.nz|com.br|com.mx|co.in", PSL, "|")
       for (i in PSL) psl[PSL[i]] = 1
+
+      # Custom host → base label mappings (easy to expand)
+      # Add entries like: custom["host.example"] = "label"
+      custom["w.wiki"] = "wiki"
     }
     {
       url = $0
@@ -336,6 +340,9 @@ extract_base() {
       if (match(host, /[\/?#]/)) host = substr(host, 1, RSTART-1)
       if (host ~ /^\[/) { print ""; next }           # IPv6 -> no basename
       sub(/:[0-9]+$/, "", host)                      # port
+
+      # Prefer explicit custom mapping for exact hostnames
+      if (host in custom) { print custom[host]; next }
 
       n = split(host, parts, /\./)
       if (n < 2) { print ""; next }
