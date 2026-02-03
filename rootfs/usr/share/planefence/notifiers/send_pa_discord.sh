@@ -48,7 +48,7 @@ fi
 export LC_ALL=C
 #DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
 # strip feeder name from any non ASCII and URL
-DISCORD_FEEDER_NAME="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+# DISCORD_FEEDER_NAME="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
 if [[ "$DISCORD_FEEDER_NAME" == \[*\]\(*\) ]]; then
   DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME#\[}
   DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME%%]*}
@@ -69,7 +69,6 @@ else
 fi
 
 VERSION="$(awk -F'=' '/^\s*VERSION/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
-
 
 log_print DEBUG "Reading records for Discord notification"
 
