@@ -98,7 +98,7 @@
         },--THUMBNAIL||
         "footer":
         {
-          "text": "Plane-Alert © ||YEAR|| by kx1t"
+          "text": "Plane-Alert ||VERSION|| © ||YEAR|| by kx1t"
         }||IMAGE--,
         "image":
         {

@@ -58,6 +58,9 @@ else
   screenshots=0
 fi
 
+VERSION="$(awk -F'=' '/^\s*VERSION/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
+
+
 log_print DEBUG "Reading records for Discord notification"
 
 READ_RECORDS
@@ -115,6 +118,7 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
   template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
+  template="$(template_replace "||VERSION||" "$VERSION" "$template")" 
   
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
     template="$(template_replace "||AVATAR||" "${DISCORD_AVATAR_URL}" "$template")"
