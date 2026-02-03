@@ -46,7 +46,8 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
 fi
 
 export LC_ALL=C
-DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+#DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//\\/}"
 
 if [[ -f "/usr/share/planefence/notifiers/discord.pa.template" ]]; then
   template="$(</usr/share/planefence/notifiers/discord.pa.template)"
