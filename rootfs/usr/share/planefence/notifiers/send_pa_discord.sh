@@ -47,7 +47,13 @@ fi
 
 export LC_ALL=C
 #DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
-DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//\\/}"
+# strip feeder name from any non ASCII and URL
+DISCORD_FEEDER_NAME="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+if [[ "$DISCORD_FEEDER_NAME" == \[*\]\(*\) ]]; then
+  DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME#\[}
+  DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME%%]*}
+fi
+
 
 if [[ -f "/usr/share/planefence/notifiers/discord.pa.template" ]]; then
   template="$(</usr/share/planefence/notifiers/discord.pa.template)"
@@ -89,8 +95,7 @@ fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pa.template)"
 
-color="$(convert_color "${PA_DISCORD_COLOR}" || true)"
-color="${color:-0xf2e718}"
+color="$(convert_color "${PA_DISCORD_COLOR:-yellow}" || true)"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${pa_records["$idx":tail]}"
@@ -109,7 +114,7 @@ for idx in "${INDEX[@]}"; do
 
   # Set strings:
   template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
-  template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME_CLEAN" "$template")"
+  template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
   template="$(template_replace "||COLOR||" "$color" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
