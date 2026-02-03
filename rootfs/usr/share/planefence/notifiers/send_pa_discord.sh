@@ -95,7 +95,7 @@ fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pa.template)"
 
-color="$(convert_color "${PA_DISCORD_COLOR:-yellow}" || true)"
+color="$(convert_color "${PA_DISCORD_COLOR:-yellow}")"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${pa_records["$idx":tail]}"
