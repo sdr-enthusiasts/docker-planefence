@@ -45,6 +45,9 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
   exit 1
 fi
 
+export LC_ALL=C
+DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+
 if [[ -f "/usr/share/planefence/notifiers/discord.pa.template" ]]; then
   template="$(</usr/share/planefence/notifiers/discord.pa.template)"
 else
@@ -105,7 +108,7 @@ for idx in "${INDEX[@]}"; do
 
   # Set strings:
   template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) is at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
-  template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
+  template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME_CLEAN" "$template")"
   template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
   template="$(template_replace "||COLOR||" "$color" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
