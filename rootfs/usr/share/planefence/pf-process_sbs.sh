@@ -1372,8 +1372,8 @@ done
 
 # check if we need to process some of the indices that have timed out but that aren't marked yet as complete:
 
-for ((idx=0; idx<records[maxindex]; idx++)); do
-  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
+for ((idx=0; idx<=records[maxindex]; idx++)); do
+  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
   fi
 done
@@ -1433,10 +1433,11 @@ for idx in "${!processed_indices[@]}"; do
   # ------------------------------------------------------------------------------------
 
   # Add complete label if current time is outside COLLAPSEWITHIN window
-  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
-    records["$idx":complete]=true
-  else
+  if [[ "${records["$idx":complete]}" == "true" ]]; then
     continue
+  fi
+  if (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
+    records["$idx":complete]=true
   fi
 
   # Add noisecapt stuff
