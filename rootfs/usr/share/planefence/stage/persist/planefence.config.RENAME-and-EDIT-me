@@ -1,8 +1,354 @@
-# Planefence parameters
+# Planefence parameters (organized by category)
 #
-# Legend: (M|O)
-#          M=Mandatory parameter, O=Optional parameter
+# Update this to reflect your station's settings
+
+###############################################################################
+# General Parameters
+###############################################################################
+# (M) Feeder station latitude in decimal degrees North. South = negative number
+FEEDER_LAT=90.12345
+# ---------------------------------------------------------------------
+# (M) Feeder station longitude in decimal degrees East. West = negative number
+FEEDER_LONG=-70.12345
+# ---------------------------------------------------------------------
+# GENERATE_CSV indicates if a daily CSV file is generated for Planefence and Plane-Alert
+# Default value if omitted is OFF
+GENERATE_CSV=ON
+
+
+###############################################################################
+# Planefence Specific Parameters
+###############################################################################
+# The following variables that start with "PF" are related to kx1t/planefence.
+
+# ---------------------------------------------------------------------
+# Max altitude for planes to be inside the "fence", in whatever unit PF_ALTUNIT is set to:
+PF_MAXALT=5000
+# ---------------------------------------------------------------------
+# Local altitude above sea level (MSL), in whatever unit PF_ALTUNIT is set to:
+# If set to any integer value > 0, Planefence will report altitudes
+# "above ground level" rather than "above sea level (MSL)"
+PF_ELEVATION=0
+# ---------------------------------------------------------------------
+# Max distance from the center (derived from FEEDER_LAT/FEEDER/LONG)
+# to be inside the "fence", in whatever unit PF_DISTUNIT is set to:
+PF_MAXDIST=2.0
+# ---------------------------------------------------------------------
+# Website subtitle personalization, add your name or nickname here:
+PF_NAME="MY"
+# ---------------------------------------------------------------------
+# How often does Planefence check for new planes, in seconds.
+# Strongly advise this value not to be less than 60 seconds
+PF_INTERVAL=80
+# ---------------------------------------------------------------------
+# Do the web pages auto-refresh? Values are "true" or "false". If "true",
+# the planefence and plane-alert pages will auto-refresh every PF_INTERVAL seconds.
+# Default is FALSE.
+# Note - for backward compatibility, if PA_AUTOREFRESH is undefined,
+#        the value PF_AUTOREFRESH (if any) will be used
+PF_AUTOREFRESH=false
+# ---------------------------------------------------------------------
+# PF/PA_TABLESIZE is the default number of rows in the table in PF/PA before it starts paginating.
+# Choose from "10", "25", "50", "100", "all". If set to "all", all entries will be shown as a single page.
+# If not defined, the default value is "50"
+PF_TABLESIZE=50
+# ---------------------------------------------------------------------
+# Website personalization: link to your feeder station's map.
+# You can use full URLs or relative URLs
+PF_MAPURL="http://external-host-name/tar1090"
+# ---------------------------------------------------------------------
+# Location of planefence log. You can see what it's doing with
+# "docker exec -it planefence tail -f /tmp/planefence.log"
+PF_LOG=/tmp/planefence.log
+# ---------------------------------------------------------------------
+# What units are we using for the distance from the station?
+# Allowed values are: kilometer, nauticalmile, mile, meter
+PF_DISTUNIT=nauticalmile
+# ---------------------------------------------------------------------
+# What units are used for the (max) altitude?
+# Allowed values are: meter, feet
+PF_ALTUNIT=feet
+# ---------------------------------------------------------------------
+# What units are used for aircraft speed?
+# Allowed valued are: kilometerph, knotph, mileph
+PF_SPEEDUNIT=knotph
+# ---------------------------------------------------------------------
+# This defines which instance of ultrafeeder/dump1090[-fa]/readsb we get our data from.
+# If you run dump1090[-fa] or readsb in a different container or on a different machine,
+# put the domain name of that machine and adjust docker-compose per README.
+# If you use tar1090 for MLAT data, consider using tar1090 as the data source.
+PF_SOCK30003HOST=ultrafeeder
+# ---------------------------------------------------------------------
+# PF_SOCK30003PORT defines which port we should connect to for SBS data.
+# If empty or omitted, port 30003 is assumed.
+PF_SOCK30003PORT=30003
+# ---------------------------------------------------------------------
+# The default size of the heatmap on the web page is configurable.
+# PF_MAPHEIGHT / PF_MAPWIDTH use viewport units (vh/vw). PF_MAPZOOM controls OSM zoom level.
+# To experiment: https://www.openstreetmap.org/#map=12/42.3763/-71.0604
+PF_HEATMAP=enabled
+PF_MAPHEIGHT=40vh
+PF_MAPWIDTH=75vw
+PF_MAPZOOM=7
+# ---------------------------------------------------------------------
+# PF_MOTD contains a string that, if present, will be shown at the top of the Planefence web page.
+# The string can contain HTML markup and is pasted onto the page's HTML as-is.
+# Please use HTML-safe characters and escape any symbols that need to be interpreted by `sed`.
+PF_MOTD="<b>Welcome to my Planefence Instance!</b>"
+# ---------------------------------------------------------------------
+# PF_DELETEAFTER indicates how many days of logs and HTML / CSV files are kept around.
+# If empty or missing, the default will be '14'. Set 0 to keep forever.
+PF_DELETEAFTER=
+# ---------------------------------------------------------------------
+# PF_NOISECAPT provides the link to the URL where the NoiseCapt container is running.
+# See http://github.com/kx1t/docker-noisecapt for information.
+PF_NOISECAPT=
+# ---------------------------------------------------------------------
+# PF_CHECKREMOTEDB indicates if we will use a remote database (run by kx1t) to
+# try to discover airline names based on flight numbers. See privacy statement below in original docs.
+PF_CHECKREMOTEDB=
+# ---------------------------------------------------------------------
+# If PF_IGNOREDUPES is non-empty, the same ICAO+flight number combination during a single day
+# will show only the first occurrence thereof. Alternatively use ~/.planefence/planefence-ignore.txt.
+# If PF_IGNOREDUPES is not set, PF_COLLAPSEWITHIN is the minimum seconds between two observations
+# to consider them separate entries. Observations within less than PF_COLLAPSEWITHIN seconds will be collapsed.
+PF_IGNOREDUPES=
+PF_COLLAPSEWITHIN=300
+# ---------------------------------------------------------------------
+# If PF_FUDGELOC is non-empty, the map and listed coordinates will be rounded to hide exact location.
+# 0: nearest full degree; 1: 0.1; 2: 0.01 (~0.5 miles at 42N); 3: 0.001 (~300 ft at 42N).
+# Any other non-empty value behaves like 3.
+PF_FUDGELOC=3
+# ---------------------------------------------------------------------
+# PF_CHECKROUTE determines if Planefence will try to put routing information in the PF webpage table
+# It uses the adsb.lol API to retrieve routing info. Default ON if not configured.
+PF_CHECKROUTE=true
+# ---------------------------------------------------------------------
+# PF_PA_LINK is a URL that points from the Planefence web page to the Plane-Alert webpage.
+# If empty, it's omitted.
+PF_PA_LINK="plane-alert"
+
+
+###############################################################################
+# Plane-Alert Specific Parameters
+###############################################################################
+# ---------------------------------------------------------------------
+# Do the Plane-Alert web page auto-refresh? Values are "true" or "false".
+PA_AUTOREFRESH=false
+# ---------------------------------------------------------------------
+# Default number of rows in Plane-Alert table before paginating.
+PA_TABLESIZE=50
+# ---------------------------------------------------------------------
+# PA_MOTD contains a string that, if present, will be shown at the top of the Plane-Alert web page.
+# The string can contain HTML markup and is pasted onto the page's HTML as-is.
+PA_MOTD="<b>Welcome to my Plane-Alert Instance!</b>"
+# ---------------------------------------------------------------------
+# PF_PLANEALERT enables a feature that monitors for a list of planes anywhere in the Feeder Station's coverage area.
+# PF_PLANEALERT=ON means that you can find a ./plane-alert sub-page of your planefence web page.
+PF_PLANEALERT=ON
+# ---------------------------------------------------------------------
+# PF_PARANGE indicates the range for Plane-Alert. If empty or omitted, it will take any plane reported by your feeder station.
+# If there is a value, it will take this distance in the unit determined by $PF_DISTUNIT.
+PF_PARANGE=999999
+# ---------------------------------------------------------------------
+# PF_PA_SQUAWKS contains a comma separated list of SQUAWK codes that Plane-Alert will trigger on.
+# Use 'x' for a single digit wildcard (e.g. 7x00). Codes must be 4 digits. Empty disables.
+PF_PA_SQUAWKS=7400,7500,7600,7700
+# ---------------------------------------------------------------------
+# PF_ALERTLIST can contain a comma separated list of up to 10 file names or URLs that contain alertlists for Plane-Alert.
+# Files point to files saved in ~/.planefence (DO NOT USE PATHS). URLs must return files in the same format.
+# If set, it concatenates the files and uses them INSTEAD of plane-alert-db.txt. Default pulls SportBadger's full list.
+PF_ALERTLIST=https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/plane-alert-db-images.csv
+# ---------------------------------------------------------------------
+# PF_ALERTHEADER defines/overrides the header for alert files. Syntax per field:
+# "Text" show; "$Text" show and include in notifications; "#Text" hide; "#$Text" hide but include in notifications.
+# To show aircraft silhouettes, ensure a column named "ICAO Type" is present.
+PF_ALERTHEADER='$ICAO,$Ident,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link'
+# ---------------------------------------------------------------------
+# PA_HISTTIME is the time (in days) that items will stay visible on the Plane-Alert website
+PA_HISTTIME=14
+# ---------------------------------------------------------------------
+# PA_SILHOUETTES_LINK contains the link from where to get updates to the silhouette icons for Plane-Alert.
+# Empty or omitted defaults to https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip. "OFF" disables.
+PA_SILHOUETTES_LINK=
+# ---------------------------------------------------------------------
+# PA_PF_LINK is a URL that points from the Plane-Alert page to the Planefence web page.
+# If empty, it's omitted.
+PA_PF_LINK=".."
+# ---------------------------------------------------------------------
+# PA_TRACKSERVICE determines the tar1090-like web service to render maps for Plane-Alert.
+# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live
+PA_TRACKSERVICE=globe.adsbexchange.com
+# ---------------------------------------------------------------------
+# PA_TRACKLIMIT sets the max number of unique aircraft shown as links above the Plane-Alert table.
+# Default 250. Larger values can slow or crash browsers.
+PA_TRACKLIMIT=250
+# ---------------------------------------------------------------------
+# PA_TRACK_FIRSTSEEN determines if the link points at the current location ("disabled")
+# or the first observed location ("enabled"). Default "enabled" if omitted.
+PA_TRACK_FIRSTSEEN=enabled
+# ---------------------------------------------------------------------
+# Plane-Alert Exclusions: comma separated entries excluded from Plane-Alert notifications and UI.
+# Accepted: ICAO type codes, ADS-B hex codes, or any string found in the plane's database entry.
+# Not case sensitive. URLs and image links are not searched. Leave blank to disable.
+PA_EXCLUSIONS=
+# ---------------------------------------------------------------------
+# Show Ignore button on the Plane-Alert webpage. If enabled, pressing "Ignore" adds the plane's Hex ID
+# to exclusions as of the next rebuild. Recommended NOT to enable on internet-accessible instances.
+PA_SHOWIGNORE=false
+
+
+###############################################################################
+# Notification Related Parameters
+###############################################################################
+# ---------------------------------------------------------------------
+# NOTIF_DATEFORMAT determines the date and time format string that is used for notifications and in the tables.
+# It follows the format of the Linux date command. Default if omitted is "%F %T %Z".
+# Note - this parameter doesn't affect the date format for Discord and MQTT notifications.
+NOTIF_DATEFORMAT="%F %T %Z"
+# ---------------------------------------------------------------------
+# If PF_NOTIFEVERY=true then a notification will be sent for every occurrence of a plane (if the rest of the params are set correctly).
+# Be careful with this in combination with PF_IGNOREDUPES=false as this may result in a lot of notifications!
+PF_NOTIFEVERY=false
+# ---------------------------------------------------------------------
+# If you send a notification, you can personalize a string at the bottom using PF_ATTRIB / PA_ATTRIB or simply $ATTRIB.
+PF_ATTRIB="#adsb #planefence by kx1t - https://sdr-e.com/docker-planefence"
+PA_ATTRIB="#adsb #planefence #planealert by kx1t - https://sdr-e.com/docker-planefence"
+# ---------------------------------------------------------------------
+# PF/PA_SHOWIMAGES determines if the web pages and notifications will attempt to get an aircraft image from planespotters.net.
+# Default is TRUE. Set to 0/off/false/no to disable including aircraft images.
+PF_SHOWIMAGES=true
+PA_SHOWIMAGES=true
+# ---------------------------------------------------------------------
+# PF_SCREENSHOTURL is the URL to the screenshotting container. Default http://screenshot:5042 if empty.
+# Service should implement GET /snap/<flight> and return a PNG image.
+# PF_SCREENSHOT_TIMEOUT sets max wait time in seconds for screenshot rendering.
+PF_SCREENSHOTURL=
+PF_SCREENSHOT_TIMEOUT=45
+# ---------------------------------------------------------------------
+# PF_NOTIF_BEHAVIOR determines if a Planefence notification is sent after the initial observation (PRE)
+# or after the last observation within the Fence (POST). Default POST.
+PF_NOTIF_BEHAVIOR=POST
+# ---------------------------------------------------------------------
+# PF_NOTIF_MINTIME is the minimum wait time (in seconds) before a notification is sent,
+# measured from either first observation or last observation depending on PF_NOTIF_BEHAVIOR. Default 100.
+PF_NOTIF_MINTIME=100
+# ---------------------------------------------------------------------
+# NOTIFICATION_SERVER contains the address (hostname or IP address) to the Notification Server.
+# If omitted, "planefence-notifier" will be assumed. Set NOTIFICATION_SERVER=OFF to disable attempts.
+NOTIFICATION_SERVER=planefence-notifier
+
+# Discord Notifications
+# ---------------------------------------------------------------------
+# Switch OFF to ON to post alerts to Discord (PF=Planefence; PA=Plane-Alert):
+PA_DISCORD=OFF
+PF_DISCORD=OFF
+# ---------------------------------------------------------------------
+# Put the Webhook URL(s) for your Discord server and channel. Comma-separated for multiple.
+PA_DISCORD_WEBHOOKS=
+PF_DISCORD_WEBHOOKS=
+# ---------------------------------------------------------------------
+# DISCORD_FEEDER_NAME determines your feeder name. MUST be customized to clearly identify you and your location.
+# Link format example (note the "\" in front of [ and ]!):
+# DISCORD_FEEDER_NAME="\[name near location\](https://link.to/mystation)"
+DISCORD_FEEDER_NAME=
+# ---------------------------------------------------------------------
+# DISCORD_MEDIA controls the type of file attachment sent to Discord.
+#   ""                no media
+#   "screenshot"      attach tar1090 screenshot
+#   "photo"           attach photo (Plane-Alert only)
+#   "photo+screenshot" Plane-Alert: photo main, screenshot thumbnail; Planefence: same as "screenshot"
+#   "screenshot+photo" Plane-Alert: screenshot main, photo thumbnail; Planefence: same as "screenshot"
+DISCORD_MEDIA=
+# ---------------------------------------------------------------------
+# PA/PF_DISCORD_COLOR controls the highlight color of the message in Discord.
+# Accepted: common color names, RGB hex starting with 0x or #, or RGB decimal.
+# Default 0xf2e718 (bright yellow). Red (0xff0000) is used for emergencies.
+PA_DISCORD_COLOR=0xf2e718
+PF_DISCORD_COLOR=0xf2e718
+
+# Mastodon Notifications
+# ---------------------------------------------------------------------
+# PF_MASTODON and PA_MASTODON enable Mastodon notifications for Planefence and Plane-Alert respectively.
+# MASTODON_SERVER contains the server name (omit http://). MASTODON_ACCESS_TOKEN contains the app's Access Token.
+# Visibility can be public, unlisted, or private. PA_MASTODON_MAXIMGS limits uploaded images.
+PF_MASTODON=OFF
+PA_MASTODON=OFF
+MASTODON_SERVER=airwaves.social
+MASTODON_ACCESS_TOKEN=
+PF_MASTODON_VISIBILITY=unlisted
+PA_MASTODON_VISIBILITY=unlisted
+PA_MASTODON_MAXIMGS=1
+MASTODON_RETENTION_TIME=7
+
+# MQTT Delivery
+# ---------------------------------------------------------------------
+# If defined, PF/PA will attempt to deliver newly observed aircraft to an MQTT broker.
+# Only TCP (mqtt:// or mqtts://) is supported (no WebSocket).
 #
+# CLIENT_ID: Optional. Client ID string (no whitespace). If omitted, the (container) hostname is used.
+# URL: Mandatory (host/IP or URL string). If omitted, MQTT is switched off.
+# PORT: Optional. TCP port of the MQTT server. Default 1883 if omitted.
+# TLS: Optional. Use TLS (set variable) or not (unset). Default unencrypted.
+# TOPIC: Optional. MQTT Topic. Default "<container-hostname>/planefence" or "<container-hostname>/plane-alert".
+# DATETIME_FORMAT: Optional. Linux date format. Default "%s" (seconds since epoch).
+# QOS: Optional. QOS value. Default "0".
+# USERNAME/PASSWORD: Basic Auth credentials.
+#
+# URL format: "mqtt[s]://[user:pass]@host[:port]/[topic]" or shorthand host[:port], topic optional.
+# If both URL and individual parameters are defined, individual parameters take precedence.
+# PF/PA_MQTT_FIELDS: empty -> send all fields; otherwise comma/space-separated list of fields to include.
+PF_MQTT_URL=""
+PF_MQTT_PORT=""
+PF_MQTT_TLS=""
+PF_MQTT_CLIENT_ID=""
+PF_MQTT_TOPIC=""
+PF_MQTT_DATETIME_FORMAT=""
+PF_MQTT_QOS=""
+PF_MQTT_FIELDS=""
+PF_MQTT_USERNAME=""
+PF_MQTT_PASSWORD=""
+
+PA_MQTT_URL=""
+PA_MQTT_PORT=""
+PA_MQTT_TLS=""
+PA_MQTT_CLIENT_ID=""
+PA_MQTT_TOPIC=""
+PA_MQTT_DATETIME_FORMAT=""
+PA_MQTT_QOS=""
+PA_MQTT_FIELDS=""
+PA_MQTT_USERNAME=""
+PA_MQTT_PASSWORD=""
+
+# RSS
+# ---------------------------------------------------------------------
+# If you use RSS, to validate correctly you MUST add a sitelink URL (base URL where planefence.rss / plane-alert.rss will be available).
+# If you don't use RSS, leave these empty.
+PF_RSS_SITELINK=""
+PF_RSS_FAVICONLINK=""
+PA_RSS_SITELINK=""
+PA_RSS_FAVICONLINK=""
+
+
+###############################################################################
+# Mapping Integrations and Overlays (Planefence)
+###############################################################################
+# ---------------------------------------------------------------------
+# PF_TRACKSERVICE determines the tar1090-like web service to render maps for Planefence.
+# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live
+PF_TRACKSERVICE=globe.adsbexchange.com
+# ---------------------------------------------------------------------
+# When PF_OPENAIP_LAYER is set to ON, the OPENAIP layer is shown on the heatmap.
+# If set to ON, an OpenAIP API key must be provided as PF_OPENAIPKEY (https://www.openaip.net)
+PF_OPENAIP_LAYER=OFF
+PF_OPENAIPKEY=
+
+
+# End of organized configuration template.# Planefence parameters
+#
+# Update this to reflect your station's settings
+#
+# General Parameters
 # ---------------------------------------------------------------------
 # (M) Feeder station latitude in decimal degrees North. South = negative number
 FEEDER_LAT=90.12345
