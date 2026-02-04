@@ -16,10 +16,10 @@ services:
       - LOGLEVEL=INFO
     volumes:
       # adopt this one to point at a subdirectory of where your docker-compose.yml file is located:
-      - ./planefence/config:/usr/share/planefence/persist
+      - ./planefence-config:/usr/share/planefence/persist
       # the following exposes the html directory to the host, in case you
       # want to use an external http daemon (lighttpd, nginx, etc)
-      - ./planefence/html:/usr/share/planefence/html
+      - ./planefence-html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
@@ -45,6 +45,8 @@ services:
     restart: always
     shm_size: 1gb
     environment:
-      - MAP_ARGS=zoom=11&hideSidebar&hideButtons&mapDim=0.2&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5
-      - LOAD_SLEEP_TIME=10
+      - MAP_ARGS=zoom=7&hideSidebar&hideButtons&mapDim=0.2&monochromeMarkers=ff0000&outlineColor=505050&iconScale=1.5&enableLabels&extendedLabels=2&trackLabels&screenshot&rangerings=0
+      - LOAD_SLEEP_TIME=15
       - BASE_URL=http://ultrafeeder
+      - MAXTIME=60
+      - CANVAS_SIZE=800,1200

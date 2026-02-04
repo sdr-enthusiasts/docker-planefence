@@ -57,7 +57,14 @@
             "name": "Route",
             "value": "||ROUTE||",
             "inline": true
-          }||NOISE--,
+          }
+          ||FIRSTSEEN--,
+          {
+            "name": "First Seen",
+            "value": "||FIRSTSEEN||",
+            "inline": true
+          }--FIRSTSEEN||
+          ||NOISE--,
           {
             "name": "Loudness",
             "value": "||LOUDNESS|| ",

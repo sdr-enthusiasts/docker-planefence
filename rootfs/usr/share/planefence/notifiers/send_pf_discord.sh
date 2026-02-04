@@ -46,6 +46,16 @@ if [[ -z "$DISCORD_FEEDER_NAME" ]]; then
   exit 1
 fi
 
+export LC_ALL=C
+#DISCORD_FEEDER_NAME_CLEAN="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+# strip feeder name from any non ASCII and URL
+#DISCORD_FEEDER_NAME="${DISCORD_FEEDER_NAME//[^[:ascii:]]/}"
+DISCORD_FEEDER_NAME="${DISCORD_FEEDER_NAME//\\/}"
+if [[ "$DISCORD_FEEDER_NAME" == \[*\]\(*\) ]]; then
+  DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME#\[}
+  DISCORD_FEEDER_NAME=${DISCORD_FEEDER_NAME%%]*}
+fi
+
 if [[ -f "/usr/share/planefence/notifiers/discord.pf.template" ]]; then
   template="$(</usr/share/planefence/notifiers/discord.pf.template)"
 else
@@ -87,8 +97,8 @@ fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
 
-color="$(convert_color "${PF_DISCORD_COLOR}" || true)"
-color="${color:-0xf2e718}"
+color="$(convert_color "${PF_DISCORD_COLOR:-yellow}")"
+
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
 
@@ -148,6 +158,13 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||SQUAWKSTRING||" "${records["$idx":squawk:value]}${records["$idx":squawk:description]:+ (}${records["$idx":squawk:description]}${records["$idx":squawk:description]:+)}" "$template")"
   else
     template="$(sed -z 's/||SQUAWK--.*--SQUAWK||//g' <<< "$template")"
+  fi
+  if [[ -n "${pa_records["$idx":time:firstseen]}" ]]; then
+    template="$(template_replace "||FIRSTSEEN--" "" "$template")"
+    template="$(template_replace "--FIRSTSEEN||" "" "$template")"
+    template="$(template_replace "||FIRSTSEEN||" "$(date -d "@${pa_records["$idx:time:firstseen"]}" +'%H:%M:%S %Z')" "$template")"
+  else
+    template="$(sed -z 's/||FIRSTSEEN--.*--FIRSTSEEN||//g' <<< "$template")"
   fi
 
   # Handle media attachments

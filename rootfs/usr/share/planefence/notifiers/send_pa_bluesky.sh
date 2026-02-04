@@ -103,7 +103,7 @@ for idx in "${INDEX[@]}"; do
   fi
   template="$(template_replace "||ICAO||" "${pa_records["$idx":icao]}" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx":callsign]}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]}" || true)" "$template")"
+  template="$(template_replace "||TAIL||" "$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]//-/}" || true)" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx":type]}" "$template")"
   if [[ -n "${pa_records["$idx":route]}" && "${pa_records["$idx":route]}" != "n/a" ]]; then 
     template="$(template_replace "||ROUTE||" "#${pa_records["$idx":route]//-/-#}" "$template")"

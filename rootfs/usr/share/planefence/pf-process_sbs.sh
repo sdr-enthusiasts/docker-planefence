@@ -1361,6 +1361,9 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":time:time_at_mindist]="$seentime"
       # ensure squawk gets set once if still empty
     fi
+    pa_records["$pa_idx":latfirstseen]="${pa_records["$pa_idx":latfirstseen]:-$lat}"
+    pa_records["$pa_idx":lonfirstseen]="${pa_records["$pa_idx":lonfirstseen]:-$lon}"
+
     if [[ -n $squawk && -z ${pa_records["$pa_idx":squawk:value]} ]]; then
       pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
     fi
@@ -1372,8 +1375,8 @@ done
 
 # check if we need to process some of the indices that have timed out but that aren't marked yet as complete:
 
-for ((idx=0; idx<records[maxindex]; idx++)); do
-  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
+for ((idx=0; idx<=records[maxindex]; idx++)); do
+  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
   fi
 done
@@ -1429,15 +1432,14 @@ for idx in "${!processed_indices[@]}"; do
 
   # ------------------------------------------------------------------------------------
   # The remainder of this loop only makes sense for complete records. It also only needs to be done once.
-  # So skip if already complete.
+  # So skip if not complete.
   # ------------------------------------------------------------------------------------
 
-  # Add complete label if current time is outside COLLAPSEWITHIN window
-  if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]} > COLLAPSEWITHIN )); then
-    records["$idx":complete]=true
-  else
+  if (( NOWTIME - ${records["$idx":time:lastseen]:-99999999999} <= COLLAPSEWITHIN )); then
     continue
   fi
+
+  records["$idx":complete]=true
 
   # Add noisecapt stuff
   if [[ -n "$REMOTENOISE" ]] && \
@@ -1530,10 +1532,10 @@ done
 
   # get Nominating location. Note - this is slow because we need to do an API call for each lookup
   if [[ "${pa_records["$idx":checked:nominatim]}" != "true" ]] && \
-      [[ -n "${pa_records["$idx":lat]}" ]] && \
-      [[ -n "${pa_records["$idx":lon]}" ]]; then
+      [[ -n "${pa_records["$idx":latfirstseen]}" ]] && \
+      [[ -n "${pa_records["$idx":lonfirstseen]}" ]]; then
     log_print DEBUG "Getting nominatim data for record $idx"
-    pa_records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${pa_records["$idx":lat]}" --lon="${pa_records["$idx":lon]}" 2>/dev/null || true)"
+    pa_records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${pa_records["$idx":latfirstseen]}" --lon="${pa_records["$idx":lonfirstseen]}" 2>/dev/null || true)"
     pa_records["$idx":checked:nominatim]=true
   fi
 done

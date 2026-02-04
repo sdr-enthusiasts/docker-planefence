@@ -11,6 +11,9 @@
       - [Staying up to date with new Planefence features](#staying-up-to-date-with-new-planefence-features)
       - [Plane-Alert Exclusions](#plane-alert-exclusions)
       - [Applying your setup](#applying-your-setup)
+    - [Restarting and Updating](#restarting-and-updating)
+      - [Restart the container](#restart-the-container)
+      - [Update to the latest Planefence image](#update-to-the-latest-planefence-image)
   - [What does it look like when it's running?](#what-does-it-look-like-when-its-running)
   - [API access to your data](#api-access-to-your-data)
     - [Introduction](#introduction)
@@ -31,8 +34,8 @@ Furthermore, Planefence can send a notification for every plane in the fence to 
 
 Planefence is deployed as a Docker container and is pre-built for the following architectures:
 
-- linux/ARMv7 (armhf): Raspberry Pi 3B+ / 4B with 32 bits Debian 10 Linux or later (RaspOS, Armbian, DietPi, etc.)
-- linux/ARM64: Raspberry Pi 4B with 64 bits Debian OS 10 or later (RaspOS, Armbian, DietPi, Ubuntu, etc.)
+- linux/ARMv7 (armhf): Raspberry Pi 3B+ / 4B with 32-bits Debian 10 Linux or later (RaspOS, Armbian, DietPi, etc.)
+- linux/ARM64: Raspberry Pi 4B/5 with 64-bits Debian OS 10 or later (RaspOS, Armbian, DietPi, Ubuntu, etc.)
 - linux/AMD64: 64-bits PC architecture (Intel x86 or AMD) running Debian 10 Linux or later (incl. Ubuntu)
 
 The Docker container is available at `ghcr.io/sdr-enthusiasts/docker-planefence` and can be pulled directy using this Docker command: `docker pull ghcr.io/sdr-enthusiasts/docker-planefence`.
@@ -42,13 +45,11 @@ The Docker container is available at `ghcr.io/sdr-enthusiasts/docker-planefence`
 Here are some assumptions or prerequisites:
 
 - You are already familiar the `dump1090` family of ADS-B software (for example, `ultrafeeder`, `readsb`, `tar1090`, `dump1090`, or `dump1090-fa`), how to deploy it, and the hardware needed. Ideally, you have your ADS-B station already up and running.
-- You know how to deploy Docker images to your machine. If you don't -- it's actually quite simple. It makes installation of new components really easy. [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) contains a step-by-step guide, and [here](https://github.com/sdr-enthusiasts/docker-install) you can find a quick install script.
+- You know how to deploy Docker images to your machine. If you don't -- it's actually quite simple. It makes installation of new components really easy. [Mikenye's excellent Gitbook](https://mikenye.gitbook.io/ads-b/) contains a step-by-step guide, and the [quick install script](https://github.com/sdr-enthusiasts/docker-install) can help you get started.
 - You use `docker compose`. This README has been written assuming `docker compose`. If you don't have it, feel free to `apt-get install` it. It should be easy to convert the `docker-compose.yml` instructions to a command-line `docker run` string, but you are on your own to do this.
 - Further support is provided at the #planefence channel at the [SDR Enthusiasts Discord Server](https://discord.gg/VDT25xNZzV). If you need immediate help, please tag "@k1xt" to your message.
 
 ## Install Planefence - Prerequisites
-
-Note - this guide assumes that `/home/pi` is your home directory. If it is not (for example, Ubuntu builds use `/home/ubuntu` as their default account), please change all mentions of `/home/pi` to the applicable home directory path.
 
 There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, or `readsb` connected to a SDR somewhere in reach of your Planefence machine:
 
@@ -57,13 +58,21 @@ There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, 
 
 ### Getting ready
 
-1. If you are adding this to an existing stack of Docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`.
-2. If you are not adding this to an existing container stack, you should create a project directory: `sudo mkdir -p /opt/planefence && sudo chmod a+rwx /opt/planefence && cd /opt/planefence` . Then add a new `docker-compose.yml` there.
-3. Get the template `docker-compose.yml` file from here:
+1. If you are adding this to an existing stack of Docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`. Example data is available [in this file](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml).
+2. If you are not adding this to an existing container stack, you should create a project directory:
 
-```bash
-curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
-```
+    ```bash
+    sudo mkdir -p -m 0777 /opt/planefence
+    sudo chmod a+rwx /opt/planefence
+    cd /opt/planefence
+    ```
+
+3. Important — if you are using adsb.im, you MUST put Planefence in its own directory, like `/opt/planefence`. You should never add it to an existing stack.
+4. Then add the template `docker-compose.yml` file from here:
+
+    ```bash
+    curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
+    ```
 
 ### Planefence Configuration
 
@@ -74,23 +83,37 @@ In the `docker-compose.yml` file, you should configure the following:
 - IMPORTANT: Update `TZ=America/New_York` to whatever is appropriate for you. Note that this variable is case sensitive
 - There are 2 volumes defined. My suggestion is NOT to change these unless you know what you are doing
 - After you exit the editor, start the container (`docker compose up -d`). The first time you do this, it can take a minute or so.
-- Monitor the container (`docker logs -f planefence`). At first start-up, it should be complaining about not being configure. That is expected behavior.
+- Monitor the container (`docker logs -f planefence`). At first start-up, it should be complaining about not being configured. That is expected behavior.
 - Once you see the warnings about `planefence.config` not being available, press CTRL-C to get the command prompt.
 
 #### Planefence Settings Configuration
 
 - After you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work!
-- MANDATORY: First -- copy the template config file in place: `sudo cp /opt/adsb/planefence/config/planefence.config-RENAME-and-EDIT-me /opt/adsb/planefence/config/planefence.config`
-- MANDATORY: `sudo nano /opt/adsb/planefence/config/planefence.config` Go through all parameters - their function is explained in this file. Edit to your liking and save/exit using `ctrl-x`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT !!!
-- OPTIONAL: `sudo nano /opt/adsb/planefence/config/planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
-- OPTIONAL: `sudo nano /opt/adsb/planefence/config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
-- OPTIONAL: `sudo nano /opt/adsb/planefence/config/plane-alert-db.txt`. This is the list of tracking aircraft of Plane-Alert. It is prefilled with the planes of a number of "interesting" political players. Feel free to add your own, delete what you don't want to see, etc. Just follow the same format.
-- OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily - see instructions [here](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/README-nginx-rev-proxy.md).
-- OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. Instructions are [here](https://github.com/kx1t/docker-noisecapt).
-- OPTIONAL for Plane-Alert: You can add custom fields, that (again optionally) are displayed on the Plane-Alert list. See [this discussion](https://github.com/sdr-enthusiasts/docker-planefence/issues/38) on how to do that.
-- OPTIONAL: The website will apply background pictures if you provide them. Save your .jpg pictures as `/opt/adsb/planefence/config/pf_background.jpg` for Planefence and `/opt/adsb/planefence/config/pa_background.jpg` for Plane-Alert. (You may have to restart the container or do `touch /opt/adsb/planefence/config/planefence.config` in order for these backgrounds to become effective.)
+- MANDATORY: After first start, a file named `planefence.config.RENAME-and-EDIT-me` appears in `planefence-config`. Edit it, then rename it to `planefence.config`.
+
+```bash
+cd /opt/planefence
+# Edit the template
+# Note - when you are done, save and exit with CTRL-x (and follow the prompts)
+nano planefence-config/planefence.config.RENAME-and-EDIT-me
+
+# Rename it to planefence.config
+mv planefence-config/planefence.config.RENAME-and-EDIT-me planefence-config/planefence.config
+```
+
+- IMPORTANT: Review all parameters in `planefence.config`; their function is explained in that file. Edit to your liking and save/exit using `Ctrl-X`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT!
+- Restart the container to apply your settings:
+
+```bash
+docker compose up -d planefence --force-recreate
+```
+
+- OPTIONAL: `nano planefence-config/planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
+- OPTIONAL: `nano planefence-config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
+- OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily — see the [reverse proxy instructions](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/README-nginx-rev-proxy.md).
+- OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. See the [NoiseCapt instructions](https://github.com/kx1t/docker-noisecapt).
 - OPTIONAL: Add images of tar1090 to your notifications in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
-- OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `/opt/adsb/planefence/config/planefence.config`
+- OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `planefence-config/planefence.config`
 
 #### Staying up to date with new Planefence features
 
@@ -98,7 +121,7 @@ Generally, any new features will be described in the default/example [`planefenc
 
 #### Plane-Alert Exclusions
 
-In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `/opt/adsb/planefence/config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
+In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `planefence-config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
 
 ```yml
 PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd\ Mayweather,UC-12W
@@ -121,13 +144,33 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 #### Applying your setup
 
-- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `/opt/adsb/planefence/config/planefence.config` will be picked up automatically
+- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `planefence-config/planefence.config` will be picked up automatically
 - You can restart the Planefence container by doing: `pushd /opt/adsb && docker compose up -d planefence --force-recreate && popd`
+
+### Restarting and Updating
+
+Need the latest image or want to refresh your container?
+
+#### Restart the container
+
+```bash
+pushd /opt/planefence
+docker compose up -d planefence --force-recreate
+popd
+```
+
+#### Update to the latest Planefence image
+
+```bash
+pushd /opt/planefence
+docker compose pull planefence
+docker compose up -d planefence
+popd
+```
 
 ## What does it look like when it's running?
 
-- Planefence deployment example: <https://planefence.com/planefence>
-- Plane-Alert deployment example: <https://planefence.com/plane-alert>
+- Planefence deployment example: <https://planefence.com/planefence-dev>
 - BlueSky notifications: <https://bsky.app/profile/aboveboston.bsky.social>
 - Telegram notifications: <https://t.me/+B_r-DgeNEQ4yMTUx>
 - RSS feed: <https://kx1t.com/planefence-dev/planefence.rss>
@@ -150,33 +193,31 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
 #### Planefence Query parameters
 
 | Parameter | Description | Example |
-|---|---|---|
+| --- | --- | --- |
 | `hex` | Hex ID to return | <https://planeboston.com/planefence/pf_query.php?hex=^A[AB>][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits |
 | `tail` | Call sign (flight number or tail) to return | <https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json> returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if a notification for the entry was sent, in which case the `tweet_url` field contains a link to the notification (legacy field name - notification is probably NOT to X/Twitter!)) |
-| `start` | Start time, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/planefence/pf_query.php?start=2021/12/19.*&type=csv> returns all entries that started on Dec 19, 2021. |
-| `end` | End time, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/planefence/pf_query.php?end=2021/12/19.*&type=csv> returns all entries that ended on Dec 19, 2021. |
+| `start` | Start time in `secs_since_epoch` | <https://planeboston.com/planefence/pf_query.php?start=163989.*&type=csv> returns all entries that started on Dec 19, 2021. |
+| `end` | End time, format `secs_since_epoch` | <https://planeboston.com/planefence/pf_query.php?end=163989.*&type=csv> returns all entries that ended before Dec 19, 2021. |
 
 #### Plane-Alert Query parameters
 
 | Parameter | Description | Example |
-|---|---|---|
+| --- | --- | --- |
 | `hex` | Hex ID to return | <https://planeboston.com/plane-alert/pa_query.php?hex=^A[EF>][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by E or F, followed by 0 or more hexadecimal digits. (Note - this query returns most US military planes!) |
 | `tail` | Tail number of the aircraft | <https://planeboston.com/plane-alert/pa_query.php?tail=N14[0-9]NE&type=csv> returns any records of which the tail starts with "N14", followed by 1 digit, followed by "NE". |
 | `name` | Aircraft owner's name | <https://planeboston.com/plane-alert/pa_query.php?name=%20Life\|%20MedFlight&type=csv> returns any records that have " Life" or " MedFlight" in the owner's name. |
 | `equipment` | Equipment make and model | <https://planeboston.com/plane-alert/pa_query.php?equipment=EuroCopter> returns any records of which the equipment contains the word "EuroCopter" |
-| `timestamp` | Time first seen, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/plane-alert/pa_query.php?timestamp=2022/01/03> returns any records from Jan 3, 2022. |
+| `timestamp` | Time first seen, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/plane-alert/pa_query.php?timestamp=163989.*> returns any records from Dec 19, 2021. |
 | `call` | Callsign as reported by aircraft | <https://planeboston.com/plane-alert/pa_query.php?call=SAM> returns any records of which the callsign contains "SAM". |
 | `lat` | Latitude first observation, in decimal degrees | <https://planeboston.com/plane-alert/pa_query.php?lat=^43> returns any records of which the latitude starts with "43" (i.e., 43 deg N) |
 | `lon` | Longitude first observation, in decimal degrees | <https://planeboston.com/plane-alert/pa_query.php?lon=^-68> returns any records of which the longitude starts with "-68" (i.e., 68 deg W) |
 
 ## Troubleshooting
 
-- Be patient. Some of the files won't get initialized until the first "event" happens: a plane is in Planefence range or is detected by Plane-Alert. This includes the planes table and the heatmap.
 - If your system doesn't behave as expected: check, check, double-check. Did you configure the correct container in `docker-compose.yml`? Did you edit the `planefence.config` file?
 - Check the logs: `docker logs -f planefence`. Some "complaining" about lost connections or files not found is normal, and will correct itself after a few minutes of operation. The logs will be quite explicit if it wants you to take action
 - Check the website: <http://myip:8088> should update every 80 seconds (starting about 80 seconds after the initial startup). The top of the website shows a last-updated time and the number of messages received from the feeder station.
 - Plane-alert will appear at <http://myip:8088/plane-alert>
-- Sending notifications to X (Twitter) has now been disabled and the corresponding code has been removed. This is done for several reasons (insert politics here), but mainly because there is no longer a free API available to send tweets. Please consider sending notifications to any of the currently supported media, including BlueSky, Mastodon, Discord, and MQTT.
 - Error "We cannot reach {host} on port 30003". This could be caused by a few things:
   - Did you set the correct hostname or IP address in `PF_SOCK30003HOST` in `planefence.config`? This can be:
     - The name of another container in the same Docker compose stack, e.g., `ultrafeeder` or `tar1090`
@@ -209,5 +250,5 @@ That's all!
 
 ## License and Data Use/Privacy
 
-Planefence is licensed under the GNU Public License, version 3, which can be found [here](LICENSE).
-Planefence's Data Use and Privacy policy can be found [here](README-privacy.md).
+Planefence is licensed under the [GNU GPL v3 License](LICENSE).
+Planefence's Data Use and Privacy policy is documented in the [Privacy Policy](README-privacy.md).
