@@ -1361,8 +1361,8 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":time:time_at_mindist]="$seentime"
       # ensure squawk gets set once if still empty
     fi
-    pa_records["$pa_idx":lat:firstseen]="${pa_records["$pa_idx":lat:firstseen]:-$lat}"
-    pa_records["$pa_idx":lon:firstseen]="${pa_records["$pa_idx":lon:firstseen]:-$lon}"
+    pa_records["$pa_idx":latfirstseen]="${pa_records["$pa_idx":latfirstseen]:-$lat}"
+    pa_records["$pa_idx":lonfirstseen]="${pa_records["$pa_idx":lonfirstseen]:-$lon}"
 
     if [[ -n $squawk && -z ${pa_records["$pa_idx":squawk:value]} ]]; then
       pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
@@ -1532,10 +1532,10 @@ done
 
   # get Nominating location. Note - this is slow because we need to do an API call for each lookup
   if [[ "${pa_records["$idx":checked:nominatim]}" != "true" ]] && \
-      [[ -n "${pa_records["$idx":lat:firstseen]}" ]] && \
-      [[ -n "${pa_records["$idx":lon:firstseen]}" ]]; then
+      [[ -n "${pa_records["$idx":latfirstseen]}" ]] && \
+      [[ -n "${pa_records["$idx":lonfirstseen]}" ]]; then
     log_print DEBUG "Getting nominatim data for record $idx"
-    pa_records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${pa_records["$idx":lat:firstseen]}" --lon="${pa_records["$idx":lon:firstseen]}" 2>/dev/null || true)"
+    pa_records["$idx":nominatim]="$(/usr/share/planefence/nominatim.sh --lat="${pa_records["$idx":latfirstseen]}" --lon="${pa_records["$idx":lonfirstseen]}" 2>/dev/null || true)"
     pa_records["$idx":checked:nominatim]=true
   fi
 done
