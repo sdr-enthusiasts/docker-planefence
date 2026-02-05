@@ -295,6 +295,8 @@ CHK_SCREENSHOT_ENABLED() {
   if [[ -z "$screenshoturl" ]]; then
     screenshoturl="$(sed -n 's/\(^\s*PF_SCREENSHOTURL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
   fi
+  screenshoturl="${screenshoturl:-http://screenshot}"
+
   screenshothost="$(sed -E 's#^(([a-zA-Z][a-zA-Z0-9+.-]*:)?//)?([^/@]*@)?([^/:?#]+).*#\4#' <<< "$screenshoturl")"
 
   if chk_disabled "$screenshoturl"; then
