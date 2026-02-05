@@ -339,10 +339,6 @@ fi
 SCREENSHOT_TIMEOUT="${SCREENSHOT_TIMEOUT:-60}"
 # max seconds to wait for screenshot retrieval
 
-
-log_print DEBUG "Getting RECORDSFILE"
-READ_RECORDS ignore-lock
-
 any_candidates=0
 pf_save_data=false
 pa_save_data=false
@@ -363,6 +359,8 @@ else
 fi
 
 if $pf_save_data || $pa_save_data; then
+
+  log_print DEBUG "Writing screenshot updates to data files"
   LOCK_RECORDS
   READ_RECORDS ignore-lock
   if $pf_save_data; then persist_screenshot_updates records "Planefence"; fi
