@@ -152,7 +152,7 @@ GET_SCREENSHOT () {
   fi
   
   # get new screenshot
-  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
+  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-http://screenshot:5042}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
     image=$(mktemp)
     # pngquant will reduce the image to about 1/3 of its original size
     # drawback: it takes about a second or so to run
