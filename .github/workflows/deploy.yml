@@ -57,6 +57,6 @@ jobs:
       build_latest: true
       docker_latest_tag: latest
       build_baseimage_test: true
-      build_baseimage_url: docker-baseimage:planefence_base/docker-baseimage:trixie-planefence_base
+      build_baseimage_url: docker-baseimage:planefence_base/docker-baseimage:planefence_base
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
