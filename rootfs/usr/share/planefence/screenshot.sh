@@ -152,7 +152,7 @@ GET_SCREENSHOT () {
   fi
   
   # get new screenshot
-  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-screenshot}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
+  if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-http://screenshot:5042}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
     image=$(mktemp)
     # pngquant will reduce the image to about 1/3 of its original size
     # drawback: it takes about a second or so to run
@@ -339,41 +339,37 @@ fi
 SCREENSHOT_TIMEOUT="${SCREENSHOT_TIMEOUT:-60}"
 # max seconds to wait for screenshot retrieval
 
-
-log_print DEBUG "Getting RECORDSFILE"
-READ_RECORDS ignore-lock
-
 any_candidates=0
+pf_save_data=false
+pa_save_data=false
 
 process_dataset_for_screenshots records "Planefence" "$MAXSCREENSHOTSPERRUN"
-if dataset_has_pending_updates records; then
+if dataset_has_pending_updates records; then 
+  pf_save_data=true
   log_print DEBUG "Planefence: saving records after screenshot attempts"
-  LOCK_RECORDS
-  READ_RECORDS ignore-lock
-  persist_screenshot_updates records "Planefence"
-  WRITE_RECORDS ignore-lock
-else
-  log_print DEBUG "Planefence: no updates to persist"
 fi
-
 if declare -p pa_records &>/dev/null; then
   process_dataset_for_screenshots pa_records "Plane-Alert" "$MAXSCREENSHOTSPERRUN"
-  if dataset_has_pending_updates pa_records; then
+  if dataset_has_pending_updates pa_records; then 
+    pa_save_data=true
     log_print DEBUG "Plane-Alert: saving records after screenshot attempts"
-    LOCK_RECORDS
-    READ_RECORDS ignore-lock
-    persist_screenshot_updates pa_records "Plane-Alert"
-    WRITE_RECORDS ignore-lock
-  else
-    log_print DEBUG "Plane-Alert: no updates to persist"
   fi
 else
-  log_print DEBUG "Plane-Alert dataset not found; skipping"
+  log_print DEBUG "Plane-Alert: no updates to persist"
+fi
+
+if $pf_save_data || $pa_save_data; then
+
+  log_print DEBUG "Writing screenshot updates to data files"
+  LOCK_RECORDS
+  READ_RECORDS ignore-lock
+  if $pf_save_data; then persist_screenshot_updates records "Planefence"; fi
+  if $pa_save_data; then persist_screenshot_updates pa_records "Plane-Alert"; fi
+  WRITE_RECORDS ignore-lock
 fi
 
 if (( any_candidates == 0 )); then
   log_print DEBUG "No records eligible for screenshotting."
-  exit 0
 fi
 
 # Cleanup old screenshots
