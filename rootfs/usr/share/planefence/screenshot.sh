@@ -368,10 +368,11 @@ if $pf_save_data || $pa_save_data; then
   WRITE_RECORDS ignore-lock
 fi
 
-if (( any_candidates == 0 )); then
-  log_print DEBUG "No records eligible for screenshotting."
-fi
-
 # Cleanup old screenshots
 find "$SCREENFILEDIR" -type f -name '*-screenshot-*.png' -mmin +180 -exec rm -f {} \;
-log_print INFO "Screenshot run completed."
+
+if (( any_candidates == 0 )); then
+  log_print DEBUG "No records eligible for screenshotting."
+else
+  log_print INFO "Screenshot run completed."
+fi

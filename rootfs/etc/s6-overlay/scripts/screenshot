@@ -21,8 +21,10 @@
 source /scripts/pf-common
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 
-LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
-LOOPTIME="${LOOPTIME:-60}"
+# Read PF_INTERVAL as a plain integer (ignore any trailing comments/text)
+LOOPTIME=$(sed -n 's/^[[:space:]]*PF_INTERVAL=[[:space:]]*\([0-9][0-9]*\).*/\1/p' /usr/share/planefence/persist/planefence.config)
+# Fallback to 60 if unset or non-numeric
+[[ "$LOOPTIME" =~ ^[0-9]+$ ]] || LOOPTIME=60
 
 ## Debug:
 #LOOPTIME=120  # for testing only - set to 120 secs
@@ -45,7 +47,7 @@ while true
 do
   if ! CHK_SCREENSHOT_ENABLED; then
     # we do this instead of stop_service because this will autmatically detect changes to screenshot settings
-    sleep $LOOPTIME
+    sleep "$LOOPTIME"
     continue
   fi
   starttime=$(date +%s)
