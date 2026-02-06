@@ -1552,13 +1552,25 @@ if [[ -z "${pa_records[HASROUTE]}" ]]; then pa_records[HASROUTE]=false; fi
 if [[ -z "${pa_records[HASIMAGES]}" ]]; then pa_records[HASIMAGES]=false; fi
 if [[ -z "${records[HASNOISE]}" || -z "$REMOTENOISE" ]] || chk_disabled "$REMOTENOISE"; then records[HASNOISE]=false; else LINK_LATEST_SPECTROFILE; fi
 
+# Apply FUDGELOC rounding to station coordinates
+case "${FUDGELOC:-3}" in
+  0) _fudge_decimals=0 ;;
+  1) _fudge_decimals=1 ;;
+  2) _fudge_decimals=2 ;;
+  3) _fudge_decimals=3 ;;
+  4) _fudge_decimals=4 ;;
+  *) _fudge_decimals=3 ;;
+esac
+printf -v _fudged_lat "%.${_fudge_decimals}f" "$LAT"
+printf -v _fudged_lon "%.${_fudge_decimals}f" "$LON"
+
 # Provide station metadata for front-end summaries
 records["station:dist:value"]="${DIST:-}"
 records["station:dist:unit"]="${DISTUNIT:-}"
 records["station:altitude:value"]="${MAXALT:-}"
 records["station:altitude:unit"]="${ALTUNIT:-}"
-records["station:lat"]="${LAT:-}"
-records["station:lon"]="${LON:-}"
+records["station:lat"]="${_fudged_lat:-}"
+records["station:lon"]="${_fudged_lon:-}"
 records["station:version"]="$VERSION"
 records["station:heatmapzoom"]="$HEATMAPZOOM"
 records["station:me"]="$MY"
@@ -1571,8 +1583,8 @@ pa_records["station:dist:value"]="${DIST:-}"
 pa_records["station:dist:unit"]="${DISTUNIT:-}"
 pa_records["station:altitude:value"]="${MAXALT:-}"
 pa_records["station:altitude:unit"]="${ALTUNIT:-}"
-pa_records["station:lat"]="${LAT:-}"
-pa_records["station:lon"]="${LON:-}"
+pa_records["station:lat"]="${_fudged_lat:-}"
+pa_records["station:lon"]="${_fudged_lon:-}"
 pa_records["station:version"]="$VERSION"
 pa_records["station:me"]="$MY"
 pa_records["station:myurl"]="$MYURL"
