@@ -981,6 +981,7 @@ ${messagesDesc}
         const wantsAllPlaneAlert = allowDefaultAll && mode === DATA_MODES.PLANE_ALERT && (dateKey === undefined || dateKey === null || dateKey === '');
         const dateParam = wantsAllPlaneAlert ? 'all' : dateKey;
         if (dateParam) params.set('date', dateParam);
+        if (opts.cacheBust !== false) params.set('ts', String(Date.now()));
         const qs = params.toString();
         return qs ? `${base}?${qs}` : base;
       }
@@ -3645,6 +3646,40 @@ function addOrUpdateRow(r){
     }
   }
 
+  async function primePlaneAlertGlobals(generation) {
+    try {
+      if (generation !== modeGeneration) return;
+      const url = buildStreamUrl(DATA_MODES.PLANE_ALERT, null, { allowPlaneAlertDefaultAll: false });
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok || !resp.body) return;
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        if (generation !== modeGeneration) return;
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          if (generation !== modeGeneration) return;
+          const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+          if (!line.trim()) continue;
+          let obj;
+          try { obj = JSON.parse(line); } catch (e) { continue; }
+          if (obj && obj.__globals) {
+            const globals = obj.__globals || {};
+            updateStationInfoFromGlobals(globals);
+            setHasNoiseAvailability(globals.HASNOISE);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('prime globals failed', e);
+    }
+  }
+
   function stopStreamReader(){
     if (streamAbortController) {
       try { streamAbortController.abort(); } catch (e) { /* ignore */ }
@@ -3863,6 +3898,9 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
     setLiveStatusPlaceholders();
     const liveHistoryParam = effectiveHistoryParam();
     const allowPlaneAlertDefaultAll = isPlaneAlertMode() && historyDate !== 'today';
+    if (allowPlaneAlertDefaultAll) {
+      primePlaneAlertGlobals(modeGeneration);
+    }
     if (cfg.enableStream) startStreamReader(modeGeneration, { historyDate: liveHistoryParam, allowPlaneAlertDefaultAll });
     if (cfg.enablePoll) startPollingLoop(modeGeneration, { historyDate: liveHistoryParam, allowPlaneAlertDefaultAll });
   }
