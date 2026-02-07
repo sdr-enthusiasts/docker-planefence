@@ -100,15 +100,22 @@ build_plane_alert_all_json() {
 
   # Capture today's LASTUPDATE (if present) to propagate into combined globals
   local TODAY_LASTUPDATE=""
+  local TODAY_GLOBALS="{}"
   TODAY_LASTUPDATE=$(jq -r '
     if (.[0]|type)=="object" and ((.[0]|has("index"))|not) then
       (.[0].LASTUPDATE // "")
     else "" end
   ' "${files[0]}" 2>/dev/null || true)
   [[ "$TODAY_LASTUPDATE" == "null" ]] && TODAY_LASTUPDATE=""
+  TODAY_GLOBALS=$(jq -c '
+    if (.[0]|type)=="object" and ((.[0]|has("index"))|not) then
+      .[0]
+    else {} end
+  ' "${files[0]}" 2>/dev/null || true)
+  [[ -z "$TODAY_GLOBALS" || "$TODAY_GLOBALS" == "null" ]] && TODAY_GLOBALS="{}"
 
   tmp="$(mktemp)" || return 1
-  if jq -s --arg todays_file "${files[0]}" --arg today_lastupdate "$TODAY_LASTUPDATE" '
+  if jq -s --arg today_lastupdate "$TODAY_LASTUPDATE" --argjson today_globals "$TODAY_GLOBALS" '
     def split_parts(arr):
       if (arr|type)!="array" then {globals:{}, rows:[]}
       else (
@@ -120,26 +127,34 @@ build_plane_alert_all_json() {
       ) end;
 
     reduce .[] as $f (
-      {globals:null, rows:[], today_globals:null};
+      {globals:null, rows:[]};
       (split_parts($f)) as $chunk
       | .globals = (if ($chunk.globals|type)=="object" and ($chunk.globals|length)>0 then $chunk.globals else .globals end)
       | .rows = (if ($chunk.rows|type)=="array" then (.rows + $chunk.rows) else .rows end)
-      | .today_globals = (if (.today_globals==null and ($f|tostring)==$todays_file and ($chunk.globals|type)=="object") then $chunk.globals else .today_globals end)
     )
     | .globals = (if (.globals|type)=="object" then .globals else {} end)
-    | .today_globals = (if (.today_globals|type)=="object" then .today_globals else {} end)
+      | .globals["station:motd"] = (
+          if ($today_globals|has("station:motd")) then $today_globals["station:motd"]
+          elif ($today_globals|has("station.motd")) then $today_globals["station.motd"]
+          else .globals["station:motd"] end
+        )
+      | .globals["station.motd"] = (
+          if ($today_globals|has("station.motd")) then $today_globals["station.motd"]
+          elif ($today_globals|has("station:motd")) then $today_globals["station:motd"]
+          else .globals["station.motd"] end
+        )
     | .rows = (.rows[0:'"$MAX_ROWS"'])                    # keep newest-first subset
     | .rows = (.rows | reverse)                             # oldest-first for reindex
     | .rows = [ range(0; (.rows|length)) as $i | (.rows[$i] // {}) + {index:$i} ]
     | .rows = (.rows | reverse)                             # emit newest-first
     | .globals.maxindex = ((.rows|length) - 1)
     | .globals.totallines = (
-      if (.today_globals|has("totallines")) then .today_globals.totallines
+      if ($today_globals|has("totallines")) then $today_globals.totallines
       elif (.globals|has("totallines")) then .globals.totallines
       else (.rows|length) end)
     | .globals.LASTUPDATE = (
       if ($today_lastupdate|length) > 0 then $today_lastupdate
-      elif (.today_globals|has("LASTUPDATE")) then .today_globals.LASTUPDATE
+      elif ($today_globals|has("LASTUPDATE")) then $today_globals.LASTUPDATE
       elif (.globals|has("LASTUPDATE")) then .globals.LASTUPDATE
       else 0 end)
     | [ .globals ]
