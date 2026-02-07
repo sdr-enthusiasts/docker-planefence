@@ -109,8 +109,8 @@ log_print DEBUG "PA_RANGE=$PA_RANGE"
 
 
 
-PF_MOTD="$(awk -F'=' '/^\s*PF_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
-PA_MOTD="$(awk -F'=' '/^\s*PA_MOTD/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/plane-alert.conf)"
+PF_MOTD="$(awk '/^\s*PF_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/planefence.conf)"
+PA_MOTD="$(awk '/^\s*PA_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/plane-alert.conf)"
 
 # ==========================
 # Functions
