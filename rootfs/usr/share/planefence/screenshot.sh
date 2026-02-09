@@ -62,6 +62,11 @@ build_index_and_stale_for_screenshot() {
   local MAXIDX
   MAXIDX=${_DATASET[maxindex]}
 
+  local ready_field="complete"
+  if [[ "$dataset_name" == "records" ]]; then
+    ready_field="ready_to_notify"
+  fi
+
   # Capture gawk output once, then demux without subshells
   local out
   out="$(
@@ -74,34 +79,34 @@ build_index_and_stale_for_screenshot() {
         field=${k#*:}
         # Only pass fields we care about to reduce awk work
         case $field in
-            complete|time:lastseen|checked:screenshot)
+            "${ready_field}"|time:lastseen|checked:screenshot)
         printf '%s\t%s\t%s\n' "$id" "$field" "${_DATASET[$k]}"
             ;;
         esac
       done
-    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" '
+    } | gawk -v CST="${CONTAINERSTARTTIME:-0}" -v rkey="$ready_field" '
       BEGIN { FS="\t" }
       {
         id=$1; key=$2; val=$3
         # Track presence/values per id
         if (key=="time:lastseen") { lastseen[id]=val+0; seen_last[id]=1 }
-        else if (key=="complete") { complete[id]=val; seen_complete[id]=1 }
+        else if (key==rkey) { ready[id]=val; seen_ready[id]=1 }
         else if (key=="checked:screenshot") { schecked[id]=val; seen_checked[id]=1 }
       }
       END {
         CSTN = CST+0
-        # Consider all ids that have either lastseen or complete or checked
+        # Consider all ids that have either lastseen or ready or checked
         for (id in seen_last) ids[id]=1
-        for (id in seen_complete) ids[id]=1
+        for (id in seen_ready) ids[id]=1
         for (id in seen_checked) ids[id]=1
 
         for (id in ids) {
           # If checked:screenshot present with any non-empty value, skip the id entirely
           if (id in seen_checked && (schecked[id] != "")) continue
 
-          # If complete missing or false/empty/0/no, skip
-          if (!(id in seen_complete)) continue
-          if (!is_truthy(complete[id])) continue
+          # If ready missing or false/empty/0/no, skip
+          if (!(id in seen_ready)) continue
+          if (!is_truthy(ready[id])) continue
 
           # If lastseen exists and is less than container start, tag stale
           if ((id in seen_last) && (lastseen[id] < CSTN)) { stale[id]=1; continue }

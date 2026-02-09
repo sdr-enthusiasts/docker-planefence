@@ -1294,8 +1294,10 @@ for line in "${socketrecords[@]}"; do
     # Min-distance update (float-safe without awk by string compare fallback)
     curdist=${records["$idx":distance:value]}
     do_update=false
+    at_mindist=false
     if [[ -z $curdist ]]; then
       do_update=true
+      at_mindist=true
     else
       # numeric compare using bc-less trick: compare as floats via printf %f then string compare is unsafe; instead use scaled ints
       # scale to 2 decimals
@@ -1304,7 +1306,10 @@ for line in "${socketrecords[@]}"; do
       d2i=${d2%.*}; d2f=${d2#*.}; d2f=${d2f%%[!0-9]*}; d2f=${d2f:0:2}; d2f=${d2f:-0}
       s1=$(( 10#$d1i*100 + 10#$d1f ))
       s2=$(( 10#$d2i*100 + 10#$d2f ))
-      if (( s1 < s2 )); then do_update=true; fi
+      if (( s1 < s2 )); then
+        do_update=true
+        at_mindist=true
+      fi
     fi
     if $do_update; then
       records["$idx":distance:value]="$distance" && records["$idx":distance:unit]="$DISTUNIT"
@@ -1316,9 +1321,13 @@ for line in "${socketrecords[@]}"; do
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
     fi
+
+    if ! $at_mindist; then
+      records["$idx":ready_to_notify]=true      
+    fi
+
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
       records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
-
     fi
     # last - make sure we're storing the idx in the list of processed indices:
     processed_indices["$idx"]=true
