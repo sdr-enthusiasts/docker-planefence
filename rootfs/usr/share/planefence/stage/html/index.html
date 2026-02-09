@@ -17,7 +17,7 @@
     tr.row-incomplete .muted { color: inherit; opacity: .9; }
 
     /* Small “still updating” */
-    .still-updating { font-size: 0.85em; }
+    .still-updating { font-size: 0.85em; }s
 
     /* Override DataTables zebra to adapt to theme */
     table.dataTable.stripe tbody tr.odd,
@@ -38,6 +38,8 @@
       --accent: #0b5fff;
       --danger-bg: #fff3f3;
       --danger-fg: #a40000;
+      --squawk-match-bg: #fff6cc;
+      --squawk-match-fg: #be8427;
       --row-incomplete: #6b6b6b;
       --chip-bg: #eee;
       --chip-fg: #222;
@@ -53,6 +55,8 @@
       --accent: #6ca0ff;
       --danger-bg: #2a1212;
       --danger-fg: #ff8a8a;
+      --squawk-match-bg: #3a2a00;
+      --squawk-match-fg: #ffd166;
       --row-incomplete: #9aa0a6;
       --chip-bg: #1f2430;
       --chip-fg: #e6e6e6;
@@ -198,6 +202,7 @@
     .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--chip-bg); color: var(--chip-fg); padding: .1rem .4rem; border-radius: .5rem; font-size: .85em; }
   .dot { display:none; }
     .danger { background: var(--danger-bg); color: var(--danger-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
+    .squawk-match { background: var(--squawk-match-bg); color: var(--squawk-match-fg); font-weight: 600; padding: 0 .25em; border-radius: .25em; }
   /* small SVG icons inside chips — make slightly larger for visibility */
   .chip svg { height: 1.25em; width: 1.25em; vertical-align: -0.15em; }
   .chip.muted { opacity: 0.8; }
@@ -3404,7 +3409,11 @@ function renderRow(r) {
   const squawkVal = safe(r["squawk:value"]);
   const squawkDesc = r["squawk:description"] ? ` <span class="muted">(${safe(r["squawk:description"])})</span>` : "";
   const isEmerg = squawkVal === "7500" || squawkVal === "7600" || squawkVal === "7700";
-  const squawk = squawkVal ? `<span class="${isEmerg ? 'danger' : ''} mono">${squawkVal}</span>${squawkDesc}` : "";
+  const isMatch = truthy(r["squawk:match"]);
+  const squawkClass = isEmerg ? 'danger' : (isMatch ? 'squawk-match' : '');
+  const squawkTitle = isMatch ? t('squawk.matchTooltip', {}, 'Squawk matches predefined alerts') : '';
+  const squawkTitleAttr = squawkTitle ? ` title="${escapeHtml(squawkTitle)}"` : '';
+  const squawk = squawkVal ? `<span class="${squawkClass} mono"${squawkTitleAttr}>${squawkVal}</span>${squawkDesc}` : "";
 
   // Capture normalized fields for CSV export (no HTML)
   const tsFirst = Number(r["time:firstseen"]);
