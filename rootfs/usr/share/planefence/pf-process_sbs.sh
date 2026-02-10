@@ -79,9 +79,10 @@ tracedate="${today_ymd//\//-}"  # YYYY-MM-DD
 # constants
 COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao pa_last_idx_for_icao   # icao -> most recent idx within window
-declare -A lastseen_for_icao   # icao -> lastseen epoch
+declare -A lastseen_for_icao  # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
-declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices
+declare -A pa_squawkmatch     # icao -> "true" if the icao matches the squawk filter (and has been seen with that squawk for at least SQUAWKTIME seconds), empty or "false" otherwise. This is used to mark records that match the squawk filter in the planefence and plane-alert records, and is updated in real time as new squawks are seen.
+declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices 
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -107,7 +108,15 @@ elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
 
-
+readarray -d , -t SQUAWKS < <(sed -n 's/^[[:space:]]*SQUAWKS=["]\?\([0-9x,]\+\).*/\1/;t process;b;:process;s/x/./g;:pad;s/\(^\|,\)\([^,]\{1,3\}\)\(,\|$\)/\10\2\3/g;t pad;s/\(^\|,\)[^,]*\([^,]\{4\}\)\(,\|$\)/\1\2\3/g;p' /usr/share/planefence/plane-alert.conf)
+SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
+if (( ${#SQUAWKS[@]} > 0 )); then 
+  printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
+  SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
+  log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
+fi
+SQUAWKTIME="$(sed -n 's/^[[:space:]]*SQUAWKTIME=["]\?\([0-9x,]\+\).*/\1/p' /usr/share/planefence/plane-alert.conf)"
+SQUAWKTIME="${SQUAWKTIME:-10}"
 
 PF_MOTD="$(awk '/^\s*PF_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/planefence.conf)"
 PA_MOTD="$(awk '/^\s*PA_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/plane-alert.conf)"
@@ -267,7 +276,7 @@ GET_ROUTE_BULK () {
           pa_records["$idx":checked:route]=true
         fi
       done
-    done <<< "$(curl -m 30 -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | [.callsign, ._airport_codes_iata, (.plausible|tostring)] | @csv  | gsub("\"";"")')"
+    done <<< "$(curl -m 30 -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | if type=="object" then [((.callsign // "")|tostring), ((._airport_codes_iata // "")|tostring), ((.plausible // "")|tostring)] elif type=="array" then [((.[0] // "")|tostring), ((.[1] // "")|tostring), ((.[2] // "")|tostring)] else empty end | @csv | gsub("\"";"")')"
   fi
 }
 
@@ -1034,6 +1043,10 @@ fi
 
 if chk_enabled "$PLANEALERT"; then
   awk -F',' 'NR>1 {print "^" $1 "," }' "$PA_FILE" > /tmp/pa_keys_$$ 2>/dev/null || touch /tmp/pa_keys_$$
+  if (( ${#SQUAWKS[@]} > 0 )); then 
+    # shellcheck disable=SC2046
+    printf "^([^,]*,){8}%s(,|$)\n" "${SQUAWKS[@]}" >> /tmp/pa_keys_$$
+  fi
 fi
 
 # ==========================
@@ -1081,7 +1094,7 @@ currentrecords=$(( records[maxindex] + 1 ))
         cat "$TODAYFILE"
   fi
 } | tac > /tmp/filtered_records_$$ \
-|| { pkill socket30003.pl 2>/dev/null; exit 1; }  # if tac fails, it's likely disk full; so kill socket30003.pl to trigger a log file cleanup and exit with error
+|| { rm -f /run/socket30003/*.pid 2>/dev/null || true; exit 1; }  # if tac fails, it's likely disk full; so kill socket30003.pl to trigger a log file cleanup and exit with error
 log_print DEBUG "Collected new records into /tmp/filtered_records_$$"
 
 # since the last line may be incomplete, set the LASTPROCESSEDLINE to the second line
@@ -1174,8 +1187,48 @@ for line in "${socketrecords[@]}"; do
     mode_pf=false
   fi
 
+  # check for squawk filter matches and ensure that we've seen the squawk at least for SQUAWKTIME seconds to avoid transient squawks:
+  if [[ -n "$squawk" && \
+        "${pa_squawkmatch["$icao"]}" != "true" && \
+        -n "$SQUAWKS_REGEX" && $squawk =~ $SQUAWKS_REGEX ]]; then
+    log_print DEBUG "$icao matches squawk filter with $squawk!"
+    # Find first and last occurrence of the icao/squawk combination:
+    read -r sq_start sq_end < <(
+      printf '%s\n' "${socketrecords[@]}" |
+      awk -F',' -v icao="$icao" -v squawk="$squawk" '
+        # d = YYYY/MM/DD, t = HH:MM:SS.mmm  (we ignore .mmm)
+        function to_epoch(d, t,    y, m, d2, H, M, S, tmp) {
+          split(d, a, "/");  y=a[1]; m=a[2]; d2=a[3]
+
+          # remove milliseconds
+          split(t, tmp, ".");  t = tmp[1]
+          split(t, b, ":");    H=b[1]; M=b[2]; S=b[3]
+
+          return mktime(y " " m " " d2 " " H " " M " " S)
+        }
+
+        $1 == icao && $9 == squawk {
+          ts = to_epoch($5, $6)
+          if (first_ts == "" || ts < first_ts) first_ts = ts
+          if (last_ts  == "" || ts > last_ts)  last_ts  = ts
+        }
+
+        END {
+          if (first_ts != "")
+            print first_ts, last_ts
+        }
+      '
+    )
+    if (( ${sq_end:-999999} - ${sq_start:-0} < SQUAWKTIME )); then
+      log_print DEBUG "NOK: Squawk $squawk for $icao has not been active for at least $SQUAWKTIME seconds (only from $(date -d "@$sq_start") to $(date -d "@$sq_end")), so skipping for PlaneAlert."
+    else
+      log_print DEBUG "OK: Squawk $squawk for $icao was active for at least $SQUAWKTIME seconds (from $(date -d "@$sq_start") to $(date -d "@$sq_end")), so including it for PlaneAlert."
+      pa_squawkmatch["$icao"]=true
+    fi
+  fi
+
   # For plane-alert, always collapse into an existing record if any was available today
-  if [[ " ${pa_icaos[*]} " == *" $icao "* ]]; then
+  if [[ " ${pa_icaos[*]} " == *" $icao "* || "${pa_squawkmatch["$icao"]}" == "true" ]]; then    
     pa_idx="${pa_last_idx_for_icao["$icao"]}"
     # Create new idx if none found or if last seen was before today
     if [[ -z "$pa_idx" || ${pa_records["$pa_idx":time:lastseen]:-0} -lt $midnight_epoch ]]; then
@@ -1241,8 +1294,10 @@ for line in "${socketrecords[@]}"; do
     # Min-distance update (float-safe without awk by string compare fallback)
     curdist=${records["$idx":distance:value]}
     do_update=false
+    at_mindist=false
     if [[ -z $curdist ]]; then
       do_update=true
+      at_mindist=true
     else
       # numeric compare using bc-less trick: compare as floats via printf %f then string compare is unsafe; instead use scaled ints
       # scale to 2 decimals
@@ -1251,7 +1306,10 @@ for line in "${socketrecords[@]}"; do
       d2i=${d2%.*}; d2f=${d2#*.}; d2f=${d2f%%[!0-9]*}; d2f=${d2f:0:2}; d2f=${d2f:-0}
       s1=$(( 10#$d1i*100 + 10#$d1f ))
       s2=$(( 10#$d2i*100 + 10#$d2f ))
-      if (( s1 < s2 )); then do_update=true; fi
+      if (( s1 < s2 )); then
+        do_update=true
+        at_mindist=true
+      fi
     fi
     if $do_update; then
       records["$idx":distance:value]="$distance" && records["$idx":distance:unit]="$DISTUNIT"
@@ -1263,6 +1321,11 @@ for line in "${socketrecords[@]}"; do
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
     fi
+
+    if ! $at_mindist; then
+      records["$idx":ready_to_notify]=true      
+    fi
+
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
       records["$idx":squawk:value]="$squawk" && records["$idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
     fi
@@ -1365,7 +1428,11 @@ for line in "${socketrecords[@]}"; do
     pa_records["$pa_idx":lonfirstseen]="${pa_records["$pa_idx":lonfirstseen]:-$lon}"
 
     if [[ -n $squawk && -z ${pa_records["$pa_idx":squawk:value]} ]]; then
-      pa_records["$pa_idx":squawk:value]="$squawk" && pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
+      pa_records["$pa_idx":squawk:value]="$squawk"
+      pa_records["$pa_idx":squawk:description]="$(GET_SQUAWK_DESCRIPTION "$squawk")"
+      if [[ "${pa_squawkmatch["$icao"]}" == "true" ]]; then
+        pa_records["$pa_idx":squawk:match]=true
+      fi
     fi
 
     # last - make sure we're storing the idx in the list of processed indices:

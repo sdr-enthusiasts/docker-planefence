@@ -249,6 +249,7 @@ configure_both "GENERATE_CSV" "${GENERATE_CSV:-OFF}"
 configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"
 
 # Configure Mastodon parameters:
+mastodon_index_file="/usr/share/planefence/html/index.html"
 if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	MASTODON_SERVER="${MASTODON_SERVER,,}"
 	# strip http:// https://
@@ -256,7 +257,8 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	if [[ "${MASTODON_SERVER:0:8}" == "https://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:8}"; fi
 	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
 	if ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
-		configure_both "MASTODON_NAME" "$(jq -r '.acct' <<<"$mast_result")"
+		MASTODON_NAME="$(jq -r '.acct' <<<"$mast_result")"
+		configure_both "MASTODON_NAME" "$MASTODON_NAME"
 	fi
 	if chk_enabled "${PF_MASTODON,,}"; then
 		configure_planefence "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
@@ -275,6 +277,27 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""
 		configure_planealert "MASTODON_SERVER" ""
+	fi
+
+	# Inject Mastodon rel=me verification link into index.html without relying on JS
+	
+	if [[ -f "$mastodon_index_file" ]]; then
+		# add tags if they don't exist in the file
+		if ! grep -q "<!-- MASTODON_LINK START -->" "$mastodon_index_file"; then
+			sed -i 's|</head>|  <!-- MASTODON_LINK START --><!-- MASTODON_LINK END -->\n</head>|' "$mastodon_index_file"
+		fi
+		if [[ -n "$MASTODON_SERVER" && -n "$MASTODON_NAME" ]]; then
+			mastodon_link="  <link rel=\"me\" href=\"https://${MASTODON_SERVER}/@${MASTODON_NAME}\">"
+		else
+			mastodon_link=""
+		fi
+		sed -i 's|<!-- MASTODON_LINK START -->.*<!-- MASTODON_LINK END -->|<!-- MASTODON_LINK START -->'"$mastodon_link"'<!-- MASTODON_LINK END -->|' "$mastodon_index_file"
+	fi
+else
+	configure_both "MASTODON_ACCESS_TOKEN" ""
+	configure_both "MASTODON_SERVER" ""
+	if [[ -f "$mastodon_index_file" ]]; then
+		sed -i 's|<!-- MASTODON_LINK START -->.*<!-- MASTODON_LINK END -->|<!-- MASTODON_LINK START --><!-- MASTODON_LINK END -->|' "$mastodon_index_file"
 	fi
 fi
 
