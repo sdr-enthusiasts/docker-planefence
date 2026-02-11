@@ -255,8 +255,8 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	# strip http:// https://
 	if [[ "${MASTODON_SERVER:0:7}" == "http://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:7}"; fi
 	if [[ "${MASTODON_SERVER:0:8}" == "https://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:8}"; fi
-	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
-	if ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
+	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")" || mast_result=""
+	if [[ -n "$mast_result" ]] && ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
 		MASTODON_NAME="$(jq -r '.acct' <<<"$mast_result")"
 		configure_both "MASTODON_NAME" "$MASTODON_NAME"
 	fi
@@ -280,7 +280,6 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	fi
 
 	# Inject Mastodon rel=me verification link into index.html without relying on JS
-	
 	if [[ -f "$mastodon_index_file" ]]; then
 		# add tags if they don't exist in the file
 		if ! grep -q "<!-- MASTODON_LINK START -->" "$mastodon_index_file"; then
