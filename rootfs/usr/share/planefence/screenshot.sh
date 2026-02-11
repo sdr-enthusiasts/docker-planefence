@@ -121,7 +121,7 @@ build_index_and_stale_for_screenshot() {
       }
 
       # Helper to determine truthy values (non-empty, not 0/false/no)
-      function is_truthy(x, lx) { lx=tolower(x); return (x != "" && x != "0" && lx != "false" && lx != "no") }
+      function is_truthy(x, lx) { lx=tolower(x); return (x != "" && x != "0" && lx != "false" && lx != "no" && lx!="semi") }
     '
   )"
 

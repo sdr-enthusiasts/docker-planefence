@@ -533,7 +533,7 @@ build_index_and_stale() {
         ni=asorti(ok, oi, "@ind_num_asc"); for (i=1;i<=ni;i++) printf "I\t%s\n", oi[i]
         ns=asorti(stale, os, "@ind_num_asc"); for (i=1;i<=ns;i++) printf "S\t%s\n", os[i]
       }
-      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no") }
+      function enabled(x, y){ y=tolower(x); return (x!="" && x!="0" && y!="false" && y!="no" && y!="semi") }
     '
   )"
 

@@ -1323,7 +1323,13 @@ for line in "${socketrecords[@]}"; do
     fi
 
     if ! $at_mindist; then
-      records["$idx":ready_to_notify]=true      
+      if [[ -z "${records["$idx":ready_to_notify]}" ]]; then
+        records["$idx":ready_to_notify]="semi"
+      else
+        records["$idx":ready_to_notify]=true
+      fi
+    else
+      records["$idx":ready_to_notify]=""
     fi
 
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
