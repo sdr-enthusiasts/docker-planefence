@@ -1325,6 +1325,7 @@ for line in "${socketrecords[@]}"; do
         records["$idx":ready_to_notify]=true
       else
         records["$idx":ready_to_notify]="semi"
+      fi
     fi
 
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
