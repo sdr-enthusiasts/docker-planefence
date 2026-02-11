@@ -1321,7 +1321,7 @@ for line in "${socketrecords[@]}"; do
       records["$idx":time:time_at_mindist]="$seentime"
       records["$idx":ready_to_notify]=""
     else
-      if [[ "${records["$idx":ready_to_notify]}" == "semi" ]];
+      if [[ "${records["$idx":ready_to_notify]}" == "semi" ]]; then
         records["$idx":ready_to_notify]=true
       else
         records["$idx":ready_to_notify]="semi"
