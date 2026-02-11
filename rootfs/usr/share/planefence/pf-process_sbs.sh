@@ -1308,7 +1308,6 @@ for line in "${socketrecords[@]}"; do
       s2=$(( 10#$d2i*100 + 10#$d2f ))
       if (( s1 < s2 )); then
         do_update=true
-        at_mindist=true
       fi
     fi
     if $do_update; then
@@ -1320,16 +1319,12 @@ for line in "${socketrecords[@]}"; do
       [[ -n $gs ]] && records["$idx":groundspeed:value]="$gs" && records["$idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
-    fi
-
-    if ! $at_mindist; then
-      if [[ -z "${records["$idx":ready_to_notify]}" ]]; then
-        records["$idx":ready_to_notify]="semi"
-      else
-        records["$idx":ready_to_notify]=true
-      fi
-    else
       records["$idx":ready_to_notify]=""
+    else
+      if [[ "${records["$idx":ready_to_notify]}" == "semi" ]];
+        records["$idx":ready_to_notify]=true
+      else
+        records["$idx":ready_to_notify]="semi"
     fi
 
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
