@@ -1447,6 +1447,7 @@ done
 for ((idx=0; idx<=records[maxindex]; idx++)); do
   if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
+    records["$idx":ready_to_notify]=true
   fi
 done
 
