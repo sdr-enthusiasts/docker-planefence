@@ -448,6 +448,57 @@ extract_url() {
   fi
 }
 
+# GET_PARAM <pa|pf|base> <parameter>
+# Reads a parameter value from the corresponding config file:
+#   - pa   -> /usr/share/planefence/plane-alert.conf
+#   - pf   -> /usr/share/planefence/planefence.conf
+#   - base -> /usr/share/planefence/persist/planefence.config
+# Strips matching single/double quotes only when both ends match.
+# Outputs the value (no trailing newline). Returns 1 if missing, 99 on bad mode.
+GET_PARAM() {
+  local mode=${1:-}
+  local source_parameter=${2:-}
+  local config_file
+  local raw
+  local cleaned
+
+  [[ -z "$source_parameter" ]] && return 0
+
+  case "${mode,,}" in
+    pa) config_file="/usr/share/planefence/plane-alert.conf" ;;
+    pf) config_file="/usr/share/planefence/planefence.conf" ;;
+    base) config_file="/usr/share/planefence/persist/planefence.config" ;;
+    *) return 99 ;;
+  esac
+
+  raw=$(awk -v key="$source_parameter" '
+    $0 ~ "^[[:space:]]*(export[[:space:]]+)?" key "[[:space:]]*=" {
+      line=$0
+      sub(/^[[:space:]]*(export[[:space:]]+)?[^=]*=/, "", line)
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      print line
+      found=1
+      exit
+    }
+    END { if (!found) exit 2 }
+  ' "$config_file")
+  if [[ $? -eq 2 ]]; then
+    return 1
+  fi
+
+  cleaned="$raw"
+  if [[ ${#cleaned} -ge 2 ]]; then
+    local first=${cleaned:0:1}
+    local last=${cleaned: -1}
+    if [[ ( "$first" == "'" || "$first" == '"' ) && "$first" == "$last" ]]; then
+      cleaned=${cleaned:1:${#cleaned}-2}
+    fi
+  fi
+
+  printf '%s' "$cleaned"
+}
+
 # Fast builder: outputs INDEX (eligible) and STALE (stale) as numeric id arrays.
 # Use:
 # declare -a INDEX STALE
