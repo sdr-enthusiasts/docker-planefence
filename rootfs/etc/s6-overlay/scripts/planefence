@@ -21,7 +21,7 @@
 source /scripts/pf-common
 source /usr/share/planefence/prep-planefence.sh
 
-LOOPTIME=$(sed -n 's/\(^\s*PF_INTERVAL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)
+LOOPTIME=$(GET_PARAM base PF_INTERVAL)
 LOOPTIME="${LOOPTIME:-60}"
 
 PLANEFENCEDIR=/usr/share/planefence
