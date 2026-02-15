@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=false
+DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
@@ -82,7 +82,7 @@ declare -A last_idx_for_icao pa_last_idx_for_icao   # icao -> most recent idx wi
 declare -A lastseen_for_icao  # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
 declare -A pa_squawkmatch     # icao -> "true" if the icao matches the squawk filter (and has been seen with that squawk for at least SQUAWKTIME seconds), empty or "false" otherwise. This is used to mark records that match the squawk filter in the planefence and plane-alert records, and is updated in real time as new squawks are seen.
-declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices 
+declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices ready_to_notify_initial
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -1319,12 +1319,31 @@ for line in "${socketrecords[@]}"; do
       [[ -n $gs ]] && records["$idx":groundspeed:value]="$gs" && records["$idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
-      records["$idx":ready_to_notify]=""
-    else
-      if [[ "${records["$idx":ready_to_notify]}" == "semi" ]]; then
-        records["$idx":ready_to_notify]=true
-      else
+    fi
+    if [[ -z ${ready_to_notify_initial[$idx]+set} ]]; then
+      ready_to_notify_initial[$idx]="${records["$idx":ready_to_notify]}"
+    fi
+    initial_ready="${ready_to_notify_initial[$idx]}"
+    current_ready="${records["$idx":ready_to_notify]}"
+    ready_updated=false
+    if [[ "$current_ready" != "$initial_ready" ]]; then
+      ready_updated=true
+    fi
+
+    if $do_update; then
+      if [[ "$initial_ready" == "true" && $ready_updated == false ]]; then
+        :
+      elif $ready_updated; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) updated since READ_RECORD; setting FALSE (closest dist detected)"
+        records["$idx":ready_to_notify]="false"
+      fi
+    elif $ready_updated; then
+      if [[ "$current_ready" == "false" ]]; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) was ${current_ready^^} and is now SEMI"
         records["$idx":ready_to_notify]="semi"
+      elif [[ "$current_ready" == "semi" ]]; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) was ${current_ready^^} and is now TRUE"
+        records["$idx":ready_to_notify]="true"
       fi
     fi
 
@@ -1448,6 +1467,7 @@ for ((idx=0; idx<=records[maxindex]; idx++)); do
   if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
     records["$idx":ready_to_notify]=true
+    log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
   fi
 done
 
@@ -1510,6 +1530,8 @@ for idx in "${!processed_indices[@]}"; do
   fi
 
   records["$idx":complete]=true
+  records["$idx":ready_to_notify]=true
+  log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to record marked complete"
 
   # Add noisecapt stuff
   if [[ -n "$REMOTENOISE" ]] && \
