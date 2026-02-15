@@ -199,6 +199,16 @@ NOTIF_DATEFORMAT="%F %T %Z"
 # Use cautiously, especially with PF_IGNOREDUPES unset (may produce many notifications).
 PF_NOTIFEVERY=false
 # ---------------------------------------------------------------------
+# PF_NOTIF_MINTIME is the minimum wait time (in seconds) before a Planefence notification is sent, 
+# depending on the PF_NOTIF_BEHAVIOR setting. Default value is 0 (secs) - this means "immediately" when
+# the plane is determined to have passed the closest location to the receiver.
+# Note that the record will be marked "ready to notify" when PF_COLLAPSEWITHIN has expired, regardless of the PF_NOTIF_MINTIME value.
+# If PF_NOTIF_BEHAVIOR is "pre", then this wait time is measured from the first observation of the plane in the fence.
+# If PF_NOTIF_BEHAVIOR is "post", then this wait time is measured from the last observation of the plane in the fence.
+# The default for PF_NOTIF_BEHAVIOR (if omitted) is "post".
+PF_NOTIF_MINTIME=
+PF_NOTIF_BEHAVIOR=
+# ---------------------------------------------------------------------
 # PF_ATTRIB / PA_ATTRIB: attribution string appended to notifications.
 PF_ATTRIB="#adsb #planefence by kx1t https://sdr-e.com/docker-planefence"
 PA_ATTRIB="#adsb #planefence #planealert by kx1t https://sdr-e.com/docker-planefence"

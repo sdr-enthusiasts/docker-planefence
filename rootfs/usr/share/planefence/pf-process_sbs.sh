@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=true
+DEBUG=false
 
 ## initialization:
 source /scripts/pf-common
@@ -93,11 +93,10 @@ elif [[ -n "$TRACKSERVICE" ]]; then
 else
   TRACKURL="globe.adsbexchange.com"
 fi
-
-PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_FILE="$(GET_PARAM pa PLANEFILE)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
-PA_RANGE="$(sed -n 's/\(^\s*RANGE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_RANGE="$(GET_PARAM pa RANGE)"
 PA_RANGE="${PA_RANGE%%#*}"
 PA_RANGE="${PA_RANGE//[\"\'[:space:]]/}"
 if [[ -z "$PA_RANGE" ]]; then
@@ -108,18 +107,18 @@ elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
 
-readarray -d , -t SQUAWKS < <(sed -n 's/^[[:space:]]*SQUAWKS=["]\?\([0-9x,]\+\).*/\1/;t process;b;:process;s/x/./g;:pad;s/\(^\|,\)\([^,]\{1,3\}\)\(,\|$\)/\10\2\3/g;t pad;s/\(^\|,\)[^,]*\([^,]\{4\}\)\(,\|$\)/\1\2\3/g;p' /usr/share/planefence/plane-alert.conf)
+readarray -d , -t SQUAWKS < <(GET_PARAM pa SQUAWKS)
 SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
 if (( ${#SQUAWKS[@]} > 0 )); then 
   printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
   SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
   log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
 fi
-SQUAWKTIME="$(sed -n 's/^[[:space:]]*SQUAWKTIME=["]\?\([0-9x,]\+\).*/\1/p' /usr/share/planefence/plane-alert.conf)"
+SQUAWKTIME="$(GET_PARAM pa SQUAWKTIME)"
 SQUAWKTIME="${SQUAWKTIME:-10}"
 
-PF_MOTD="$(awk '/^\s*PF_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/planefence.conf)"
-PA_MOTD="$(awk '/^\s*PA_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/plane-alert.conf)"
+PF_MOTD="$(GET_PARAM pf PF_MOTD)"
+PA_MOTD="$(GET_PARAM pa PA_MOTD)"
 
 # ==========================
 # Functions
@@ -317,7 +316,7 @@ GET_PA_INFO () {
     return
   fi
   local header_line
-  header_line="$(sed -En '/^\s*ALERTHEADER=/ { s/^\s*ALERTHEADER='\''?([^'\'']*)'\''?/\1/; p; q }' /usr/share/planefence/plane-alert.conf)"
+  header_line="$(GET_PARAM pa ALERTHEADER)"
   header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
   header_line="${header_line//[#$]/}"
   if [[ -z "$header_line" ]]; then
@@ -1321,7 +1320,7 @@ for line in "${socketrecords[@]}"; do
       records["$idx":time:time_at_mindist]="$seentime"
     fi
     if [[ -z ${ready_to_notify_initial[$idx]+set} ]]; then
-      ready_to_notify_initial[$idx]="${records["$idx":ready_to_notify]}"
+      ready_to_notify_initial[idx]="${records["$idx":ready_to_notify]}"
     fi
     initial_ready="${ready_to_notify_initial[$idx]}"
     current_ready="${records["$idx":ready_to_notify]}"
@@ -1518,6 +1517,22 @@ for idx in "${!processed_indices[@]}"; do
     callsign="$(GET_CALLSIGN "$icao")"
     records["$idx":callsign]="${callsign//[[:space:]]/}"
     records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+  fi
+
+  # If TWEET_MINTIME is set, then ensure we're not notifying until at least after this time has passed,
+  # of the record is complete.
+  if [[ -n "$TWEET_MINTIME" ]]; then
+    if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then 
+      if (( ${records["$idx":time:lastseen]} + TWEET_MINTIME <= seentime )); then
+        records["$idx":ready_to_notify]="false"
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
+      fi
+    else
+      if (( ${records["$idx":time:firstseen]} + TWEET_MINTIME <= seentime )); then
+        records["$idx":ready_to_notify]="false"
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+      fi
+    fi
   fi
 
   # ------------------------------------------------------------------------------------
