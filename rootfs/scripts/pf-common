@@ -293,7 +293,7 @@ CHK_SCREENSHOT_ENABLED() {
   local screenshothost
   local screenshoturl="$PF_SCREENSHOTURL"
   if [[ -z "$screenshoturl" ]]; then
-    screenshoturl="$(sed -n 's/\(^\s*PF_SCREENSHOTURL=\)\(.*\)/\2/p' /usr/share/planefence/persist/planefence.config)"
+    screenshoturl="$(GET_PARAM base PF_SCREENSHOTURL)"
   fi
   screenshoturl="${screenshoturl:-http://screenshot}"
 
