@@ -71,7 +71,8 @@ ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/i
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -Rf /usr/share/planefence/stage/html/* /usr/share/planefence/html/	# always update to latest version
+cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
+	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
@@ -155,7 +156,7 @@ else
 fi
 
 configure_planefence "TWEET_MINTIME" "${PF_NOTIF_MINTIME:-$PF_TWEET_MINTIME}"
-configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-$PF_TWEET_BEHAVIOR}"
+configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-${PF_TWEET_BEHAVIOR:-post}}"
 configure_planefence "PA_LINK" "$PF_PA_LINK"
 configure_planealert "PF_LINK" "$PA_PF_LINK"
 if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then
