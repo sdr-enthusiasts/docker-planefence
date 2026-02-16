@@ -487,6 +487,66 @@ GET_PARAM() {
     return 1
   fi
 
+  # Strip inline comments like bash assignments:
+  # - "#" starts a comment when not quoted
+  # - "\#" is literal # when not quoted
+  # - "#" inside single/double quotes is literal
+  if [[ -n "$raw" ]]; then
+    local stripped=""
+    local in_single=0
+    local in_double=0
+    local i=0
+    local c next
+    while (( i < ${#raw} )); do
+      c=${raw:i:1}
+      if (( in_single )); then
+        [[ $c == "'" ]] && in_single=0
+        stripped+="$c"
+        ((i++))
+        continue
+      fi
+      if (( in_double )); then
+        [[ $c == '"' ]] && in_double=0
+        stripped+="$c"
+        ((i++))
+        continue
+      fi
+      case "$c" in
+        "'")
+          in_single=1
+          stripped+="$c"
+          ((i++))
+          ;;
+        '"')
+          in_double=1
+          stripped+="$c"
+          ((i++))
+          ;;
+        "\\")
+          next=${raw:i+1:1}
+          if [[ $next == "#" ]]; then
+            stripped+="#"
+            ((i+=2))
+          else
+            stripped+="$c"
+            ((i++))
+          fi
+          ;;
+        "#")
+          break
+          ;;
+        *)
+          stripped+="$c"
+          ((i++))
+          ;;
+      esac
+    done
+    raw="$stripped"
+    # trim whitespace after stripping comments
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+  fi
+
   cleaned="$raw"
   if [[ ${#cleaned} -ge 2 ]]; then
     local first=${cleaned:0:1}
