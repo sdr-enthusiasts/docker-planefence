@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=false
+DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
@@ -1027,12 +1027,7 @@ log_print DEBUG "Getting RECORDSFILE"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 
-log_print DEBUG "Got RECORDSFILE. Getting ignorelist"
-if [[ -f "$IGNORELIST" ]]; then
-    sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
-else
-    touch "$IGNORELIST"
-fi
+
 
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then

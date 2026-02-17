@@ -191,9 +191,10 @@ fi
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 if chk_enabled "$PF_IGNOREDUPES"; then configure_planefence "IGNOREDUPES" "ON"; else configure_planefence "IGNOREDUPES" "OFF"; fi
 configure_planefence "COLLAPSEWITHIN" "${PF_COLLAPSEWITHIN:-300}"
-a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf | sed 's/\"//g')"
-[[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
-unset a
+
+IGNORELIST="$(GET_PARAM pf IGNORELIST)"
+touch -a "$IGNORELIST"
+sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
 #
 # -----------------------------------------------------------------------------------
 #
