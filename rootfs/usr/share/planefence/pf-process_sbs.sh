@@ -107,9 +107,9 @@ elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
 
-readarray -d , -t SQUAWKS < <(GET_PARAM pa SQUAWKS)
-SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
+readarray -d , -t SQUAWKS < <("$(GET_PARAM pa SQUAWKS)")
 if (( ${#SQUAWKS[@]} > 0 )); then 
+  SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
   printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
   SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
   log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
