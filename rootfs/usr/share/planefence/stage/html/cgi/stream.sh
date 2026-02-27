@@ -16,9 +16,10 @@
 # -----------------------------------------------------------------------------------
 set -eo pipefail
 
+source /scripts/pf-common
+
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
-PLANE_ALERT_CONF="/usr/share/planefence/plane-alert.conf"
 
 # UTC dates to avoid TZ drift
 utc_today="$(date -u +%y%m%d)"
@@ -27,13 +28,10 @@ utc_yday="$(date -u -d 'yesterday' +%y%m%d 2>/dev/null || date -u -v-1d +%y%m%d)
 
 plane_alert_hist_days() {
   local val
-  val="$(sed -n 's/^\s*HISTTIME\s*=\s*\(.*\)$/\1/p' "$PLANE_ALERT_CONF" | head -n1)"
-  val="${val%%#*}"
-  val="${val//\"/}"
-  val="${val//\'/}"
+  val="$(GET_PARAM plane-alert HISTTIME)"
   val="${val//[[:space:]]/}"
   [[ "$val" =~ ^[0-9]+$ ]] || val=14
-  printf '%s' "$val"
+  printf '%s' "${val}"
 }
 
 choose_json_for_date() {

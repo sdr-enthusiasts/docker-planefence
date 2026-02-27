@@ -69,8 +69,7 @@ else
   screenshots=0
 fi
 
-VERSION="$(awk -F'=' '/^\s*VERSION/ {gsub(/^["'"'"']|["'"'"']$/, "", $2); print $2}' /usr/share/planefence/planefence.conf)"
-
+VERSION="$(GET_PARAM pf VERSION)"
 log_print DEBUG "Reading records for Discord notification"
 
 READ_RECORDS

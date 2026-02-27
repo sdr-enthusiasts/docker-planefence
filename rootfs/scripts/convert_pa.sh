@@ -42,7 +42,7 @@ GET_PA_INFO () {
     return
   fi
   local header_line
-  header_line="$(sed -En '/^\s*ALERTHEADER=/ { s/^\s*ALERTHEADER='\''?([^'\'']*)'\''?/\1/; p; q }' /usr/share/planefence/plane-alert.conf)"
+  header_line="$(GET_PARAM pa ALERTHEADER)"
   header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
   header_line="${header_line//[#$]/}"
   if [[ -z "$header_line" ]]; then
@@ -99,7 +99,7 @@ GET_TYPE () {
   local apiUrl="https://api.adsb.lol/v2/hex"
   local header_line
 
-  header_line="$ALERTHEADER"
+  header_line="$(GET_PARAM pa ALERTHEADER)"
   header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
   header_line="${header_line//[#$]/}"
   if [[ -n "$header_line" ]]; then

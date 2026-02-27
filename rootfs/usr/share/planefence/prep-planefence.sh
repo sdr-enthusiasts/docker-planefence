@@ -71,7 +71,8 @@ ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/i
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
-cp -Rf /usr/share/planefence/stage/html/* /usr/share/planefence/html/	# always update to latest version
+cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
+	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
@@ -155,7 +156,7 @@ else
 fi
 
 configure_planefence "TWEET_MINTIME" "${PF_NOTIF_MINTIME:-$PF_TWEET_MINTIME}"
-configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-$PF_TWEET_BEHAVIOR}"
+configure_planefence "TWEET_BEHAVIOR" "${PF_NOTIF_BEHAVIOR:-${PF_TWEET_BEHAVIOR:-post}}"
 configure_planefence "PA_LINK" "$PF_PA_LINK"
 configure_planealert "PF_LINK" "$PA_PF_LINK"
 if chk_enabled "${PF_NOTIFEVERY:-$PF_TWEETEVERY}"; then
@@ -190,9 +191,10 @@ fi
 # Deal with duplicates. Put IGNOREDUPES in its place and create (or delete) the link to the ignorelist:
 if chk_enabled "$PF_IGNOREDUPES"; then configure_planefence "IGNOREDUPES" "ON"; else configure_planefence "IGNOREDUPES" "OFF"; fi
 configure_planefence "COLLAPSEWITHIN" "${PF_COLLAPSEWITHIN:-300}"
-a="$(sed -n 's/^\s*IGNORELIST=\(.*\)/\1/p' /usr/share/planefence/planefence.conf | sed 's/\"//g')"
-[[ -n "$a" ]] && ln -sf "$a" /usr/share/planefence/html/ignorelist.txt || rm -f /usr/share/planefence/html/ignorelist.txt
-unset a
+
+IGNORELIST="$(GET_PARAM pf IGNORELIST)"
+touch -a "$IGNORELIST"
+sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
 #
 # -----------------------------------------------------------------------------------
 #
@@ -255,8 +257,8 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	# strip http:// https://
 	if [[ "${MASTODON_SERVER:0:7}" == "http://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:7}"; fi
 	if [[ "${MASTODON_SERVER:0:8}" == "https://" ]]; then MASTODON_SERVER="${MASTODON_SERVER:8}"; fi
-	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
-	if ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
+	mast_result="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")" || mast_result=""
+	if [[ -n "$mast_result" ]] && ! grep -iq "The access token is invalid\|<body class='error'>" <<<"$mast_result" >/dev/null 2>&1; then
 		MASTODON_NAME="$(jq -r '.acct' <<<"$mast_result")"
 		configure_both "MASTODON_NAME" "$MASTODON_NAME"
 	fi
@@ -280,7 +282,6 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 	fi
 
 	# Inject Mastodon rel=me verification link into index.html without relying on JS
-	
 	if [[ -f "$mastodon_index_file" ]]; then
 		# add tags if they don't exist in the file
 		if ! grep -q "<!-- MASTODON_LINK START -->" "$mastodon_index_file"; then

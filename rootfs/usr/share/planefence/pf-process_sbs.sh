@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=false
+DEBUG=true
 
 ## initialization:
 source /scripts/pf-common
@@ -82,7 +82,7 @@ declare -A last_idx_for_icao pa_last_idx_for_icao   # icao -> most recent idx wi
 declare -A lastseen_for_icao  # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
 declare -A pa_squawkmatch     # icao -> "true" if the icao matches the squawk filter (and has been seen with that squawk for at least SQUAWKTIME seconds), empty or "false" otherwise. This is used to mark records that match the squawk filter in the planefence and plane-alert records, and is updated in real time as new squawks are seen.
-declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices 
+declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices ready_to_notify_initial
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
   TRACKURL="globe.adsbexchange.com"
@@ -93,11 +93,10 @@ elif [[ -n "$TRACKSERVICE" ]]; then
 else
   TRACKURL="globe.adsbexchange.com"
 fi
-
-PA_FILE="$(sed -n 's/\(^\s*PLANEFILE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_FILE="$(GET_PARAM pa PLANEFILE)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
 
-PA_RANGE="$(sed -n 's/\(^\s*RANGE=\)\(.*\)/\2/p' /usr/share/planefence/plane-alert.conf)"
+PA_RANGE="$(GET_PARAM pa RANGE)"
 PA_RANGE="${PA_RANGE%%#*}"
 PA_RANGE="${PA_RANGE//[\"\'[:space:]]/}"
 if [[ -z "$PA_RANGE" ]]; then
@@ -108,18 +107,18 @@ elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
 
-readarray -d , -t SQUAWKS < <(sed -n 's/^[[:space:]]*SQUAWKS=["]\?\([0-9x,]\+\).*/\1/;t process;b;:process;s/x/./g;:pad;s/\(^\|,\)\([^,]\{1,3\}\)\(,\|$\)/\10\2\3/g;t pad;s/\(^\|,\)[^,]*\([^,]\{4\}\)\(,\|$\)/\1\2\3/g;p' /usr/share/planefence/plane-alert.conf)
-SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
+readarray -d , -t SQUAWKS < <("$(GET_PARAM pa SQUAWKS)")
 if (( ${#SQUAWKS[@]} > 0 )); then 
+  SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
   printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
   SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
   log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
 fi
-SQUAWKTIME="$(sed -n 's/^[[:space:]]*SQUAWKTIME=["]\?\([0-9x,]\+\).*/\1/p' /usr/share/planefence/plane-alert.conf)"
+SQUAWKTIME="$(GET_PARAM pa SQUAWKTIME)"
 SQUAWKTIME="${SQUAWKTIME:-10}"
 
-PF_MOTD="$(awk '/^\s*PF_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/planefence.conf)"
-PA_MOTD="$(awk '/^\s*PA_MOTD/ { sub(/^[^=]*=/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit }' /usr/share/planefence/plane-alert.conf)"
+PF_MOTD="$(GET_PARAM pf PF_MOTD)"
+PA_MOTD="$(GET_PARAM pa PA_MOTD)"
 
 # ==========================
 # Functions
@@ -317,7 +316,7 @@ GET_PA_INFO () {
     return
   fi
   local header_line
-  header_line="$(sed -En '/^\s*ALERTHEADER=/ { s/^\s*ALERTHEADER='\''?([^'\'']*)'\''?/\1/; p; q }' /usr/share/planefence/plane-alert.conf)"
+  header_line="$(GET_PARAM pa ALERTHEADER)"
   header_line="${header_line:-$(head -n1 "$PA_FILE" 2>/dev/null)}"
   header_line="${header_line//[#$]/}"
   if [[ -z "$header_line" ]]; then
@@ -1028,12 +1027,7 @@ log_print DEBUG "Getting RECORDSFILE"
 LOCK_RECORDS
 READ_RECORDS ignore-lock
 
-log_print DEBUG "Got RECORDSFILE. Getting ignorelist"
-if [[ -f "$IGNORELIST" ]]; then
-    sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
-else
-    touch "$IGNORELIST"
-fi
+
 
 log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
@@ -1308,7 +1302,6 @@ for line in "${socketrecords[@]}"; do
       s2=$(( 10#$d2i*100 + 10#$d2f ))
       if (( s1 < s2 )); then
         do_update=true
-        at_mindist=true
       fi
     fi
     if $do_update; then
@@ -1321,9 +1314,31 @@ for line in "${socketrecords[@]}"; do
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
       records["$idx":time:time_at_mindist]="$seentime"
     fi
+    if [[ -z ${ready_to_notify_initial[$idx]+set} ]]; then
+      ready_to_notify_initial[idx]="${records["$idx":ready_to_notify]}"
+    fi
+    initial_ready="${ready_to_notify_initial[$idx]}"
+    current_ready="${records["$idx":ready_to_notify]}"
+    ready_updated=false
+    if [[ "$current_ready" != "$initial_ready" ]]; then
+      ready_updated=true
+    fi
 
-    if ! $at_mindist; then
-      records["$idx":ready_to_notify]=true      
+    if $do_update; then
+      if [[ "$initial_ready" == "true" && $ready_updated == false ]]; then
+        :
+      elif $ready_updated; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) updated since READ_RECORD; setting FALSE (closest dist detected)"
+        records["$idx":ready_to_notify]="false"
+      fi
+    elif $ready_updated; then
+      if [[ "$current_ready" == "false" ]]; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) was ${current_ready^^} and is now SEMI"
+        records["$idx":ready_to_notify]="semi"
+      elif [[ "$current_ready" == "semi" ]]; then
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) was ${current_ready^^} and is now TRUE"
+        records["$idx":ready_to_notify]="true"
+      fi
     fi
 
     if [[ -n $squawk && -z ${records["$idx":squawk:value]} ]]; then
@@ -1445,6 +1460,8 @@ done
 for ((idx=0; idx<=records[maxindex]; idx++)); do
   if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
+    records["$idx":ready_to_notify]=true
+    log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
   fi
 done
 
@@ -1497,6 +1514,22 @@ for idx in "${!processed_indices[@]}"; do
     records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
+  # If TWEET_MINTIME is set, then ensure we're not notifying until at least after this time has passed,
+  # of the record is complete.
+  if [[ -n "$TWEET_MINTIME" ]]; then
+    if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then 
+      if (( ${records["$idx":time:lastseen]} + TWEET_MINTIME <= seentime )); then
+        records["$idx":ready_to_notify]="false"
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
+      fi
+    else
+      if (( ${records["$idx":time:firstseen]} + TWEET_MINTIME <= seentime )); then
+        records["$idx":ready_to_notify]="false"
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+      fi
+    fi
+  fi
+
   # ------------------------------------------------------------------------------------
   # The remainder of this loop only makes sense for complete records. It also only needs to be done once.
   # So skip if not complete.
@@ -1507,6 +1540,8 @@ for idx in "${!processed_indices[@]}"; do
   fi
 
   records["$idx":complete]=true
+  records["$idx":ready_to_notify]=true
+  log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to record marked complete"
 
   # Add noisecapt stuff
   if [[ -n "$REMOTENOISE" ]] && \
