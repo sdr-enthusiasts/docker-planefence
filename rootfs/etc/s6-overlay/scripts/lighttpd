@@ -40,7 +40,7 @@ sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 # -----------------------------------------------------------------------------------
 # Link the required config files
 ln -sf /etc/lighttpd/conf-available/88-planefence-cgi.conf /etc/lighttpd/conf-enabled
-if ! chk_disabled "$(GET_PARAM base PA_SHOW_STALE_PAGE)"; then
+if ! chk_enabled "$(GET_PARAM base PA_SHOW_STALE_PAGE)"; then
     ln -sf /etc/lighttpd/conf-available/88-plane-alert-new.conf /etc/lighttpd/conf-enabled/88-plane-alert.conf
 else
     ln -sf /etc/lighttpd/conf-available/88-plane-alert-old.conf /etc/lighttpd/conf-enabled/88-plane-alert.conf

@@ -22,7 +22,7 @@ if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 fi
 
 # Post message to any old plane-alert page to inform user that Planefence has been updated
-if ! chk_disabled "$PA_SHOW_STALE_PAGE"; then
+if ! chk_enabled "$PA_SHOW_STALE_PAGE"; then
     if [[ -f /usr/share/planefence/html/plane-alert/index.html ]]; then
         # Move the index to index-old.html in case someone wants to refer to it.
         mv -f /usr/share/planefence/html/plane-alert/index.html /usr/share/planefence/html/plane-alert/index-old.html
