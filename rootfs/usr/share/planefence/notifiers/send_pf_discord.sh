@@ -19,7 +19,6 @@
 shopt -s extglob
 
 source /scripts/pf-common
-source /usr/share/planefence/persist/planefence.config
 source /usr/share/planefence/planefence.conf
 
 # shellcheck disable=SC2034
@@ -29,14 +28,14 @@ declare -a INDEX STALE link delivery_errors link
 
 # Load a bunch of stuff and determine if we should notify
 
-if ! chk_enabled "$PF_DISCORD"; then
+if ! chk_enabled "$DISCORD_ENABLED"; then
   log_print DEBUG "Discord notifications not enabled."
   exit 0
 fi
 
 log_print DEBUG "Hello. Starting Discord notification run"
 
-if [[ -z "$PF_DISCORD_WEBHOOKS" ]]; then
+if [[ -z "$DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."
   exit 1
 fi
@@ -96,7 +95,7 @@ fi
 
 template_clean="$(</usr/share/planefence/notifiers/discord.pf.template)"
 
-color="$(convert_color "${PF_DISCORD_COLOR:-yellow}")"
+color="$(convert_color "${DISCORD_COLOR:-yellow}")"
 
 for idx in "${INDEX[@]}"; do
   log_print DEBUG "Preparing Discord notification for ${records["$idx":tail]}"
@@ -225,7 +224,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   # Now send the notification to Discord
-  readarray -td, webhooks <<<"${PF_DISCORD_WEBHOOKS}"
+  readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
 
   #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do
