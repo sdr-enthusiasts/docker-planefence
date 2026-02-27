@@ -191,6 +191,8 @@ PA_EXCLUSIONS=
 # PA_SHOW_STALE_PAGE: If set to true/on/enabled/1, http://xxx/plane-alert will show the old, stale plane-alert page.
 # If disabled or empty, http://xxx/plane-alert will redirect automatically to the new plane-alert page.
 # Default is empty (off), which means that the link will automatically redirect to the new page.
+# Note - changes to this parameter only take effect upon container restart. If you still see the previous behavior
+#        after restarting the container, make sure to clear your browser cache as sometimes it remembers previous redirects.
 PA_SHOW_STALE_PAGE=
 
 ###############################################################################
