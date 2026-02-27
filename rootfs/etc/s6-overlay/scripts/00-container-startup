@@ -24,8 +24,13 @@ fi
 # Post message to any old plane-alert page to inform user that Planefence has been updated
 if [[ -f /usr/share/planefence/html/plane-alert/index.html ]] && \
    ! grep -q "\!-- pa_updated --" /usr/share/planefence/html/plane-alert/index.html; then
-    sed -i "s|</h1>|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"${PA_PF_LINK:-..}?mode=pa\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
+    sed -i "s|</h1>|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"index.html\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
     sed -i "s|<hr>Note - soon.*<hr>||g" /usr/share/planefence/html/plane-alert/index.html
+fi
+
+if [[ -f /usr/share/planefence/html/plane-alert/index.html ]]; then
+    # Move the index to index-old.html in case someone wants to refer to it.
+    mv -f /usr/share/planefence/html/plane-alert/index.html /usr/share/planefence/html/plane-alert/index-old.html
 fi
 
 "${s6wrap[@]}" echo "Initial Planefence check done..."

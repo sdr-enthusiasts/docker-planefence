@@ -137,6 +137,8 @@ GET_AIRLINE_DB ()
     [[ "${LOGLEVEL,,}" != "error" ]] && "${s6wrap[@]}" echo "Airlinecodes database update complete" || true
 }
 
+# Do this once:
+
 #Now loop forevah:
 while true
 do
