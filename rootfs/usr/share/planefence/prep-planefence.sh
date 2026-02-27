@@ -244,6 +244,7 @@ configure_planealert "PA_DISCORD_COLOR" "$PA_DISCORD_COLOR"
 configure_planefence "PF_DISCORD_COLOR" "$PF_DISCORD_COLOR"
 configure_both "DISCORD_FEEDER_NAME" "${DISCORD_FEEDER_NAME}"
 configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
+configure_both "DISCORD_AVATAR_URL" "${DISCORD_AVATAR_URL}"
 #configure_both "NOTIFICATION_SERVER" "$NOTIFICATION_SERVER"
 configure_both "GENERATE_CSV" "${GENERATE_CSV:-OFF}"
 
