@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=true
+DEBUG=false
 
 ## initialization:
 source /scripts/pf-common
@@ -107,12 +107,15 @@ elif ! [[ $PA_RANGE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 log_print DEBUG "PA_RANGE=$PA_RANGE"
 
-readarray -d , -t SQUAWKS < <("$(GET_PARAM pa SQUAWKS)")
-if (( ${#SQUAWKS[@]} > 0 )); then 
-  SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
-  printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
-  SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
-  log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
+sq_string="$(GET_PARAM pa SQUAWKS)"
+if [[ -n "$sq_string" ]]; then
+  readarray -d , -t SQUAWKS <<< "$sq_string"
+  if (( ${#SQUAWKS[@]} > 0 )); then 
+    SQUAWKS[-1]="${SQUAWKS[-1]%$'\n'}"
+    printf -v SQUAWKS_REGEX "%s|" "${SQUAWKS[@]}"
+    SQUAWKS_REGEX="${SQUAWKS_REGEX%|}"
+    log_print DEBUG "SQUAWKS to monitor: ${SQUAWKS[*]}"
+  fi
 fi
 SQUAWKTIME="$(GET_PARAM pa SQUAWKTIME)"
 SQUAWKTIME="${SQUAWKTIME:-10}"
