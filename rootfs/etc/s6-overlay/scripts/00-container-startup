@@ -22,15 +22,28 @@ if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 fi
 
 # Post message to any old plane-alert page to inform user that Planefence has been updated
-if [[ -f /usr/share/planefence/html/plane-alert/index.html ]] && \
-   ! grep -q "\!-- pa_updated --" /usr/share/planefence/html/plane-alert/index.html; then
-    sed -i "s|</h1>|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"index.html\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
-    sed -i "s|<hr>Note - soon.*<hr>||g" /usr/share/planefence/html/plane-alert/index.html
-fi
-
-if [[ -f /usr/share/planefence/html/plane-alert/index.html ]]; then
-    # Move the index to index-old.html in case someone wants to refer to it.
-    mv -f /usr/share/planefence/html/plane-alert/index.html /usr/share/planefence/html/plane-alert/index-old.html
+if ! chk_disabled "$PA_SHOW_STALE_PAGE"; then
+    if [[ -f /usr/share/planefence/html/plane-alert/index.html ]]; then
+        # Move the index to index-old.html in case someone wants to refer to it.
+        mv -f /usr/share/planefence/html/plane-alert/index.html /usr/share/planefence/html/plane-alert/index-old.html
+        if ! grep -q "\!-- pa_updated --" /usr/share/planefence/html/plane-alert/index-old.html; then
+            sed -i "s|</h1>|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"index.html\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index-old.html
+            sed -i "s|<hr>Note - soon.*<hr>||g" /usr/share/planefence/html/plane-alert/index-old.html
+        else
+            sed -i "s|</h1>.*<\!-- pa_updated -->|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"index.html\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index-old.html
+        fi
+    fi
+else
+    # Restore the old page if it exists
+    if [[ -f /usr/share/planefence/html/plane-alert/index-old.html ]]; then
+        mv -f /usr/share/planefence/html/plane-alert/index-old.html /usr/share/planefence/html/plane-alert/index.html
+        if ! grep -q "\!-- pa_updated --" /usr/share/planefence/html/plane-alert/index.html; then
+            sed -i "s|</h1>|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"${PF_PA_LINK:-../index.html?mode=pa}\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
+            sed -i "s|<hr>Note - soon.*<hr>||g" /usr/share/planefence/html/plane-alert/index.html
+        else
+            sed -i "s|</h1>.*<\!-- pa_updated -->|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"${PF_PA_LINK:-../index.html?mode=pa}\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
+        fi        
+    fi
 fi
 
 "${s6wrap[@]}" echo "Initial Planefence check done..."

@@ -38,6 +38,15 @@ sed -i 's/^server\.username/# server\.username/g' /etc/lighttpd/lighttpd.conf
 sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 #
 # -----------------------------------------------------------------------------------
+# Link the required config files
+ln -sf /etc/lighttpd/conf-available/88-planefence-cgi.conf /etc/lighttpd/conf-enabled
+if ! chk_disabled "$(GET_PARAM base PA_SHOW_STALE_PAGE)"; then
+    ln -sf /etc/lighttpd/conf-available/88-plane-alert-new.conf /etc/lighttpd/conf-enabled/88-plane-alert.conf
+else
+    ln -sf /etc/lighttpd/conf-available/88-plane-alert-old.conf /etc/lighttpd/conf-enabled/88-plane-alert.conf
+fi
+#
+# -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
 log_print INFO "Starting FastCGI"
 lighttpd-enable-mod fastcgi fastcgi-php mod_alias mod_cgi extforward >/dev/null 2>&1 || true

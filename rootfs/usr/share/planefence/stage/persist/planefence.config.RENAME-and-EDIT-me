@@ -45,8 +45,8 @@ PF_MAXALT=5000
 GENERATE_CSV=OFF
 # ---------------------------------------------------------------------
 # PF_INTERVAL: poll interval in seconds for new planes.
-# Recommended minimum is 60 seconds to avoid excessive load.
-PF_INTERVAL=80
+# Recommended minimum is 30 seconds to avoid excessive load.
+PF_INTERVAL=45
 # ---------------------------------------------------------------------
 # PF_DISTUNIT: unit for distances/radius.
 # Allowed: kilometer, nauticalmile, mile, meter.
@@ -58,6 +58,8 @@ PF_ALTUNIT=feet
 # ---------------------------------------------------------------------
 # PF_SPEEDUNIT: unit for aircraft speed.
 # Allowed: kilometerph, knotph, mileph.
+# (yes we know -- knot is already a unit of speed, but an external package included
+#  in the software requires it this way)
 PF_SPEEDUNIT=knotph
 # ---------------------------------------------------------------------
 # PF_FUDGELOC: round displayed station coordinates to protect privacy.
@@ -71,7 +73,8 @@ PF_CHECKROUTE=true
 # 
 # ---------------------------------------------------------------------
 # PF_TRACKSERVICE: map service used to render tracking links for Planefence.
-# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live.
+# This must be a tar1090-style service as we create a deep link to a specific aircraft/location/time combo
+# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live, adsb.lol.
 PF_TRACKSERVICE=globe.adsbexchange.com
 # ---------------------------------------------------------------------
 # PF_ELEVATION: station elevation above mean sea level (MSL),
@@ -83,8 +86,6 @@ PF_ELEVATION=0
 # Used as fallback to identify aircraft owner when other sources fail.
 # Set to "disabled" to prevent downloads (use previously stored copy if present).
 OPENSKYDB_DOWNLOAD=
-# ---------------------------------------------------------------------
-
 
 ###############################################################################
 # Web Page Related Parameters
@@ -186,6 +187,11 @@ PA_TRACKSERVICE=globe.adsbexchange.com
 # Accepted: ICAO type codes, ADS-B hex, or any text in the plane’s record. Case-insensitive.
 # URLs/image links are not searched. Empty disables filtering.
 PA_EXCLUSIONS=
+# ---------------------------------------------------------------------
+# PA_SHOW_STALE_PAGE: If set to true/on/enabled/1, http://xxx/plane-alert will show the old, stale plane-alert page.
+# If disabled or empty, http://xxx/plane-alert will redirect automatically to the new plane-alert page.
+# Default is empty (off), which means that the link will automatically redirect to the new page.
+PA_SHOW_STALE_PAGE=
 
 ###############################################################################
 # Notification Related Parameters
