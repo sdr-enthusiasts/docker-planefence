@@ -1,8 +1,6 @@
 # Plane-Alert candidate filters
 #
 # Format:
-#   ICAO:<glob-pattern>
-#   CALLSIGN:<glob-pattern>
 #   ICAO:<glob-pattern>:<owner fallback>
 #   CALLSIGN:<glob-pattern>:<owner fallback>
 #
