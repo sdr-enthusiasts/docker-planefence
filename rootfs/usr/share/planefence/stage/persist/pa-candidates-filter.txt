@@ -134,19 +134,9 @@ ICAO:33FFD*:Italian Air Force
 ICAO:3532*:Spanish Air Force
 ICAO:3536*:Spanish Air Force
 ICAO:3553*:Spanish Air Force
-ICAO:400EA*:UK Ministry of Defence
-ICAO:400EB*:UK Ministry of Defence
-ICAO:400ED*:UK Ministry of Defence
-ICAO:400EE*:UK Ministry of Defence
-ICAO:400EF*:UK Ministry of Defence
 ICAO:407EF7*:QinetiQ
 ICAO:407F58*:HM Coast Guard
-ICAO:40800*:HM Coast Guard
-ICAO:4080C*:HM Coast Guard
 ICAO:497C*:Portuguese Air Force
-ICAO:4CA42*:Irish Air Corps
-ICAO:4CAED*:Irish Coastguard
-ICAO:4CAEF*:Irish Coastguard
 ICAO:5002CB*:Democratic Republic of Congo Air Force
 ICAO:505FA*:Slovak Air Force
 ICAO:601142*:Government of Kyrgyzstan
