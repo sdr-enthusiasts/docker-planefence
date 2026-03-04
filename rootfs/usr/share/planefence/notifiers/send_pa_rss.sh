@@ -24,7 +24,7 @@ source /scripts/pf-common
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
 set -eo pipefail
-#DEBUG=true
+#DEBUG="${DEBUG:-true}"
 
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')

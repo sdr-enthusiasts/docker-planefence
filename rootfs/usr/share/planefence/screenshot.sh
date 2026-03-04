@@ -30,7 +30,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-#DEBUG=true
+#DEBUG="${DEBUG:-true}"
 
 ## initialization:
 source /scripts/pf-common
@@ -40,7 +40,7 @@ declare -A screenshot_file_map=()
 declare -A screenshot_checked_map=()
 any_candidates=0
 
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 # ==========================
 # Constants
 # ==========================

@@ -22,7 +22,7 @@ source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 # shellcheck disable=SC2034
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 
 declare -a INDEX STALE link delivery_errors link
 

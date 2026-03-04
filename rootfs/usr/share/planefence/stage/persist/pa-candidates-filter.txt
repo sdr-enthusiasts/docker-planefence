@@ -39,7 +39,7 @@ ICAO:457*:Bulgarian Air Force
 ICAO:45F4*:Royal Danish Air Force
 
 # Netherlands military (Royal Netherlands Air Force / Dutch military aircraft)
-ICAO:480*:Multinational MRTT Fleet
+ICAO:480*:Royal Netherlands Air Force
 
 # Norway military (Royal Norwegian Air Force)
 ICAO:4781*:Royal Norwegian Air Force
@@ -108,10 +108,9 @@ CALLSIGN:USCG*:United States Coast Guard
 CALLSIGN:CG*:United States Coast Guard
 
 # Unidentified military-style callsign
-CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*:Military / Government Flight
+CALLSIGN:[A-Z][A-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
 
 # 4) Additional ICAO ranges extracted from Snoop's manual observations (military/government)
-# Tightened to narrower prefixes to reduce false positives.
 
 # North Africa / Middle East military-government examples
 ICAO:020141*:Royal Moroccan Air Force

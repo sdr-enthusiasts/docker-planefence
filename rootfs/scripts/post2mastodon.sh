@@ -10,7 +10,7 @@
 # -----------------------------------------------------------------------------------
 
 source /scripts/pf-common
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
                     # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text

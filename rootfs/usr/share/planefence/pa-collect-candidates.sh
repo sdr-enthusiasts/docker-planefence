@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=true
+DEBUG="${DEBUG:-false}"
 
 ## initialization:
 if [[ -r /scripts/pf-common ]]; then
@@ -334,9 +334,9 @@ for icao in "${candidate_icaos[@]}"; do
 	new_candidate_icaos+=("$icao")
 	candidate_match_owner["$icao"]="${CANDIDATE_MATCH_OWNER:-}"
 	candidate_match_reason["$icao"]="${CANDIDATE_MATCH_REASON:-}"
-	log_print DEBUG "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
+	log_print INFO "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
 done
-log_print DEBUG "Filter summary: total=${#candidate_icaos[@]}, new=${#new_candidate_icaos[@]}, skipped_filter=$skipped_filter, skipped_known=$skipped_known, skipped_existing=$skipped_existing"
+log_print INFO "Filter summary: total=${#candidate_icaos[@]}, new=${#new_candidate_icaos[@]}, skipped_filter=$skipped_filter, skipped_known=$skipped_known, skipped_existing=$skipped_existing"
 
 declare -A adsb_icao_type adsb_type_long adsb_owner
 if (( ${#new_candidate_icaos[@]} > 0 )); then

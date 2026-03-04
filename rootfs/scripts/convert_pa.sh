@@ -14,7 +14,7 @@
 # It will check if there's already an existing record file. If so, it will not overwrite
 # existing records, but only add new ones.
 
-DEBUG=true
+DEBUG="${DEBUG:-true}"
 
 source /scripts/pf-common
 source /usr/share/planefence/plane-alert.conf

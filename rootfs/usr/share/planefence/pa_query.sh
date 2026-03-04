@@ -26,7 +26,7 @@
 
 # shellcheck disable=SC1091
 source /scripts/pf-common
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 # Parse command line into variables:
 for i in "$@"; do
 	i="${i//\'/}"	# remove any single quotes
