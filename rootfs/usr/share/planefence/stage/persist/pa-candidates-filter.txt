@@ -1,0 +1,161 @@
+# Plane-Alert candidate filters
+#
+# Format:
+#   ICAO:<glob-pattern>
+#   CALLSIGN:<glob-pattern>
+#   ICAO:<glob-pattern>:<owner fallback>
+#   CALLSIGN:<glob-pattern>:<owner fallback>
+#
+# Matching logic is OR:
+#   a record is considered if ICAO matches any ICAO pattern OR callsign matches any CALLSIGN pattern.
+#
+# Notes:
+# - Matching is case-insensitive (internally uppercased)
+# - Patterns use shell-style globs (* and ?)
+#
+
+# United States military (DoD; commonly used overall block)
+ICAO:AE*:United States Military
+
+# United States (non-civil US allocation; includes many US military/public aircraft—broad)
+ICAO:AF*:United States Military
+
+# United States military (DoD sub-block within AD* commonly observed)
+ICAO:ADF[89A-F]*:United States Military
+
+# United Kingdom military (commonly RAF/RN/RM; “43C–43F” widely associated with UK mil use)
+ICAO:43[C-F]*:Royal Air Force
+
+# Belgium military (commonly Belgian Air Component)
+ICAO:44F*:Belgian Air Component
+
+# Austria military (Austrian Armed Forces / air assets)
+ICAO:44[4-7]*:Austrian Air Force
+
+# Bulgaria military (Bulgarian Air Force)
+ICAO:457*:Bulgarian Air Force
+
+# Denmark military (Royal Danish Air Force / Danish military aircraft)
+ICAO:45F4*:Royal Danish Air Force
+
+# Netherlands military (Royal Netherlands Air Force / Dutch military aircraft)
+ICAO:480*:Multinational MRTT Fleet
+
+# Norway military (Royal Norwegian Air Force)
+ICAO:4781*:Royal Norwegian Air Force
+
+# Switzerland military (Swiss Air Force)
+ICAO:4B7*:Swiss Air Force
+
+# Turkey military (Turkish Air Force / Turkish military aircraft)
+ICAO:4B82*:Turkish Air Force
+
+# Hungary military (Hungarian Defence Forces / air assets; small observed block)
+ICAO:473C0*:Hungarian Air Force
+
+# Germany military (Bundeswehr; Luftwaffe/Heer/Marineflieger—observed “3E8–3EB”)
+ICAO:3E[89AB]*:German Air Force
+
+# Germany military (Bundeswehr; observed “3F4–3F7”)
+ICAO:3F[4-7]*:German Air Force
+
+# Germany military (Bundeswehr; observed “3F8–3FB”)
+ICAO:3F[89AB]*:German Air Force
+
+# France military (French Armed Forces / Armée de l’Air et de l’Espace, Aéronavale, etc.)
+ICAO:3B*:French Air Force
+
+# Canada military (Canadian Armed Forces; Canadian allocation frequently includes RCAF/CAF aircraft)
+ICAO:C[23]*:Royal Canadian Air Force
+
+# Military / Government Flight
+CALLSIGN:REACH*:United States Air Force
+CALLSIGN:RCH*:United States Air Force
+CALLSIGN:SAM*:United States Air Force
+CALLSIGN:TEXACO*:United States Air Force
+CALLSIGN:SHELL*:United States Air Force
+CALLSIGN:EXXON*:United States Air Force
+CALLSIGN:GOLD*:United States Air Force
+CALLSIGN:ROMA*:United States Air Force
+CALLSIGN:PYREX*:United States Air Force
+CALLSIGN:QUAD*:United States Air Force
+CALLSIGN:OILER*:United States Air Force
+CALLSIGN:OILGATE*:United States Air Force
+CALLSIGN:OPEC*:United States Air Force
+CALLSIGN:ESSO*:United States Air Force
+CALLSIGN:ETHYL*:United States Air Force
+CALLSIGN:EXTENDER*:United States Air Force
+CALLSIGN:GETFUEL*:United States Air Force
+CALLSIGN:ASTRO*:United States Air Force
+CALLSIGN:ORCA*:United States Air Force
+CALLSIGN:PRIMO*:United States Air Force
+CALLSIGN:QUEST*:United States Air Force
+CALLSIGN:ROVING*:United States Air Force
+CALLSIGN:SHAMU*:United States Air Force
+CALLSIGN:SPUR*:United States Air Force
+CALLSIGN:TOGA*:United States Air Force
+CALLSIGN:UNIVERSAL*:United States Air Force
+CALLSIGN:WHISTLER*:United States Air Force
+CALLSIGN:WRESTLER*:United States Air Force
+CALLSIGN:NAVY*:United States Navy
+CALLSIGN:MARINE*:United States Marine Corps
+CALLSIGN:ARMY*:United States Army
+CALLSIGN:AIRFORCE*:United States Air Force
+CALLSIGN:USAF*:United States Air Force
+CALLSIGN:USN*:United States Navy
+CALLSIGN:USMC*:United States Marine Corps
+CALLSIGN:USCG*:United States Coast Guard
+CALLSIGN:CG*:United States Coast Guard
+
+# Unidentified military-style callsign
+CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*:Military / Government Flight
+
+# 4) Additional ICAO ranges extracted from Snoop's manual observations (military/government)
+# Tightened to narrower prefixes to reduce false positives.
+
+# North Africa / Middle East military-government examples
+ICAO:020141*:Royal Moroccan Air Force
+ICAO:02B261*:Tunisian Air Force
+ICAO:06401C*:Nigerian Air Force
+ICAO:06A1*:Qatar State Flight
+ICAO:06A27*:Qatar Emiri Air Force
+ICAO:06A28*:Qatar Emiri Air Force
+ICAO:06A3CF*:Qatar Amiri Flight
+ICAO:7102*:Royal Saudi Air Force
+ICAO:7660*:Pakistan Air Force
+ICAO:800792*:Indian Air Force
+ICAO:87CD23*:Japan Air Self-Defense Force
+ICAO:8940*:Bahrain Royal Flight
+ICAO:896C2*:United Arab Emirates Air Force
+
+# European military/government examples (not covered above)
+ICAO:33FC*:Italian Air Force
+ICAO:33FFD*:Italian Air Force
+ICAO:3532*:Spanish Air Force
+ICAO:3536*:Spanish Air Force
+ICAO:3553*:Spanish Air Force
+ICAO:400EA*:UK Ministry of Defence
+ICAO:400EB*:UK Ministry of Defence
+ICAO:400ED*:UK Ministry of Defence
+ICAO:400EE*:UK Ministry of Defence
+ICAO:400EF*:UK Ministry of Defence
+ICAO:407EF7*:QinetiQ
+ICAO:407F58*:HM Coast Guard
+ICAO:40800*:HM Coast Guard
+ICAO:4080C*:HM Coast Guard
+ICAO:497C*:Portuguese Air Force
+ICAO:4CA42*:Irish Air Corps
+ICAO:4CAED*:Irish Coastguard
+ICAO:4CAEF*:Irish Coastguard
+ICAO:5002CB*:Democratic Republic of Congo Air Force
+ICAO:505FA*:Slovak Air Force
+ICAO:601142*:Government of Kyrgyzstan
+
+# Americas / APAC military-government examples
+ICAO:E494A*:Brazilian Air Force
+
+# 5) Residual uncovered military/government examples from Snoop
+ICAO:200000*:United States Air Force
+ICAO:4CA448*:Irish Air Corps
+ICAO:7101E2*:Saudi Ministry of Finance
+ICAO:8965FC*:Royal Jet

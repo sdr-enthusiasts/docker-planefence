@@ -194,6 +194,20 @@ PA_EXCLUSIONS=
 # Note - changes to this parameter only take effect upon container restart. If you still see the previous behavior
 #        after restarting the container, make sure to clear your browser cache as sometimes it remembers previous redirects.
 PA_SHOW_STALE_PAGE=
+# ---------------------------------------------------------------------
+# PA_COLLECT_CANDIDATES: enable automatic collection of potential Plane-Alert candidates
+# from socket30003 data.
+#   ON/true/enabled/1/yes  -> enabled
+#   OFF/false/disabled/0/no/empty -> disabled
+#
+# When enabled:
+# - Pattern definitions (ICAO and/or Callsign) are read from pa-candidates-filter.txt in your config directory
+# - Candidate output is written to plane-alert-candidates.txt in your config directory
+#
+# To auto-include generated candidates in your watchlist, append
+# plane-alert-candidates.txt to the end of your comma-separated alert list in the
+# PF_ALERTLIST parameter.
+PA_COLLECT_CANDIDATES=ON
 
 ###############################################################################
 # Notification Related Parameters

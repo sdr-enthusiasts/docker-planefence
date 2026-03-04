@@ -342,11 +342,6 @@ if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/soc
 fi
 #
 #--------------------------------------------------------------------------------
-# Move web page background pictures in place
-[[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
-[[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pa_background.jpg
-
-#--------------------------------------------------------------------------------
 # Put the MOTDs in place:
 configure_planefence "PF_MOTD" "$PF_MOTD"
 configure_planealert "PA_MOTD" "$PA_MOTD"
