@@ -38,6 +38,9 @@ else
 	exit 2
 fi
 
+# Allow extended glob tokens in filter patterns (e.g. ?(-) for optional hyphen)
+shopt -s extglob
+
 TODAY="$(date +%y%m%d)"
 CANDIDATE_FILE="/usr/share/planefence/persist/plane-alert-candidates.txt"
 FILTER_FILE="/usr/share/planefence/persist/pa-candidates-filter.txt"

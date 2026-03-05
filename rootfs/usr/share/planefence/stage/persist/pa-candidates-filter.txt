@@ -12,6 +12,73 @@
 # - Patterns use shell-style globs (* and ?)
 #
 
+# Callsign-based filters
+
+# Military / Government Flight
+CALLSIGN:REACH*:United States Air Force
+CALLSIGN:RCH*:United States Air Force
+CALLSIGN:SAM*:United States Air Force
+CALLSIGN:TEXACO*:United States Air Force
+CALLSIGN:SHELL*:United States Air Force
+CALLSIGN:EXXON*:United States Air Force
+CALLSIGN:GOLD*:United States Air Force
+CALLSIGN:ROMA*:United States Air Force
+CALLSIGN:PYREX*:United States Air Force
+CALLSIGN:QUAD*:United States Air Force
+CALLSIGN:OILER*:United States Air Force
+CALLSIGN:OILGATE*:United States Air Force
+CALLSIGN:OPEC*:United States Air Force
+CALLSIGN:ESSO*:United States Air Force
+CALLSIGN:ETHYL*:United States Air Force
+CALLSIGN:EXTENDER*:United States Air Force
+CALLSIGN:GETFUEL*:United States Air Force
+CALLSIGN:ASTRO*:United States Air Force
+CALLSIGN:ORCA*:United States Air Force
+CALLSIGN:PRIMO*:United States Air Force
+CALLSIGN:QUEST*:United States Air Force
+CALLSIGN:ROVING*:United States Air Force
+CALLSIGN:SHAMU*:United States Air Force
+CALLSIGN:SPUR*:United States Air Force
+CALLSIGN:TOGA*:United States Air Force
+CALLSIGN:UNIVERSAL*:United States Air Force
+CALLSIGN:WHISTLER*:United States Air Force
+CALLSIGN:WRESTLER*:United States Air Force
+CALLSIGN:NAVY*:United States Navy
+CALLSIGN:MARINE*:United States Marine Corps
+CALLSIGN:ARMY*:United States Army
+CALLSIGN:AIRFORCE*:United States Air Force
+CALLSIGN:USAF*:United States Air Force
+CALLSIGN:USN*:United States Navy
+CALLSIGN:USMC*:United States Marine Corps
+CALLSIGN:USCG*:United States Coast Guard
+CALLSIGN:CG*:United States Coast Guard
+
+# Unidentified military-style callsign (exclude TEST*)
+CALLSIGN:[A-SU-Z][A-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
+CALLSIGN:T[A-DF-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
+CALLSIGN:TE[A-RT-Z][A-Z][0-9][0-9]*:Military / Government Flight
+CALLSIGN:TES[A-SU-Z][0-9][0-9]*:Military / Government Flight
+
+# European military callsign prefixes (optional hyphen before numeric flight number)
+CALLSIGN:RRR?(-)[0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:GAF?(-)[0-9]*:Germany Luftwaffe
+CALLSIGN:CTM?(-)[0-9]*:France (French military air transport flights commonly using ICAO operator designator CTM)
+CALLSIGN:NAF?(-)[0-9]*:Royal Netherlands Air Force
+CALLSIGN:SVF?(-)[0-9]*:Swedish Armed Forces
+CALLSIGN:IAM?(-)[0-9]*:Italian Air Force
+CALLSIGN:AME?(-)[0-9]*:Spanish Air and Space Force
+CALLSIGN:DAF?(-)[0-9]*:Royal Danish Air Force
+CALLSIGN:BAF?(-)[0-9]*:Belgian Air Component
+CALLSIGN:HAF?(-)[0-9]*:Greece / Hellenic Air Force
+CALLSIGN:FNF?(-)[0-9]*:Finnish Air Force
+CALLSIGN:PLF?(-)[0-9]*:Polish Air Force
+
+# Additional callsign formats
+CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
+CALLSIGN:Q-[0-9]*:Royal Netherlands Air Force - helicopter
+CALLSIGN:T-[0-9]*:Royal Netherlands Air Force - MRTT transport
+CALLSIGN:V-[0-9]*:Royal Netherlands Air Force - VIP transport
+
 # United States military (DoD; commonly used overall block)
 ICAO:AE*:United States Military
 
@@ -66,65 +133,14 @@ ICAO:3B*:French Air Force
 # Canada military (Canadian Armed Forces; Canadian allocation frequently includes RCAF/CAF aircraft)
 ICAO:C[23]*:Royal Canadian Air Force
 
-# Military / Government Flight
-CALLSIGN:REACH*:United States Air Force
-CALLSIGN:RCH*:United States Air Force
-CALLSIGN:SAM*:United States Air Force
-CALLSIGN:TEXACO*:United States Air Force
-CALLSIGN:SHELL*:United States Air Force
-CALLSIGN:EXXON*:United States Air Force
-CALLSIGN:GOLD*:United States Air Force
-CALLSIGN:ROMA*:United States Air Force
-CALLSIGN:PYREX*:United States Air Force
-CALLSIGN:QUAD*:United States Air Force
-CALLSIGN:OILER*:United States Air Force
-CALLSIGN:OILGATE*:United States Air Force
-CALLSIGN:OPEC*:United States Air Force
-CALLSIGN:ESSO*:United States Air Force
-CALLSIGN:ETHYL*:United States Air Force
-CALLSIGN:EXTENDER*:United States Air Force
-CALLSIGN:GETFUEL*:United States Air Force
-CALLSIGN:ASTRO*:United States Air Force
-CALLSIGN:ORCA*:United States Air Force
-CALLSIGN:PRIMO*:United States Air Force
-CALLSIGN:QUEST*:United States Air Force
-CALLSIGN:ROVING*:United States Air Force
-CALLSIGN:SHAMU*:United States Air Force
-CALLSIGN:SPUR*:United States Air Force
-CALLSIGN:TOGA*:United States Air Force
-CALLSIGN:UNIVERSAL*:United States Air Force
-CALLSIGN:WHISTLER*:United States Air Force
-CALLSIGN:WRESTLER*:United States Air Force
-CALLSIGN:NAVY*:United States Navy
-CALLSIGN:MARINE*:United States Marine Corps
-CALLSIGN:ARMY*:United States Army
-CALLSIGN:AIRFORCE*:United States Air Force
-CALLSIGN:USAF*:United States Air Force
-CALLSIGN:USN*:United States Navy
-CALLSIGN:USMC*:United States Marine Corps
-CALLSIGN:USCG*:United States Coast Guard
-CALLSIGN:CG*:United States Coast Guard
-
-# Unidentified military-style callsign (exclude TEST*)
-CALLSIGN:[A-SU-Z][A-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:T[A-DF-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:TE[A-RT-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:TES[A-SU-Z][0-9][0-9]*:Military / Government Flight
-
-# 4) Additional ICAO ranges extracted from Snoop's manual observations (military/government)
+# Additional ICAO ranges extracted from Snoop's manual observations (military/government)
 
 # North Africa / Middle East military-government examples
-ICAO:020141*:Royal Moroccan Air Force
-ICAO:02B261*:Tunisian Air Force
-ICAO:06401C*:Nigerian Air Force
 ICAO:06A1*:Qatar State Flight
 ICAO:06A27*:Qatar Emiri Air Force
 ICAO:06A28*:Qatar Emiri Air Force
-ICAO:06A3CF*:Qatar Amiri Flight
 ICAO:7102*:Royal Saudi Air Force
 ICAO:7660*:Pakistan Air Force
-ICAO:800792*:Indian Air Force
-ICAO:87CD23*:Japan Air Self-Defense Force
 ICAO:8940*:Bahrain Royal Flight
 ICAO:896C2*:United Arab Emirates Air Force
 
@@ -134,18 +150,19 @@ ICAO:33FFD*:Italian Air Force
 ICAO:3532*:Spanish Air Force
 ICAO:3536*:Spanish Air Force
 ICAO:3553*:Spanish Air Force
-ICAO:407EF7*:QinetiQ
-ICAO:407F58*:HM Coast Guard
 ICAO:497C*:Portuguese Air Force
-ICAO:5002CB*:Democratic Republic of Congo Air Force
 ICAO:505FA*:Slovak Air Force
-ICAO:601142*:Government of Kyrgyzstan
 
 # Americas / APAC military-government examples
 ICAO:E494A*:Brazilian Air Force
 
-# 5) Residual uncovered military/government examples from Snoop
+# Residual uncovered military/government examples from Snoop
 ICAO:200000*:United States Air Force
 ICAO:4CA448*:Irish Air Corps
 ICAO:7101E2*:Saudi Ministry of Finance
 ICAO:8965FC*:Royal Jet
+
+
+
+
+
