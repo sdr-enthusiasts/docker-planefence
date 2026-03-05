@@ -42,7 +42,7 @@ fi
 log_print DEBUG "Hello. Starting Telegram notification run"
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
-  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
+  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PA_TELEGRAM_CHAT_ID aren't set. Aborting."
   exit
 fi
 

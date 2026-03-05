@@ -15,69 +15,70 @@
 # Callsign-based filters
 
 # Military / Government Flight
-CALLSIGN:REACH*:United States Air Force
-CALLSIGN:RCH*:United States Air Force
-CALLSIGN:SAM*:United States Air Force
-CALLSIGN:TEXACO*:United States Air Force
-CALLSIGN:SHELL*:United States Air Force
-CALLSIGN:EXXON*:United States Air Force
-CALLSIGN:GOLD*:United States Air Force
-CALLSIGN:ROMA*:United States Air Force
-CALLSIGN:PYREX*:United States Air Force
-CALLSIGN:QUAD*:United States Air Force
-CALLSIGN:OILER*:United States Air Force
-CALLSIGN:OILGATE*:United States Air Force
-CALLSIGN:OPEC*:United States Air Force
-CALLSIGN:ESSO*:United States Air Force
-CALLSIGN:ETHYL*:United States Air Force
-CALLSIGN:EXTENDER*:United States Air Force
-CALLSIGN:GETFUEL*:United States Air Force
-CALLSIGN:ASTRO*:United States Air Force
-CALLSIGN:ORCA*:United States Air Force
-CALLSIGN:PRIMO*:United States Air Force
-CALLSIGN:QUEST*:United States Air Force
-CALLSIGN:ROVING*:United States Air Force
-CALLSIGN:SHAMU*:United States Air Force
-CALLSIGN:SPUR*:United States Air Force
-CALLSIGN:TOGA*:United States Air Force
-CALLSIGN:UNIVERSAL*:United States Air Force
-CALLSIGN:WHISTLER*:United States Air Force
-CALLSIGN:WRESTLER*:United States Air Force
-CALLSIGN:NAVY*:United States Navy
-CALLSIGN:MARINE*:United States Marine Corps
-CALLSIGN:ARMY*:United States Army
-CALLSIGN:AIRFORCE*:United States Air Force
-CALLSIGN:USAF*:United States Air Force
-CALLSIGN:USN*:United States Navy
-CALLSIGN:USMC*:United States Marine Corps
-CALLSIGN:USCG*:United States Coast Guard
-CALLSIGN:CG*:United States Coast Guard
+CALLSIGN:REACH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RCH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SAM?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TEXACO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SHELL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:EXXON?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:GOLD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ROMA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PYREX?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:QUAD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OILER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OILGATE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OPEC?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ESSO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ETHYL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:EXTENDER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:GETFUEL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ORCA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PRIMO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:QUEST?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ROVING?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SHAMU?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SPUR?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TOGA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:UNIVERSAL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:WHISTLER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:WRESTLER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:NAVY?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:MARINE?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
+CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USAF?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USN?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
+CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
 
-# Unidentified military-style callsign (exclude TEST*)
-CALLSIGN:[A-SU-Z][A-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:T[A-DF-Z][A-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:TE[A-RT-Z][A-Z][0-9][0-9]*:Military / Government Flight
-CALLSIGN:TES[A-SU-Z][0-9][0-9]*:Military / Government Flight
+# Unidentified military-style callsign (4+ letters excluding TEST, optional '-', then 2+ digits)
+CALLSIGN:[A-SU-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
+CALLSIGN:T[A-DF-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
+CALLSIGN:TE[A-RT-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
+CALLSIGN:TES[A-SU-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
 
 # European military callsign prefixes (optional hyphen before numeric flight number)
-CALLSIGN:RRR?(-)[0-9]*:United Kingdom RAF air transport/support flights
-CALLSIGN:GAF?(-)[0-9]*:Germany Luftwaffe
-CALLSIGN:CTM?(-)[0-9]*:France (French military air transport flights commonly using ICAO operator designator CTM)
-CALLSIGN:NAF?(-)[0-9]*:Royal Netherlands Air Force
-CALLSIGN:SVF?(-)[0-9]*:Swedish Armed Forces
-CALLSIGN:IAM?(-)[0-9]*:Italian Air Force
-CALLSIGN:AME?(-)[0-9]*:Spanish Air and Space Force
-CALLSIGN:DAF?(-)[0-9]*:Royal Danish Air Force
-CALLSIGN:BAF?(-)[0-9]*:Belgian Air Component
-CALLSIGN:HAF?(-)[0-9]*:Greece / Hellenic Air Force
-CALLSIGN:FNF?(-)[0-9]*:Finnish Air Force
-CALLSIGN:PLF?(-)[0-9]*:Polish Air Force
+CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
+CALLSIGN:CTM?(-)[0-9][0-9]*:France (French military air transport flights commonly using ICAO operator designator CTM)
+CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
+CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
+CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
+CALLSIGN:DAF?(-)[0-9][0-9]*:Royal Danish Air Force
+CALLSIGN:BAF?(-)[0-9][0-9]*:Belgian Air Component
+CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
+CALLSIGN:FNF?(-)[0-9][0-9]*:Finnish Air Force
+CALLSIGN:PLF?(-)[0-9][0-9]*:Polish Air Force
 
 # Additional callsign formats
 CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
-CALLSIGN:Q-[0-9]*:Royal Netherlands Air Force - helicopter
-CALLSIGN:T-[0-9]*:Royal Netherlands Air Force - MRTT transport
-CALLSIGN:V-[0-9]*:Royal Netherlands Air Force - VIP transport
+CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
+CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
+CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
 
 # United States military (DoD; commonly used overall block)
 ICAO:AE*:United States Military

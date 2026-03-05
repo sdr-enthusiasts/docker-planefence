@@ -347,18 +347,21 @@ PA_BLUESKY_ENABLED=""
 # ---------------------------------------------------------------------
 # Optional Telegram notifications.
 # See README-telegram.md for creating a Bot and channel.
-# TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
+# [PA_|PF_]TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
 # PF_TELEGRAM_CHAT_ID / PA_TELEGRAM_CHAT_ID: numeric (private) or public name (e.g., @yourchannel).
-# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: dm/private/user → send DM; no link retained.
+# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: when set to dm/private/user: send DM; no link retained.
+#                                                Leave this param empty or set to "normal" unless needed
 # IMPORTANT: add your Bot as a channel Administrator (requires you being an Admin).
 # PF_TELEGRAM_ENABLED / PA_TELEGRAM_ENABLED must be on/enabled/1/yes/true to activate notifications.
 #
+# If you set the parameter without the PA_ or PF_ prefix, it will apply to both PA and PF. 
+# However, if you also set the PA_TELEGRAM_... or PF_TELEGRAM_..., that value will have preference
 TELEGRAM_BOT_TOKEN=""
 PF_TELEGRAM_CHAT_ID=""
 PA_TELEGRAM_CHAT_ID=""
 PF_TELEGRAM_ENABLED=false
 PA_TELEGRAM_ENABLED=false
-PF_TELEGRAM_CHAT_TYPE=
-PA_TELEGRAM_CHAT_TYPE=
+PF_TELEGRAM_CHAT_TYPE=normal
+PA_TELEGRAM_CHAT_TYPE=normal
 #
 # ---------------------------------------------------------------------
