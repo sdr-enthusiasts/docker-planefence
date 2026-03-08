@@ -135,9 +135,15 @@ PF_NOISECAPT=
 # See project docs for privacy details. Any non-empty value enables; empty disables.
 PF_CHECKREMOTEDB=
 # ---------------------------------------------------------------------
-# PF_IGNOREDUPES: if set, show only the first ICAO+flight combo per day.
-# PF_COLLAPSEWITHIN (when PF_IGNOREDUPES is unset): minimum seconds between observations to
+# PF_IGNOREDUPES: if set to yes/on/true/1/enabled, show only the first ICAO+flight combo per day.
+# PF_COLLAPSEWITHIN: minimum seconds between observations to
 # treat them as separate entries; closer observations are collapsed.
+# Note - to completely ignore specific aircraft in Planefence, you can create a file named
+#        planefence-ignore.txt in the same directory as this config file. In that file, you can
+#        list ICAOs, callsigns, or regex patterns, with one entry per line. Regexes should be 
+#        compatible with the Linux grep command.
+#        Since aircraft often only transmit their callsign once every X messages, adding callsigns to
+#        this list may not be as effective as adding ICAO patterns.
 PF_IGNOREDUPES=
 PF_COLLAPSEWITHIN=300
 
@@ -203,11 +209,16 @@ PA_SHOW_STALE_PAGE=
 # When enabled:
 # - Pattern definitions (ICAO and/or Callsign) are read from pa-candidates-filter.txt in your config directory
 # - Candidate output is written to plane-alert-candidates.txt in your config directory
+# - If you set PA_COLLECT_CANDIDATES_FILTER_FILE to a file name, it will read from that file 
+#   in your config directory instead of pa-candidates-filter.txt. (Note - provide only the file name, not a full path).
+#   Since the original pa-candidates-filter.txt file is regularly updated/overwritten when new builds are released, this
+#   enables you to maintain your own file that won't be affected by system updates.
 #
 # To auto-include generated candidates in your watchlist, append
 # plane-alert-candidates.txt to the end of your comma-separated alert list in the
 # PF_ALERTLIST parameter.
 PA_COLLECT_CANDIDATES=ON
+PA_COLLECT_CANDIDATES_FILTER_FILE=
 
 ###############################################################################
 # Notification Related Parameters

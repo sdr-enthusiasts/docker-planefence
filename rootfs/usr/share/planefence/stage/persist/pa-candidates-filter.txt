@@ -63,8 +63,9 @@ CALLSIGN:TES[A-SU-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
 CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
 CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
 CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
-CALLSIGN:CTM?(-)[0-9][0-9]*:France (French military air transport flights commonly using ICAO operator designator CTM)
+CALLSIGN:CTM?(-)[0-9][0-9]*:France Armee de lAir
 CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:MMF?(-)[0-9][0-9]*:Royal Netherlands Air Force
 CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
 CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
 CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force

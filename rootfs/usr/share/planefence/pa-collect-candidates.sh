@@ -42,10 +42,11 @@ fi
 shopt -s extglob
 
 TODAY="$(date +%y%m%d)"
-CANDIDATE_FILE="/usr/share/planefence/persist/plane-alert-candidates.txt"
-FILTER_FILE="/usr/share/planefence/persist/pa-candidates-filter.txt"
-FILTER_FILE_DEFAULT="/usr/share/planefence/persist/pa-candidates-filter.txt"
+FILTER_FILE="$(GET_PARAM base PA_COLLECT_CANDIDATES_FILTER_FILE || true)"
+FILTER_FILE="${FILTER_FILE:-/usr/share/planefence/persist/pa-candidates-filter.txt}"
 HEADER='ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link'
+
+CANDIDATE_FILE="/usr/share/planefence/persist/plane-alert-candidates.txt"
 
 PA_FILE="$(GET_PARAM pa PA_FILE || true)"
 if [[ -z "$PA_FILE" ]]; then
@@ -133,9 +134,6 @@ LOAD_CANDIDATE_FILTERS() {
 	FILTER_ICAO_OWNER=()
 	FILTER_CALLSIGN_OWNER=()
 
-	if [[ ! -f "$FILTER_FILE" && -f "$FILTER_FILE_DEFAULT" ]]; then
-		cp -f "$FILTER_FILE_DEFAULT" "$FILTER_FILE" 2>/dev/null || :
-	fi
 
 	if [[ ! -f "$FILTER_FILE" ]]; then
 		log_print WARN "Filter file $FILTER_FILE not found; processing without pattern filtering"

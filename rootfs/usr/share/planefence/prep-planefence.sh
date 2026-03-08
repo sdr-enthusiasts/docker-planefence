@@ -193,8 +193,9 @@ if chk_enabled "$PF_IGNOREDUPES"; then configure_planefence "IGNOREDUPES" "ON"; 
 configure_planefence "COLLAPSEWITHIN" "${PF_COLLAPSEWITHIN:-300}"
 
 IGNORELIST="$(GET_PARAM pf IGNORELIST)"
-touch -a "$IGNORELIST"
-sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
+if [[ -n "$IGNORELIST" && -f "$IGNORELIST" ]]; then
+	sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
+fi
 #
 # -----------------------------------------------------------------------------------
 #
