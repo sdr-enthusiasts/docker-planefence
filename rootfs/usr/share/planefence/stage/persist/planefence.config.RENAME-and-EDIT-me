@@ -213,12 +213,16 @@ PA_SHOW_STALE_PAGE=
 #   in your config directory instead of pa-candidates-filter.txt. (Note - provide only the file name, not a full path).
 #   Since the original pa-candidates-filter.txt file is regularly updated/overwritten when new builds are released, this
 #   enables you to maintain your own file that won't be affected by system updates.
+# - If you configure a filename in PA_COLLECT_CANDIDATES_LOG, it will log which filter match caused a specific plane to be
+#   added to plane-alert-candidates.txt. This is useful to finetune your filter settings if undesired planes get through.
+#   Leave this parameter empty to no longer log to this file.
 #
 # To auto-include generated candidates in your watchlist, append
 # plane-alert-candidates.txt to the end of your comma-separated alert list in the
 # PF_ALERTLIST parameter.
 PA_COLLECT_CANDIDATES=ON
 PA_COLLECT_CANDIDATES_FILTER_FILE=
+PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log
 
 ###############################################################################
 # Notification Related Parameters

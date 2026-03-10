@@ -30,7 +30,7 @@ declare -gA records pa_records
 log_print() {
   # Give up quickly is DEBUG isn't on:
   if [[ "${1^^}" == "DEBUG" ]] && ! chk_enabled "$DEBUG"; then return; fi
-  local loglevel="" logmsg=""
+  local loglevel="" logmsg="" logfile=""
 
   case "${1^^}" in
     INF|INFO) loglevel="INFO" ;;
@@ -45,6 +45,12 @@ log_print() {
   else
     logmsg="$2"
   fi
+  
+  if [[ "${logmsg:0:7}" == "output=" ]]; then
+    # Special case for "output=" messages: log the message without prefix and to a separate file
+    logfile="${logmsg#output=}"
+    logmsg="$3"
+  fi
 
   if [[ "$loglevel" == "DEBUG" ]]; then
     local currenttime
@@ -53,12 +59,20 @@ log_print() {
       execlaststeptime="$execstarttime"
     fi
     currenttime="$(date +%s.%3N)"
-    "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$logmsg" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+
+    if [[ -z "$logfile" ]]; then
+      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$logmsg" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >&2
+    else
+      "${s6wrap[@]}" printf "[DEBUG] %s (%s secs, total time elapsed %s secs)\n" "$logmsg" "$(bc -l <<< "$currenttime - $execlaststeptime")" "$(bc -l <<< "$currenttime - $execstarttime")" >> "$logfile"
+    fi
     execlaststeptime="$currenttime"
   else
-    "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
+    if [[ -z "$logfile" ]]; then
+      "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >&2
+    else
+      "${s6wrap[@]}" printf "[%s] %s\n" "$loglevel" "$logmsg" >> "$logfile"
+    fi
   fi
-
 }
 
 

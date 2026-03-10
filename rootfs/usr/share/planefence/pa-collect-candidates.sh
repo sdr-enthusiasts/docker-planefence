@@ -48,6 +48,17 @@ HEADER='ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link'
 
 CANDIDATE_FILE="/usr/share/planefence/persist/plane-alert-candidates.txt"
 
+CANDIDATE_LOG="$(GET_PARAM base PA_COLLECT_CANDIDATES_LOG || true)"
+CANDIDATE_LOG="${CANDIDATE_LOG:+/usr/share/planefence/persist/${CANDIDATE_LOG##*/}}"
+
+if [[ -n "$CANDIDATE_LOG" ]]; then
+  log_print DEBUG "Logging candidate details to output=${CANDIDATE_LOG##*/}"
+  if ! umask 000 && : > "$CANDIDATE_LOG" 2>/dev/null; then
+    log_print ERROR "Failed to create candidate log file at $CANDIDATE_LOG; logging to file disabled"
+    CANDIDATE_LOG=""
+  fi
+fi
+
 PA_FILE="$(GET_PARAM pa PA_FILE || true)"
 if [[ -z "$PA_FILE" ]]; then
 	PA_FILE="$(GET_PARAM pa PLANEFILE || true)"
@@ -234,7 +245,7 @@ script_start_epoch="$(date +%s)"
 stage_epoch="$script_start_epoch"
 log_print DEBUG "Config: TODAY=$TODAY, PA_FILE=$PA_FILE, CANDIDATE_FILE=$CANDIDATE_FILE"
 
-mkdir -p "$(dirname "$CANDIDATE_FILE")" "/usr/share/planefence/persist/.internal" 2>/dev/null || :
+mkdir -p "$(dirname "$CANDIDATE_FILE")" 2>/dev/null || :
 
 LOAD_CANDIDATE_FILTERS
 log_print DEBUG "Loaded ${#FILTER_ICAO_PATTERNS[@]} ICAO and ${#FILTER_CALLSIGN_PATTERNS[@]} callsign filter pattern(s) from $FILTER_FILE"
@@ -336,6 +347,9 @@ for icao in "${candidate_icaos[@]}"; do
 	candidate_match_owner["$icao"]="${CANDIDATE_MATCH_OWNER:-}"
 	candidate_match_reason["$icao"]="${CANDIDATE_MATCH_REASON:-}"
 	log_print INFO "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
+  if [[ -n "$CANDIDATE_LOG" ]]; then
+    log_print "output=${CANDIDATE_LOG}" "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
+  fi
 done
 log_print INFO "Filter summary: total=${#candidate_icaos[@]}, new=${#new_candidate_icaos[@]}, skipped_filter=$skipped_filter, skipped_known=$skipped_known, skipped_existing=$skipped_existing"
 
