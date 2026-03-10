@@ -103,8 +103,5 @@ while true; do
 			sleep $LOOPTIME & wait 
 		fi
 
-		# run the pa-collect-candidates.sh script to collect candidates for Plane-Alert.
-		/usr/share/planefence/pa-collect-candidates.sh
-
 	fi
 done

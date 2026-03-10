@@ -1,0 +1,23 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2154
+
+source /scripts/common
+
+# Run interval in seconds (default: 10 minutes)
+PA_COLLECT_CANDIDATES_INTERVAL_SECONDS="${PA_COLLECT_CANDIDATES_INTERVAL_SECONDS:-600}"
+
+if [[ ! "$PA_COLLECT_CANDIDATES_INTERVAL_SECONDS" =~ ^[0-9]+$ ]] || (( PA_COLLECT_CANDIDATES_INTERVAL_SECONDS < 1 )); then
+	"${s6wrap[@]}" echo "Invalid PA_COLLECT_CANDIDATES_INTERVAL_SECONDS='$PA_COLLECT_CANDIDATES_INTERVAL_SECONDS' - using 600"
+	PA_COLLECT_CANDIDATES_INTERVAL_SECONDS=600
+fi
+
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
+	sleep 5
+done
+
+"${s6wrap[@]}" echo "pa-collect-candidates service started (interval ${PA_COLLECT_CANDIDATES_INTERVAL_SECONDS}s)"
+
+while true; do
+	sleep "$PA_COLLECT_CANDIDATES_INTERVAL_SECONDS" & wait
+	/usr/share/planefence/pa-collect-candidates.sh || "${s6wrap[@]}" echo "pa-collect-candidates.sh exited with code $?"
+done
