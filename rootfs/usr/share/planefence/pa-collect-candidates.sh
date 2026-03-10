@@ -427,6 +427,11 @@ now_epoch="$(date +%s)"
 log_print DEBUG "Stage build-candidates completed in $((now_epoch - stage_epoch))s"
 stage_epoch="$now_epoch"
 
+if (( ${#new_rows[@]} == 0 )); then
+	log_print INFO "Done. No new candidates discovered; leaving $CANDIDATE_FILE unchanged."
+	exit 0
+fi
+
 tmpfile="$(mktemp)"
 {
 	printf '%s\n' "$HEADER"
