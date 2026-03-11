@@ -523,7 +523,7 @@ for icao in "${candidate_icaos[@]}"; do
 	candidate_match_reason["$icao"]="${CANDIDATE_MATCH_REASON:-}"
 	log_print INFO "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
   if [[ -n "$CANDIDATE_LOG" ]]; then
-    log_print "output=${CANDIDATE_LOG}" "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
+    log_print INFO "output=${CANDIDATE_LOG}" "New candidate $icao matched filter ${CANDIDATE_MATCH_REASON:-unknown} (callsign=${callsign:-none})"
   fi
 done
 log_print INFO "Filter summary: total=${#candidate_icaos[@]}, new=${#new_candidate_icaos[@]}, skipped_filter=$skipped_filter, skipped_known=$skipped_known, skipped_existing=$skipped_existing"
