@@ -150,8 +150,8 @@ CSV_CLEAN() {
 }
 
 declare -gA OPENSKY_HEADER_INDEX
-declare -g -a FILTER_DATABASE_SPECS
-declare -gA DB_MATCH_REASON DB_TAIL DB_OWNER DB_TYPE DB_ICAO_TYPE
+declare -g -a FILTER_DATABASE_SPECS FILTER_DATABASE_EXCLUDE_SPECS
+declare -gA DB_MATCH_REASON DB_EXCLUDED_REASON DB_TAIL DB_OWNER DB_TYPE DB_ICAO_TYPE
 
 LOAD_OPENSKY_HEADERS() {
 	OPENSKY_HEADER_INDEX=()
@@ -178,12 +178,13 @@ LOAD_OPENSKY_HEADERS() {
 
 EVALUATE_DATABASE_MATCHES() {
 	DB_MATCH_REASON=()
+	DB_EXCLUDED_REASON=()
 	DB_TAIL=()
 	DB_OWNER=()
 	DB_TYPE=()
 	DB_ICAO_TYPE=()
 
-	(( ${#FILTER_DATABASE_SPECS[@]} == 0 )) && return 0
+	(( ${#FILTER_DATABASE_SPECS[@]} == 0 && ${#FILTER_DATABASE_EXCLUDE_SPECS[@]} == 0 )) && return 0
 	(( ${#candidate_icaos[@]} == 0 )) && return 0
 
 	if ! LOAD_OPENSKY_HEADERS; then
@@ -229,9 +230,36 @@ EVALUATE_DATABASE_MATCHES() {
 	while IFS=$'\t' read -r row_icao row_csv; do
 		[[ -z "$row_icao" || -z "$row_csv" ]] && continue
 		local icao_upper="${row_icao^^}"
+		[[ -n "${DB_EXCLUDED_REASON[$icao_upper]:-}" ]] && continue
 		[[ -n "${DB_MATCH_REASON[$icao_upper]:-}" ]] && continue
 
 		IFS=',' read -r -a cols <<< "$row_csv"
+
+		for spec in "${FILTER_DATABASE_EXCLUDE_SPECS[@]}"; do
+			matched=1
+			IFS=':' read -r -a specparts <<< "$spec"
+			for (( i=0; i<${#specparts[@]}; i+=2 )); do
+				field="${specparts[$i]}"
+				pattern="${specparts[$((i + 1))]}"
+				field_idx="${OPENSKY_HEADER_INDEX[$field]:-}"
+				if [[ -z "$field_idx" ]]; then
+					matched=0
+					break
+				fi
+				val="$(CSV_CLEAN "${cols[$((field_idx - 1))]:-}")"
+				val="${val^^}"
+				# shellcheck disable=SC2053  # intentional extglob matching from DATABASE filter patterns
+				if [[ "$val" != $pattern ]]; then
+					matched=0
+					break
+				fi
+			done
+			if (( matched == 1 )); then
+				DB_EXCLUDED_REASON["$icao_upper"]="DATABASE:!$spec"
+				break
+			fi
+		done
+		[[ -n "${DB_EXCLUDED_REASON[$icao_upper]:-}" ]] && continue
 
 		for spec in "${FILTER_DATABASE_SPECS[@]}"; do
 			matched=1
@@ -277,10 +305,14 @@ EVALUATE_DATABASE_MATCHES() {
 
 LOAD_CANDIDATE_FILTERS() {
 	declare -g -a FILTER_ICAO_PATTERNS FILTER_CALLSIGN_PATTERNS FILTER_DATABASE_SPECS
+	declare -g -a FILTER_ICAO_EXCLUDE_PATTERNS FILTER_CALLSIGN_EXCLUDE_PATTERNS FILTER_DATABASE_EXCLUDE_SPECS
 	declare -gA FILTER_ICAO_OWNER FILTER_CALLSIGN_OWNER
 	FILTER_ICAO_PATTERNS=()
 	FILTER_CALLSIGN_PATTERNS=()
 	FILTER_DATABASE_SPECS=()
+	FILTER_ICAO_EXCLUDE_PATTERNS=()
+	FILTER_CALLSIGN_EXCLUDE_PATTERNS=()
+	FILTER_DATABASE_EXCLUDE_SPECS=()
 	FILTER_ICAO_OWNER=()
 	FILTER_CALLSIGN_OWNER=()
 
@@ -292,7 +324,7 @@ LOAD_CANDIDATE_FILTERS() {
 
 	local line key pattern owner rest spec
 	local -a parts
-	local i field
+	local i field exclude
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		line="${line%$'\r'}"
 		line="${line#"${line%%[![:space:]]*}"}"
@@ -329,6 +361,12 @@ LOAD_CANDIDATE_FILTERS() {
 				continue
 			fi
 
+			exclude=0
+			if [[ "${parts[0]}" == \!* ]]; then
+				exclude=1
+				parts[0]="${parts[0]#!}"
+			fi
+
 			spec=""
 			for (( i=0; i<${#parts[@]}; i+=2 )); do
 				field="${parts[$i]}"
@@ -341,7 +379,13 @@ LOAD_CANDIDATE_FILTERS() {
 				spec+="${field}:${pattern}:"
 			done
 			spec="${spec%:}"
-			[[ -n "$spec" ]] && FILTER_DATABASE_SPECS+=("$spec")
+			if [[ -n "$spec" ]]; then
+				if (( exclude == 1 )); then
+					FILTER_DATABASE_EXCLUDE_SPECS+=("$spec")
+				else
+					FILTER_DATABASE_SPECS+=("$spec")
+				fi
+			fi
 			continue
 		fi
 
@@ -351,15 +395,29 @@ LOAD_CANDIDATE_FILTERS() {
 		owner="${owner#"${owner%%[![:space:]]*}"}"
 		owner="${owner%"${owner##*[![:space:]]}"}"
 		[[ -z "$pattern" ]] && continue
+		exclude=0
+		if [[ "$pattern" == \!* ]]; then
+			exclude=1
+			pattern="${pattern#!}"
+			[[ -z "$pattern" ]] && continue
+		fi
 
 		case "$key" in
 			ICAO)
-				FILTER_ICAO_PATTERNS+=("$pattern")
-				FILTER_ICAO_OWNER["$pattern"]="$owner"
+				if (( exclude == 1 )); then
+					FILTER_ICAO_EXCLUDE_PATTERNS+=("$pattern")
+				else
+					FILTER_ICAO_PATTERNS+=("$pattern")
+					FILTER_ICAO_OWNER["$pattern"]="$owner"
+				fi
 				;;
 			CALLSIGN|CS)
-				FILTER_CALLSIGN_PATTERNS+=("$pattern")
-				FILTER_CALLSIGN_OWNER["$pattern"]="$owner"
+				if (( exclude == 1 )); then
+					FILTER_CALLSIGN_EXCLUDE_PATTERNS+=("$pattern")
+				else
+					FILTER_CALLSIGN_PATTERNS+=("$pattern")
+					FILTER_CALLSIGN_OWNER["$pattern"]="$owner"
+				fi
 				;;
 		esac
 	done < "$FILTER_FILE"
@@ -372,9 +430,32 @@ MATCH_CANDIDATE_FILTER() {
 	CANDIDATE_MATCH_REASON=""
 	CANDIDATE_MATCH_OWNER=""
 
-	# No filters loaded -> keep legacy behavior (process all)
+	if [[ -n "${DB_EXCLUDED_REASON[$icao]:-}" ]]; then
+		CANDIDATE_MATCH_REASON="${DB_EXCLUDED_REASON[$icao]}"
+		return 1
+	fi
+
+	for p in "${FILTER_ICAO_EXCLUDE_PATTERNS[@]}"; do
+		# shellcheck disable=SC2053  # intentional glob matching from filter file patterns
+		if [[ "$icao" == $p ]]; then
+			CANDIDATE_MATCH_REASON="ICAO:!$p"
+			return 1
+		fi
+	done
+
+	if [[ -n "$callsign" ]]; then
+		for p in "${FILTER_CALLSIGN_EXCLUDE_PATTERNS[@]}"; do
+			# shellcheck disable=SC2053  # intentional glob matching from filter file patterns
+			if [[ "$callsign" == $p ]]; then
+				CANDIDATE_MATCH_REASON="CALLSIGN:!$p"
+				return 1
+			fi
+		done
+	fi
+
+	# No inclusive filters loaded -> keep legacy behavior (process all except excludes)
 	if (( ${#FILTER_ICAO_PATTERNS[@]} == 0 && ${#FILTER_CALLSIGN_PATTERNS[@]} == 0 && ${#FILTER_DATABASE_SPECS[@]} == 0 )); then
-		CANDIDATE_MATCH_REASON="no-filters"
+		CANDIDATE_MATCH_REASON="no-inclusive-filters"
 		CANDIDATE_MATCH_OWNER=""
 		return 0
 	fi
@@ -419,7 +500,8 @@ log_print DEBUG "Config: TODAY=$TODAY, PA_FILE=$PA_FILE, CANDIDATE_FILE=$CANDIDA
 mkdir -p "$(dirname "$CANDIDATE_FILE")" 2>/dev/null || :
 
 LOAD_CANDIDATE_FILTERS
-log_print DEBUG "Loaded ${#FILTER_ICAO_PATTERNS[@]} ICAO, ${#FILTER_CALLSIGN_PATTERNS[@]} callsign, and ${#FILTER_DATABASE_SPECS[@]} DATABASE filter pattern(s) from $FILTER_FILE"
+log_print DEBUG "Loaded include filters: ICAO=${#FILTER_ICAO_PATTERNS[@]}, CALLSIGN=${#FILTER_CALLSIGN_PATTERNS[@]}, DATABASE=${#FILTER_DATABASE_SPECS[@]} from $FILTER_FILE"
+log_print DEBUG "Loaded exclude filters: ICAO=${#FILTER_ICAO_EXCLUDE_PATTERNS[@]}, CALLSIGN=${#FILTER_CALLSIGN_EXCLUDE_PATTERNS[@]}, DATABASE=${#FILTER_DATABASE_EXCLUDE_SPECS[@]} from $FILTER_FILE"
 
 readarray -t dumpfiles < <(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort)
 if (( ${#dumpfiles[@]} == 0 )); then
@@ -506,6 +588,7 @@ log_print DEBUG "Collapsed socket records into ${#candidate_icaos[@]} unique ICA
 
 EVALUATE_DATABASE_MATCHES
 log_print DEBUG "DATABASE filters matched ${#DB_MATCH_REASON[@]} ICAO(s)"
+log_print DEBUG "DATABASE filters excluded ${#DB_EXCLUDED_REASON[@]} ICAO(s)"
 
 now_epoch="$(date +%s)"
 log_print DEBUG "Stage scan-input completed in $((now_epoch - stage_epoch))s"

@@ -4,6 +4,10 @@
 #   ICAO:<glob-pattern>:<owner fallback>
 #   CALLSIGN:<glob-pattern>:<owner fallback>
 #   DATABASE:fieldname1:pattern1[:fieldname2:pattern2][...]
+# Exclusions (overrule includes):
+#   ICAO:!<glob-pattern>
+#   CALLSIGN:!<glob-pattern>
+#   DATABASE:!fieldname1:pattern1[:fieldname2:pattern2][...]
 #
 # Matching logic is OR:
 #   a record is considered if ICAO matches any ICAO pattern OR callsign matches any CALLSIGN pattern.
@@ -54,11 +58,8 @@ CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
 CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
 CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
 
-# Unidentified military-style callsign (4+ letters excluding TEST, optional '-', then 2+ digits)
-CALLSIGN:[A-SU-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
-CALLSIGN:T[A-DF-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
-CALLSIGN:TE[A-RT-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
-CALLSIGN:TES[A-SU-Z]*([A-Z])?(-)[0-9][0-9]*:Military / Government Flight
+# Unidentified military-style callsign (4+ letters, optional '-', then 2+ digits, then optional letters)
+CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*([A-Z]):Military / Government Flight
 
 # European military callsign prefixes (optional hyphen before numeric flight number)
 CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
@@ -81,6 +82,10 @@ CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
 CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
 CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
 CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
+
+# Callsign exclusion examples (exclusions overrule includes)
+CALLSIGN:!KAPT*
+CALLSIGN:!TEST*
 
 # DATABASE filters derived from aircraft-database-complete-2025-08.csv
 # Selection method:
