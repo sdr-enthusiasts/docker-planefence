@@ -137,11 +137,150 @@ DERIVE_CPMG() {
 	fi
 }
 
+CSV_CLEAN() {
+	local s="$1"
+	s="${s%$'\r'}"
+	s="${s#"${s%%[![:space:]]*}"}"
+	s="${s%"${s##*[![:space:]]}"}"
+	s="${s#\'}"
+	s="${s%\'}"
+	s="${s#\"}"
+	s="${s%\"}"
+	printf '%s' "$s"
+}
+
+declare -gA OPENSKY_HEADER_INDEX
+declare -g -a FILTER_DATABASE_SPECS
+declare -gA DB_MATCH_REASON DB_TAIL DB_OWNER DB_TYPE DB_ICAO_TYPE
+
+LOAD_OPENSKY_HEADERS() {
+	OPENSKY_HEADER_INDEX=()
+	if [[ ! -f /run/OpenSkyDB.csv ]]; then
+		return 1
+	fi
+
+	local header_line
+	if ! IFS= read -r header_line < /run/OpenSkyDB.csv; then
+		return 1
+	fi
+
+	local -a cols
+	local i name
+	IFS=',' read -r -a cols <<< "$header_line"
+	for (( i=0; i<${#cols[@]}; i++ )); do
+		name="$(CSV_CLEAN "${cols[$i]}")"
+		name="${name,,}"
+		[[ -n "$name" ]] && OPENSKY_HEADER_INDEX["$name"]="$((i + 1))"
+	done
+
+	[[ -n "${OPENSKY_HEADER_INDEX[icao24]:-}" ]]
+}
+
+EVALUATE_DATABASE_MATCHES() {
+	DB_MATCH_REASON=()
+	DB_TAIL=()
+	DB_OWNER=()
+	DB_TYPE=()
+	DB_ICAO_TYPE=()
+
+	(( ${#FILTER_DATABASE_SPECS[@]} == 0 )) && return 0
+	(( ${#candidate_icaos[@]} == 0 )) && return 0
+
+	if ! LOAD_OPENSKY_HEADERS; then
+		log_print WARN "DATABASE filter(s) configured but /run/OpenSkyDB.csv is unavailable or invalid"
+		return 0
+	fi
+
+	local idx_icao24 idx_registration idx_owner idx_model idx_class
+	idx_icao24="${OPENSKY_HEADER_INDEX[icao24]:-}"
+	idx_registration="${OPENSKY_HEADER_INDEX[registration]:-}"
+	idx_owner="${OPENSKY_HEADER_INDEX[owner]:-}"
+	idx_model="${OPENSKY_HEADER_INDEX[model]:-}"
+	idx_class="${OPENSKY_HEADER_INDEX[icaoaircraftclass]:-}"
+	[[ -z "$idx_icao24" ]] && return 0
+
+	local tmp_wanted tmp_rows
+	tmp_wanted="$(mktemp)"
+	tmp_rows="$(mktemp)"
+	for icao in "${candidate_icaos[@]}"; do
+		printf '%s\n' "${icao,,}" >> "$tmp_wanted"
+	done
+
+	awk -F',' -v idx="$idx_icao24" -v wantf="$tmp_wanted" '
+		BEGIN {
+			while ((getline w < wantf) > 0) {
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "", w)
+				if (w != "") want[w] = 1
+			}
+			close(wantf)
+		}
+		NR == 1 { next }
+		{
+			icao = $idx
+			gsub(/^[[:space:]"\047]+|[[:space:]"\047]+$/, "", icao)
+			icao = tolower(icao)
+			if (icao in want) print icao "\t" $0
+		}
+	' /run/OpenSkyDB.csv > "$tmp_rows"
+
+	local row_icao row_csv spec matched
+	local -a cols specparts
+	local i field pattern field_idx val
+	while IFS=$'\t' read -r row_icao row_csv; do
+		[[ -z "$row_icao" || -z "$row_csv" ]] && continue
+		local icao_upper="${row_icao^^}"
+		[[ -n "${DB_MATCH_REASON[$icao_upper]:-}" ]] && continue
+
+		IFS=',' read -r -a cols <<< "$row_csv"
+
+		for spec in "${FILTER_DATABASE_SPECS[@]}"; do
+			matched=1
+			IFS=':' read -r -a specparts <<< "$spec"
+			for (( i=0; i<${#specparts[@]}; i+=2 )); do
+				field="${specparts[$i]}"
+				pattern="${specparts[$((i + 1))]}"
+				field_idx="${OPENSKY_HEADER_INDEX[$field]:-}"
+				if [[ -z "$field_idx" ]]; then
+					matched=0
+					break
+				fi
+				val="$(CSV_CLEAN "${cols[$((field_idx - 1))]:-}")"
+				val="${val^^}"
+				# shellcheck disable=SC2053  # intentional extglob matching from DATABASE filter patterns
+				if [[ "$val" != $pattern ]]; then
+					matched=0
+					break
+				fi
+			done
+
+			if (( matched == 1 )); then
+				DB_MATCH_REASON["$icao_upper"]="DATABASE:$spec"
+				if [[ -n "$idx_registration" ]]; then
+					DB_TAIL["$icao_upper"]="$(CSV_CLEAN "${cols[$((idx_registration - 1))]:-}")"
+				fi
+				if [[ -n "$idx_owner" ]]; then
+					DB_OWNER["$icao_upper"]="$(CSV_CLEAN "${cols[$((idx_owner - 1))]:-}")"
+				fi
+				if [[ -n "$idx_model" ]]; then
+					DB_TYPE["$icao_upper"]="$(CSV_CLEAN "${cols[$((idx_model - 1))]:-}")"
+				fi
+				if [[ -n "$idx_class" ]]; then
+					DB_ICAO_TYPE["$icao_upper"]="$(CSV_CLEAN "${cols[$((idx_class - 1))]:-}")"
+				fi
+				break
+			fi
+		done
+	done < "$tmp_rows"
+
+	rm -f "$tmp_wanted" "$tmp_rows"
+}
+
 LOAD_CANDIDATE_FILTERS() {
-	declare -g -a FILTER_ICAO_PATTERNS FILTER_CALLSIGN_PATTERNS
+	declare -g -a FILTER_ICAO_PATTERNS FILTER_CALLSIGN_PATTERNS FILTER_DATABASE_SPECS
 	declare -gA FILTER_ICAO_OWNER FILTER_CALLSIGN_OWNER
 	FILTER_ICAO_PATTERNS=()
 	FILTER_CALLSIGN_PATTERNS=()
+	FILTER_DATABASE_SPECS=()
 	FILTER_ICAO_OWNER=()
 	FILTER_CALLSIGN_OWNER=()
 
@@ -151,7 +290,9 @@ LOAD_CANDIDATE_FILTERS() {
 		return
 	fi
 
-	local line key pattern owner rest
+	local line key pattern owner rest spec
+	local -a parts
+	local i field
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		line="${line%$'\r'}"
 		line="${line#"${line%%[![:space:]]*}"}"
@@ -180,6 +321,30 @@ LOAD_CANDIDATE_FILTERS() {
 		fi
 
 		key="${key^^}"
+
+		if [[ "$key" == "DATABASE" ]]; then
+			IFS=':' read -r -a parts <<< "$rest"
+			if (( ${#parts[@]} < 2 || ${#parts[@]} % 2 != 0 )); then
+				log_print WARN "Invalid DATABASE filter (requires field:pattern pairs): $line"
+				continue
+			fi
+
+			spec=""
+			for (( i=0; i<${#parts[@]}; i+=2 )); do
+				field="${parts[$i]}"
+				pattern="${parts[$((i + 1))]}"
+				field="$(CSV_CLEAN "$field")"
+				pattern="$(CSV_CLEAN "$pattern")"
+				field="${field,,}"
+				pattern="${pattern^^}"
+				[[ -z "$field" || -z "$pattern" ]] && continue 2
+				spec+="${field}:${pattern}:"
+			done
+			spec="${spec%:}"
+			[[ -n "$spec" ]] && FILTER_DATABASE_SPECS+=("$spec")
+			continue
+		fi
+
 		pattern="${pattern^^}"
 		pattern="${pattern#"${pattern%%[![:space:]]*}"}"
 		pattern="${pattern%"${pattern##*[![:space:]]}"}"
@@ -208,9 +373,15 @@ MATCH_CANDIDATE_FILTER() {
 	CANDIDATE_MATCH_OWNER=""
 
 	# No filters loaded -> keep legacy behavior (process all)
-	if (( ${#FILTER_ICAO_PATTERNS[@]} == 0 && ${#FILTER_CALLSIGN_PATTERNS[@]} == 0 )); then
+	if (( ${#FILTER_ICAO_PATTERNS[@]} == 0 && ${#FILTER_CALLSIGN_PATTERNS[@]} == 0 && ${#FILTER_DATABASE_SPECS[@]} == 0 )); then
 		CANDIDATE_MATCH_REASON="no-filters"
 		CANDIDATE_MATCH_OWNER=""
+		return 0
+	fi
+
+	if [[ -n "${DB_MATCH_REASON[$icao]:-}" ]]; then
+		CANDIDATE_MATCH_REASON="${DB_MATCH_REASON[$icao]}"
+		CANDIDATE_MATCH_OWNER="${DB_OWNER[$icao]:-}"
 		return 0
 	fi
 
@@ -248,7 +419,7 @@ log_print DEBUG "Config: TODAY=$TODAY, PA_FILE=$PA_FILE, CANDIDATE_FILE=$CANDIDA
 mkdir -p "$(dirname "$CANDIDATE_FILE")" 2>/dev/null || :
 
 LOAD_CANDIDATE_FILTERS
-log_print DEBUG "Loaded ${#FILTER_ICAO_PATTERNS[@]} ICAO and ${#FILTER_CALLSIGN_PATTERNS[@]} callsign filter pattern(s) from $FILTER_FILE"
+log_print DEBUG "Loaded ${#FILTER_ICAO_PATTERNS[@]} ICAO, ${#FILTER_CALLSIGN_PATTERNS[@]} callsign, and ${#FILTER_DATABASE_SPECS[@]} DATABASE filter pattern(s) from $FILTER_FILE"
 
 readarray -t dumpfiles < <(find /run/socket30003 -type f -name "dump1090-*-${TODAY}.txt" -print | sort)
 if (( ${#dumpfiles[@]} == 0 )); then
@@ -318,6 +489,10 @@ rm -f "$tmp_icaos" "$tmp_callsigns"
 
 log_print DEBUG "Built latest callsign map for ${#latest_callsign[@]} ICAO(s)"
 log_print DEBUG "Collapsed socket records into ${#candidate_icaos[@]} unique ICAO candidate(s)"
+
+EVALUATE_DATABASE_MATCHES
+log_print DEBUG "DATABASE filters matched ${#DB_MATCH_REASON[@]} ICAO(s)"
+
 now_epoch="$(date +%s)"
 log_print DEBUG "Stage scan-input completed in $((now_epoch - stage_epoch))s"
 stage_epoch="$now_epoch"
@@ -392,31 +567,41 @@ for icao in "${new_candidate_icaos[@]}"; do
 	fi
 
 	callsign="${latest_callsign["$icao"]:-}"
-	tail="$(GET_TAIL "$icao" 2>/dev/null || true)"
-	icao_type="${adsb_icao_type["$icao"]:-}"
-	type_long="${adsb_type_long["$icao"]:-}"
-	owner_fallback="${adsb_owner["$icao"]:-}"
 	owner_from_filter="${candidate_match_owner["$icao"]:-}"
 
-	owner="$owner_fallback"
-	# Re-check owner via airlinename.sh, but only for records that already passed all filters
-	# and are being written to output (minimizes expensive lookups).
-	if [[ -z "$owner" && -n "$callsign" ]]; then
-		owner="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null || true)"
-	fi
-	if [[ -z "$owner" && -n "$tail" ]]; then
-		owner="$(/usr/share/planefence/airlinename.sh "$tail" "$icao" 2>/dev/null || true)"
-	fi
-	if [[ -z "$owner" && -n "$owner_from_filter" ]]; then
-		owner="$owner_from_filter"
-	fi
+	if [[ -n "${DB_MATCH_REASON["$icao"]:-}" ]]; then
+		tail="${DB_TAIL["$icao"]^^}"
+		owner="${DB_OWNER["$icao"]:-}"
+		type_long="${DB_TYPE["$icao"]:-}"
+		icao_type="${DB_ICAO_TYPE["$icao"]:-}"
+		cpmg=""
+		category=""
+	else
+		tail="$(GET_TAIL "$icao" 2>/dev/null || true)"
+		icao_type="${adsb_icao_type["$icao"]:-}"
+		type_long="${adsb_type_long["$icao"]:-}"
+		owner_fallback="${adsb_owner["$icao"]:-}"
 
-	[[ -z "$type_long" ]] && type_long="$icao_type"
+		owner="$owner_fallback"
+		# Re-check owner via airlinename.sh, but only for records that already passed all filters
+		# and are being written to output (minimizes expensive lookups).
+		if [[ -z "$owner" && -n "$callsign" ]]; then
+			owner="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null || true)"
+		fi
+		if [[ -z "$owner" && -n "$tail" ]]; then
+			owner="$(/usr/share/planefence/airlinename.sh "$tail" "$icao" 2>/dev/null || true)"
+		fi
+		if [[ -z "$owner" && -n "$owner_from_filter" ]]; then
+			owner="$owner_from_filter"
+		fi
+
+		[[ -z "$type_long" ]] && type_long="$icao_type"
+
+		cpmg="$(DERIVE_CPMG "$owner" "$type_long")"
+		category="$owner"
+	fi
 
 	photo_link="$(GET_PS_PHOTO_LINK "$icao" 2>/dev/null || true)"
-
-	cpmg="$(DERIVE_CPMG "$owner" "$type_long")"
-	category="$owner"
 
 	row="$(csv_encode "$icao"),$(csv_encode "$tail"),$(csv_encode "$owner"),$(csv_encode "$type_long"),$(csv_encode "$icao_type"),$(csv_encode "$cpmg"),,,,$(csv_encode "$category"),$(csv_encode "$photo_link")"
 	new_rows+=("$row")

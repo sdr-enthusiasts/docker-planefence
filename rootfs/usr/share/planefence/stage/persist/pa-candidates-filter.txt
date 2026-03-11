@@ -3,6 +3,7 @@
 # Format:
 #   ICAO:<glob-pattern>:<owner fallback>
 #   CALLSIGN:<glob-pattern>:<owner fallback>
+#   DATABASE:fieldname1:pattern1[:fieldname2:pattern2][...]
 #
 # Matching logic is OR:
 #   a record is considered if ICAO matches any ICAO pattern OR callsign matches any CALLSIGN pattern.
@@ -80,6 +81,103 @@ CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
 CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
 CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
 CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
+
+# DATABASE filters derived from aircraft-database-complete-2025-08.csv
+# Selection method:
+# - source set: icao24 starts with ae
+# - keep typecodes whose count in icao24 matching a[0-9a-d]* is < 5
+DATABASE:owner:*AIR?( )FORCE*
+DATABASE:owner:*army*
+DATABASE:owner:*armee*
+DATABASE:owner:*luftwaffe*
+DATABASE:owner=*Guardia Di Finanza*
+DATABASE:typecode:22-72479
+DATABASE:typecode:22-72481
+DATABASE:typecode:A10
+DATABASE:typecode:A109
+DATABASE:typecode:A139
+DATABASE:typecode:A140
+DATABASE:typecode:A148
+DATABASE:typecode:A400
+DATABASE:typecode:A6
+DATABASE:typecode:A748
+DATABASE:typecode:AJET
+DATABASE:typecode:AMX
+DATABASE:typecode:AN*
+DATABASE:typecode:AS*
+DATABASE:typecode:AS55
+DATABASE:typecode:AT76
+DATABASE:typecode:B1
+DATABASE:typecode:B105
+DATABASE:typecode:B17
+DATABASE:typecode:B25
+DATABASE:typecode:B26
+DATABASE:typecode:B412
+DATABASE:typecode:B52
+DATABASE:typecode:C135
+DATABASE:typecode:C160
+DATABASE:typecode:C17
+DATABASE:typecode:C2
+DATABASE:typecode:C208
+DATABASE:typecode:C212
+DATABASE:typecode:C27J
+DATABASE:typecode:C295
+DATABASE:typecode:C30J
+DATABASE:typecode:C414
+DATABASE:typecode:C5
+DATABASE:typecode:C5M
+DATABASE:typecode:CORS
+DATABASE:typecode:DOVE
+DATABASE:typecode:DRON
+DATABASE:typecode:E2
+DATABASE:typecode:E314
+DATABASE:typecode:E3TF
+DATABASE:typecode:E6
+DATABASE:typecode:E8
+DATABASE:typecode:EC25
+DATABASE:typecode:EUF1
+DATABASE:typecode:EUFI
+DATABASE:typecode:F15
+DATABASE:typecode:F18
+DATABASE:typecode:F18S
+DATABASE:typecode:F27
+DATABASE:typecode:F50
+DATABASE:typecode:H53
+DATABASE:typecode:H53S
+DATABASE:typecode:IL76
+DATABASE:typecode:IL96
+DATABASE:typecode:K35E
+DATABASE:typecode:LANC
+DATABASE:typecode:P3
+DATABASE:typecode:P51
+DATABASE:typecode:P8-[?]
+DATABASE:typecode:PUMA
+DATABASE:typecode:Q4
+DATABASE:typecode:R135
+DATABASE:typecode:RFAL
+DATABASE:typecode:SB*
+DATABASE:typecode:SF34
+DATABASE:typecode:SUCO
+DATABASE:typecode:T134
+DATABASE:typecode:T154
+DATABASE:typecode:T206
+DATABASE:typecode:T214
+DATABASE:typecode:T34
+DATABASE:typecode:T38
+DATABASE:typecode:TBM7
+DATABASE:typecode:TEX2
+DATABASE:typecode:TOR
+DATABASE:typecode:U2
+DATABASE:typecode:UH1*
+DATABASE:typecode:V22
+DATABASE:typecode:VF35
+DATABASE:typecode:VINT
+DATABASE:typecode:W3
+DATABASE:typecode:YK40
+DATABASE:typecode:YUN8
+DATABASE:typecode:Z42
+DATABASE:typecode:ZEPH
+DATABASE:typecode:ZZZZ
 
 # United States military (DoD; commonly used overall block)
 ICAO:AE*:United States Military
@@ -159,7 +257,6 @@ ICAO:505FA*:Slovak Air Force
 ICAO:E494A*:Brazilian Air Force
 
 # Residual uncovered military/government examples from Snoop
-ICAO:200000*:United States Air Force
 ICAO:4CA448*:Irish Air Corps
 ICAO:7101E2*:Saudi Ministry of Finance
 ICAO:8965FC*:Royal Jet

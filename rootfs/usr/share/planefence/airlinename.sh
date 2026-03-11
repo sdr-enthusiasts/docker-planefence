@@ -203,6 +203,7 @@ if [[ -n "$b" ]]; then
   b="${b% TRUSTEE}"
   b="${b% OWNER}"
   b="${b% INC}"
+  b="${b% LIMITED}"
   b="${b% LTD}"
   b="${b% PTY}"
   b="${b% CO KG}"
