@@ -61,6 +61,10 @@ CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
 # Unidentified military-style callsign (4+ letters, optional '-', then 2+ digits, then optional letters)
 CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*([A-Z]):Military / Government Flight
 
+# Callsign exclusion examples (exclusions overrule includes)
+CALLSIGN:!KAPT*
+CALLSIGN:!TEST*
+
 # European military callsign prefixes (optional hyphen before numeric flight number)
 CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
 CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
@@ -83,19 +87,14 @@ CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
 CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
 CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
 
-# Callsign exclusion examples (exclusions overrule includes)
-CALLSIGN:!KAPT*
-CALLSIGN:!TEST*
-
-# DATABASE filters derived from aircraft-database-complete-2025-08.csv
-# Selection method:
-# - source set: icao24 starts with ae
-# - keep typecodes whose count in icao24 matching a[0-9a-d]* is < 5
+#  Military aircraft by owner name or type code:
 DATABASE:owner:*AIR?( )FORCE*
 DATABASE:owner:*army*
 DATABASE:owner:*armee*
 DATABASE:owner:*luftwaffe*
 DATABASE:owner:*Guardia Di Finanza*
+DATABASE:owner:*navy*
+DATABASE:owner: *Marine Corps*
 DATABASE:typecode:22-72479
 DATABASE:typecode:22-72481
 DATABASE:typecode:A10
@@ -193,9 +192,6 @@ ICAO:AF*:United States Military
 # United States military (DoD sub-block within AD* commonly observed)
 ICAO:ADF[89A-F]*:United States Military
 
-# United Kingdom military (commonly RAF/RN/RM; “43C–43F” widely associated with UK mil use)
-ICAO:43[C-F]*:Royal Air Force
-
 # Belgium military (commonly Belgian Air Component)
 ICAO:44F*:Belgian Air Component
 
@@ -241,7 +237,6 @@ ICAO:C[23]*:Royal Canadian Air Force
 # Additional ICAO ranges extracted from Snoop's manual observations (military/government)
 
 # North Africa / Middle East military-government examples
-ICAO:06A1*:Qatar State Flight
 ICAO:06A27*:Qatar Emiri Air Force
 ICAO:06A28*:Qatar Emiri Air Force
 ICAO:7102*:Royal Saudi Air Force
@@ -265,6 +260,11 @@ ICAO:E494A*:Brazilian Air Force
 ICAO:4CA448*:Irish Air Corps
 ICAO:7101E2*:Saudi Ministry of Finance
 ICAO:8965FC*:Royal Jet
+
+# Non-military aircraft filters
+DATABASE:owner:* Oil*
+DATABASE:owner:* Petrol*
+DATABASE:owner:* Patrol*
 
 
 

@@ -152,6 +152,7 @@ CSV_CLEAN() {
 declare -gA OPENSKY_HEADER_INDEX
 declare -g -a FILTER_DATABASE_SPECS FILTER_DATABASE_EXCLUDE_SPECS
 declare -gA DB_MATCH_REASON DB_EXCLUDED_REASON DB_TAIL DB_OWNER DB_TYPE DB_ICAO_TYPE
+declare -gA OPENSKY_REG_BY_ICAO
 
 LOAD_OPENSKY_HEADERS() {
 	OPENSKY_HEADER_INDEX=()
@@ -183,6 +184,7 @@ EVALUATE_DATABASE_MATCHES() {
 	DB_OWNER=()
 	DB_TYPE=()
 	DB_ICAO_TYPE=()
+	OPENSKY_REG_BY_ICAO=()
 
 	(( ${#FILTER_DATABASE_SPECS[@]} == 0 && ${#FILTER_DATABASE_EXCLUDE_SPECS[@]} == 0 )) && return 0
 	(( ${#candidate_icaos[@]} == 0 )) && return 0
@@ -234,6 +236,9 @@ EVALUATE_DATABASE_MATCHES() {
 		[[ -n "${DB_MATCH_REASON[$icao_upper]:-}" ]] && continue
 
 		IFS=',' read -r -a cols <<< "$row_csv"
+		if [[ -n "$idx_registration" ]]; then
+			OPENSKY_REG_BY_ICAO["$icao_upper"]="$(CSV_CLEAN "${cols[$((idx_registration - 1))]:-}")"
+		fi
 
 		for spec in "${FILTER_DATABASE_EXCLUDE_SPECS[@]}"; do
 			matched=1
@@ -674,7 +679,12 @@ for icao in "${new_candidate_icaos[@]}"; do
 		cpmg=""
 		category=""
 	else
-		tail="$(GET_TAIL "$icao" 2>/dev/null || true)"
+		tail="${OPENSKY_REG_BY_ICAO["$icao"]:-}"
+		if [[ -n "$tail" ]]; then
+			tail="${tail^^}"
+		else
+			tail="$(GET_TAIL "$icao" 2>/dev/null || true)"
+		fi
 		icao_type="${adsb_icao_type["$icao"]:-}"
 		type_long="${adsb_type_long["$icao"]:-}"
 		owner_fallback="${adsb_owner["$icao"]:-}"
