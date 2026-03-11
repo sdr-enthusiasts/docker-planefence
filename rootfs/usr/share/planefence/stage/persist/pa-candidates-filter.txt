@@ -90,7 +90,7 @@ DATABASE:owner:*AIR?( )FORCE*
 DATABASE:owner:*army*
 DATABASE:owner:*armee*
 DATABASE:owner:*luftwaffe*
-DATABASE:owner=*Guardia Di Finanza*
+DATABASE:owner:*Guardia Di Finanza*
 DATABASE:typecode:22-72479
 DATABASE:typecode:22-72481
 DATABASE:typecode:A10
