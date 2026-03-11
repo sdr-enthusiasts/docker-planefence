@@ -220,6 +220,11 @@ PA_SHOW_STALE_PAGE=
 # To auto-include generated candidates in your watchlist, append
 # plane-alert-candidates.txt to the end of your comma-separated alert list in the
 # PF_ALERTLIST parameter.
+#
+# If, after review of plane-alert-candidates.txt, you want to exclude specific aircraft from this file,
+# then comment them out (by placing a # at the start of the line) instead of simply erasing them.
+# Aircraft that are commented out will not be added back in during subsequent observations and filter matches.
+#
 PA_COLLECT_CANDIDATES=ON
 PA_COLLECT_CANDIDATES_FILTER_FILE=
 PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log

@@ -447,12 +447,26 @@ if [[ -f "$CANDIDATE_FILE" ]]; then
 		[[ -z "$icao" || -z "$line" ]] && continue
 		existing_candidates["$icao"]="$line"
 	done < <(awk -F',' '
-		NR==1 && toupper($1) == "ICAO" { next }
+		function trim(s) {
+			gsub(/^[[:space:]"]+|[[:space:]"]+$/, "", s)
+			return s
+		}
 		$0 == "" { next }
 		{
-			icao = toupper($1)
-			gsub(/^[[:space:]"]+|[[:space:]"]+$/, "", icao)
-			if (icao != "") print icao "\t" $0
+			line = $0
+			parse = line
+			commented = 0
+			if (parse ~ /^[[:space:]]*#/) {
+				commented = 1
+				sub(/^[[:space:]]*#[[:space:]]*/, "", parse)
+			}
+
+			split(parse, f, ",")
+			icao = toupper(trim(f[1]))
+			if (icao == "" || icao == "ICAO") next
+
+			# Preserve comments as-is while still keying by ICAO for dedupe/blocking.
+			print icao "\t" line
 		}
 	' "$CANDIDATE_FILE")
 fi
