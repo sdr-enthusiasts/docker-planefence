@@ -27,7 +27,7 @@ LOOPTIME="${LOOPTIME:-60}"
 PLANEFENCEDIR=/usr/share/planefence
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then
-    "${s6wrap[@]}" echo "Planefence started as an s6 service"
+    "${s6wrap[@]}" echo "$0 started as an s6 service"
     "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
 fi
 

@@ -15,9 +15,9 @@ while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
 	sleep 5
 done
 
-"${s6wrap[@]}" echo "pa-collect-candidates service started (interval ${PA_COLLECT_CANDIDATES_INTERVAL_SECONDS}s)"
+"${s6wrap[@]}" echo "$0 started as an s6 service"
 
 while true; do
 	sleep "$PA_COLLECT_CANDIDATES_INTERVAL_SECONDS" & wait
-	/usr/share/planefence/pa-collect-candidates.sh || "${s6wrap[@]}" echo "pa-collect-candidates.sh exited with code $?"
+	/usr/share/planefence/pa-collect-candidates.sh || "${s6wrap[@]}" echo "$0 exited with code $?"
 done
