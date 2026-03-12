@@ -71,6 +71,7 @@ ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/i
 # Move the jscript files from the staging directory into the html/staging directory.
 # this cannot be done at build time because the directory is exposed and it is
 # overwritten by the host at start of runtime
+rm -f /usr/share/planefence/html/index.html 2>/dev/null || true
 cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
 	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
