@@ -251,4 +251,4 @@ That's all!
 ## License and Data Use/Privacy
 
 Planefence is licensed under the [GNU GPL v3 License](LICENSE).
-Planefence's Data Use and Privacy policy is documented in the [Privacy Policy](README-privacy.md).
+Planefence's Data Use and Privacy policy, including deployment guidance related to California's Digital Age Assurance Act (AB 1043), is documented in the [Privacy Policy](README-privacy.md).

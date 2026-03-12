@@ -1,6 +1,6 @@
 # Privacy Statement
 
-Last updated: 24-Jan-2026
+Last updated: 12-Mar-2026
 
 Planefence ("we," "us," or "our") is committed to protecting your privacy. This Privacy Statement explains how we handle information when you use our website.
 
@@ -52,30 +52,45 @@ Under the GDPR and LGPD, we do not process personal data. The limited preference
 
 For California residents: We do not collect, sell, or share "personal information" as defined by the CCPA/CPRA. We do not disclose personal information to third parties for monetary or other valuable consideration. We do not use or disclose "sensitive personal information." Because we do not collect personal information, the typical CCPA/CPRA rights (such as the right to access, delete, or correct personal information, and the right to opt out of sale or sharing) are generally not applicable to our website. If you believe that we may have inadvertently collected personal information, please contact us using the details below, and we will address your request in accordance with applicable law.
 
-## 4. Your Choices and Control
+## 4. California Digital Age Assurance Act (AB 1043)
+
+Planefence is distributed as a self-hosted software package and is typically installed by an Operator on their own Linux computer, including single board computers such as Raspberry Pi devices. The installation method alone does not determine whether California's Digital Age Assurance Act ("AB 1043") applies. The relevant questions depend on how a particular Operator deploys and offers the resulting service.
+
+As distributed by the project, Planefence does not include user accounts, direct messaging, targeted advertising, age estimation, or collection of visitors' personal information beyond the browser-side preference storage described above. Because of that, many hobbyist or household deployments may present materially different compliance considerations than consumer-facing online services that are directed to minors or likely to be accessed by minors.
+
+Operators should review at least the following for their own deployment:
+
+- Whether the deployment is directed to minors, marketed to minors, or otherwise likely to be accessed by minors in California
+- Whether any analytics, advertising, tracking, profiling, or age-assurance tooling has been added by the Operator or a third party
+- Whether the deployment adds user accounts, user-generated content, messaging, recommendation/ranking features, or monetization features
+- Whether reverse proxies, CDNs, authentication layers, embedded third-party content, or other components collect personal information that Planefence itself does not collect
+
+If you operate Planefence only as a personal or household dashboard, or as a general-audience hobbyist site without accounts and without personal information collection beyond browser-side preference storage, your compliance review is generally simpler. However, this Privacy Statement is not legal advice and is not a determination that AB 1043 does or does not apply to any specific deployment. Operators with California users, minors in their audience, or custom integrations that collect personal information should obtain legal advice tailored to their deployment before relying on this statement.
+
+## 5. Your Choices and Control
 
 You can control how preference information is stored in your browser in the following ways:
 
 - **Browser settings:** You can block or delete cookies and local storage data through your browser's privacy or security settings. If you do so, the website may no longer remember your dark/light mode, last visited page, language, or consent status.
 - **On-site settings (if provided):** We may offer an in-page control (e.g., a toggle or banner) allowing you to opt in or out of storing preferences. If you opt out, we will attempt to stop storing new preference data in your browser, but your browser may still retain existing data until you clear it.
 
-## 5. Children's Privacy
+## 6. Children's Privacy
 
 Our website is not directed to children under the age of 13 (or a higher age as defined by local law), and we do not knowingly collect personal information from children. Since we do not collect personal information at all, we do not create profiles of children or target them for any purposes.
 
-## 6. Third-Party Services
+## 7. Third-Party Services
 
 We design our website not to incorporate third-party analytics, advertising, or tracking services that collect personal information. If in the future we integrate any third-party content or tools that could process personal information, we will update this Privacy Statement, and provide clear information and controls consistent with applicable privacy laws.
 
-## 7. International Users
+## 8. International Users
 
 Our website may be accessed from different countries, but our practices are designed so that we do not collect personal information from any user, regardless of location. To the extent any privacy law (such as the GDPR or LGPD) applies, our approach is to minimize data collection to non-personal preference data stored locally in your browser only.
 
-## 8. Changes to This Privacy Statement
+## 9. Changes to This Privacy Statement
 
 We may update this Privacy Statement from time to time, for example, if we change how we store preferences or if we begin processing personal information in the future. When we make changes, we will update the "Last updated" date at the top of this page, and post the revised Privacy Statement on this page. If we ever begin collecting personal information, we will update this Privacy Statement before such collection begins and, where required, obtain your consent.
 
-## 9. Contact Us
+## 10. Contact Us
 
 If you have any questions about this Privacy Statement or believe that we may have inadvertently collected personal information, you can contact us at:
 
