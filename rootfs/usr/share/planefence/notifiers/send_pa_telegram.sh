@@ -26,7 +26,7 @@ exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /
 
 
 # shellcheck disable=SC2034
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 declare -a INDEX STALE
 declare -a link
 
@@ -42,7 +42,7 @@ fi
 log_print DEBUG "Hello. Starting Telegram notification run"
 
 if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
-  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PF_TELEGRAM_CHAT_ID aren't set. Aborting."
+  log_print ERR "Telegram is enabled, but TELEGRAM_BOT_TOKEN or PA_TELEGRAM_CHAT_ID aren't set. Aborting."
   exit
 fi
 

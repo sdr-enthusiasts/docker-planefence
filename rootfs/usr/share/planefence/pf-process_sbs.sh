@@ -28,7 +28,7 @@
 # Only change the variables below if you know what you are doing.
 
 ## DEBUG stuff:
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 
 ## initialization:
 source /scripts/pf-common
@@ -1032,7 +1032,7 @@ READ_RECORDS ignore-lock
 
 
 
-log_print DEBUG "Got ignorelist. Getting noiselist in the background as this may take a while"
+log_print DEBUG "Getting noiselist in the background as this may take a while"
 if [[ -n $REMOTENOISE ]]; then
   curl -m 30 -fsSL "$REMOTENOISE/noisecapt-dir.gz" 2>/dev/null | zcat > /tmp/.allnoise 2>/dev/null &
   noise_pid=$!

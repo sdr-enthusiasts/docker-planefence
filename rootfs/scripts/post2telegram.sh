@@ -10,10 +10,9 @@
 # -----------------------------------------------------------------------------------
 
 source /scripts/pf-common
-source /usr/share/planefence/persist/planefence.config
 
 # shellcheck disable=SC2034
-DEBUG=false
+DEBUG="${DEBUG:-false}"
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
 
@@ -23,27 +22,21 @@ if (( ${#@} < 1 )); then
   exit 1
 fi
 
-# Set the default values
-TELEGRAM_API="${TELEGRAM_API:-https://api.telegram.org/bot}"
-TELEGRAM_MAX_LENGTH="${TELEGRAM_MAX_LENGTH:-4096}"
-if [[ "${1,,}" == "pf" ]]; then
-  if [[ -z "${PF_TELEGRAM_CHAT_ID}" ]]; then
-    log_print ERR "the PF_TELEGRAM_CHAT_ID environment variable must be set"
-    exit 1
-  fi
-  TELEGRAM_CHAT_ID="${PF_TELEGRAM_CHAT_ID}"
-elif [[ "${1,,}" == "pa" ]]; then
-  # shellcheck disable=SC2153
-  TELEGRAM_CHAT_ID="${PA_TELEGRAM_CHAT_ID}"
-  if [[ -z "$TELEGRAM_CHAT_ID" ]]; then
-    log_print ERR "the PA_TELEGRAM_CHAT_ID environment variable must be set"
-    exit 1
-  fi
-else
-  log_print ERR "you must specify either 'PF' or 'PA' as the first argument to $0"
-  log_print ERR "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
+if [[ "${1,,}" != "pf" && "${1,,}" != "pa" ]]; then
+  log_print INFO "Usage: $0 <PF|PA> <text> [image1] [image2] ..."
   exit 1
 fi
+
+TELEGRAM_API="$(GET_PARAM "${1,,}" TELEGRAM_API)" || true
+TELEGRAM_API="${TELEGRAM_API:-https://api.telegram.org/bot}"
+
+TELEGRAM_MAX_LENGTH="$(GET_PARAM "${1,,}" TELEGRAM_MAX_LENGTH)" || true
+TELEGRAM_MAX_LENGTH="${TELEGRAM_MAX_LENGTH:-4096}"
+
+TELEGRAM_CHAT_ID="$(GET_PARAM "${1,,}" TELEGRAM_CHAT_ID)" || true
+TELEGRAM_BOT_TOKEN="$(GET_PARAM "${1,,}" TELEGRAM_BOT_TOKEN)" || true
+TELEGRAM_CHAT_TYPE="$(GET_PARAM "${1,,}" TELEGRAM_CHAT_TYPE)" || true
+
 
 # Check if the required variables are set
 if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then

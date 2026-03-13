@@ -18,7 +18,7 @@ shopt -s extglob
 
 SPACE=$'\x1F'   # "special" space
 
-DEBUG=false   # set to true to enable debug output to /tmp/bsky.debug
+DEBUG="${DEBUG:-false}"   # set to true to enable debug output to /tmp/bsky.debug
 
 if (( ${#@} < 1 )); then
   log_print ERR "Usage: $0 [pf|pa] <text> [image1] [image2] ..."

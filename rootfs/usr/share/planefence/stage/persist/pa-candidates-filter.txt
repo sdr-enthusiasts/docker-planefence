@@ -1,0 +1,269 @@
+# Plane-Alert candidate filters
+#
+# Format:
+#   ICAO:<glob-pattern>:<owner fallback>
+#   CALLSIGN:<glob-pattern>:<owner fallback>
+#   DATABASE:fieldname1:pattern1[:fieldname2:pattern2][...]
+# Exclusions (overrule includes):
+#   ICAO:!<glob-pattern>
+#   CALLSIGN:!<glob-pattern>
+#   DATABASE:!fieldname1:pattern1[:fieldname2:pattern2][...]
+#
+# Matching logic is OR:
+#   a record is considered if ICAO matches any ICAO pattern OR callsign matches any CALLSIGN pattern.
+#
+# Notes:
+# - Matching is case-insensitive (internally uppercased)
+# - Patterns use shell-style globs (* and ?)
+#
+
+# Callsign-based filters
+
+# Military / Government Flight
+CALLSIGN:REACH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RCH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SAM?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TEXACO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SHELL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:EXXON?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:GOLD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ROMA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PYREX?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:QUAD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OILER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OILGATE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:OPEC?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ESSO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ETHYL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:EXTENDER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:GETFUEL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ORCA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PRIMO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:QUEST?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ROVING?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SHAMU?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SPUR?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TOGA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:UNIVERSAL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:WHISTLER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:WRESTLER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:NAVY?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:MARINE?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
+CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USAF?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USN?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
+CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
+
+CALLSIGN:NATO?(-)[0-9]*:NATO air component
+
+# Callsign exclusion examples (exclusions overrule includes)
+CALLSIGN:!KAPT*
+CALLSIGN:!TEST*
+
+# European military callsign prefixes (optional hyphen before numeric flight number)
+CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
+CALLSIGN:CTM?(-)[0-9][0-9]*:France Armee de lAir
+CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:MMF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
+CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
+CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
+CALLSIGN:DAF?(-)[0-9][0-9]*:Royal Danish Air Force
+CALLSIGN:BAF?(-)[0-9][0-9]*:Belgian Air Component
+CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
+CALLSIGN:FNF?(-)[0-9][0-9]*:Finnish Air Force
+CALLSIGN:PLF?(-)[0-9][0-9]*:Polish Air Force
+
+# Additional callsign formats
+CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
+CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
+CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
+CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
+
+# Unidentified military-style callsign (4+ letters, optional '-', then 2+ digits, then optional letters)
+CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*([A-Z]):Military / Government Flight
+
+#  Military aircraft by owner name or type code:
+DATABASE:owner:*AIR?( )FORCE*
+DATABASE:owner:*army*
+DATABASE:owner:*armee*
+DATABASE:owner:*luftwaffe*
+DATABASE:owner:*Guardia Di Finanza*
+DATABASE:owner:*navy*
+DATABASE:owner: *Marine Corps*
+DATABASE:typecode:22-72479
+DATABASE:typecode:22-72481
+DATABASE:typecode:A10
+DATABASE:typecode:A109
+DATABASE:typecode:A139
+DATABASE:typecode:A140
+DATABASE:typecode:A148
+DATABASE:typecode:A400
+DATABASE:typecode:A6
+DATABASE:typecode:A748
+DATABASE:typecode:AJET
+DATABASE:typecode:AMX
+DATABASE:typecode:AN*
+DATABASE:typecode:AS*
+DATABASE:typecode:AS55
+DATABASE:typecode:AT76
+DATABASE:typecode:B1
+DATABASE:typecode:B105
+DATABASE:typecode:B17
+DATABASE:typecode:B25
+DATABASE:typecode:B26
+DATABASE:typecode:B412
+DATABASE:typecode:B52
+DATABASE:typecode:C135
+DATABASE:typecode:C160
+DATABASE:typecode:C17
+DATABASE:typecode:C2
+DATABASE:typecode:C208
+DATABASE:typecode:C212
+DATABASE:typecode:C27J
+DATABASE:typecode:C295
+DATABASE:typecode:C30J
+DATABASE:typecode:C414
+DATABASE:typecode:C5
+DATABASE:typecode:C5M
+DATABASE:typecode:CORS
+DATABASE:typecode:DOVE
+DATABASE:typecode:DRON
+DATABASE:typecode:E2
+DATABASE:typecode:E314
+DATABASE:typecode:E3TF
+DATABASE:typecode:E6
+DATABASE:typecode:E8
+DATABASE:typecode:EC25
+DATABASE:typecode:EUF1
+DATABASE:typecode:EUFI
+DATABASE:typecode:F15
+DATABASE:typecode:F18
+DATABASE:typecode:F18S
+DATABASE:typecode:F27
+DATABASE:typecode:F50
+DATABASE:typecode:H53
+DATABASE:typecode:H53S
+DATABASE:typecode:IL76
+DATABASE:typecode:IL96
+DATABASE:typecode:K35E
+DATABASE:typecode:LANC
+DATABASE:typecode:P3
+DATABASE:typecode:P51
+DATABASE:typecode:P8-[?]
+DATABASE:typecode:PUMA
+DATABASE:typecode:Q4
+DATABASE:typecode:R135
+DATABASE:typecode:RFAL
+DATABASE:typecode:SB*
+DATABASE:typecode:SF34
+DATABASE:typecode:SUCO
+DATABASE:typecode:T134
+DATABASE:typecode:T154
+DATABASE:typecode:T206
+DATABASE:typecode:T214
+DATABASE:typecode:T34
+DATABASE:typecode:T38
+DATABASE:typecode:TBM7
+DATABASE:typecode:TEX2
+DATABASE:typecode:TOR
+DATABASE:typecode:U2
+DATABASE:typecode:UH1*
+DATABASE:typecode:V22
+DATABASE:typecode:VF35
+DATABASE:typecode:VINT
+DATABASE:typecode:W3
+DATABASE:typecode:YK40
+DATABASE:typecode:YUN8
+DATABASE:typecode:Z42
+DATABASE:typecode:ZEPH
+DATABASE:typecode:ZZZZ
+
+# United States military (DoD; commonly used overall block)
+ICAO:AE*:United States Military
+
+# United States (non-civil US allocation; includes many US military/public aircraft—broad)
+ICAO:AF*:United States Military
+
+# United States military (DoD sub-block within AD* commonly observed)
+ICAO:ADF[89A-F]*:United States Military
+
+# Belgium military (commonly Belgian Air Component)
+ICAO:44F*:Belgian Air Component
+
+# Austria military (Austrian Armed Forces / air assets)
+ICAO:44[4-7]*:Austrian Air Force
+
+# Bulgaria military (Bulgarian Air Force)
+ICAO:457*:Bulgarian Air Force
+
+# Denmark military (Royal Danish Air Force / Danish military aircraft)
+ICAO:45F4*:Royal Danish Air Force
+
+# Netherlands military (Royal Netherlands Air Force / Dutch military aircraft)
+ICAO:480*:Royal Netherlands Air Force
+
+# Norway military (Royal Norwegian Air Force)
+ICAO:4781*:Royal Norwegian Air Force
+
+# Switzerland military (Swiss Air Force)
+ICAO:4B7*:Swiss Air Force
+
+# Turkey military (Turkish Air Force / Turkish military aircraft)
+ICAO:4B82*:Turkish Air Force
+
+# Hungary military (Hungarian Defence Forces / air assets; small observed block)
+ICAO:473C0*:Hungarian Air Force
+
+# Germany military (Bundeswehr; Luftwaffe/Heer/Marineflieger—observed “3E8–3EB”)
+ICAO:3E[89AB]*:German Air Force
+
+# Germany military (Bundeswehr; observed “3F4–3F7”)
+ICAO:3F[4-7]*:German Air Force
+
+# Germany military (Bundeswehr; observed “3F8–3FB”)
+ICAO:3F[89AB]*:German Air Force
+
+# France military (French Armed Forces / Armée de l’Air et de l’Espace, Aéronavale, etc.)
+ICAO:3B*:French Air Force
+
+# Canada military (Canadian Armed Forces; Canadian allocation frequently includes RCAF/CAF aircraft)
+ICAO:C[23]*:Royal Canadian Air Force
+
+# Additional ICAO ranges extracted from Snoop's manual observations (military/government)
+
+# North Africa / Middle East military-government examples
+ICAO:06A27*:Qatar Emiri Air Force
+ICAO:06A28*:Qatar Emiri Air Force
+ICAO:7102*:Royal Saudi Air Force
+ICAO:7660*:Pakistan Air Force
+ICAO:8940*:Bahrain Royal Flight
+ICAO:896C2*:United Arab Emirates Air Force
+
+# European military/government examples (not covered above)
+ICAO:33FC*:Italian Air Force
+ICAO:33FFD*:Italian Air Force
+ICAO:3532*:Spanish Air Force
+ICAO:3536*:Spanish Air Force
+ICAO:3553*:Spanish Air Force
+ICAO:497C*:Portuguese Air Force
+ICAO:505FA*:Slovak Air Force
+
+# Americas / APAC military-government examples
+ICAO:E494A*:Brazilian Air Force
+
+# Non-military aircraft filters
+DATABASE:owner:* Oil*
+DATABASE:owner:* Petrol*
+DATABASE:owner:* Patrol*
+
+
+
+
+

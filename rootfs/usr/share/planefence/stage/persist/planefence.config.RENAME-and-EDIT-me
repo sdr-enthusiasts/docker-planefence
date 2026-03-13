@@ -45,8 +45,8 @@ PF_MAXALT=5000
 GENERATE_CSV=OFF
 # ---------------------------------------------------------------------
 # PF_INTERVAL: poll interval in seconds for new planes.
-# Recommended minimum is 60 seconds to avoid excessive load.
-PF_INTERVAL=80
+# Recommended minimum is 30 seconds to avoid excessive load.
+PF_INTERVAL=45
 # ---------------------------------------------------------------------
 # PF_DISTUNIT: unit for distances/radius.
 # Allowed: kilometer, nauticalmile, mile, meter.
@@ -58,6 +58,8 @@ PF_ALTUNIT=feet
 # ---------------------------------------------------------------------
 # PF_SPEEDUNIT: unit for aircraft speed.
 # Allowed: kilometerph, knotph, mileph.
+# (yes we know -- knot is already a unit of speed, but an external package included
+#  in the software requires it this way)
 PF_SPEEDUNIT=knotph
 # ---------------------------------------------------------------------
 # PF_FUDGELOC: round displayed station coordinates to protect privacy.
@@ -71,7 +73,8 @@ PF_CHECKROUTE=true
 # 
 # ---------------------------------------------------------------------
 # PF_TRACKSERVICE: map service used to render tracking links for Planefence.
-# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live.
+# This must be a tar1090-style service as we create a deep link to a specific aircraft/location/time combo
+# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live, adsb.lol.
 PF_TRACKSERVICE=globe.adsbexchange.com
 # ---------------------------------------------------------------------
 # PF_ELEVATION: station elevation above mean sea level (MSL),
@@ -83,8 +86,6 @@ PF_ELEVATION=0
 # Used as fallback to identify aircraft owner when other sources fail.
 # Set to "disabled" to prevent downloads (use previously stored copy if present).
 OPENSKYDB_DOWNLOAD=
-# ---------------------------------------------------------------------
-
 
 ###############################################################################
 # Web Page Related Parameters
@@ -134,9 +135,15 @@ PF_NOISECAPT=
 # See project docs for privacy details. Any non-empty value enables; empty disables.
 PF_CHECKREMOTEDB=
 # ---------------------------------------------------------------------
-# PF_IGNOREDUPES: if set, show only the first ICAO+flight combo per day.
-# PF_COLLAPSEWITHIN (when PF_IGNOREDUPES is unset): minimum seconds between observations to
+# PF_IGNOREDUPES: if set to yes/on/true/1/enabled, show only the first ICAO+flight combo per day.
+# PF_COLLAPSEWITHIN: minimum seconds between observations to
 # treat them as separate entries; closer observations are collapsed.
+# Note - to completely ignore specific aircraft in Planefence, you can create a file named
+#        planefence-ignore.txt in the same directory as this config file. In that file, you can
+#        list ICAOs, callsigns, or regex patterns, with one entry per line. Regexes should be 
+#        compatible with the Linux grep command.
+#        Since aircraft often only transmit their callsign once every X messages, adding callsigns to
+#        this list may not be as effective as adding ICAO patterns.
 PF_IGNOREDUPES=
 PF_COLLAPSEWITHIN=300
 
@@ -186,6 +193,41 @@ PA_TRACKSERVICE=globe.adsbexchange.com
 # Accepted: ICAO type codes, ADS-B hex, or any text in the plane’s record. Case-insensitive.
 # URLs/image links are not searched. Empty disables filtering.
 PA_EXCLUSIONS=
+# ---------------------------------------------------------------------
+# PA_SHOW_STALE_PAGE: If set to true/on/enabled/1, http://xxx/plane-alert will show the old, stale plane-alert page.
+# If disabled or empty, http://xxx/plane-alert will redirect automatically to the new plane-alert page.
+# Default is empty (off), which means that the link will automatically redirect to the new page.
+# Note - changes to this parameter only take effect upon container restart. If you still see the previous behavior
+#        after restarting the container, make sure to clear your browser cache as sometimes it remembers previous redirects.
+PA_SHOW_STALE_PAGE=
+# ---------------------------------------------------------------------
+# PA_COLLECT_CANDIDATES: enable automatic collection of potential Plane-Alert candidates
+# from socket30003 data.
+#   ON/true/enabled/1/yes  -> enabled
+#   OFF/false/disabled/0/no/empty -> disabled
+#
+# When enabled:
+# - Pattern definitions (ICAO and/or Callsign) are read from pa-candidates-filter.txt in your config directory
+# - Candidate output is written to plane-alert-candidates.txt in your config directory
+# - If you set PA_COLLECT_CANDIDATES_FILTER_FILE to a file name, it will read from that file 
+#   in your config directory instead of pa-candidates-filter.txt. (Note - provide only the file name, not a full path).
+#   Since the original pa-candidates-filter.txt file is regularly updated/overwritten when new builds are released, this
+#   enables you to maintain your own file that won't be affected by system updates.
+# - If you configure a filename in PA_COLLECT_CANDIDATES_LOG, it will log which filter match caused a specific plane to be
+#   added to plane-alert-candidates.txt. This is useful to finetune your filter settings if undesired planes get through.
+#   Leave this parameter empty to no longer log to this file.
+#
+# To auto-include generated candidates in your watchlist, append
+# plane-alert-candidates.txt to the end of your comma-separated alert list in the
+# PF_ALERTLIST parameter.
+#
+# If, after review of plane-alert-candidates.txt, you want to exclude specific aircraft from this file,
+# then comment them out (by placing a # at the start of the line) instead of simply erasing them.
+# Aircraft that are commented out will not be added back in during subsequent observations and filter matches.
+#
+PA_COLLECT_CANDIDATES=ON
+PA_COLLECT_CANDIDATES_FILTER_FILE=
+PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log
 
 ###############################################################################
 # Notification Related Parameters
@@ -325,18 +367,21 @@ PA_BLUESKY_ENABLED=""
 # ---------------------------------------------------------------------
 # Optional Telegram notifications.
 # See README-telegram.md for creating a Bot and channel.
-# TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
+# [PA_|PF_]TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
 # PF_TELEGRAM_CHAT_ID / PA_TELEGRAM_CHAT_ID: numeric (private) or public name (e.g., @yourchannel).
-# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: dm/private/user → send DM; no link retained.
+# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: when set to dm/private/user: send DM; no link retained.
+#                                                Leave this param empty or set to "normal" unless needed
 # IMPORTANT: add your Bot as a channel Administrator (requires you being an Admin).
 # PF_TELEGRAM_ENABLED / PA_TELEGRAM_ENABLED must be on/enabled/1/yes/true to activate notifications.
 #
+# If you set the parameter without the PA_ or PF_ prefix, it will apply to both PA and PF. 
+# However, if you also set the PA_TELEGRAM_... or PF_TELEGRAM_..., that value will have preference
 TELEGRAM_BOT_TOKEN=""
 PF_TELEGRAM_CHAT_ID=""
 PA_TELEGRAM_CHAT_ID=""
 PF_TELEGRAM_ENABLED=false
 PA_TELEGRAM_ENABLED=false
-PF_TELEGRAM_CHAT_TYPE=
-PA_TELEGRAM_CHAT_TYPE=
+PF_TELEGRAM_CHAT_TYPE=normal
+PA_TELEGRAM_CHAT_TYPE=normal
 #
 # ---------------------------------------------------------------------

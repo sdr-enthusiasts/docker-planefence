@@ -194,8 +194,9 @@ if chk_enabled "$PF_IGNOREDUPES"; then configure_planefence "IGNOREDUPES" "ON"; 
 configure_planefence "COLLAPSEWITHIN" "${PF_COLLAPSEWITHIN:-300}"
 
 IGNORELIST="$(GET_PARAM pf IGNORELIST)"
-touch -a "$IGNORELIST"
-sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
+if [[ -n "$IGNORELIST" && -f "$IGNORELIST" ]]; then
+	sed -i '/^$/d' "$IGNORELIST" 2>/dev/null  # clean empty lines from ignorelist
+fi
 #
 # -----------------------------------------------------------------------------------
 #
@@ -307,9 +308,12 @@ fi
 # Configure Telegram parameters:
 configure_planefence "TELEGRAM_ENABLED" "$PF_TELEGRAM_ENABLED"
 configure_planealert "TELEGRAM_ENABLED" "$PA_TELEGRAM_ENABLED"
-configure_both "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
-configure_planefence "TELEGRAM_CHAT_ID" "$PF_TELEGRAM_CHAT_ID"
-configure_planealert "TELEGRAM_CHAT_ID" "$PA_TELEGRAM_CHAT_ID"
+configure_planefence "TELEGRAM_BOT_TOKEN" "${PF_TELEGRAM_BOT_TOKEN:-$TELEGRAM_BOT_TOKEN}"
+configure_planealert "TELEGRAM_BOT_TOKEN" "${PA_TELEGRAM_BOT_TOKEN:-$TELEGRAM_BOT_TOKEN}"
+configure_planefence "TELEGRAM_CHAT_ID" "${PF_TELEGRAM_CHAT_ID:-$TELEGRAM_CHAT_ID}"
+configure_planealert "TELEGRAM_CHAT_ID" "${PA_TELEGRAM_CHAT_ID:-$TELEGRAM_CHAT_ID}"
+configure_planefence "TELEGRAM_CHAT_TYPE" "${PF_TELEGRAM_CHAT_TYPE:-$TELEGRAM_CHAT_TYPE}"
+configure_planealert "TELEGRAM_CHAT_TYPE" "${PA_TELEGRAM_CHAT_TYPE:-$TELEGRAM_CHAT_TYPE}"
 
 configure_planealert "NAME" "${PF_NAME:-My}"
 configure_planealert "ADSBLINK" "$PF_MAPURL"
@@ -342,11 +346,6 @@ if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/soc
 	pkill socket30003.pl
 fi
 #
-#--------------------------------------------------------------------------------
-# Move web page background pictures in place
-[[ -f /usr/share/planefence/persist/pf_background.jpg ]] && cp -f /usr/share/planefence/persist/pf_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pf_background.jpg
-[[ -f /usr/share/planefence/persist/pa_background.jpg ]] && cp -f /usr/share/planefence/persist/pa_background.jpg /usr/share/planefence/html || rm -f /usr/share/planefence/html/pa_background.jpg
-
 #--------------------------------------------------------------------------------
 # Put the MOTDs in place:
 configure_planefence "PF_MOTD" "$PF_MOTD"

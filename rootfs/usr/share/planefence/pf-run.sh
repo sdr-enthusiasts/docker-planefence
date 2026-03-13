@@ -72,9 +72,16 @@ fi
 
 cd "$PF_PATH"
 
-if [[ -f /run/planefence/last-config-change ]] && (( $(</run/planefence/last-config-change) < $(stat -c %Z /usr/share/planefence/persist/planefence.config) )); then
+if [[ -f /run/planefence/last-config-change ]] && \
+   (( $(</run/planefence/last-config-change) < $(stat -c %Z /usr/share/planefence/persist/planefence.config) )); then
   log_print INFO "Detected a change in the config file since last run. Applying config changes."
   /usr/share/planefence/prep-planefence.sh
+  date +%s >/run/planefence/last-config-change
+elif [[ -f /run/planefence/last-config-change ]] && [[ -f /usr/share/planefence/persist/plane-alert-candidates.txt ]] && \
+   (( $(</run/planefence/last-config-change) < $(stat -c %Z /usr/share/planefence/persist/plane-alert-candidates.txt) )); then
+  log_print INFO "Detected a change in the plane-alert-candidates file since last run. Applying config changes."
+  /usr/share/planefence/get-pa-alertlist.sh
+  date +%s >/run/planefence/last-config-change
 fi
 
 ./pf-process_sbs.sh	&	# read and process SBS data
