@@ -311,6 +311,8 @@ MASTODON_RETENTION_TIME=7
 # URL: mandatory broker host/IP or URL. If omitted, MQTT is disabled.
 # PORT: optional TCP port (default 1883).
 # TLS: set to enable TLS; unset for plaintext.
+# CAFILE: optional path to CA certificate file for self-signed broker certificates (Default: none).
+# TLS_INSECURE: set to "true" to disable certificate verification (Default: false).
 # TOPIC: optional topic (default "<container-hostname>/planefence" or "<container-hostname>/plane-alert").
 # DATETIME_FORMAT: optional Linux date format (default "%s").
 # QOS: optional QoS level (default 0).
@@ -321,6 +323,8 @@ MASTODON_RETENTION_TIME=7
 PF_MQTT_URL=""
 PF_MQTT_PORT=""
 PF_MQTT_TLS=""
+PF_MQTT_CAFILE=""
+PF_MQTT_TLS_INSECURE=""
 PF_MQTT_CLIENT_ID=""
 PF_MQTT_TOPIC=""
 PF_MQTT_DATETIME_FORMAT=""
@@ -332,6 +336,8 @@ PF_MQTT_PASSWORD=""
 PA_MQTT_URL=""
 PA_MQTT_PORT=""
 PA_MQTT_TLS=""
+PA_MQTT_CAFILE=""
+PA_MQTT_TLS_INSECURE=""
 PA_MQTT_CLIENT_ID=""
 PA_MQTT_TOPIC=""
 PA_MQTT_DATETIME_FORMAT=""
