@@ -26,6 +26,15 @@ utc_today="$(date -u +%y%m%d)"
 # GNU date or BSD date (macOS) compatible yesterday
 utc_yday="$(date -u -d 'yesterday' +%y%m%d 2>/dev/null || date -u -v-1d +%y%m%d)"
 
+PLANEALERT_CFG_VALUE="$(GET_PARAM pa PLANEALERT || true)"
+if chk_enabled "${PLANEALERT_CFG_VALUE:-}"; then
+  PLANEALERT_ENABLED=true
+  PLANEALERT_ENABLED_HEADER=1
+else
+  PLANEALERT_ENABLED=false
+  PLANEALERT_ENABLED_HEADER=0
+fi
+
 plane_alert_hist_days() {
   local val
   val="$(GET_PARAM plane-alert HISTTIME)"
@@ -171,6 +180,7 @@ printf 'Cache-Control: no-store\r\n'
 printf 'Pragma: no-cache\r\n'
 printf 'Expires: 0\r\n'
 printf 'X-Content-Type-Options: nosniff\r\n'
+printf 'X-Planefence-PlaneAlert-Enabled: %s\r\n' "${PLANEALERT_ENABLED_HEADER}"
 printf '\r\n'
 
 choose_json() {
@@ -277,7 +287,7 @@ if [[ -z "${JSONFILE:-}" ]]; then
 fi
 
 # Stream schema then rows
-if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" '
+if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" --argjson planealert_enabled "${PLANEALERT_ENABLED}" '
   def pri: [
     "index","icao","tail","callsign","type","owner","route","nominatim",
     "time:firstseen","time:time_at_mindist","time:lastseen","distance:value","distance:unit","complete",
@@ -319,8 +329,9 @@ if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" '
     ( .[0] | (type=="object") and (has("index")|not) ) as $has_globals
     | ( if $has_globals then .[0] else {} end ) as $raw_globals
     | ( if ($todays_version|length)>0
-        then $raw_globals + {"station:version":$todays_version, "station.version":$todays_version}
-        else $raw_globals end ) as $globals
+      then $raw_globals + {"station:version":$todays_version, "station.version":$todays_version}
+      else $raw_globals end ) as $globals0
+    | ($globals0 + {"planealert:enabled":$planealert_enabled, "planealert.enabled":$planealert_enabled}) as $globals
     | ( if $has_globals then .[1:] else . end ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})

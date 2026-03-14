@@ -885,6 +885,9 @@
       return applyParams(tpl, { range: rangeStr, distUnit });
     })();
     const planeAlertSection = [planeAlertDesc, planeAlertRangeNote].filter(Boolean).join(' ');
+    const planeAlertInfoBlock = planeAlertFeatureEnabled
+      ? `\n<h1>${planeAlertHeading}</h1>\n${planeAlertSection}`
+      : '';
     const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
     const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
@@ -902,8 +905,7 @@ ${pfDesc}
 <div class="station-map-wrapper">
   <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>
 </div>
-<h1>${planeAlertHeading}</h1>
-${planeAlertSection}
+${planeAlertInfoBlock}
 <h1>${messagesHeading}</h1>
 ${messagesDesc}
 <footer>
@@ -924,10 +926,89 @@ ${messagesDesc}
 
     // -------- Data mode (Planefence vs Plane-Alert) --------
     const DATA_MODE_KEY = 'pf-data-mode';
+    const PLANE_ALERT_ENABLED_HEADER = 'x-planefence-planealert-enabled';
     const DATA_MODES = {
       PLANEFENCE: 'planefence',
       PLANE_ALERT: 'plane-alert'
     };
+    let planeAlertFeatureEnabled = true;
+    let planeAlertRedirectInProgress = false;
+
+    function parseBooleanLike(raw){
+      if (raw === true || raw === 1) return true;
+      if (raw === false || raw === 0) return false;
+      if (typeof raw === 'string') {
+        const s = raw.trim().toLowerCase();
+        if (!s) return null;
+        if (s === 'true' || s === '1' || s === 'yes' || s === 'on') return true;
+        if (s === 'false' || s === '0' || s === 'no' || s === 'off') return false;
+      }
+      return null;
+    }
+
+    function forceReloadToPlanefence(){
+      if (planeAlertRedirectInProgress) return;
+      planeAlertRedirectInProgress = true;
+      safeSetItem(DATA_MODE_KEY, DATA_MODES.PLANEFENCE);
+      dataMode = DATA_MODES.PLANEFENCE;
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', DATA_MODES.PLANEFENCE);
+        window.location.replace(url.toString());
+      } catch (e) {
+        window.location.reload();
+      }
+    }
+
+    function applyDataModeAvailabilityUI(){
+      const modeToggle = document.querySelector('.mode-toggle');
+      const modeDivider = document.querySelector('.toggle-row > .header-divider');
+      const toggleInput = document.getElementById('dataModeToggle');
+      const show = planeAlertFeatureEnabled;
+      if (modeToggle) modeToggle.style.display = show ? 'flex' : 'none';
+      if (modeDivider) modeDivider.style.display = show ? '' : 'none';
+      if (toggleInput) toggleInput.disabled = !show;
+    }
+
+    function setPlaneAlertFeatureEnabled(enabled){
+      const next = enabled !== false;
+      const changed = planeAlertFeatureEnabled !== next;
+      planeAlertFeatureEnabled = next;
+      if (changed) {
+        applyDataModeAvailabilityUI();
+        refreshStationInfoContent();
+      }
+      if (!planeAlertFeatureEnabled && isPlaneAlertMode()) {
+        forceReloadToPlanefence();
+      }
+    }
+
+    function updatePlaneAlertAvailabilityFromResponse(resp){
+      try {
+        const headerValue = resp?.headers?.get?.(PLANE_ALERT_ENABLED_HEADER);
+        const parsed = parseBooleanLike(headerValue);
+        if (parsed === null) return;
+        setPlaneAlertFeatureEnabled(parsed);
+      } catch (e) { /* ignore */ }
+    }
+
+    function updatePlaneAlertAvailabilityFromGlobals(globals){
+      if (!globals || typeof globals !== 'object') return;
+      const candidates = [
+        getGlobalValue(globals, 'planealert:enabled'),
+        getGlobalValue(globals, 'planealert.enabled'),
+        globals.PLANEALERT_ENABLED,
+        globals.PLANEALERT
+      ];
+      for (const value of candidates) {
+        if (value === undefined || value === null || value === '') continue;
+        const parsed = parseBooleanLike(value);
+        if (parsed === null) continue;
+        setPlaneAlertFeatureEnabled(parsed);
+        return;
+      }
+    }
+
     function modeFromQuery(){
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -972,6 +1053,7 @@ ${messagesDesc}
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
         body.classList.toggle('mode-planefence', !isPlaneAlertMode());
       }
+      applyDataModeAvailabilityUI();
       updateHistorySupport();
       updateHeatmapButtonState();
     }
@@ -999,6 +1081,11 @@ ${messagesDesc}
       if (!toggle) return;
       toggle.addEventListener('change', ()=>{
         const newMode = toggle.checked ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+        if (!planeAlertFeatureEnabled && newMode === DATA_MODES.PLANE_ALERT) {
+          try { toggle.checked = false; } catch (e) { /* ignore */ }
+          forceReloadToPlanefence();
+          return;
+        }
         if (newMode === dataMode) return;
         safeSetItem(DATA_MODE_KEY, newMode);
         dataMode = newMode;
@@ -2132,6 +2219,7 @@ ${messagesDesc}
 
   function updateStationInfoFromGlobals(globals) {
     if (!globals || typeof globals !== 'object') return;
+    updatePlaneAlertAvailabilityFromGlobals(globals);
     let changed = false;
     const mapping = [
       ['dist', 'station:dist:value'],
@@ -3553,6 +3641,7 @@ function addOrUpdateRow(r){
     const modeForRun = dataMode;
     try {
       const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store', signal: controller.signal });
+      updatePlaneAlertAvailabilityFromResponse(resp);
       if (!resp.ok || !resp.body) { if (prog) prog.textContent = t('status.streamFailed', {}, 'Stream failed'); return; }
 
       const reader = resp.body.getReader();
@@ -3661,6 +3750,7 @@ function addOrUpdateRow(r){
       if (generation !== modeGeneration) return;
       const url = buildStreamUrl(DATA_MODES.PLANE_ALERT, null, { allowPlaneAlertDefaultAll: false });
       const resp = await fetch(url, { cache: 'no-store' });
+      updatePlaneAlertAvailabilityFromResponse(resp);
       if (!resp.ok || !resp.body) return;
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
@@ -3704,6 +3794,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
   try {
     if (generation !== modeGeneration) return;
     const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store' });
+    updatePlaneAlertAvailabilityFromResponse(resp);
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
     if (generation !== modeGeneration) return;
     const txt = await resp.text();
