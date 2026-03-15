@@ -67,7 +67,7 @@ PF_SPEEDUNIT=knotph
 # 3 → 0.001° (~300 ft at 42°N). Any other non-empty value acts like 3.
 PF_FUDGELOC=3
 # ---------------------------------------------------------------------
-# PF_CHECKROUTE: enrich PF table with route info via adsb.lol API.
+# PF_CHECKROUTE: enrich PF table with route info via adsb.im API.
 # Default is ON if not explicitly disabled.
 PF_CHECKROUTE=true
 # 

@@ -552,7 +552,7 @@
   <div id="heatmapModal" class="heatmap-modal" role="dialog" aria-modal="true" aria-label="Planefence heatmap" aria-hidden="true">
     <div class="heatmap-card">
       <button type="button" id="heatmapClose" class="heatmap-close" aria-label="Close heatmap">&times;</button>
-      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+      <iframe id="heatmapFrame" class="heatmap-frame" title="Planefence heatmap" loading="lazy" sandbox="allow-scripts allow-popups allow-forms allow-same-origin"></iframe>
       <div id="heatmapLoading" class="heatmap-loading">Preparing heatmap...</div>
     </div>
   </div>
@@ -1554,6 +1554,7 @@ ${messagesDesc}
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>${mapTitle}</title>
   <base href="${baseHref}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -1568,8 +1569,8 @@ ${messagesDesc}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <script>
     var map = L.map('map').setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noopener">Planefence</a>',
       crossOrigin: 'anonymous'
     }).addTo(map);
     var circle = L.circle([parseFloat('${latStr}'), parseFloat('${lonStr}')], {
@@ -1602,6 +1603,7 @@ ${messagesDesc}
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>${heatmapTitle}</title>
   <base href="${baseHref}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -1619,8 +1621,8 @@ ${messagesDesc}
   <script src="./js/planeheatdata.js"><\/script>
   <script>
     var map = L.map('map', { scrollWheelZoom: true, zoomSnap: 0.25, zoomDelta: 0.5 }).setView([parseFloat('${latStr}'), parseFloat('${lonStr}')], ${zoomLevel});
-    var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '\u00a9 OpenStreetMap contributors | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">Planefence</a>',
+    var tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> | <a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noopener">Planefence</a>',
       crossOrigin: 'anonymous'
     }).addTo(map);
     if (typeof addressPoints === 'undefined' || !Array.isArray(addressPoints)) { addressPoints = []; }
