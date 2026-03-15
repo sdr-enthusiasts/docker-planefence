@@ -200,7 +200,49 @@ GET_CALLSIGN() {
 
 GET_TYPE () {
   local apiUrl="https://api.adsb.lol/v2/hex"
-  curl -m 30 -sSL "$apiUrl/$1" | jq -r '.ac[] .t' 2>/dev/null
+  local type=""
+  local _osdb_header _osdb_col _osdb_norm i
+
+  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
+	if [[ -f /run/planefence/icao2plane.txt ]]; then
+		type="$(grep -m1 -i -F "$icao" /run/planefence/icao2plane.txt 2>/dev/null | awk -F, '{print $3}')"
+	fi
+
+  # If there is a OpenSkyDB file, check that one:
+  if [[ -z "$type" && -f /run/OpenSkyDB.csv ]]; then
+    # Determine icao24/typecode column numbers once from header, then do a fast grep prefilter + awk exact-column match
+    if [[ -z "${OPENSKYDB_ICAO24_COL:-}" || -z "${OPENSKYDB_TYPECODE_COL:-}" ]]; then
+      _osdb_header="$(head -n1 /run/OpenSkyDB.csv 2>/dev/null)"
+      IFS=',' read -r -a _osdb_col <<< "$_osdb_header"
+      for i in "${!_osdb_col[@]}"; do
+        _osdb_norm="${_osdb_col[$i]//[\"\'[:space:]]/}"
+        _osdb_norm="${_osdb_norm,,}"
+        [[ "$_osdb_norm" == "icao24" ]] && OPENSKYDB_ICAO24_COL=$(( i + 1 ))
+        [[ "$_osdb_norm" == "typecode" ]] && OPENSKYDB_TYPECODE_COL=$(( i + 1 ))
+      done
+    fi
+
+    if [[ -n "${OPENSKYDB_ICAO24_COL:-}" && -n "${OPENSKYDB_TYPECODE_COL:-}" ]]; then
+      type="$(grep -i -F "$icao" /run/OpenSkyDB.csv | awk -F, -v icao="$icao" -v icol="$OPENSKYDB_ICAO24_COL" -v tcol="$OPENSKYDB_TYPECODE_COL" '
+        {
+          key=$icol
+          gsub(/[ "\047\r\t]/, "", key)
+          if (tolower(key) == tolower(icao)) {
+            v=$tcol
+            gsub(/[ "\047\r\t]/, "", v)
+            print v
+            exit
+          }
+        }
+      ')"
+    fi
+  fi
+
+  if [[ -z "$type" ]]; then
+    type="$(curl -m 30 -sSL "$apiUrl/$icao" | jq -r 'try .ac[] .t | select(. != null)')"
+  fi
+
+  echo "$type"
 }
 
 GET_ROUTE_BULK () {
