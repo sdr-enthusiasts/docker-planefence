@@ -199,13 +199,16 @@ GET_CALLSIGN() {
 }
 
 GET_TYPE () {
+  local icao="$1"
   local apiUrl="https://api.adsb.lol/v2/hex"
   local type=""
   local _osdb_header _osdb_col _osdb_norm i
+  local provenance=""
 
   # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
 	if [[ -f /run/planefence/icao2plane.txt ]]; then
 		type="$(grep -m1 -i -F "$icao" /run/planefence/icao2plane.txt 2>/dev/null | awk -F, '{print $3}')"
+    if [[ -n "$type" ]]; then provenance="mictronics"; fi
 	fi
 
   # If there is a OpenSkyDB file, check that one:
@@ -236,12 +239,14 @@ GET_TYPE () {
         }
       ')"
     fi
+    if [[ -n "$type" ]]; then provenance="OpenSkyDB"; fi
   fi
 
   if [[ -z "$type" ]]; then
     type="$(curl -m 30 -sSL "$apiUrl/$icao" | jq -r 'try .ac[] .t | select(. != null)')"
+      if [[ -n "$type" ]]; then provenance="$apiUrl"; fi
   fi
-
+  log_print DEBUG "GET_TYPE for $icao: $type (provenance: $provenance)"
   echo "$type"
 }
 
