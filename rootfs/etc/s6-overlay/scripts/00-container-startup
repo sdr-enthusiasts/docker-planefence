@@ -46,4 +46,9 @@ else
     fi
 fi
 
+if chk_disabled "$PF_PLANEFENCE" && chk_disabled "$PF_PLANEALERT"; then
+    log_print ERR "PF_PLANEFENCE and PF_PLANEALERT are both disabled. Container will not start!"
+    exec sleep infinity
+fi
+
 "${s6wrap[@]}" echo "Initial Planefence check done..."

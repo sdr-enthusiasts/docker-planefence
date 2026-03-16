@@ -119,6 +119,11 @@ PF_OPENAIPKEY=
 # Parameters affecting Planefence behavior and data retention.
 
 # ---------------------------------------------------------------------
+# PF_PLANEFENCE: enable Planefence feature and corresponding web page
+# Note that PF_PLANEFENCE and PF_PLANEALERT cannot both be disabled!
+# Default value if omitted: enabled
+PF_PLANEFENCE=enabled
+# ---------------------------------------------------------------------
 # PF_MOTD: message-of-the-day shown at the top of the PF page.
 # Supports simple HTML. Escape special characters for sed (e.g., \|, \&, ").
 PF_MOTD="<b>Welcome to my Planefence Instance!</b>"
@@ -151,6 +156,8 @@ PF_COLLAPSEWITHIN=300
 # Plane-Alert Specific Parameters
 ###############################################################################
 
+# PF_PLANEALERT: enable Plane-Alert feature and sub-page.
+PF_PLANEALERT=enabled
 # ---------------------------------------------------------------------
 # PA_TABLESIZE: default rows per page before pagination.
 PA_TABLESIZE=50
@@ -158,9 +165,6 @@ PA_TABLESIZE=50
 # PA_MOTD: message-of-the-day shown at the top of the Plane-Alert page.
 # Supports simple HTML.
 PA_MOTD="<b>Welcome to my Plane-Alert Instance!</b>"
-# ---------------------------------------------------------------------
-# PF_PLANEALERT: enable Plane-Alert feature and sub-page.
-PF_PLANEALERT=ON
 # ---------------------------------------------------------------------
 # PF_PARANGE: Plane-Alert operating radius (uses PF_DISTUNIT). Empty → any plane your station reports.
 PF_PARANGE=999999

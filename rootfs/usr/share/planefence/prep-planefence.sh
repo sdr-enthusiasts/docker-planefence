@@ -233,7 +233,8 @@ fi
 
 
 # make sure $PLANEALERT is set to ON in the planefence.conf file, so it will be invoked:
-if chk_enabled "$PF_PLANEALERT"; then configure_planefence "PLANEALERT" "ON"; else configure_planefence "PLANEALERT" "OFF"; fi
+if ! chk_disabled "$PF_PLANEALERT"; then configure_planefence "PLANEALERT" "ON"; else configure_planefence "PLANEALERT" "OFF"; fi
+if ! chk_disabled "$PF_PLANEFENCE"; then configure_planefence "PLANEFENCE" "ON"; else configure_planefence "PLANEFENCE" "OFF"; fi
 # Go get the plane-alert-db files:
 /usr/share/planefence/get-pa-alertlist.sh
 /usr/share/planefence/get-silhouettes.sh

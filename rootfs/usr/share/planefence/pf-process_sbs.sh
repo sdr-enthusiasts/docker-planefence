@@ -1146,8 +1146,10 @@ log_print DEBUG "Collected new records into /tmp/filtered_records_$$"
 LASTPROCESSEDLINE="$(head -n2 /tmp/filtered_records_$$ | tail -1 || true)"
 
 # Create pf_socketrecords array
-readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }' || true)
-log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
+if chk_enabled "$PLANEFENCE"; then
+  readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }' || true)
+  log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
+fi
 
 # Create pa_socketrecords array
 if chk_enabled "$PLANEALERT" && (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
@@ -1161,8 +1163,10 @@ fi
 rm -f /tmp/filtered_records_$$
 
 # read the unique icao's into arrays:
-readarray -t pf_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
-log_print DEBUG "Created index array with ${#pf_icaos[@]} unique planefence entries"
+if chk_enabled "$PLANEFENCE"; then
+  readarray -t pf_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
+  log_print DEBUG "Created index array with ${#pf_icaos[@]} unique planefence entries"
+fi
 if chk_enabled "$PLANEALERT"; then
   readarray -t pa_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
   log_print DEBUG "Created index array with ${#pa_icaos[@]} unique plane-alert entries"
