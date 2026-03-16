@@ -927,11 +927,15 @@ ${messagesDesc}
     // -------- Data mode (Planefence vs Plane-Alert) --------
     const DATA_MODE_KEY = 'pf-data-mode';
     const PLANE_ALERT_ENABLED_HEADER = 'x-planefence-planealert-enabled';
+    const PLANEFENCE_ENABLED_HEADER = 'x-planefence-planefence-enabled';
     const DATA_MODES = {
       PLANEFENCE: 'planefence',
       PLANE_ALERT: 'plane-alert'
     };
+    let planefenceFeatureEnabled = true;
     let planeAlertFeatureEnabled = true;
+    let modeAvailabilityUpdateInProgress = false;
+    let fatalConfigErrorShown = false;
     let planeAlertRedirectInProgress = false;
 
     function parseBooleanLike(raw){
@@ -946,28 +950,101 @@ ${messagesDesc}
       return null;
     }
 
-    function forceReloadToPlanefence(){
+    function forceReloadToMode(mode){
       if (planeAlertRedirectInProgress) return;
       planeAlertRedirectInProgress = true;
-      safeSetItem(DATA_MODE_KEY, DATA_MODES.PLANEFENCE);
-      dataMode = DATA_MODES.PLANEFENCE;
+      const targetMode = mode === DATA_MODES.PLANE_ALERT ? DATA_MODES.PLANE_ALERT : DATA_MODES.PLANEFENCE;
+      const targetQueryMode = targetMode === DATA_MODES.PLANE_ALERT ? 'pa' : DATA_MODES.PLANEFENCE;
+      safeSetItem(DATA_MODE_KEY, targetMode);
+      dataMode = targetMode;
       try {
         const url = new URL(window.location.href);
-        url.searchParams.set('mode', DATA_MODES.PLANEFENCE);
+        url.searchParams.set('mode', targetQueryMode);
         window.location.replace(url.toString());
       } catch (e) {
         window.location.reload();
       }
     }
 
+    function forceReloadToPlanefence(){
+      forceReloadToMode(DATA_MODES.PLANEFENCE);
+    }
+
+    function forceReloadToPlaneAlert(){
+      forceReloadToMode(DATA_MODES.PLANE_ALERT);
+    }
+
+    function showFatalConfigurationErrorPage(){
+      if (fatalConfigErrorShown) return;
+      fatalConfigErrorShown = true;
+      try { stopStreamReader(); } catch (e) { /* ignore */ }
+      try { stopPollingLoop(); } catch (e) { /* ignore */ }
+
+      const body = document.body;
+      if (!body) return;
+      body.classList.remove('modal-open');
+
+      const hideSelectors = ['header', 'main', 'footer', '#privacyBanner', '#stationInfoModal', '#heatmapModal', '#photoModal'];
+      hideSelectors.forEach((sel) => {
+        try {
+          const el = document.querySelector(sel);
+          if (el) el.style.display = 'none';
+        } catch (e) { /* ignore */ }
+      });
+
+      let panel = document.getElementById('pfConfigErrorPage');
+      if (!panel) {
+        panel = document.createElement('main');
+        panel.id = 'pfConfigErrorPage';
+        panel.style.maxWidth = '54rem';
+        panel.style.margin = '2rem auto';
+        panel.style.padding = '0 1rem';
+        panel.innerHTML = `
+          <h1>Planefence Configuration Error</h1>
+          <p>Both <span class="mono">PF_PLANEFENCE</span> and <span class="mono">PF_PLANEALERT</span> have been disabled. This means that no aircraft data is collected.</p>
+          <p>This is probably a configuration error. Please contact the operator of this Planefence instance and ask them to correct this.</p>
+        `;
+        body.appendChild(panel);
+      }
+      try { document.title = 'Planefence Configuration Error'; } catch (e) { /* ignore */ }
+    }
+
+    function enforceModeAvailability(){
+      if (!planefenceFeatureEnabled && !planeAlertFeatureEnabled) {
+        showFatalConfigurationErrorPage();
+        return true;
+      }
+      if (!planeAlertFeatureEnabled && isPlaneAlertMode()) {
+        forceReloadToPlanefence();
+        return true;
+      }
+      if (!planefenceFeatureEnabled && (isPlanefenceRequestedInQuery() || !isPlaneAlertMode())) {
+        forceReloadToPlaneAlert();
+        return true;
+      }
+      return false;
+    }
+
     function applyDataModeAvailabilityUI(){
       const modeToggle = document.querySelector('.mode-toggle');
       const modeDivider = document.querySelector('.toggle-row > .header-divider');
       const toggleInput = document.getElementById('dataModeToggle');
-      const show = planeAlertFeatureEnabled;
+      const show = planeAlertFeatureEnabled && planefenceFeatureEnabled;
       if (modeToggle) modeToggle.style.display = show ? 'flex' : 'none';
       if (modeDivider) modeDivider.style.display = show ? '' : 'none';
       if (toggleInput) toggleInput.disabled = !show;
+    }
+
+    function setPlanefenceFeatureEnabled(enabled){
+      const next = enabled !== false;
+      const changed = planefenceFeatureEnabled !== next;
+      planefenceFeatureEnabled = next;
+      if (changed) {
+        applyDataModeAvailabilityUI();
+      }
+      if (!modeAvailabilityUpdateInProgress) {
+        enforceModeAvailability();
+      }
     }
 
     function setPlaneAlertFeatureEnabled(enabled){
@@ -978,9 +1055,18 @@ ${messagesDesc}
         applyDataModeAvailabilityUI();
         refreshStationInfoContent();
       }
-      if (!planeAlertFeatureEnabled && isPlaneAlertMode()) {
-        forceReloadToPlanefence();
+      if (!modeAvailabilityUpdateInProgress) {
+        enforceModeAvailability();
       }
+    }
+
+    function updatePlanefenceAvailabilityFromResponse(resp){
+      try {
+        const headerValue = resp?.headers?.get?.(PLANEFENCE_ENABLED_HEADER);
+        const parsed = parseBooleanLike(headerValue);
+        if (parsed === null) return;
+        setPlanefenceFeatureEnabled(parsed);
+      } catch (e) { /* ignore */ }
     }
 
     function updatePlaneAlertAvailabilityFromResponse(resp){
@@ -990,6 +1076,29 @@ ${messagesDesc}
         if (parsed === null) return;
         setPlaneAlertFeatureEnabled(parsed);
       } catch (e) { /* ignore */ }
+    }
+
+    function updateModeAvailabilityFromResponse(resp){
+      modeAvailabilityUpdateInProgress = true;
+      try {
+        updatePlaneAlertAvailabilityFromResponse(resp);
+        updatePlanefenceAvailabilityFromResponse(resp);
+      } finally {
+        modeAvailabilityUpdateInProgress = false;
+      }
+      enforceModeAvailability();
+    }
+
+    function updateModeAvailabilityFromGlobals(globals){
+      if (!globals || typeof globals !== 'object') return;
+      modeAvailabilityUpdateInProgress = true;
+      try {
+        updatePlaneAlertAvailabilityFromGlobals(globals);
+        updatePlanefenceAvailabilityFromGlobals(globals);
+      } finally {
+        modeAvailabilityUpdateInProgress = false;
+      }
+      enforceModeAvailability();
     }
 
     function updatePlaneAlertAvailabilityFromGlobals(globals){
@@ -1009,6 +1118,23 @@ ${messagesDesc}
       }
     }
 
+    function updatePlanefenceAvailabilityFromGlobals(globals){
+      if (!globals || typeof globals !== 'object') return;
+      const candidates = [
+        getGlobalValue(globals, 'planefence:enabled'),
+        getGlobalValue(globals, 'planefence.enabled'),
+        globals.PLANEFENCE_ENABLED,
+        globals.PLANEFENCE
+      ];
+      for (const value of candidates) {
+        if (value === undefined || value === null || value === '') continue;
+        const parsed = parseBooleanLike(value);
+        if (parsed === null) continue;
+        setPlanefenceFeatureEnabled(parsed);
+        return;
+      }
+    }
+
     function modeFromQuery(){
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -1021,6 +1147,18 @@ ${messagesDesc}
         return null;
       } catch (e) {
         return null;
+      }
+    }
+
+    function isPlanefenceRequestedInQuery(){
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const raw = params.get('mode');
+        if (!raw) return false;
+        const normalized = raw.trim().toLowerCase();
+        return normalized === 'pf' || normalized === DATA_MODES.PLANEFENCE;
+      } catch (e) {
+        return false;
       }
     }
     function currentDataMode(){
@@ -1084,6 +1222,11 @@ ${messagesDesc}
         if (!planeAlertFeatureEnabled && newMode === DATA_MODES.PLANE_ALERT) {
           try { toggle.checked = false; } catch (e) { /* ignore */ }
           forceReloadToPlanefence();
+          return;
+        }
+        if (!planefenceFeatureEnabled && newMode === DATA_MODES.PLANEFENCE) {
+          try { toggle.checked = true; } catch (e) { /* ignore */ }
+          forceReloadToPlaneAlert();
           return;
         }
         if (newMode === dataMode) return;
@@ -2026,6 +2169,7 @@ ${messagesDesc}
         const keyStr = toYYMMDD(d);
         try {
           const resp = await fetch(buildStreamUrl(key, keyStr), { method: 'HEAD', cache: 'no-store' });
+          updateModeAvailabilityFromResponse(resp);
           if (resp && resp.ok) {
             dates.push({ key: keyStr, label: formatHistoryDateDisplay(d) });
             foundAny = true;
@@ -2221,7 +2365,7 @@ ${messagesDesc}
 
   function updateStationInfoFromGlobals(globals) {
     if (!globals || typeof globals !== 'object') return;
-    updatePlaneAlertAvailabilityFromGlobals(globals);
+    updateModeAvailabilityFromGlobals(globals);
     let changed = false;
     const mapping = [
       ['dist', 'station:dist:value'],
@@ -3643,7 +3787,7 @@ function addOrUpdateRow(r){
     const modeForRun = dataMode;
     try {
       const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store', signal: controller.signal });
-      updatePlaneAlertAvailabilityFromResponse(resp);
+      updateModeAvailabilityFromResponse(resp);
       if (!resp.ok || !resp.body) { if (prog) prog.textContent = t('status.streamFailed', {}, 'Stream failed'); return; }
 
       const reader = resp.body.getReader();
@@ -3752,7 +3896,7 @@ function addOrUpdateRow(r){
       if (generation !== modeGeneration) return;
       const url = buildStreamUrl(DATA_MODES.PLANE_ALERT, null, { allowPlaneAlertDefaultAll: false });
       const resp = await fetch(url, { cache: 'no-store' });
-      updatePlaneAlertAvailabilityFromResponse(resp);
+      updateModeAvailabilityFromResponse(resp);
       if (!resp.ok || !resp.body) return;
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
@@ -3796,7 +3940,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
   try {
     if (generation !== modeGeneration) return;
     const resp = await fetch(buildStreamUrl(modeForRun, opts.historyDate, { allowPlaneAlertDefaultAll: opts.allowPlaneAlertDefaultAll }), { cache: 'no-store' });
-    updatePlaneAlertAvailabilityFromResponse(resp);
+    updateModeAvailabilityFromResponse(resp);
     if (!resp.ok) { console.warn('poll: fetch failed', resp.status); return; }
     if (generation !== modeGeneration) return;
     const txt = await resp.text();
@@ -3987,6 +4131,14 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
   }
 
   function restartDataPipelines(){
+    if (!planefenceFeatureEnabled && !planeAlertFeatureEnabled) {
+      showFatalConfigurationErrorPage();
+      return;
+    }
+    if (!planefenceFeatureEnabled && !isPlaneAlertMode()) {
+      forceReloadToPlaneAlert();
+      return;
+    }
     modeGeneration++;
     resetTableState();
     stopStreamReader();

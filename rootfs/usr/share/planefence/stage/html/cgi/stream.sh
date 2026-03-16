@@ -28,7 +28,7 @@ utc_yday="$(date -u -d 'yesterday' +%y%m%d 2>/dev/null || date -u -v-1d +%y%m%d)
 
 PLANEALERT_CFG_VALUE="$(GET_PARAM pf PLANEALERT || true)"
 if chk_enabled "${PLANEALERT_CFG_VALUE:-}"; then
-  PLANEALERT_ENABLED=true
+  #PLANEALERT_ENABLED=true
   PLANEALERT_ENABLED_HEADER=1
 else
   PLANEALERT_ENABLED=false
