@@ -18,6 +18,10 @@ on:
         description: "Build latest as test"
         default: false
 
+  pull_request:
+    types: [closed]
+    branches:
+     - main
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
