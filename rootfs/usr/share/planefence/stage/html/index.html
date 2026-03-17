@@ -2913,6 +2913,7 @@ ${messagesDesc}
   const missingCounts = new Map();
   // Track indices added since last user-visible redraw. Used to highlight new rows.
   const pendingNewIndices = new Set();
+  let forceNewestOnNextRedraw = false;
 
   function resetTableState(){
     try {
@@ -2922,6 +2923,7 @@ ${messagesDesc}
     exportRowByIndex.clear();
     missingCounts.clear();
     pendingNewIndices.clear();
+    forceNewestOnNextRedraw = false;
     userOrderOverride = false;
     userPageOverride = false;
     updateNewUpdatesBanner();
@@ -2945,15 +2947,131 @@ ${messagesDesc}
     } catch (e) { /* ignore */ }
   }
 
-  function redrawTable(forceFull=false){
+  function isIndexDescOrderActive(){
+    try {
+      const ord = table && typeof table.order === 'function' ? table.order() : null;
+      if (!Array.isArray(ord) || !ord.length || !Array.isArray(ord[0])) return false;
+      const first = ord[0];
+      return Number(first[0]) === 0 && String(first[1] || '').toLowerCase() === 'desc';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function topVisibleRowIndex(){
+    try {
+      if (table && typeof table.rows === 'function') {
+        const idxs = table.rows({ page: 'current' }).indexes();
+        const firstIdx = idxs && typeof idxs.length === 'number' && idxs.length > 0
+          ? idxs[0]
+          : null;
+        if (firstIdx != null) {
+          const rowData = table.row(firstIdx).data();
+          const firstCell = rowData && rowData[0] ? String(rowData[0]) : '';
+          const m = firstCell.match(/data-order="(-?\d+)"/);
+          if (m) {
+            const n = Number(m[1]);
+            if (Number.isFinite(n)) return n;
+          }
+          const fallback = Number(firstCell.replace(/[^0-9.\-]/g, ''));
+          if (Number.isFinite(fallback)) return fallback;
+        }
+      }
+      const tr = document.querySelector('#t tbody tr');
+      if (!tr) return null;
+      const cell = tr.querySelector('td');
+      const html = cell ? String(cell.innerHTML || '') : '';
+      const m = html.match(/data-order="(-?\d+)"/);
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n)) return n;
+      }
+      const txt = cell ? String(cell.textContent || '').trim() : '';
+      const idx = Number(txt.replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(idx) ? idx : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function maxTrackedIndexExcluding(excludedSet){
+    try {
+      if (table && typeof table.rows === 'function') {
+        const data = table.rows().data();
+        const rows = data && data.toArray ? data.toArray() : Array.from(data || []);
+        let max = -Infinity;
+        for (const row of rows) {
+          const firstCell = row && row[0] ? String(row[0]) : '';
+          const m = firstCell.match(/data-order="(-?\d+)"/);
+          if (!m) continue;
+          const idx = Number(m[1]);
+          if (!Number.isFinite(idx)) continue;
+          if (excludedSet && excludedSet.has(idx)) continue;
+          if (idx > max) max = idx;
+        }
+        if (Number.isFinite(max)) return max;
+      }
+    } catch (e) { /* ignore, fall back */ }
+    let max = -Infinity;
+    for (const key of rowByIndex.keys()) {
+      const idx = Number(key);
+      if (!Number.isFinite(idx)) continue;
+      if (excludedSet && excludedSet.has(idx)) continue;
+      if (idx > max) max = idx;
+    }
+    return Number.isFinite(max) ? max : null;
+  }
+
+  function maxTrackedIndex(){
+    return maxTrackedIndexExcluding(null);
+  }
+
+  function shouldAutoJumpToNewest(hasPendingNew){
+    if (!hasPendingNew) return false;
+    const topIdx = topVisibleRowIndex();
+    if (!Number.isFinite(topIdx)) return false;
+    const newerPending = Array.from(pendingNewIndices)
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v) && v > topIdx);
+    if (!newerPending.length) return false;
+    const previousMax = Math.min(...newerPending) - 1;
+    return topIdx === previousMax;
+  }
+
+  function ensureNewestVisibleAfterJump(){
+    try {
+      if (!table) return;
+      const top = topVisibleRowIndex();
+      const max = maxTrackedIndex();
+      if (!Number.isFinite(top) || !Number.isFinite(max) || top === max) return;
+      // One hard corrective pass for stale ordering/render caches.
+      try { table.rows().invalidate(); } catch (e) { /* ignore */ }
+      table.order([[0, 'desc']]);
+      table.page('first');
+      table.draw(false);
+    } catch (e) { /* ignore */ }
+  }
+
+  function redrawTable(forceFull=false, opts = {}){
     try {
       if (!table) return;
       const info = table.page ? table.page.info() : null;
       const onFirst = info && info.page === 0;
-      if (forceFull || onFirst) {
-        if (!userOrderOverride) table.order([[0,'desc']]);
-        if (!userPageOverride) table.page('first');
+      const hasPendingNew = pendingNewIndices.size > 0;
+      const forceNewest = opts.forceNewest === true || forceNewestOnNextRedraw === true;
+      forceNewestOnNextRedraw = false;
+      const autoJumpToNewest = shouldAutoJumpToNewest(hasPendingNew);
+      if (forceFull || onFirst || autoJumpToNewest || forceNewest) {
+        if (autoJumpToNewest || forceNewest) {
+          // In auto-jump mode, force the canonical newest-first view.
+          table.order([[0,'desc']]);
+          table.page('first');
+        } else {
+          if (!userOrderOverride) table.order([[0,'desc']]);
+          if (!userPageOverride) table.page('first');
+        }
         table.draw(false);
+        if (autoJumpToNewest || forceNewest) ensureNewestVisibleAfterJump();
         highlightPendingNewRows();
         if (newUpdatesBtn) newUpdatesBtn.style.display = 'none';
       } else {
@@ -3181,7 +3299,6 @@ ${messagesDesc}
         // the numeric value placed in the cell's data-order attribute.
         {
           targets: 0,
-          orderDataType: 'dom-data-order',
           type: 'num',
           // Ensure numeric sort even if the order plugin isn't engaged by parsing
           // the data-order attribute or falling back to numeric text extraction.
@@ -3742,6 +3859,7 @@ function addOrUpdateRow(r){
     try {
       const apiRow = rowByIndex.get(idxVal);
       apiRow.data(rendered.row);
+      try { apiRow.invalidate(); } catch (e) { /* ignore */ }
       return { api: apiRow, created: false, idx: idxVal };
     } catch (e) {
       console.warn('row update failed, falling back to add', e);
@@ -3803,7 +3921,7 @@ function addOrUpdateRow(r){
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
-      let added = 0;
+      let processed = 0;
       let seenHeader = false;
       let streamGlobals = {};
 
@@ -3861,16 +3979,20 @@ function addOrUpdateRow(r){
           applyMediaPrefixes(payload);
 
           const norm = normalizeRow(payload);
-          if (!norm || !norm.icao || String(norm.icao).trim() === '') {
-            continue;
-          }
+          if (!norm) continue;
+          const prevMaxBefore = maxTrackedIndex();
+          const topBefore = topVisibleRowIndex();
           const res = addOrUpdateRow(norm);
           if (res.created && Number.isFinite(Number(res.idx))) {
             pendingNewIndices.add(Number(res.idx));
             updateNewUpdatesBanner();
+            if (Number.isFinite(prevMaxBefore) && Number.isFinite(topBefore) && topBefore === prevMaxBefore && Number(res.idx) > prevMaxBefore) {
+              forceNewestOnNextRedraw = true;
+            }
           }
-          added++;
-          if (added % 10 === 0) {
+          processed++;
+          // Redraw immediately for newly created rows so new aircraft appear promptly.
+          if (res.created || processed % 10 === 0) {
             if (generation !== modeGeneration || controller.signal.aborted) return;
             redrawTable(false);
             if (prog) prog.textContent = t('status.loadingCount', { count: rowCount() }, `Loaded ${rowCount()}...`);
@@ -3882,10 +4004,22 @@ function addOrUpdateRow(r){
         try {
           const last = JSON.parse(buf);
           if (generation !== modeGeneration || controller.signal.aborted) return;
-          const res = addOrUpdateRow(last);
-          if (res.created && Number.isFinite(Number(res.idx))) {
-            pendingNewIndices.add(Number(res.idx));
-            updateNewUpdatesBanner();
+          const payload = (last && typeof last === 'object')
+            ? Object.assign({}, streamGlobals, last)
+            : last;
+          applyMediaPrefixes(payload);
+          const norm = normalizeRow(payload);
+          if (norm) {
+            const prevMaxBefore = maxTrackedIndex();
+            const topBefore = topVisibleRowIndex();
+            const res = addOrUpdateRow(norm);
+            if (res.created && Number.isFinite(Number(res.idx))) {
+              pendingNewIndices.add(Number(res.idx));
+              updateNewUpdatesBanner();
+              if (Number.isFinite(prevMaxBefore) && Number.isFinite(topBefore) && topBefore === prevMaxBefore && Number(res.idx) > prevMaxBefore) {
+                forceNewestOnNextRedraw = true;
+              }
+            }
           }
         } catch(e) { /* ignore parse */ }
       }
@@ -3986,8 +4120,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       applyMediaPrefixes(payload);
 
   const norm = normalizeRow(payload);
-  // Ignore records without an ICAO value
-  if (!norm || !norm.icao || String(norm.icao).trim() === '') continue;
+  if (!norm) continue;
       const rendered = renderRow(norm);
 
       // Fast lookup: use rowByIndex map to find existing row by numeric index
@@ -4007,12 +4140,20 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
 
     if (generation !== modeGeneration) return;
 
+    const preAddMax = maxTrackedIndex();
+    const preAddTop = topVisibleRowIndex();
+    const forceNewestFromPoll = Number.isFinite(preAddMax)
+      && Number.isFinite(preAddTop)
+      && preAddTop === preAddMax
+      && toAdd.some(item => Number.isFinite(Number(item.idx)) && Number(item.idx) > preAddMax);
+
     // Apply updates
     for (const u of toUpdate) {
       try {
         // Prefer direct API update. Some API objects may be stale before a draw,
         // so if this fails, fall back to locating the row node by data-idx.
         u.api.data(u.row);
+        try { u.api.invalidate(); } catch (e) { /* ignore */ }
       } catch(e) {
         console.warn('poll: update failed via api, trying fallback', e, u && u.idx);
         try {
@@ -4081,7 +4222,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
 
     // Single redraw to refresh display (preserve paging)
     if (toUpdate.length || toAdd.length || purged) {
-      redrawTable(false);
+      redrawTable(false, { forceNewest: forceNewestFromPoll });
       if (opts.isHistory && table) {
         try { table.order([[0, 'desc']]).draw(false); } catch (e) { /* ignore */ }
       }
