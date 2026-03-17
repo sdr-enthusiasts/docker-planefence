@@ -9,7 +9,7 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 #
-
+#sleep 1 # Give 00-container-start-time a chance to write the container start time to the file before we read it in pf-common
 source /scripts/pf-common
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
