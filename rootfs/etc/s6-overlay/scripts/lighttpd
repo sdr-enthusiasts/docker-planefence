@@ -36,6 +36,11 @@ if [[ ! -d /var/run/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/v
 # Comment out server.username and server.groupname in the lighttpd.conf file
 sed -i 's/^server\.username/# server\.username/g' /etc/lighttpd/lighttpd.conf
 sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
+# -----------------------------------------------------------------------------------
+# If PF_HTTP_PORT is set, change the default port in the config file
+if [[ -n "$PF_HTTP_PORT" ]]; then
+    sed -i "s/^\(\s*server\.port\s*=\s*\).*/\1$PF_HTTP_PORT/" /etc/lighttpd/lighttpd.conf
+fi
 #
 # -----------------------------------------------------------------------------------
 # Link the required config files

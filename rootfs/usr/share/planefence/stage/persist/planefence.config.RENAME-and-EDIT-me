@@ -70,7 +70,6 @@ PF_FUDGELOC=3
 # PF_CHECKROUTE: enrich PF table with route info via adsb.im API.
 # Default is ON if not explicitly disabled.
 PF_CHECKROUTE=true
-# 
 # ---------------------------------------------------------------------
 # PF_TRACKSERVICE: map service used to render tracking links for Planefence.
 # This must be a tar1090-style service as we create a deep link to a specific aircraft/location/time combo
@@ -90,6 +89,12 @@ OPENSKYDB_DOWNLOAD=
 ###############################################################################
 # Web Page Related Parameters
 ###############################################################################
+# PF_HTTP_PORT: the HTTP port used inside the container. If omitted, port 80 is used.
+# This parameter can be used to use a unique port for the Planefence container in podman 
+# when using shared name spaces with other containers using port 80. Do not change unless
+# you know what you are doing.
+PF_HTTP_PORT=80
+# ---------------------------------------------------------------------
 # PF_NAME: short station label shown in the page title.
 PF_NAME="MY"
 # ---------------------------------------------------------------------
