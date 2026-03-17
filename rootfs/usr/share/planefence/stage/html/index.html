@@ -868,6 +868,8 @@
       altUnit: '{{altUnit}}',
       coords: coordsHtml
     }, 'Planefence shows all aircraft received today by this station within a range of {{dist}} {{distUnit}} and altitude below {{altitude}} {{altUnit}} from {{latCardinal}}, {{lonCardinal}}.');
+    const pfDisabled = t('stationInfo.planefence.disabled', {}, 'Planefence has been disabled by the operator of this station.');
+    const pfSectionBody = planefenceFeatureEnabled ? pfDesc : pfDisabled;
     const planeAlertHeading = t('stationInfo.heading.planeAlert', {}, 'Plane-Alert');
     const planeAlertBase = t('stationInfo.planeAlert.description', {}, "Plane-Alert shows those aircraft in range of the station that are part of the station's {watchlist}.");
     const planeAlertDesc = (() => {
@@ -884,10 +886,11 @@
       const tpl = t('stationInfo.planeAlert.rangeNote', { range: rangeStr, distUnit }, 'Plane-Alert only displays those aircraft that are within {range} {distUnit} of the station.');
       return applyParams(tpl, { range: rangeStr, distUnit });
     })();
-    const planeAlertSection = [planeAlertDesc, planeAlertRangeNote].filter(Boolean).join(' ');
-    const planeAlertInfoBlock = planeAlertFeatureEnabled
-      ? `\n<h1>${planeAlertHeading}</h1>\n${planeAlertSection}`
-      : '';
+    const planeAlertDisabled = t('stationInfo.planeAlert.disabled', {}, 'Plane-Alert has been disabled by the operator of this station.');
+    const planeAlertSection = planeAlertFeatureEnabled
+      ? [planeAlertDesc, planeAlertRangeNote].filter(Boolean).join(' ')
+      : planeAlertDisabled;
+    const planeAlertInfoBlock = `\n<h1>${planeAlertHeading}</h1>\n${planeAlertSection}`;
     const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
     const messagesDesc = t('stationInfo.messages.description', { totalLines: '{{totalLines}}' }, "Today's data is derived from {{totalLines}} ADS-B messages received by the station since midnight");
     const repoLink = `<a href="https://sdr-e.com/docker-planefence" target="_blank" rel="noreferrer noopener">${t('footer.repo', {}, 'Github repo')}</a>`;
@@ -897,14 +900,15 @@
     const footerLicense = t('stationInfo.footer.license', { year: '{{year}}', version: '{{version}}', repoLink }, 'Planefence is (c) 2020-{{year}} by Ramon F. Kolb, kx1t and is available as source code or as a Docker container. See the Github repository for more information. Version: {{version}}');
     const footerContrib = t('stationInfo.footer.contributors', { repoContributorsLink: repoContribLink, externalContributorsLink: externalContribLink }, 'Planefence is made possible thanks to our repo contributors and other external contributors.');
     const mapTitle = t('stationMap.label', {}, 'Station coverage map');
+    const mapBlock = planefenceFeatureEnabled
+      ? `\n<div class="station-map-wrapper">\n  <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>\n</div>`
+      : '';
     return `
 <h1 class="station-welcome-title">${welcome}</h1>
 {{introductionSection}}
 <h1 id="stationInfoTitle">${pfHeading}</h1>
-${pfDesc}
-<div class="station-map-wrapper">
-  <iframe id="stationInfoMapFrame" class="station-map-frame" title="${mapTitle}" loading="lazy"></iframe>
-</div>
+${pfSectionBody}
+${mapBlock}
 ${planeAlertInfoBlock}
 <h1>${messagesHeading}</h1>
 ${messagesDesc}
@@ -984,7 +988,7 @@ ${messagesDesc}
       if (!body) return;
       body.classList.remove('modal-open');
 
-      const hideSelectors = ['header', 'main', 'footer', '#privacyBanner', '#stationInfoModal', '#heatmapModal', '#photoModal'];
+      const hideSelectors = ['header', 'main', '#privacyBanner', '#stationInfoModal', '#heatmapModal', '#photoModal'];
       hideSelectors.forEach((sel) => {
         try {
           const el = document.querySelector(sel);
@@ -1004,7 +1008,12 @@ ${messagesDesc}
           <p>Both <span class="mono">PF_PLANEFENCE</span> and <span class="mono">PF_PLANEALERT</span> have been disabled. This means that no aircraft data is collected.</p>
           <p>This is probably a configuration error. Please contact the operator of this Planefence instance and ask them to correct this.</p>
         `;
-        body.appendChild(panel);
+        const footer = document.querySelector('footer');
+        if (footer && footer.parentNode === body) {
+          body.insertBefore(panel, footer);
+        } else {
+          body.appendChild(panel);
+        }
       }
       try { document.title = 'Planefence Configuration Error'; } catch (e) { /* ignore */ }
     }
@@ -1041,6 +1050,7 @@ ${messagesDesc}
       planefenceFeatureEnabled = next;
       if (changed) {
         applyDataModeAvailabilityUI();
+        refreshStationInfoContent();
       }
       if (!modeAvailabilityUpdateInProgress) {
         enforceModeAvailability();
