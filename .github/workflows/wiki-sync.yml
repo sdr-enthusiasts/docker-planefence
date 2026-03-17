@@ -1,0 +1,41 @@
+name: Sync Wiki
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - documentation
+    paths:
+      - 'docs/wiki/**'
+      - 'README.md'
+      - 'README-privacy.md'
+      - 'README-discord-alerts.md'
+      - 'README-Mastodon.md'
+      - 'README-telegram.md'
+      - 'README-nginx-rev-proxy.md'
+      - 'ATTRIBUTION.md'
+      - 'LICENSE'
+      - 'rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me'
+      - 'rootfs/usr/share/planefence/stage/html/locales/privacy.json'
+      - 'scripts/wiki/**'
+      - '.github/workflows/wiki-sync.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  wiki-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Stage wiki pages
+        run: scripts/wiki/stage_wiki.sh docs/wiki .wiki-dist
+
+      - name: Publish to GitHub Wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: scripts/wiki/publish_wiki.sh .wiki-dist .wiki-repo
