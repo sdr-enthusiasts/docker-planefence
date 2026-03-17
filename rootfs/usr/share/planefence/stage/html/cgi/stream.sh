@@ -27,8 +27,8 @@ utc_today="$(date -u +%y%m%d)"
 utc_yday="$(date -u -d 'yesterday' +%y%m%d 2>/dev/null || date -u -v-1d +%y%m%d)"
 
 PLANEALERT_CFG_VALUE="$(GET_PARAM pf PLANEALERT || true)"
-if chk_enabled "${PLANEALERT_CFG_VALUE:-}"; then
-  #PLANEALERT_ENABLED=true
+if ! chk_disabled "${PLANEALERT_CFG_VALUE:-}"; then
+  PLANEALERT_ENABLED=true
   PLANEALERT_ENABLED_HEADER=1
 else
   PLANEALERT_ENABLED=false
@@ -36,11 +36,11 @@ else
 fi
 
 PLANEFENCE_CFG_VALUE="$(GET_PARAM pf PLANEFENCE || true)"
-if chk_enabled "${PLANEFENCE_CFG_VALUE:-}"; then
-  PLANEFENCE_ENABLED=true
+if ! chk_disabled "${PLANEFENCE_CFG_VALUE:-}"; then
+  #PLANEFENCE_ENABLED=true
   PLANEFENCE_ENABLED_HEADER=1
 else
-  PLANEFENCE_ENABLED=false
+  #PLANEFENCE_ENABLED=false
   PLANEFENCE_ENABLED_HEADER=0
 fi
 plane_alert_hist_days() {

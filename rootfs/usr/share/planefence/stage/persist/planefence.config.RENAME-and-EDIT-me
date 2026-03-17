@@ -119,10 +119,11 @@ PF_OPENAIPKEY=
 # Parameters affecting Planefence behavior and data retention.
 
 # ---------------------------------------------------------------------
-# PF_PLANEFENCE: enable Planefence feature and corresponding web page
+# PLANEFENCE: enable Planefence feature and corresponding web page
 # Note that PF_PLANEFENCE and PF_PLANEALERT cannot both be disabled!
 # Default value if omitted: enabled
-PF_PLANEFENCE=enabled
+# Note - PF_PLANEFENCE is also supported for backward compatibility
+PLANEFENCE=enabled
 # ---------------------------------------------------------------------
 # PF_MOTD: message-of-the-day shown at the top of the PF page.
 # Supports simple HTML. Escape special characters for sed (e.g., \|, \&, ").
@@ -156,8 +157,9 @@ PF_COLLAPSEWITHIN=300
 # Plane-Alert Specific Parameters
 ###############################################################################
 
-# PF_PLANEALERT: enable Plane-Alert feature and sub-page.
-PF_PLANEALERT=enabled
+# PLANEALERT: enable Plane-Alert feature and sub-page.
+# Note - PF_PLANEALERT is also supported for backward compatibility
+PLANEALERT=enabled
 # ---------------------------------------------------------------------
 # PA_TABLESIZE: default rows per page before pagination.
 PA_TABLESIZE=50
