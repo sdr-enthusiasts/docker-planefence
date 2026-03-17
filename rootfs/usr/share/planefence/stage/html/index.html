@@ -401,6 +401,8 @@
   .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
   .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
   .table-shell { overflow: auto; margin-top: .35rem; }
+  .table-shell { scrollbar-width: none; -ms-overflow-style: none; }
+  .table-shell::-webkit-scrollbar { width: 0; height: 0; }
   .station-map-frame,
   .heatmap-frame { min-height: clamp(260px, 50vh, 520px); }
 
