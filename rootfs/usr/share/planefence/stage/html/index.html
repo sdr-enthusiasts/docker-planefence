@@ -3538,10 +3538,10 @@ setTimeout(()=> expandDiscordLinksInNotifications(), 150);
 
 // 5) Render row with row class + position split link + numeric idx data source
 function renderRow(r) {
-  const idx = fmtInt(r.index) ?? safe(r.index);
   const idxVal = fmtInt(r.index);
+  const idxDisplay = Number.isFinite(idxVal) ? (idxVal + 1) : safe(r.index);
   const idxCell = idxVal != null
-    ? `<span class="mono" data-order="${idxVal}">${idxVal}</span>`
+    ? `<span class="mono" data-order="${idxVal}">${idxDisplay}</span>`
     : `<span class="mono">${safe(r.index)}</span>`;
 
   // Seen
