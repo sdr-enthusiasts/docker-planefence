@@ -3866,19 +3866,50 @@ function renderPlaneAlertCell(r){
 }
 
 
+function findExistingRowApiByIndex(idxVal) {
+  if (!table || !Number.isFinite(idxVal)) return null;
+  try {
+    const mapped = rowByIndex.get(idxVal);
+    if (mapped) return mapped;
+  } catch (e) { /* ignore */ }
+
+  // Fallback: scan DataTables row data for the embedded numeric idx sort key.
+  // This catches rare stream/poll races where rowByIndex is briefly stale.
+  try {
+    const rowsApi = table.rows();
+    const idxs = rowsApi.indexes();
+    const list = idxs && idxs.toArray ? idxs.toArray() : Array.from(idxs || []);
+    for (const rowIdx of list) {
+      const api = table.row(rowIdx);
+      const data = api && typeof api.data === 'function' ? api.data() : null;
+      const first = data && data[0] ? String(data[0]) : '';
+      const m = first.match(/data-order="(-?\d+)"/);
+      const parsed = m ? Number(m[1]) : Number.NaN;
+      if (Number.isFinite(parsed) && parsed === idxVal) {
+        rowByIndex.set(idxVal, api);
+        return api;
+      }
+    }
+  } catch (e) { /* ignore */ }
+  return null;
+}
+
+
 // 6) Prepend newest-first during streaming and apply row class
 function addOrUpdateRow(r){
   const rendered = renderRow(r);
   const idxVal = fmtInt(r.index);
-  if (Number.isFinite(idxVal) && rowByIndex.has(idxVal)) {
+  if (Number.isFinite(idxVal)) {
+    const existingApi = findExistingRowApiByIndex(idxVal);
+    if (existingApi) {
     try {
-      const apiRow = rowByIndex.get(idxVal);
-      apiRow.data(rendered.row);
-      try { apiRow.invalidate(); } catch (e) { /* ignore */ }
-      return { api: apiRow, created: false, idx: idxVal };
+        existingApi.data(rendered.row);
+        try { existingApi.invalidate(); } catch (e) { /* ignore */ }
+        return { api: existingApi, created: false, idx: idxVal };
     } catch (e) {
       console.warn('row update failed, falling back to add', e);
       rowByIndex.delete(idxVal);
+    }
     }
   }
 
@@ -4189,6 +4220,23 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
     }
     // Append new rows and register them in rowByIndex
     for (const item of toAdd) {
+      // Race guard: stream may have added this idx after poll queued toAdd.
+      if (Number.isFinite(item.idx)) {
+        const existingApi = findExistingRowApiByIndex(item.idx);
+        if (existingApi) {
+          try {
+            existingApi.data(item.row);
+            try { existingApi.invalidate(); } catch (e) { /* ignore */ }
+          } catch (e) { /* ignore */ }
+          opsSinceYield++;
+          if (opsSinceYield >= chunkSize) {
+            redrawTable(false, { forceNewest: forceNewestFromPoll });
+            opsSinceYield = 0;
+            await yieldToBrowser();
+          }
+          continue;
+        }
+      }
       const apiRow = table.row.add(item.row);
       // If we know the numeric index, register the newly added row in the map
       try {
