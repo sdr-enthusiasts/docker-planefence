@@ -40,9 +40,7 @@ sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 # If PF_HTTP_PORT is set, change the default port in the config file
 
 HTTP_PORT="$(GET_PARAM base PF_HTTP_PORT || true)"
-if [[ -n "$HTTP_PORT" ]]; then
-    sed -i "s/^\(\s*server\.port\s*=\s*\).*/\1$HTTP_PORT/" /etc/lighttpd/lighttpd.conf
-fi
+sed -i "s/^\(\s*server\.port\s*=\s*\).*/\1${HTTP_PORT:-80}/" /etc/lighttpd/lighttpd.conf
 #
 # -----------------------------------------------------------------------------------
 # Link the required config files
