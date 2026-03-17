@@ -8,11 +8,11 @@
 #
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
-# This script streams planefence or plane-alert JSON records via CGI
+# This script streams planefence, plane-alert, or Plane-Alert candidates via CGI
 # Usage:
-#   stream.sh [mode=planefence|plane-alert] [date=YYMMDD|all]
+#   stream.sh [mode=planefence|plane-alert|pa-candidates] [date=YYMMDD|all]
 #   or via HTTP GET with query string parameters:
-#   http://<server>/cgi/stream.sh?mode=planefence|plane-alert[&date=YYMMDD|all]
+#   http://<server>/cgi/stream.sh?mode=planefence|plane-alert|pa-candidates[&date=YYMMDD|all]
 # -----------------------------------------------------------------------------------
 set -eo pipefail
 
@@ -43,6 +43,169 @@ else
   #PLANEFENCE_ENABLED=false
   PLANEFENCE_ENABLED_HEADER=0
 fi
+
+PA_CANDIDATES_CFG_VALUE="$(GET_PARAM base PA_COLLECT_CANDIDATES || true)"
+if chk_disabled "${PA_CANDIDATES_CFG_VALUE:-}"; then
+  PA_CANDIDATES_ENABLED=false
+  PA_CANDIDATES_ENABLED_HEADER=0
+else
+  PA_CANDIDATES_ENABLED=true
+  PA_CANDIDATES_ENABLED_HEADER=1
+fi
+
+PA_CANDIDATES_HEADER_DEFAULT="ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link"
+PA_CANDIDATES_HEADER="$(GET_PARAM pa PA_COLLECT_CANDIDATES_HEADER || true)"
+PA_CANDIDATES_HEADER="${PA_CANDIDATES_HEADER:-${PA_CANDIDATES_HEADER_DEFAULT}}"
+PA_CANDIDATES_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
+PA_CANDIDATES_FILE="${PA_CANDIDATES_FILE:-plane-alert-candidates.txt}"
+PA_CANDIDATES_FILE="/usr/share/planefence/persist/${PA_CANDIDATES_FILE##*/}"
+PA_CANDIDATES_BASENAME="${PA_CANDIDATES_FILE##*/}"
+PA_CANDIDATES_AUTOADD=false
+PF_ALERTLIST_RAW="$(GET_PARAM base PF_ALERTLIST || true)"
+if [[ -n "${PF_ALERTLIST_RAW:-}" ]]; then
+  IFS=',' read -r -a pf_alertlist_items <<< "$PF_ALERTLIST_RAW"
+  for pf_item in "${pf_alertlist_items[@]}"; do
+    pf_item="${pf_item%$'\r'}"
+    pf_item="${pf_item#"${pf_item%%[![:space:]]*}"}"
+    pf_item="${pf_item%"${pf_item##*[![:space:]]}"}"
+    pf_item="${pf_item#\"}"
+    pf_item="${pf_item%\"}"
+    [[ -z "$pf_item" ]] && continue
+    [[ "$pf_item" == *"://"* ]] && continue
+    pf_base="${pf_item##*/}"
+    if [[ "$pf_base" == "$PA_CANDIDATES_BASENAME" ]]; then
+      PA_CANDIDATES_AUTOADD=true
+      break
+    fi
+  done
+fi
+
+stream_pa_candidates_ndjson() {
+  local file="${PA_CANDIDATES_FILE}"
+  local fallback_header="${PA_CANDIDATES_HEADER}"
+  local header_line=""
+  local line trimmed
+
+  printf '{"__globals":{"pa:candidates:enabled":%s,"pa:candidates:autoadd":%s}}\n' "${PA_CANDIDATES_ENABLED}" "${PA_CANDIDATES_AUTOADD}"
+  printf '{"__columns":["photo_link","icao","tail","operator","type"]}\n'
+
+  [[ "${PA_CANDIDATES_ENABLED}" == "true" ]] || return 0
+  [[ -r "$file" ]] || return 0
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    trimmed="${line%$'\r'}"
+    trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+    trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+    [[ -z "$trimmed" ]] && continue
+    [[ "${trimmed:0:1}" == "#" ]] && continue
+    header_line="$trimmed"
+    break
+  done < "$file"
+
+  [[ -n "$header_line" ]] || header_line="$fallback_header"
+
+  awk -v hdr="$header_line" '
+    function trim(s) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+      return s
+    }
+    function unquote(s) {
+      s = trim(s)
+      if (s ~ /^".*"$/) {
+        s = substr(s, 2, length(s) - 2)
+      }
+      gsub(/""/, "\"", s)
+      return s
+    }
+    function canon(s) {
+      s = tolower(unquote(s))
+      gsub(/[[:space:]]+/, " ", s)
+      return s
+    }
+    function jesc(s) {
+      gsub(/\\/, "\\\\", s)
+      gsub(/"/, "\\\"", s)
+      gsub(/\t/, "\\t", s)
+      gsub(/\r/, "\\r", s)
+      gsub(/\n/, "\\n", s)
+      return s
+    }
+    function csv_split(s, out,    i, ch, nextch, inq, n, field) {
+      inq = 0
+      n = 0
+      field = ""
+      delete out
+      for (i = 1; i <= length(s); i++) {
+        ch = substr(s, i, 1)
+        if (inq) {
+          if (ch == "\"") {
+            nextch = substr(s, i + 1, 1)
+            if (nextch == "\"") {
+              field = field "\""
+              i++
+            } else {
+              inq = 0
+            }
+          } else {
+            field = field ch
+          }
+        } else {
+          if (ch == "\"") {
+            inq = 1
+          } else if (ch == ",") {
+            out[++n] = field
+            field = ""
+          } else {
+            field = field ch
+          }
+        }
+      }
+      out[++n] = field
+      return n
+    }
+    BEGIN {
+      header_count = csv_split(hdr, header_cols)
+      for (i = 1; i <= header_count; i++) {
+        name = canon(header_cols[i])
+        if (name == "icao") idx_icao = i
+        else if (name == "tail") idx_tail = i
+        else if (name == "operator") idx_operator = i
+        else if (name == "type") idx_type = i
+        else if (name == "imagelink" || name == "image_link" || name == "imagelink1") idx_image_link = i
+        else if (name == "photo_link") idx_photo = i
+      }
+      if (!idx_icao) idx_icao = 1
+      if (!idx_tail) idx_tail = 2
+      if (!idx_operator) idx_operator = 3
+      if (!idx_type) idx_type = 4
+      if (!idx_image_link && !idx_photo) idx_photo = 11
+      consumed_header = 0
+    }
+    {
+      raw = $0
+      gsub(/\r$/, "", raw)
+      line = trim(raw)
+      if (line == "" || line ~ /^#/) next
+      if (!consumed_header) {
+        consumed_header = 1
+        next
+      }
+      n = csv_split(raw, row)
+      icao = trim(unquote((idx_icao <= n ? row[idx_icao] : "")))
+      if (icao == "" || toupper(icao) == "ICAO") next
+      tail = trim(unquote((idx_tail <= n ? row[idx_tail] : "")))
+      oper = trim(unquote((idx_operator <= n ? row[idx_operator] : "")))
+      typ = trim(unquote((idx_type <= n ? row[idx_type] : "")))
+      if (idx_image_link) {
+        photo = trim(unquote((idx_image_link <= n ? row[idx_image_link] : "")))
+      } else {
+        photo = trim(unquote((idx_photo <= n ? row[idx_photo] : "")))
+      }
+      printf("{\"photo_link\":\"%s\",\"icao\":\"%s\",\"tail\":\"%s\",\"operator\":\"%s\",\"type\":\"%s\"}\n", jesc(photo), jesc(icao), jesc(tail), jesc(oper), jesc(typ))
+    }
+  ' "$file"
+}
+
 plane_alert_hist_days() {
   local val
   val="$(GET_PARAM plane-alert HISTTIME)"
@@ -190,6 +353,7 @@ printf 'Expires: 0\r\n'
 printf 'X-Content-Type-Options: nosniff\r\n'
 printf 'X-Planefence-PlaneAlert-Enabled: %s\r\n' "${PLANEALERT_ENABLED_HEADER}"
 printf 'X-Planefence-Planefence-Enabled: %s\r\n' "${PLANEFENCE_ENABLED_HEADER}"
+printf 'X-Planefence-Pa-Candidates-Enabled: %s\r\n' "${PA_CANDIDATES_ENABLED_HEADER}"
 printf '\r\n'
 
 choose_json() {
@@ -246,6 +410,7 @@ if [[ ${#pf_qs[@]} -gt 0 ]]; then
       mode)
         [[ "$val" == "plane-alert" ]] && FILTER_MODE="plane-alert"
         [[ "$val" == "planefence" ]] && FILTER_MODE="planefence"
+        [[ "$val" == "pa-candidates" ]] && FILTER_MODE="pa-candidates"
         ;;
       date)
         if [[ "$val" =~ ^([0-9]{6})$ ]]; then
@@ -258,6 +423,11 @@ if [[ ${#pf_qs[@]} -gt 0 ]]; then
   done
 elif [[ "$1" == "mode=plane-alert" ]]; then
   FILTER_MODE="plane-alert"
+fi
+
+if [[ "$FILTER_MODE" == "pa-candidates" ]]; then
+  stream_pa_candidates_ndjson
+  exit 0
 fi
 
 if [[ "$REQUESTED_DATE" == "all" ]]; then
@@ -296,7 +466,7 @@ if [[ -z "${JSONFILE:-}" ]]; then
 fi
 
 # Stream schema then rows
-if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" --argjson planealert_enabled "${PLANEALERT_ENABLED}" '
+if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" --argjson planealert_enabled "${PLANEALERT_ENABLED}" --argjson pa_candidates_enabled "${PA_CANDIDATES_ENABLED}" --argjson pa_candidates_autoadd "${PA_CANDIDATES_AUTOADD}" '
   def pri: [
     "index","icao","tail","callsign","type","owner","route","nominatim",
     "time:firstseen","time:time_at_mindist","time:lastseen","distance:value","distance:unit","complete",
@@ -340,7 +510,7 @@ if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" --argjson planealert_enabl
     | ( if ($todays_version|length)>0
       then $raw_globals + {"station:version":$todays_version, "station.version":$todays_version}
       else $raw_globals end ) as $globals0
-    | ($globals0 + {"planealert:enabled":$planealert_enabled, "planealert.enabled":$planealert_enabled}) as $globals
+    | ($globals0 + {"planealert:enabled":$planealert_enabled, "planealert.enabled":$planealert_enabled, "pa:candidates:enabled":$pa_candidates_enabled, "pa.candidates.enabled":$pa_candidates_enabled, "pa:candidates:autoadd":$pa_candidates_autoadd, "pa.candidates.autoadd":$pa_candidates_autoadd}) as $globals
     | ( if $has_globals then .[1:] else . end ) as $rows
 
     # 1) Emit globals object (always emit, possibly empty {})

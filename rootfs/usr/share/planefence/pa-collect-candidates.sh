@@ -43,15 +43,18 @@ shopt -s extglob
 
 TODAY="$(date +%y%m%d)"
 FILTER_FILE="$(GET_PARAM base PA_COLLECT_CANDIDATES_FILTER_FILE || true)"
-FILTER_FILE="${FILTER_FILE:-/usr/share/planefence/persist/pa-candidates-filter.txt}"
+FILTER_FILE="${FILTER_FILE:-pa-candidates-filter.txt}"
+FILTER_FILE="/usr/share/planefence/persist/${FILTER_FILE##*/}"
 HEADER="$(GET_PARAM pa PA_COLLECT_CANDIDATES_HEADER || true)"
 HEADER="${HEADER:-ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link}"
 
 CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
-CANDIDATE_FILE="${CANDIDATE_FILE:-/usr/share/planefence/persist/plane-alert-candidates.txt}"
+CANDIDATE_FILE="${CANDIDATE_FILE:-plane-alert-candidates.txt}"
+CANDIDATE_FILE="/usr/share/planefence/persist/${CANDIDATE_FILE##*/}"
 
 CANDIDATE_LOG="$(GET_PARAM base PA_COLLECT_CANDIDATES_LOG || true)"
-CANDIDATE_LOG="${CANDIDATE_LOG:+/usr/share/planefence/persist/${CANDIDATE_LOG##*/}}"
+CANDIDATE_LOG="${CANDIDATE_LOG:-plane-alert-candidates.log}"
+CANDIDATE_LOG="/usr/share/planefence/persist/${CANDIDATE_LOG##*/}}"
 
 if [[ -n "$CANDIDATE_LOG" ]]; then
   log_print DEBUG "Logging candidate details to output=${CANDIDATE_LOG##*/}"
@@ -122,7 +125,7 @@ GET_PS_PHOTO_LINK() {
 	fi
 
 	if json="$(curl -m 20 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao" 2>/dev/null)" && \
-		 link="$(jq -r 'try .photos[].link | select(. != null) | .' <<< "$json" | head -n1)" && \
+		 link="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
 		 [[ -n "$link" ]]; then
 		printf '%s\n' "$link" > "$lnk"
 		printf '%s\n' "$link"

@@ -108,6 +108,22 @@
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
     html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
     .station-info-card p { margin: .35rem 0; }
+    .pa-candidates-link { font-weight: 600; text-decoration: underline; text-underline-offset: .15em; }
+    .pa-candidates-overlay { position: absolute; inset: 0; background: rgba(0, 3, 12, 0.72); display: none; align-items: center; justify-content: center; border-radius: 1rem; z-index: 12; padding: 1rem; }
+    .pa-candidates-overlay.open { display: flex; }
+    .pa-candidates-card { position: relative; width: min(760px, 100%); max-height: min(75vh, 620px); background: var(--bg); color: var(--fg); border: 1px solid var(--soft); border-radius: .85rem; box-shadow: 0 20px 60px rgba(0,0,0,0.45); padding: 2.4rem 1rem 1rem; display: flex; flex-direction: column; }
+    html.dark .pa-candidates-card { border-color: rgba(255,255,255,0.1); }
+    .pa-candidates-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: .45rem; right: .6rem; cursor: pointer; padding: .25rem; line-height: 1; }
+    .pa-candidates-status { margin: 0 0 .5rem; color: var(--muted); font-size: .95rem; }
+    .pa-candidates-table-wrap { overflow: auto; flex: 1; scrollbar-width: none; -ms-overflow-style: none; }
+    .pa-candidates-table-wrap::-webkit-scrollbar { width: 0; height: 0; }
+    .pa-candidates-table { width: 100%; border-collapse: collapse; }
+    .pa-candidates-table tbody tr { border-top: 1px solid var(--soft); }
+    html.dark .pa-candidates-table tbody tr { border-color: rgba(255,255,255,0.08); }
+    .pa-candidates-table td { padding: .48rem .35rem; vertical-align: middle; }
+    .pa-candidates-table td.mono { font-size: .9rem; }
+    .pa-candidates-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: .35rem; background: rgba(0,0,0,0.08); display: block; }
+    .pa-candidates-thumb.empty { opacity: 0; }
     .station-coords { font-weight: 600; white-space: nowrap; }
     .station-map-wrapper { margin: 1rem 0 0; border-radius: 0.75rem; overflow: hidden; border: 1px solid var(--soft); background: var(--soft); }
     html.dark .station-map-wrapper { border-color: rgba(255,255,255,0.08); background: #111421; }
@@ -571,6 +587,17 @@
     <div class="station-info-card">
       <button type="button" id="stationInfoClose" class="station-info-close" aria-label="Close station information">&times;</button>
       <div id="stationInfoContent" class="station-info-content"></div>
+      <div id="paCandidatesOverlay" class="pa-candidates-overlay" role="dialog" aria-modal="true" aria-label="Plane-Alert candidates" aria-hidden="true">
+        <div class="pa-candidates-card">
+          <button type="button" id="paCandidatesClose" class="pa-candidates-close" aria-label="Close list">&times;</button>
+          <p id="paCandidatesStatus" class="pa-candidates-status"></p>
+          <div class="pa-candidates-table-wrap">
+            <table class="pa-candidates-table" aria-label="Plane-Alert candidates">
+              <tbody id="paCandidatesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -875,6 +902,7 @@
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
   let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
+  let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
@@ -911,9 +939,24 @@
       const tpl = t('stationInfo.planeAlert.rangeNote', { range: rangeStr, distUnit }, 'Plane-Alert only displays those aircraft that are within {range} {distUnit} of the station.');
       return applyParams(tpl, { range: rangeStr, distUnit });
     })();
+    const planeAlertCandidatesInfo = (() => {
+      if (!truthy(stationInfoState.paCandidatesEnabled)) return '';
+      const linkLabel = escapeHtml(t('stationInfo.planeAlert.candidates.listLabel', {}, 'a list of aircraft'));
+      const candidateListLink = `<a href="#" class="pa-candidates-link" data-action="open-pa-candidates">${linkLabel}</a>`;
+      const tpl = t('stationInfo.planeAlert.candidates.description', {}, 'Plane-Alert is configured to automatically detect new interesting planes, based on an algorithm that considers ICAO Hex IDs, call signs and flight numbers, and/or owner names. Here is {candidateListLink} that were detected by this algorithm.');
+      if (tpl.includes('{candidateListLink}')) return applyParams(tpl, { candidateListLink });
+      return `${tpl} ${candidateListLink}`;
+    })();
+    const planeAlertCandidatesPolicyNote = (() => {
+      if (!truthy(stationInfoState.paCandidatesEnabled)) return '';
+      if (truthy(stationInfoState.paCandidatesAutoAdd)) {
+        return t('stationInfo.planeAlert.candidates.autoAdd', {}, 'Any automatically detected new aircraft are automatically made available in Plane-Alert.');
+      }
+      return t('stationInfo.planeAlert.candidates.manualAdd', {}, 'Any automatically detected new aircraft are saved in a list for the Plane-Alert operator to vet and manually add to Plane-Alert. As a result, you may not see them appear in Plane-Alert immediately.');
+    })();
     const planeAlertDisabled = t('stationInfo.planeAlert.disabled', {}, 'Plane-Alert has been disabled by the operator of this station.');
     const planeAlertSection = planeAlertFeatureEnabled
-      ? [planeAlertDesc, planeAlertRangeNote].filter(Boolean).join(' ')
+      ? [planeAlertDesc, planeAlertRangeNote, planeAlertCandidatesInfo, planeAlertCandidatesPolicyNote].filter(Boolean).map((item) => `<p>${item}</p>`).join('')
       : planeAlertDisabled;
     const planeAlertInfoBlock = `\n<h1>${planeAlertHeading}</h1>\n${planeAlertSection}`;
     const messagesHeading = t('stationInfo.heading.messages', {}, 'Messages');
@@ -1332,6 +1375,10 @@ ${messagesDesc}
     stationInfoModal = document.getElementById('stationInfoModal');
     stationInfoContentEl = document.getElementById('stationInfoContent');
     stationInfoCloseBtn = document.getElementById('stationInfoClose');
+    paCandidatesOverlay = document.getElementById('paCandidatesOverlay');
+    paCandidatesCloseBtn = document.getElementById('paCandidatesClose');
+    paCandidatesBodyEl = document.getElementById('paCandidatesBody');
+    paCandidatesStatusEl = document.getElementById('paCandidatesStatus');
     heatmapModal = document.getElementById('heatmapModal');
     heatmapFrame = document.getElementById('heatmapFrame');
     heatmapCloseBtn = document.getElementById('heatmapClose');
@@ -1352,6 +1399,16 @@ ${messagesDesc}
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
     stationInfoModal?.addEventListener('click', (ev) => {
       if (ev.target === stationInfoModal) closeStationInfoModal();
+    });
+    paCandidatesCloseBtn?.addEventListener('click', closePaCandidatesOverlay);
+    paCandidatesOverlay?.addEventListener('click', (ev) => {
+      if (ev.target === paCandidatesOverlay) closePaCandidatesOverlay();
+    });
+    stationInfoContentEl?.addEventListener('click', (ev) => {
+      const trigger = ev.target && ev.target.closest ? ev.target.closest('[data-action="open-pa-candidates"]') : null;
+      if (!trigger) return;
+      ev.preventDefault();
+      openPaCandidatesOverlay();
     });
     heatmapBtn?.addEventListener('click', openHeatmapModal);
     heatmapCloseBtn?.addEventListener('click', closeHeatmapModal);
@@ -1432,7 +1489,9 @@ ${messagesDesc}
     stationName: '',
     stationUrl: '',
     motd: '',
-    histtime: null
+    histtime: null,
+    paCandidatesEnabled: false,
+    paCandidatesAutoAdd: false
   };
   let historyDate = null; // YYMMDD string when viewing historical data
   let historyDateLabel = '';
@@ -1599,6 +1658,8 @@ ${messagesDesc}
     if (photoModal) photoModal.setAttribute('aria-label', t('photo.modal.label', {}, 'Aircraft photo'));
     if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
     if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
+    if (paCandidatesOverlay) paCandidatesOverlay.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.modalLabel', {}, 'Plane-Alert candidates'));
+    if (paCandidatesCloseBtn) paCandidatesCloseBtn.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.close', {}, 'Close list'));
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
@@ -1904,6 +1965,102 @@ ${messagesDesc}
       photoModalLastFocus.focus({ preventScroll: true });
     }
     photoModalLastFocus = null;
+  }
+
+  function normalizePaCandidateRow(row) {
+    const obj = row && typeof row === 'object' ? row : {};
+    return {
+      photo_link: String(obj.photo_link || obj.photoLink || obj['photo:link'] || '').trim(),
+      icao: String(obj.icao || obj.ICAO || '').trim(),
+      tail: String(obj.tail || obj.registration || '').trim(),
+      operator: String(obj.operator || obj.owner || '').trim(),
+      type: String(obj.type || obj.model || '').trim()
+    };
+  }
+
+  function candidateThumbHtml(url) {
+    const safe = escapeHtml(url || '');
+    if (!safe) return '<img class="pa-candidates-thumb empty" alt="" aria-hidden="true" loading="lazy">';
+    return `<img class="pa-candidates-thumb" src="${safe}" alt="${escapeHtml(t('image.photo.alt', {}, 'Aircraft photo'))}" loading="lazy">`;
+  }
+
+  function renderPaCandidatesRows(rows) {
+    if (!paCandidatesBodyEl) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      paCandidatesBodyEl.innerHTML = `<tr><td class="muted" colspan="5">${escapeHtml(t('stationInfo.planeAlert.candidates.empty', {}, 'No automatically detected candidates are available.'))}</td></tr>`;
+      return;
+    }
+
+    const html = rows.map((raw) => {
+      const row = normalizePaCandidateRow(raw);
+      const icao = escapeHtml(row.icao || '--');
+      const tail = escapeHtml(row.tail || '--');
+      const oper = escapeHtml(row.operator || '--');
+      const type = escapeHtml(row.type || '--');
+      return `<tr><td>${candidateThumbHtml(row.photo_link)}</td><td class="mono">${icao}</td><td>${tail}</td><td>${oper}</td><td>${type}</td></tr>`;
+    }).join('');
+
+    paCandidatesBodyEl.innerHTML = html;
+  }
+
+  async function fetchPaCandidatesRows() {
+    const url = new URL('./cgi/stream.sh', window.location.href);
+    url.searchParams.set('mode', 'pa-candidates');
+    url.searchParams.set('ts', String(Date.now()));
+    const resp = await fetch(url.toString(), { cache: 'no-store' });
+    const text = await resp.text();
+    const rows = [];
+
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      let obj;
+      try {
+        obj = JSON.parse(line);
+      } catch (e) {
+        continue;
+      }
+      if (obj && obj.error) {
+        throw new Error(String(obj.error));
+      }
+      if (obj && obj.__globals && Object.prototype.hasOwnProperty.call(obj.__globals, 'pa:candidates:enabled')) {
+        stationInfoState.paCandidatesEnabled = truthy(obj.__globals['pa:candidates:enabled']);
+      }
+      if (obj && !obj.__globals && !obj.__columns) rows.push(obj);
+    }
+    return rows;
+  }
+
+  async function openPaCandidatesOverlay() {
+    if (!paCandidatesOverlay) return;
+    paCandidatesOverlay.classList.add('open');
+    paCandidatesOverlay.setAttribute('aria-hidden', 'false');
+    if (paCandidatesBodyEl) paCandidatesBodyEl.innerHTML = '';
+    if (paCandidatesStatusEl) paCandidatesStatusEl.textContent = t('status.loading', {}, 'Loading...');
+    paCandidatesCloseBtn?.focus({ preventScroll: true });
+
+    try {
+      const rows = await fetchPaCandidatesRows();
+      renderPaCandidatesRows(rows);
+      if (paCandidatesStatusEl) {
+        paCandidatesStatusEl.textContent = t('stationInfo.planeAlert.candidates.count', { count: rows.length }, `${rows.length} candidate aircraft`);
+      }
+    } catch (e) {
+      if (paCandidatesStatusEl) {
+        paCandidatesStatusEl.textContent = t('status.errorPrefix', { message: String(e && e.message ? e.message : e) }, `Error: ${String(e && e.message ? e.message : e)}`);
+      }
+      if (paCandidatesBodyEl) {
+        paCandidatesBodyEl.innerHTML = `<tr><td class="muted" colspan="5">${escapeHtml(t('stationInfo.planeAlert.candidates.loadError', {}, 'Unable to load candidate aircraft right now.'))}</td></tr>`;
+      }
+    }
+  }
+
+  function closePaCandidatesOverlay() {
+    if (!paCandidatesOverlay) return;
+    paCandidatesOverlay.classList.remove('open');
+    paCandidatesOverlay.setAttribute('aria-hidden', 'true');
+    if (paCandidatesBodyEl) paCandidatesBodyEl.innerHTML = '';
+    if (paCandidatesStatusEl) paCandidatesStatusEl.textContent = '';
   }
 
   function thumbnailTargetData(target) {
@@ -2379,6 +2536,7 @@ ${messagesDesc}
 
   function closeStationInfoModal() {
     if (!stationInfoModal) return;
+    closePaCandidatesOverlay();
     stationInfoModal.classList.remove('open');
     stationInfoModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
@@ -2429,6 +2587,31 @@ ${messagesDesc}
       }
       changed = true;
     }
+    const paCandidatesEnabledRaw = [
+      getGlobalValue(globals, 'pa:candidates:enabled'),
+      getGlobalValue(globals, 'pa.candidates.enabled'),
+      globals.PA_COLLECT_CANDIDATES_ENABLED,
+      globals.PA_COLLECT_CANDIDATES
+    ].find((v) => v !== undefined && v !== null && v !== '');
+    if (paCandidatesEnabledRaw !== undefined) {
+      const nextPaEnabled = truthy(paCandidatesEnabledRaw);
+      if (stationInfoState.paCandidatesEnabled !== nextPaEnabled) {
+        stationInfoState.paCandidatesEnabled = nextPaEnabled;
+        changed = true;
+      }
+    }
+    const paCandidatesAutoAddRaw = [
+      getGlobalValue(globals, 'pa:candidates:autoadd'),
+      getGlobalValue(globals, 'pa.candidates.autoadd'),
+      globals.PA_CANDIDATES_AUTOADD
+    ].find((v) => v !== undefined && v !== null && v !== '');
+    if (paCandidatesAutoAddRaw !== undefined) {
+      const nextPaAutoAdd = truthy(paCandidatesAutoAddRaw);
+      if (stationInfoState.paCandidatesAutoAdd !== nextPaAutoAdd) {
+        stationInfoState.paCandidatesAutoAdd = nextPaAutoAdd;
+        changed = true;
+      }
+    }
     if ('totallines' in globals) {
       const tot = Number(globals.totallines);
       if (Number.isFinite(tot) && stationInfoState.totalLines !== tot) {
@@ -2446,7 +2629,10 @@ ${messagesDesc}
   }
 
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
+    if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
+      ev.preventDefault();
+      closePaCandidatesOverlay();
+    } else if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
       ev.preventDefault();
       closeStationInfoModal();
     } else if (ev.key === 'Escape' && heatmapModal?.classList.contains('open')) {
