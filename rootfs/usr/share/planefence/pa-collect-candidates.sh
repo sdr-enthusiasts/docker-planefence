@@ -44,9 +44,11 @@ shopt -s extglob
 TODAY="$(date +%y%m%d)"
 FILTER_FILE="$(GET_PARAM base PA_COLLECT_CANDIDATES_FILTER_FILE || true)"
 FILTER_FILE="${FILTER_FILE:-/usr/share/planefence/persist/pa-candidates-filter.txt}"
-HEADER='ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link'
+HEADER="$(GET_PARAM pa PA_COLLECT_CANDIDATES_HEADER || true)"
+HEADER="${HEADER:-ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link}"
 
-CANDIDATE_FILE="/usr/share/planefence/persist/plane-alert-candidates.txt"
+CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
+CANDIDATE_FILE="${CANDIDATE_FILE:-/usr/share/planefence/persist/plane-alert-candidates.txt}"
 
 CANDIDATE_LOG="$(GET_PARAM base PA_COLLECT_CANDIDATES_LOG || true)"
 CANDIDATE_LOG="${CANDIDATE_LOG:+/usr/share/planefence/persist/${CANDIDATE_LOG##*/}}"
