@@ -578,7 +578,7 @@
     </div>
   </main>
 
-  <footer>
+  <footer id="pageFooter">
     <small class="muted">&copy; 2020-<span id="footerYear">2026</span> Ram&oacute;n F. Kolb, kx1t. All rights reserved. Code is licensable under the terms and conditions of GPLv3 - see <a href="https://github.com/sdr-enthusiasts/docker-planefence" target="_blank" rel="noreferrer noopener">Github repo</a>. Thanks to our <a href="https://github.com/sdr-enthusiasts/docker-planefence/graphs/contributors" target="_blank" rel="noreferrer noopener">repo contributors</a> and other external <a href="https://github.com/sdr-enthusiasts/docker-planefence/blob/main/ATTRIBUTION.md" target="_blank" rel="noreferrer noopener">contributors</a>. <a href="./privacy.html" target="_blank" rel="noreferrer noopener">Privacy Policy</a>. <span id="appVersionText">Version --</span></small>
   </footer>
 
@@ -1004,18 +1004,18 @@ ${messagesDesc}
         panel.style.margin = '2rem auto';
         panel.style.padding = '0 1rem';
         panel.innerHTML = `
-          <h1>Planefence Configuration Error</h1>
-          <p>Both <span class="mono">PF_PLANEFENCE</span> and <span class="mono">PF_PLANEALERT</span> have been disabled. This means that no aircraft data is collected.</p>
-          <p>This is probably a configuration error. Please contact the operator of this Planefence instance and ask them to correct this.</p>
+          <h1>${escapeHtml(t('fatalConfig.title', {}, 'Planefence Configuration Error'))}</h1>
+          <p>${escapeHtml(t('fatalConfig.body.bothDisabled', {}, 'Both PLANEFENCE and PLANEALERT have been disabled. This means that no aircraft data is collected.'))}</p>
+          <p>${escapeHtml(t('fatalConfig.body.contactOperator', {}, 'This is probably a configuration error. Please contact the operator of this Planefence instance and ask them to correct this.'))}</p>
         `;
-        const footer = document.querySelector('footer');
+        const footer = document.querySelector('body > footer#pageFooter');
         if (footer && footer.parentNode === body) {
           body.insertBefore(panel, footer);
         } else {
           body.appendChild(panel);
         }
       }
-      try { document.title = 'Planefence Configuration Error'; } catch (e) { /* ignore */ }
+      try { document.title = t('fatalConfig.title', {}, 'Planefence Configuration Error'); } catch (e) { /* ignore */ }
     }
 
     function enforceModeAvailability(){
