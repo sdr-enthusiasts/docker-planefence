@@ -8,6 +8,12 @@ This page documents how wiki syncing is automated.
 - Stage script: `scripts/wiki/stage_wiki.sh`
 - Publish script: `scripts/wiki/publish_wiki.sh`
 
+## Authentication Notes
+
+The workflow uses `secrets.GITHUB_TOKEN` and requires `permissions: contents: write`.
+
+If your organization policy blocks wiki pushes from `github-actions[bot]`, use a Personal Access Token and run `scripts/wiki/publish_wiki.sh` manually from a trusted environment.
+
 ## How It Works
 
 1. The workflow triggers on `workflow_dispatch` and selected `push` events.

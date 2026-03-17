@@ -22,7 +22,7 @@ on:
       - '.github/workflows/wiki-sync.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   wiki-sync:
