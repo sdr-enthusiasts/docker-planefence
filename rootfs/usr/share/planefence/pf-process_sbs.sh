@@ -475,6 +475,24 @@ GET_PS_PHOTO () {
   find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
 }
 
+# Returns 0 (true) when TWEET_MINTIME delay is still active for this record,
+# i.e. notifications must still be delayed.
+tweet_mintime_delay_active_for_idx() {
+  local idx="$1"
+  local anchor_ts
+
+  [[ -z "$TWEET_MINTIME" ]] && return 1
+
+  if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then
+    anchor_ts="${records["$idx":time:lastseen]:-0}"
+  else
+    anchor_ts="${records["$idx":time:firstseen]:-0}"
+  fi
+
+  [[ "$anchor_ts" =~ ^[0-9]+$ ]] || return 1
+  (( NOWTIME < anchor_ts + TWEET_MINTIME ))
+}
+
 CHK_NOTIFICATIONS_ENABLED () {
   # Check if any notifications are enabled
   if chk_enabled "$PF_DISCORD" || \
@@ -1514,8 +1532,15 @@ done
 for ((idx=0; idx<=records[maxindex]; idx++)); do
   if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
-    records["$idx":ready_to_notify]=true
-    log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
+    if [[ -n "$TWEET_MINTIME" ]]; then
+      if tweet_mintime_delay_active_for_idx "$idx"; then
+        records["$idx":ready_to_notify]=false
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) remains FALSE due to TWEET_MINTIME delay"
+      fi
+    else
+      records["$idx":ready_to_notify]=true
+      log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
+    fi
   fi
 done
 
@@ -1568,18 +1593,19 @@ for idx in "${!processed_indices[@]}"; do
     records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
-  # If TWEET_MINTIME is set, then ensure we're not notifying until at least after this time has passed,
-  # of the record is complete.
+  # If TWEET_MINTIME is set, hold readiness at FALSE until the configured
+  # delay has elapsed (from lastseen when TWEET_BEHAVIOR=post, else firstseen).
+  mintime_blocking=false
   if [[ -n "$TWEET_MINTIME" ]]; then
-    if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then 
-      if (( ${records["$idx":time:lastseen]} + TWEET_MINTIME <= seentime )); then
+    if tweet_mintime_delay_active_for_idx "$idx"; then
+      mintime_blocking=true
+      if [[ "${records["$idx":ready_to_notify]}" != "false" ]]; then
         records["$idx":ready_to_notify]="false"
-        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
-      fi
-    else
-      if (( ${records["$idx":time:firstseen]} + TWEET_MINTIME <= seentime )); then
-        records["$idx":ready_to_notify]="false"
-        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+        if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then
+          log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
+        else
+          log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+        fi
       fi
     fi
   fi
@@ -1767,15 +1793,16 @@ log_print INFO "Processing complete. Now writing results to disk..."
 # Emit snapshots
 # ==========================
 
-if chk_enabled "$GENERATE_CSV"; then
-  { GENERATE_PF_CSV
-    log_print DEBUG "Wrote PF CSV object to $CSVOUT"
-  } &
-fi
+if chk_enabled "$PLANEFENCE"; then
+  if chk_enabled "$GENERATE_CSV"; then
+    { GENERATE_PF_CSV
+      log_print DEBUG "Wrote PF CSV object to $CSVOUT"
+    } &
+  fi
   { GENERATE_PF_JSON
     log_print DEBUG "Wrote PF JSON object to $JSONOUT"
   } &
-
+fi
 if chk_enabled "$PLANEALERT"; then
   if chk_enabled "$GENERATE_CSV"; then  
     { GENERATE_PA_CSV
