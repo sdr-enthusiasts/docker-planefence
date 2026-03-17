@@ -41,6 +41,10 @@ sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
 
 HTTP_PORT="$(GET_PARAM base PF_HTTP_PORT || true)"
 sed -i "s/^\(\s*server\.port\s*=\s*\).*/\1${HTTP_PORT:-80}/" /etc/lighttpd/lighttpd.conf
+
+if [[ "${HTTP_PORT:-80}" -ne 80 ]]; then
+    log_print WARN "Planefence Web Page is configured to listen on non-standard port ${HTTP_PORT}. Make sure you browse to the port and/or correctly map it in your docker or podman setup!"
+fi
 #
 # -----------------------------------------------------------------------------------
 # Link the required config files
