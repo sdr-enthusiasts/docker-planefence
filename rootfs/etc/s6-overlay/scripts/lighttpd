@@ -36,6 +36,15 @@ if [[ ! -d /var/run/lighttpd ]]; then install -d -o $OWNER -g $GROUP -m 0750 "/v
 # Comment out server.username and server.groupname in the lighttpd.conf file
 sed -i 's/^server\.username/# server\.username/g' /etc/lighttpd/lighttpd.conf
 sed -i 's/^server\.groupname/# server\.groupname/g' /etc/lighttpd/lighttpd.conf
+# -----------------------------------------------------------------------------------
+# If PF_HTTP_PORT is set, change the default port in the config file
+
+HTTP_PORT="$(GET_PARAM base PF_HTTP_PORT || true)"
+sed -i "s/^\(\s*server\.port\s*=\s*\).*/\1${HTTP_PORT:-80}/" /etc/lighttpd/lighttpd.conf
+
+if [[ "${HTTP_PORT:-80}" -ne 80 ]]; then
+    log_print WARN "Planefence Web Page is configured to listen on non-standard port ${HTTP_PORT}. Make sure you browse to this port and/or correctly map it in your docker or podman setup!"
+fi
 #
 # -----------------------------------------------------------------------------------
 # Link the required config files

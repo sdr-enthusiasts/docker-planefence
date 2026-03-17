@@ -344,6 +344,11 @@ fi
 SCREENSHOT_TIMEOUT="${SCREENSHOT_TIMEOUT:-60}"
 # max seconds to wait for screenshot retrieval
 
+# Pin records date/file for the entire run to avoid midnight rollover races.
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/run/planefence}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
 
 log_print DEBUG "Getting RECORDSFILE"
 READ_RECORDS ignore-lock

@@ -72,6 +72,11 @@ VERSION="$(GET_PARAM pf VERSION)"
 log_print DEBUG "Reading records for Discord notification"
 log_print DEBUG "Reading records for Discord notification"
 
+# Pin records date/file for the entire run to avoid midnight rollover races.
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/run/planefence}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
 READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Discord notification and stale records"

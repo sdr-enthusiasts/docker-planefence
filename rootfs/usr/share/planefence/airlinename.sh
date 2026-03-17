@@ -51,7 +51,7 @@ MUSTCACHE=0
 
 # get the plane-alert configuration before the planefence configuration
 # so that any values redefined in planefence prevail over plane-alert
-[[ -f "/usr/share/plane-alert/plane-alert.conf" ]] && source "/usr/share/plane-alert/plane-alert.conf"
+[[ -f "/usr/share/planefence/plane-alert.conf" ]] && source "/usr/share/planefence/plane-alert.conf"
 # get the planefence.conf configuration:
 if [[ -f "/usr/share/planefence/planefence.conf" ]]; then
   source "/usr/share/planefence/planefence.conf"

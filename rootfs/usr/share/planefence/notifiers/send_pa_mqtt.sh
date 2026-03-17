@@ -74,6 +74,8 @@ generate_mqtt() {
 		log_print DEBUG "MQTT Host: $MQTT_HOST"
 		log_print DEBUG "MQTT Port: ${MQTT_PORT:-1883}"
 		log_print DEBUG "MQTT TLS: $MQTT_TLS"
+		if [[ -n "$MQTT_CAFILE" ]]; then log_print DEBUG "MQTT CA File: $MQTT_CAFILE"; fi
+		if [[ -n "$MQTT_TLS_INSECURE" ]]; then log_print DEBUG "MQTT TLS Insecure: $MQTT_TLS_INSECURE"; fi
 		log_print DEBUG "MQTT Topic: $MQTT_TOPIC"
 		log_print DEBUG "MQTT Client ID: ${MQTT_CLIENT_ID:-$(hostname)}"
 		if [[ -n "$MQTT_USERNAME" ]]; then log_print DEBUG "MQTT Username: $MQTT_USERNAME"; fi
@@ -85,6 +87,8 @@ generate_mqtt() {
 		mqtt_string=(--broker "$MQTT_HOST")
 		if [[ -n "$MQTT_PORT" ]]; then mqtt_string+=(--port "$MQTT_PORT"); fi
 		if [[ -n "$MQTT_TLS" ]]; then mqtt_string+=(--tls); fi
+		if [[ -n "$MQTT_CAFILE" ]]; then mqtt_string+=(--cafile "$MQTT_CAFILE"); fi
+		if [[ -n "$MQTT_TLS_INSECURE" ]]; then mqtt_string+=(--tls-insecure); fi
 		mqtt_string+=(--topic "$MQTT_TOPIC")
 		if [[ -n "$MQTT_QOS" ]]; then mqtt_string+=(--qos "$MQTT_QOS"); fi
 		mqtt_string+=(--client_id "${MQTT_CLIENT_ID:-$(hostname)}")
@@ -116,6 +120,11 @@ fi
 log_print DEBUG "Hello. Starting generation of MQTT notifications"
 
 # read the records file
+# Pin records date/file for the entire run to avoid midnight rollover races.
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/run/planefence}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
 READ_RECORDS
 
 # build index and stale arrays

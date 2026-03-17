@@ -9,8 +9,8 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 #
-
-source /scripts/common
+#sleep 1 # Give 00-container-start-time a chance to write the container start time to the file before we read it in pf-common
+source /scripts/pf-common
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
 fi
@@ -46,4 +46,20 @@ else
     fi
 fi
 
-"${s6wrap[@]}" echo "Initial Planefence check done..."
+if chk_disabled "${PLANEFENCE:-$PF_PLANEFENCE}" && chk_disabled "${PLANEALERT:-$PF_PLANEALERT}"; then
+    log_print ERR "(PF_)PLANEFENCE and (PF_)PLANEALERT are both disabled. Container will not start!"
+    exec sleep infinity
+fi
+
+# Now update the plane-alert-candidates.txt file if needed
+CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
+CANDIDATE_FILE="${CANDIDATE_FILE:-plane-alert-candidates.txt}"
+CANDIDATE_FILE="/usr/share/planefence/persist/${CANDIDATE_FILE##*/}"
+FIX_VERSION="v1.0"
+if [[ -f "$CANDIDATE_FILE" && ! -f /usr/share/planefence/persist/.internal/.candidate_file_updated ]] \
+   || [[ -f "$CANDIDATE_FILE" && -f /usr/share/planefence/persist/.internal/.candidate_file_updated && "$(</usr/share/planefence/persist/.internal/.candidate_file_updated)" != "$FIX_VERSION" ]]; then
+    log_print INFO "Updating $CANDIDATE_FILE to add ImageLink column if missing or update existing ImageLink values if needed..."
+    /scripts/update-pa-candidates.sh "$CANDIDATE_FILE"
+    echo "$FIX_VERSION" > /usr/share/planefence/persist/.internal/.candidate_file_updated
+fi
+"${s6wrap[@]}" echo "Initial Planefence check complete."

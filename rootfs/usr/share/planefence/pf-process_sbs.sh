@@ -199,8 +199,55 @@ GET_CALLSIGN() {
 }
 
 GET_TYPE () {
+  local icao="$1"
   local apiUrl="https://api.adsb.lol/v2/hex"
-  curl -m 30 -sSL "$apiUrl/$1" | jq -r '.ac[] .t' 2>/dev/null
+  local type=""
+  local _osdb_header _osdb_col _osdb_norm i
+  local provenance=""
+
+  # Look up the ICAO in the mictronics database (local copy) if we have it downloaded:
+	if [[ -f /run/planefence/icao2plane.txt ]]; then
+		type="$(grep -m1 -i -F "$icao" /run/planefence/icao2plane.txt 2>/dev/null | awk -F, '{print $3}')"
+    if [[ -n "$type" ]]; then provenance="mictronics"; fi
+	fi
+
+  # If there is a OpenSkyDB file, check that one:
+  if [[ -z "$type" && -f /run/OpenSkyDB.csv ]]; then
+    # Determine icao24/typecode column numbers once from header, then do a fast grep prefilter + awk exact-column match
+    if [[ -z "${OPENSKYDB_ICAO24_COL:-}" || -z "${OPENSKYDB_TYPECODE_COL:-}" ]]; then
+      _osdb_header="$(head -n1 /run/OpenSkyDB.csv 2>/dev/null)"
+      IFS=',' read -r -a _osdb_col <<< "$_osdb_header"
+      for i in "${!_osdb_col[@]}"; do
+        _osdb_norm="${_osdb_col[$i]//[\"\'[:space:]]/}"
+        _osdb_norm="${_osdb_norm,,}"
+        [[ "$_osdb_norm" == "icao24" ]] && OPENSKYDB_ICAO24_COL=$(( i + 1 ))
+        [[ "$_osdb_norm" == "typecode" ]] && OPENSKYDB_TYPECODE_COL=$(( i + 1 ))
+      done
+    fi
+
+    if [[ -n "${OPENSKYDB_ICAO24_COL:-}" && -n "${OPENSKYDB_TYPECODE_COL:-}" ]]; then
+      type="$(grep -i -F "$icao" /run/OpenSkyDB.csv | awk -F, -v icao="$icao" -v icol="$OPENSKYDB_ICAO24_COL" -v tcol="$OPENSKYDB_TYPECODE_COL" '
+        {
+          key=$icol
+          gsub(/[ "\047\r\t]/, "", key)
+          if (tolower(key) == tolower(icao)) {
+            v=$tcol
+            gsub(/[ "\047\r\t]/, "", v)
+            print v
+            exit
+          }
+        }
+      ')"
+    fi
+    if [[ -n "$type" ]]; then provenance="OpenSkyDB"; fi
+  fi
+
+  if [[ -z "$type" ]]; then
+    type="$(curl -m 30 -sSL "$apiUrl/$icao" | jq -r 'try .ac[] .t | select(. != null)')"
+      if [[ -n "$type" ]]; then provenance="$apiUrl"; fi
+  fi
+  log_print DEBUG "GET_TYPE for $icao: $type (provenance: $provenance)"
+  echo "$type"
 }
 
 GET_ROUTE_BULK () {
@@ -426,6 +473,24 @@ GET_PS_PHOTO () {
 
   # do a quick cache cleanup
   find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
+}
+
+# Returns 0 (true) when TWEET_MINTIME delay is still active for this record,
+# i.e. notifications must still be delayed.
+tweet_mintime_delay_active_for_idx() {
+  local idx="$1"
+  local anchor_ts
+
+  [[ -z "$TWEET_MINTIME" ]] && return 1
+
+  if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then
+    anchor_ts="${records["$idx":time:lastseen]:-0}"
+  else
+    anchor_ts="${records["$idx":time:firstseen]:-0}"
+  fi
+
+  [[ "$anchor_ts" =~ ^[0-9]+$ ]] || return 1
+  (( NOWTIME < anchor_ts + TWEET_MINTIME ))
 }
 
 CHK_NOTIFICATIONS_ENABLED () {
@@ -1099,8 +1164,10 @@ log_print DEBUG "Collected new records into /tmp/filtered_records_$$"
 LASTPROCESSEDLINE="$(head -n2 /tmp/filtered_records_$$ | tail -1 || true)"
 
 # Create pf_socketrecords array
-readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }' || true)
-log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
+if chk_enabled "$PLANEFENCE"; then
+  readarray -t pf_socketrecords < <(grep -v -i -f "$IGNORELIST" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$DIST" -v maxalt="$MAXALT" '$8 <= dist && $2 <= maxalt && NF==12 { print }' || true)
+  log_print DEBUG "Created pf_socketrecords array with ${#pf_socketrecords[@]} entries"
+fi
 
 # Create pa_socketrecords array
 if chk_enabled "$PLANEALERT" && (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
@@ -1114,8 +1181,10 @@ fi
 rm -f /tmp/filtered_records_$$
 
 # read the unique icao's into arrays:
-readarray -t pf_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
-log_print DEBUG "Created index array with ${#pf_icaos[@]} unique planefence entries"
+if chk_enabled "$PLANEFENCE"; then
+  readarray -t pf_icaos < <(printf '%s\n' "${pf_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
+  log_print DEBUG "Created index array with ${#pf_icaos[@]} unique planefence entries"
+fi
 if chk_enabled "$PLANEALERT"; then
   readarray -t pa_icaos < <(printf '%s\n' "${pa_socketrecords[@]}" | sort -t, -k1,1 -u | awk -F, '{print $1}')
   log_print DEBUG "Created index array with ${#pa_icaos[@]} unique plane-alert entries"
@@ -1463,8 +1532,15 @@ done
 for ((idx=0; idx<=records[maxindex]; idx++)); do
   if [[ "${records["$idx":complete]}" != "true" ]] && (( NOWTIME - ${records["$idx":time:lastseen]:-0} > COLLAPSEWITHIN )); then
     processed_indices["$idx"]=true
-    records["$idx":ready_to_notify]=true
-    log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
+    if [[ -n "$TWEET_MINTIME" ]]; then
+      if tweet_mintime_delay_active_for_idx "$idx"; then
+        records["$idx":ready_to_notify]=false
+        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) remains FALSE due to TWEET_MINTIME delay"
+      fi
+    else
+      records["$idx":ready_to_notify]=true
+      log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now TRUE due to collapse timeout"
+    fi
   fi
 done
 
@@ -1517,18 +1593,19 @@ for idx in "${!processed_indices[@]}"; do
     records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
-  # If TWEET_MINTIME is set, then ensure we're not notifying until at least after this time has passed,
-  # of the record is complete.
+  # If TWEET_MINTIME is set, hold readiness at FALSE until the configured
+  # delay has elapsed (from lastseen when TWEET_BEHAVIOR=post, else firstseen).
+  mintime_blocking=false
   if [[ -n "$TWEET_MINTIME" ]]; then
-    if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then 
-      if (( ${records["$idx":time:lastseen]} + TWEET_MINTIME <= seentime )); then
+    if tweet_mintime_delay_active_for_idx "$idx"; then
+      mintime_blocking=true
+      if [[ "${records["$idx":ready_to_notify]}" != "false" ]]; then
         records["$idx":ready_to_notify]="false"
-        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
-      fi
-    else
-      if (( ${records["$idx":time:firstseen]} + TWEET_MINTIME <= seentime )); then
-        records["$idx":ready_to_notify]="false"
-        log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+        if [[ "${TWEET_BEHAVIOR,,}" == "post" ]]; then
+          log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since last seen"
+        else
+          log_print DEBUG "[READY_TO_NOTIFY] $idx ($icao $callsign) is now FALSE due to TWEET_MINTIME not yet passed since first seen"
+        fi
       fi
     fi
   fi
@@ -1716,15 +1793,16 @@ log_print INFO "Processing complete. Now writing results to disk..."
 # Emit snapshots
 # ==========================
 
-if chk_enabled "$GENERATE_CSV"; then
-  { GENERATE_PF_CSV
-    log_print DEBUG "Wrote PF CSV object to $CSVOUT"
-  } &
-fi
+if chk_enabled "$PLANEFENCE"; then
+  if chk_enabled "$GENERATE_CSV"; then
+    { GENERATE_PF_CSV
+      log_print DEBUG "Wrote PF CSV object to $CSVOUT"
+    } &
+  fi
   { GENERATE_PF_JSON
     log_print DEBUG "Wrote PF JSON object to $JSONOUT"
   } &
-
+fi
 if chk_enabled "$PLANEALERT"; then
   if chk_enabled "$GENERATE_CSV"; then  
     { GENERATE_PA_CSV
