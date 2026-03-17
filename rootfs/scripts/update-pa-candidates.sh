@@ -80,6 +80,8 @@ tail -n +2 "$file" | while IFS= read -r line; do
 done
 
 mv -f "$tmp" "$file"
+chmod a+r "$file"
+
 trap - EXIT
 
 log_print INFO "Done. Updated=$updated Skipped=$skipped PassedThrough=$passed Output=$file"

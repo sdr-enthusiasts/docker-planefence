@@ -55,11 +55,11 @@ fi
 CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
 CANDIDATE_FILE="${CANDIDATE_FILE:-plane-alert-candidates.txt}"
 CANDIDATE_FILE="/usr/share/planefence/persist/${CANDIDATE_FILE##*/}"
-FIX_VERSION="v1"
+FIX_VERSION="v1.0"
 if [[ -f "$CANDIDATE_FILE" && ! -f /usr/share/planefence/persist/.internal/.candidate_file_updated ]] \
    || [[ -f "$CANDIDATE_FILE" && -f /usr/share/planefence/persist/.internal/.candidate_file_updated && "$(</usr/share/planefence/persist/.internal/.candidate_file_updated)" != "$FIX_VERSION" ]]; then
     log_print INFO "Updating $CANDIDATE_FILE to add ImageLink column if missing or update existing ImageLink values if needed..."
-    /scripts/update-pa-candidatest.sh "$CANDIDATE_FILE"
+    /scripts/update-pa-candidates.sh "$CANDIDATE_FILE"
     echo "$FIX_VERSION" > /usr/share/planefence/persist/.internal/.candidate_file_updated
 fi
 "${s6wrap[@]}" echo "Initial Planefence check complete."
