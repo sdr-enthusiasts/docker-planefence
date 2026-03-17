@@ -50,7 +50,7 @@ updated=0
 skipped=0
 passed=0
 
-tail -n +2 "$file" | while IFS= read -r line; do
+while IFS= read -r line; do
   n=$((n+1))
 
   if [[ "$line" == \#* ]]; then
@@ -77,7 +77,7 @@ tail -n +2 "$file" | while IFS= read -r line; do
   fi
 
   (IFS=','; printf '%s\n' "${f[*]}") >> "$tmp"
-done
+done < <(tail -n +2 "$file")
 
 mv -f "$tmp" "$file"
 chmod a+r "$file"
