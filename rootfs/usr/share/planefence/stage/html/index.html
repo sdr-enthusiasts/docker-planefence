@@ -2485,6 +2485,24 @@ ${messagesDesc}
     } catch (e) { return 0; }
   }
 
+  function uiChunkSize() {
+    try {
+      const len = Number(table?.page?.len?.());
+      if (Number.isFinite(len) && len > 0) return Math.max(10, Math.min(200, len));
+    } catch (e) { /* ignore */ }
+    return 50;
+  }
+
+  async function yieldToBrowser() {
+    await new Promise((resolve) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+  }
+
   function fmtInt(s){ const n = Number(s); return Number.isFinite(n)? n : null; }
   function safe(s){ return String(s ?? ""); }
   function isHttp(u){ return typeof u === 'string' && /^https?:\/\//i.test(u); }
@@ -2913,7 +2931,6 @@ ${messagesDesc}
   const missingCounts = new Map();
   // Track indices added since last user-visible redraw. Used to highlight new rows.
   const pendingNewIndices = new Set();
-  let forceNewestOnNextRedraw = false;
 
   function resetTableState(){
     try {
@@ -2923,7 +2940,6 @@ ${messagesDesc}
     exportRowByIndex.clear();
     missingCounts.clear();
     pendingNewIndices.clear();
-    forceNewestOnNextRedraw = false;
     userOrderOverride = false;
     userPageOverride = false;
     updateNewUpdatesBanner();
@@ -3058,8 +3074,7 @@ ${messagesDesc}
       const info = table.page ? table.page.info() : null;
       const onFirst = info && info.page === 0;
       const hasPendingNew = pendingNewIndices.size > 0;
-      const forceNewest = opts.forceNewest === true || forceNewestOnNextRedraw === true;
-      forceNewestOnNextRedraw = false;
+      const forceNewest = opts.forceNewest === true;
       const autoJumpToNewest = shouldAutoJumpToNewest(hasPendingNew);
       if (forceFull || onFirst || autoJumpToNewest || forceNewest) {
         if (autoJumpToNewest || forceNewest) {
@@ -3922,6 +3937,10 @@ function addOrUpdateRow(r){
       const dec = new TextDecoder();
       let buf = '';
       let processed = 0;
+      let processedSinceDraw = 0;
+      const chunkSize = uiChunkSize();
+      const firstPaintChunk = Math.max(8, Math.min(20, chunkSize));
+      let didFirstPaint = false;
       let seenHeader = false;
       let streamGlobals = {};
 
@@ -3980,22 +3999,21 @@ function addOrUpdateRow(r){
 
           const norm = normalizeRow(payload);
           if (!norm) continue;
-          const prevMaxBefore = maxTrackedIndex();
-          const topBefore = topVisibleRowIndex();
           const res = addOrUpdateRow(norm);
           if (res.created && Number.isFinite(Number(res.idx))) {
             pendingNewIndices.add(Number(res.idx));
             updateNewUpdatesBanner();
-            if (Number.isFinite(prevMaxBefore) && Number.isFinite(topBefore) && topBefore === prevMaxBefore && Number(res.idx) > prevMaxBefore) {
-              forceNewestOnNextRedraw = true;
-            }
           }
           processed++;
-          // Redraw immediately for newly created rows so new aircraft appear promptly.
-          if (res.created || processed % 10 === 0) {
+          processedSinceDraw++;
+          const drawThreshold = didFirstPaint ? chunkSize : firstPaintChunk;
+          if (processedSinceDraw >= drawThreshold) {
             if (generation !== modeGeneration || controller.signal.aborted) return;
             redrawTable(false);
             if (prog) prog.textContent = t('status.loadingCount', { count: rowCount() }, `Loaded ${rowCount()}...`);
+            didFirstPaint = true;
+            processedSinceDraw = 0;
+            await yieldToBrowser();
           }
         }
       }
@@ -4010,15 +4028,10 @@ function addOrUpdateRow(r){
           applyMediaPrefixes(payload);
           const norm = normalizeRow(payload);
           if (norm) {
-            const prevMaxBefore = maxTrackedIndex();
-            const topBefore = topVisibleRowIndex();
             const res = addOrUpdateRow(norm);
             if (res.created && Number.isFinite(Number(res.idx))) {
               pendingNewIndices.add(Number(res.idx));
               updateNewUpdatesBanner();
-              if (Number.isFinite(prevMaxBefore) && Number.isFinite(topBefore) && topBefore === prevMaxBefore && Number(res.idx) > prevMaxBefore) {
-                forceNewestOnNextRedraw = true;
-              }
             }
           }
         } catch(e) { /* ignore parse */ }
@@ -4147,6 +4160,9 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       && preAddTop === preAddMax
       && toAdd.some(item => Number.isFinite(Number(item.idx)) && Number(item.idx) > preAddMax);
 
+    const chunkSize = uiChunkSize();
+    let opsSinceYield = 0;
+
     // Apply updates
     for (const u of toUpdate) {
       try {
@@ -4163,6 +4179,12 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
             else console.warn('poll: fallback row not found for idx', u.idx);
           }
         } catch (ee) { console.warn('poll: fallback update failed', ee); }
+      }
+      opsSinceYield++;
+      if (opsSinceYield >= chunkSize) {
+        redrawTable(false, { forceNewest: forceNewestFromPoll });
+        opsSinceYield = 0;
+        await yieldToBrowser();
       }
     }
     // Append new rows and register them in rowByIndex
@@ -4189,6 +4211,12 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
           }
         }
       } catch (e) { /* ignore */ }
+      opsSinceYield++;
+      if (opsSinceYield >= chunkSize) {
+        redrawTable(false, { forceNewest: forceNewestFromPoll });
+        opsSinceYield = 0;
+        await yieldToBrowser();
+      }
     }
 
     // After applying updates/adds, purge any rows not present in the snapshot.
