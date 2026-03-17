@@ -6,6 +6,7 @@ This wiki is generated from repository documentation and configuration reference
 
 - [Installation Guide](Installation-Guide)
 - [Configuration Guide](Configuration-Guide)
+- [Advanced Configuration Reference](Advanced-Configuration-Reference)
 - [Feature Documentation](Feature-Documentation)
 - [Troubleshooting](Troubleshooting)
 - [Privacy](Privacy)
