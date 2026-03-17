@@ -31,6 +31,8 @@
       color-scheme: light dark;
       /* height reserved for the top page header; table thead will stick beneath this (reduced ~25% for desktop) */
       --header-height: 2.625rem;
+      --table-controls-height: 0px;
+      --table-shell-max-height: 70vh;
       --bg: #ffffff;
       --fg: #111111;
       --muted: #666;
@@ -172,16 +174,12 @@
     color: var(--muted);
   }
   /* Removed Spectro column; kept layout flexible */
-    /* Keep the table header visible while scrolling; it will sit just below the page header */
+    /* Default (mobile-first): controls/header scroll normally */
     table.dataTable thead th {
-      position: sticky;
-      top: var(--header-height);
-      z-index: 40;
+      position: static;
+      top: auto;
+      z-index: auto;
       background: var(--soft);
-    }
-    /* Give the first data row extra padding so it clears the sticky header */
-    table.dataTable tbody tr:first-of-type > * {
-      padding-top: calc(var(--header-height) + 0.5rem);
     }
     th, td { vertical-align: middle; }
   img.thumb { height: 56px; width: 56px; object-fit: cover; border-radius: .25rem; background: #0001; }
@@ -417,6 +415,31 @@
   .btn-secondary { background: transparent; border-color: var(--muted); color: var(--fg); }
   .privacy-link { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; }
 
+  /* Desktop: keep DataTables controls and table header visible while scrolling. */
+  @media (min-width: 721px) {
+    .table-shell {
+      overflow: auto !important;
+      max-height: var(--table-shell-max-height);
+    }
+    #t_wrapper .pf-controls {
+      position: sticky;
+      top: 0;
+      z-index: 46;
+      background: var(--bg);
+      padding: .35rem 0;
+      border-bottom: 1px solid var(--soft);
+    }
+    table.dataTable thead {
+      position: sticky;
+      top: var(--table-controls-height);
+      z-index: 45;
+    }
+    table.dataTable thead th {
+      position: static;
+      background: var(--soft);
+    }
+  }
+
   @media (max-width: 960px) {
     :root { --header-height: 4.25rem; }
     header { flex-wrap: wrap; }
@@ -568,7 +591,7 @@
   </div>
 
   <main style="padding: 0 1rem 1rem;">
-    <div class="table-shell" style="overflow:auto;">
+    <div class="table-shell">
       <table id="t" class="display compact stripe" style="width:100%;">
         <thead id="thead">
           <tr></tr>
@@ -2923,6 +2946,27 @@ ${messagesDesc}
   let table = null;
   let userOrderOverride = false;
   let userPageOverride = false;
+
+  function updateStickyTableOffsets(){
+    try {
+      const desktop = window.matchMedia && window.matchMedia('(min-width: 721px)').matches;
+      const controls = document.querySelector('#t_wrapper .pf-controls');
+      const shell = document.querySelector('.table-shell');
+      const height = (desktop && controls)
+        ? Math.max(0, Math.ceil(controls.getBoundingClientRect().height || 0))
+        : 0;
+      document.documentElement.style.setProperty('--table-controls-height', `${height}px`);
+
+      // Keep table scrolling confined to its own area on desktop.
+      if (desktop && shell) {
+        const rect = shell.getBoundingClientRect();
+        const available = Math.max(220, Math.floor(window.innerHeight - rect.top - 8));
+        document.documentElement.style.setProperty('--table-shell-max-height', `${available}px`);
+      } else {
+        document.documentElement.style.setProperty('--table-shell-max-height', 'none');
+      }
+    } catch (e) { /* ignore */ }
+  }
   // Map of index -> DataTables row API for fast incremental updates
   const rowByIndex = new Map();
   // Map of index -> normalized data used for CSV export
@@ -3365,7 +3409,12 @@ ${messagesDesc}
     table.on('order', () => { userOrderOverride = true; });
     table.on('page', () => { userPageOverride = true; });
   try { table.on('draw', ()=> lazyLoadImagesIn(document)); } catch (e) { /* ignore draw hook */ }
+  try { table.on('draw', ()=> updateStickyTableOffsets()); } catch (e) { /* ignore offset hook */ }
   try { lazyLoadImagesIn(document); } catch (e) { /* ignore initial lazy load */ }
+  updateStickyTableOffsets();
+  try {
+    window.addEventListener('resize', updateStickyTableOffsets, { passive: true });
+  } catch (e) { /* ignore */ }
 
     applyPlaneAlertColumnVisibility();
 
