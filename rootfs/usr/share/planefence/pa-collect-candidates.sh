@@ -46,7 +46,7 @@ FILTER_FILE="$(GET_PARAM base PA_COLLECT_CANDIDATES_FILTER_FILE || true)"
 FILTER_FILE="${FILTER_FILE:-pa-candidates-filter.txt}"
 FILTER_FILE="/usr/share/planefence/persist/${FILTER_FILE##*/}"
 HEADER="$(GET_PARAM pa PA_COLLECT_CANDIDATES_HEADER || true)"
-HEADER="${HEADER:-ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link}"
+HEADER="${HEADER:-ICAO,Tail,Operator,Type,ICAO Type,CMPG,,,,Category,photo_link,,,,ImageLink}"
 
 CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
 CANDIDATE_FILE="${CANDIDATE_FILE:-plane-alert-candidates.txt}"
@@ -108,6 +108,7 @@ GET_ADSB_META() {
 GET_PS_PHOTO_LINK() {
 	local icao=${1^^}
 	local json link
+  ImageLink=""
 	local ctime=$((3 * 24 * 3600))
 	local dir="/usr/share/planefence/persist/planepix/cache"
 	local lnk="$dir/$icao.link"
@@ -125,7 +126,8 @@ GET_PS_PHOTO_LINK() {
 	fi
 
 	if json="$(curl -m 20 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao" 2>/dev/null)" && \
-		 link="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
+		 ImageLink="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
+		 link="$(jq -r 'try .photos[].link | select(. != null) | .' <<< "$json" | head -n1)" && \
 		 [[ -n "$link" ]]; then
 		printf '%s\n' "$link" > "$lnk"
 		printf '%s\n' "$link"
@@ -714,8 +716,9 @@ for icao in "${new_candidate_icaos[@]}"; do
 	fi
 
 	photo_link="$(GET_PS_PHOTO_LINK "$icao" 2>/dev/null || true)"
+	ImageLink="${ImageLink:-}"
 
-	row="$(csv_encode "$icao"),$(csv_encode "$tail"),$(csv_encode "$owner"),$(csv_encode "$type_long"),$(csv_encode "$icao_type"),$(csv_encode "$cpmg"),,,,$(csv_encode "$category"),$(csv_encode "$photo_link")"
+	row="$(csv_encode "$icao"),$(csv_encode "$tail"),$(csv_encode "$owner"),$(csv_encode "$type_long"),$(csv_encode "$icao_type"),$(csv_encode "$cpmg"),,,,$(csv_encode "$category"),$(csv_encode "$photo_link"),,,,$(csv_encode "$ImageLink")"
 	new_rows+=("$row")
 	existing_candidates["$icao"]="$row"
 done

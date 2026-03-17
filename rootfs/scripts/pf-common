@@ -16,6 +16,8 @@ source /scripts/common
 set -eo pipefail
 LC_ALL=C
 
+DEBUG="${DEBUG:-false}"   # added for safety to avoid unset variable issues in log_print when called before DEBUG is set in pf-common.
+
 MAXWAITTIME=300   # max time we'll wait for the records lock to expire
 
 # Container Start Time is used to determine whether a record is "new" or "stale"

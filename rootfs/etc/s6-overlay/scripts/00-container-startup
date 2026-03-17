@@ -51,4 +51,15 @@ if chk_disabled "${PLANEFENCE:-$PF_PLANEFENCE}" && chk_disabled "${PLANEALERT:-$
     exec sleep infinity
 fi
 
+# Now update the plane-alert-candidates.txt file if needed
+CANDIDATE_FILE="$(GET_PARAM pa PA_COLLECT_CANDIDATES_FILE || true)"
+CANDIDATE_FILE="${CANDIDATE_FILE:-plane-alert-candidates.txt}"
+CANDIDATE_FILE="/usr/share/planefence/persist/${CANDIDATE_FILE##*/}"
+FIX_VERSION="v1"
+if [[ -f "$CANDIDATE_FILE" && ! -f /usr/share/planefence/persist/.internal/.candidate_file_updated ]] \
+   || [[ -f "$CANDIDATE_FILE" && -f /usr/share/planefence/persist/.internal/.candidate_file_updated && "$(</usr/share/planefence/persist/.internal/.candidate_file_updated)" != "$FIX_VERSION" ]]; then
+    log_print INFO "Updating $CANDIDATE_FILE to add ImageLink column if missing or update existing ImageLink values if needed..."
+    /scripts/update-pa-candidatest.sh "$CANDIDATE_FILE"
+    echo "$FIX_VERSION" > /usr/share/planefence/persist/.internal/.candidate_file_updated
+fi
 "${s6wrap[@]}" echo "Initial Planefence check complete."
