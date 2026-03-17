@@ -10,7 +10,7 @@
 # -----------------------------------------------------------------------------------
 #
 
-source /scripts/common
+source /scripts/pf-common
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
 fi
