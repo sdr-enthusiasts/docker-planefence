@@ -62,6 +62,11 @@ fi
 
 log_print DEBUG "Reading records for Telegram notification"
 
+# Pin records date/file for the entire run to avoid midnight rollover races.
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/run/planefence}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
 READ_RECORDS
 
 log_print DEBUG "Getting indices of records ready for Telegram notification and stale records"

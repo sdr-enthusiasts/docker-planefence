@@ -120,6 +120,11 @@ fi
 log_print DEBUG "Hello. Starting generation of MQTT notifications"
 
 # read the records file
+# Pin records date/file for the entire run to avoid midnight rollover races.
+TODAY="${TODAY:-$(date +%y%m%d)}"
+RECORDSDIR="${RECORDSDIR:-/run/planefence}"
+RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+
 READ_RECORDS
 
 # build index and stale arrays
