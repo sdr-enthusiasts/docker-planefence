@@ -170,7 +170,11 @@
         "fatalConfig.body.bothDisabled": "Both PLANEFENCE and PLANEALERT have been disabled. This means that no aircraft data is collected.",
         "fatalConfig.body.contactOperator": "This is probably a configuration error. Please contact the operator of this Planefence instance and ask them to correct this.",
         "stationInfo.planeAlert.candidates.autoAdd": "Any automatically detected new aircraft are automatically made available in Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Any automatically detected new aircraft are saved in a list for the Plane-Alert operator to vet and manually add to Plane-Alert. As a result, you may not see them appear in Plane-Alert immediately."
+        "stationInfo.planeAlert.candidates.manualAdd": "Any automatically detected new aircraft are saved in a list for the Plane-Alert operator to vet and manually add to Plane-Alert. As a result, you may not see them appear in Plane-Alert immediately.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Tail",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     },
     "es-ES": {
@@ -342,7 +346,11 @@
         "fatalConfig.body.bothDisabled": "Tanto PLANEFENCE como PLANEALERT han sido deshabilitados. Esto significa que no se recopilan datos de aeronaves.",
         "fatalConfig.body.contactOperator": "Probablemente se trate de un error de configuración. Por favor, contacte al operador de esta instancia de Planefence y pídale que lo corrija.",
         "stationInfo.planeAlert.candidates.autoAdd": "Cualquier nueva aeronave detectada automáticamente se pone a disposición automáticamente en Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Cualquier nueva aeronave detectada automáticamente se guarda en una lista para que el operador de Plane-Alert la revise y la agregue manualmente a Plane-Alert. Como resultado, es posible que no la vea aparecer en Plane-Alert de inmediato."
+        "stationInfo.planeAlert.candidates.manualAdd": "Cualquier nueva aeronave detectada automáticamente se guarda en una lista para que el operador de Plane-Alert la revise y la agregue manualmente a Plane-Alert. Como resultado, es posible que no la vea aparecer en Plane-Alert de inmediato.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrícula",
+        "table.headers.operator": "Operador",
+        "table.headers.type": "Tipo"
       }
     },
     "ca-ES": {
@@ -513,7 +521,11 @@
         "fatalConfig.body.bothDisabled": "Tant PLANEFENCE com PLANEALERT s'han desactivat. Això vol dir que no es recullen dades d'aeronaus.",
         "fatalConfig.body.contactOperator": "Probablement es tracta d'un error de configuració. Si us plau, contacteu amb l'operador d'aquesta instància de Planefence i demaneu-li que ho corregeixi.",
         "stationInfo.planeAlert.candidates.autoAdd": "Qualsevol aeronau nova detectada automàticament es posa automàticament a disposició a Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Qualsevol aeronau nova detectada automàticament es desa en una llista perquè l'operador de Plane-Alert la validi i l'afegeixi manualment a Plane-Alert. Com a resultat, és possible que no la vegis aparèixer a Plane-Alert immediatament."
+        "stationInfo.planeAlert.candidates.manualAdd": "Qualsevol aeronau nova detectada automàticament es desa en una llista perquè l'operador de Plane-Alert la validi i l'afegeixi manualment a Plane-Alert. Com a resultat, és possible que no la vegis aparèixer a Plane-Alert immediatament.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrícula",
+        "table.headers.operator": "Operador",
+        "table.headers.type": "Tipus"
       }
     },
     "eu-ES": {
@@ -684,7 +696,11 @@
         "history.menu.aria": "Historia datak",
         "history.empty": "Ez dago historiarik eskuragarri",
         "stationInfo.planeAlert.candidates.autoAdd": "Automatikoki detektatutako hegazkin berri oro automatikoki eskuragarri jartzen da Plane-Alert-en.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Automatikoki detektatutako hegazkin berri oro zerrenda batean gordetzen da Plane-Alert-eko operadoreak baliozkotu eta eskuz Plane-Alert-era gehitu dezan. Ondorioz, baliteke Plane-Alert-en berehala ez agertzea."
+        "stationInfo.planeAlert.candidates.manualAdd": "Automatikoki detektatutako hegazkin berri oro zerrenda batean gordetzen da Plane-Alert-eko operadoreak baliozkotu eta eskuz Plane-Alert-era gehitu dezan. Ondorioz, baliteke Plane-Alert-en berehala ez agertzea.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrikula",
+        "table.headers.operator": "Operadorea",
+        "table.headers.type": "Mota"
       }
     },
     "gl-ES": {
@@ -855,7 +871,11 @@
         "history.menu.aria": "Datas do historial",
         "history.empty": "Non hai historial dispoñible",
         "stationInfo.planeAlert.candidates.autoAdd": "Calquera aeronave nova detectada automaticamente ponse automaticamente dispoñible en Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Calquera aeronave nova detectada automaticamente gárdase nunha lista para que o operador de Plane-Alert a revise e a engada manualmente a Plane-Alert. Como resultado, pode que non a vexas aparecer en Plane-Alert de inmediato."
+        "stationInfo.planeAlert.candidates.manualAdd": "Calquera aeronave nova detectada automaticamente gárdase nunha lista para que o operador de Plane-Alert a revise e a engada manualmente a Plane-Alert. Como resultado, pode que non a vexas aparecer en Plane-Alert de inmediato.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrícula",
+        "table.headers.operator": "Operador",
+        "table.headers.type": "Tipo"
       }
     },
     "ga-IE": {
@@ -1026,7 +1046,11 @@
         "fatalConfig.body.bothDisabled": "Tá PLANEFENCE agus PLANEALERT araon díchumasaithe. Ciallaíonn sé seo nach mbailítear sonraí aerárthaí.",
         "fatalConfig.body.contactOperator": "Is dócha gur earráid chumraíochta é seo. Déan teagmháil le hoibreoir na hinstainte Planefence seo agus iarr orthu é a cheartú.",
         "stationInfo.planeAlert.candidates.autoAdd": "Cuirtear aon aerárthach nua a bhraitear go huathoibríoch ar fáil go huathoibríoch in Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Sábháiltear aon aerárthach nua a bhraitear go huathoibríoch i liosta chun go ndéanfaidh oibreoir Plane-Alert é a fhíorú agus a chur le Plane-Alert de láimh. Dá bharr sin, seans nach bhfeicfidh tú é ag teacht chun cinn in Plane-Alert láithreach."
+        "stationInfo.planeAlert.candidates.manualAdd": "Sábháiltear aon aerárthach nua a bhraitear go huathoibríoch i liosta chun go ndéanfaidh oibreoir Plane-Alert é a fhíorú agus a chur le Plane-Alert de láimh. Dá bharr sin, seans nach bhfeicfidh tú é ag teacht chun cinn in Plane-Alert láithreach.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Clárúchán",
+        "table.headers.operator": "Oibreoir",
+        "table.headers.type": "Cineál"
       }
     },
     "qu-PE": {
@@ -1198,7 +1222,11 @@
         "history.empty": "Historia mana kanchu",
         "history.locale": "es-PE",
         "stationInfo.planeAlert.candidates.autoAdd": "Kikinmanta tarisqa musuq wamp'uqa Plane-Alertpi kikillanmanta churakun.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Kikinmanta tarisqa musuq wamp'uqa huk listapi waqaychasqa kan Plane-Alert kamachiq qhawananpaq, hinaspa makillawan Plane-Alertman yapananpaq. Chayrayku, ichaqa manaraqmi Plane-Alertpi chaylla rikunkichu."
+        "stationInfo.planeAlert.candidates.manualAdd": "Kikinmanta tarisqa musuq wamp'uqa huk listapi waqaychasqa kan Plane-Alert kamachiq qhawananpaq, hinaspa makillawan Plane-Alertman yapananpaq. Chayrayku, ichaqa manaraqmi Plane-Alertpi chaylla rikunkichu.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrikula",
+        "table.headers.operator": "Operador",
+        "table.headers.type": "Laya"
       }
     },
     "nl-NL": {
@@ -1369,7 +1397,11 @@
         "history.menu.aria": "Historie datums",
         "history.empty": "Geen geschiedenis beschikbaar",
         "stationInfo.planeAlert.candidates.autoAdd": "Alle automatisch gedetecteerde nieuwe vliegtuigen worden automatisch beschikbaar gemaakt in Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch gedetecteerde nieuwe vliegtuigen worden opgeslagen in een lijst zodat de Plane-Alert-operator ze kan beoordelen en handmatig aan Plane-Alert kan toevoegen. Daardoor zie je ze mogelijk niet meteen in Plane-Alert verschijnen."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch gedetecteerde nieuwe vliegtuigen worden opgeslagen in een lijst zodat de Plane-Alert-operator ze kan beoordelen en handmatig aan Plane-Alert kan toevoegen. Daardoor zie je ze mogelijk niet meteen in Plane-Alert verschijnen.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Registratie",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     },
     "fy-NL": {
@@ -1541,7 +1573,11 @@
         "history.empty": "Gjin skiednis beskikber",
         "history.locale": "nl-NL",
         "stationInfo.planeAlert.candidates.autoAdd": "Alle automatysk detektearre nije fleantugen wurde automatysk beskikber makke yn Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatysk detektearre nije fleantugen wurde yn in list bewarre sadat de Plane-Alert-operator se beoardielje en hânmjittich oan Plane-Alert tafoegje kin. Dêrtroch kinst se miskien net daliks yn Plane-Alert sjen."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatysk detektearre nije fleantugen wurde yn in list bewarre sadat de Plane-Alert-operator se beoardielje en hânmjittich oan Plane-Alert tafoegje kin. Dêrtroch kinst se miskien net daliks yn Plane-Alert sjen.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Registraasje",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     },
     "li-NL": {
@@ -1713,7 +1749,11 @@
         "history.empty": "Gein gesjiedenis besjikbaar",
         "history.locale": "nl-NL",
         "stationInfo.planeAlert.candidates.autoAdd": "Alle automatisch gedetecteerde neije vleegtuuge waere automatisch beschikbaar gemaak in Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch gedetecteerde neije vleegtuuge waere opgeslage in ein lies zoadat de Plane-Alert-operator ze kan beoordeile en handmatich aan Plane-Alert toevoege. Daardoor zie se mich neet direct in Plane-Alert."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch gedetecteerde neije vleegtuuge waere opgeslage in ein lies zoadat de Plane-Alert-operator ze kan beoordeile en handmatich aan Plane-Alert toevoege. Daardoor zie se mich neet direct in Plane-Alert.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Registrasie",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     },
     "de-DE": {
@@ -1884,7 +1924,11 @@
         "history.menu.aria": "Verlaufsdaten",
         "history.empty": "Kein Verlauf verfugbar",
         "stationInfo.planeAlert.candidates.autoAdd": "Alle automatisch erkannten neuen Flugzeuge werden automatisch in Plane-Alert verfügbar gemacht.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch erkannten neuen Flugzeuge werden in einer Liste gespeichert, damit der Plane-Alert-Betreiber sie prüfen und manuell zu Plane-Alert hinzufügen kann. Daher erscheinen sie möglicherweise nicht sofort in Plane-Alert."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alle automatisch erkannten neuen Flugzeuge werden in einer Liste gespeichert, damit der Plane-Alert-Betreiber sie prüfen und manuell zu Plane-Alert hinzufügen kann. Daher erscheinen sie möglicherweise nicht sofort in Plane-Alert.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Kennzeichen",
+        "table.headers.operator": "Betreiber",
+        "table.headers.type": "Typ"
       }
     },
     "de-CH": {
@@ -2055,7 +2099,11 @@
         "history.menu.aria": "Verlouf-Date",
         "history.empty": "Kei Verlouf verfügbar",
         "stationInfo.planeAlert.candidates.autoAdd": "Alli automatisch erkannte neue Flugzüg werde automatisch i Plane-Alert verfügbar gmacht.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alli automatisch erkannte neue Flugzüg werde i ere Lischt gspeicheret, damit dr Plane-Alert-Betreiber sie prüefe und manuell zu Plane-Alert hinzuefüege cha. Drum chöi si vilicht nöd sofort i Plane-Alert erschiine."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alli automatisch erkannte neue Flugzüg werde i ere Lischt gspeicheret, damit dr Plane-Alert-Betreiber sie prüefe und manuell zu Plane-Alert hinzuefüege cha. Drum chöi si vilicht nöd sofort i Plane-Alert erschiine.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Kennzeiche",
+        "table.headers.operator": "Betreiber",
+        "table.headers.type": "Typ"
       }
     },
     "fr-FR": {
@@ -2222,7 +2270,11 @@
         "history.menu.aria": "Dates de l'historique",
         "history.empty": "Aucun historique disponible",
         "stationInfo.planeAlert.candidates.autoAdd": "Tout nouvel aéronef détecté automatiquement est automatiquement rendu disponible dans Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Tout nouvel aéronef détecté automatiquement est enregistré dans une liste pour que l'opérateur Plane-Alert le valide et l'ajoute manuellement à Plane-Alert. Par conséquent, il se peut que vous ne le voyiez pas apparaître immédiatement dans Plane-Alert."
+        "stationInfo.planeAlert.candidates.manualAdd": "Tout nouvel aéronef détecté automatiquement est enregistré dans une liste pour que l'opérateur Plane-Alert le valide et l'ajoute manuellement à Plane-Alert. Par conséquent, il se peut que vous ne le voyiez pas apparaître immédiatement dans Plane-Alert.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Immatriculation",
+        "table.headers.operator": "Opérateur",
+        "table.headers.type": "Type"
       }
     },
     "it-IT": {
@@ -2393,7 +2445,11 @@
         "history.menu.aria": "Date cronologia",
         "history.empty": "Cronologia non disponibile",
         "stationInfo.planeAlert.candidates.autoAdd": "Qualsiasi nuovo aeromobile rilevato automaticamente viene reso automaticamente disponibile in Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Qualsiasi nuovo aeromobile rilevato automaticamente viene salvato in un elenco affinché l'operatore di Plane-Alert possa valutarlo e aggiungerlo manualmente a Plane-Alert. Di conseguenza, potresti non vederlo comparire subito in Plane-Alert."
+        "stationInfo.planeAlert.candidates.manualAdd": "Qualsiasi nuovo aeromobile rilevato automaticamente viene salvato in un elenco affinché l'operatore di Plane-Alert possa valutarlo e aggiungerlo manualmente a Plane-Alert. Di conseguenza, potresti non vederlo comparire subito in Plane-Alert.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matricola",
+        "table.headers.operator": "Operatore",
+        "table.headers.type": "Tipo"
       }
     },
     "la": {
@@ -2565,7 +2621,11 @@
         "history.empty": "Historia non praesto est",
         "history.locale": "en",
         "stationInfo.planeAlert.candidates.autoAdd": "Quaevis nova aeronavis automatice detecta automatice in Plane-Alert praebetur.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Quaevis nova aeronavis automatice detecta in indice servatur, ut operator Plane-Alert eam examinet et manu ad Plane-Alert addat. Quam ob rem, fortasse eam statim in Plane-Alert apparere non videbis."
+        "stationInfo.planeAlert.candidates.manualAdd": "Quaevis nova aeronavis automatice detecta in indice servatur, ut operator Plane-Alert eam examinet et manu ad Plane-Alert addat. Quam ob rem, fortasse eam statim in Plane-Alert apparere non videbis.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Registrum",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Typus"
       }
     },
     "fi-FI": {
@@ -2736,7 +2796,11 @@
         "history.menu.aria": "Historian päivämäärät",
         "history.empty": "Historiaa ei ole saatavilla",
         "stationInfo.planeAlert.candidates.autoAdd": "Kaikki automaattisesti havaitut uudet lentokoneet tuodaan automaattisesti saataville Plane-Alertissa.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Kaikki automaattisesti havaitut uudet lentokoneet tallennetaan listaan, jotta Plane-Alertin ylläpitäjä voi tarkistaa ne ja lisätä ne manuaalisesti Plane-Alertiin. Tämän vuoksi et välttämättä näe niitä Plane-Alertissa heti."
+        "stationInfo.planeAlert.candidates.manualAdd": "Kaikki automaattisesti havaitut uudet lentokoneet tallennetaan listaan, jotta Plane-Alertin ylläpitäjä voi tarkistaa ne ja lisätä ne manuaalisesti Plane-Alertiin. Tämän vuoksi et välttämättä näe niitä Plane-Alertissa heti.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Rekisteritunnus",
+        "table.headers.operator": "Operaattori",
+        "table.headers.type": "Tyyppi"
       }
     },
     "sv-SE": {
@@ -2907,7 +2971,11 @@
         "history.menu.aria": "Historikdatum",
         "history.empty": "Ingen historik tillgänglig",
         "stationInfo.planeAlert.candidates.autoAdd": "Alla automatiskt upptäckta nya flygplan görs automatiskt tillgängliga i Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Alla automatiskt upptäckta nya flygplan sparas i en lista så att Plane-Alert-operatören kan granska dem och lägga till dem manuellt i Plane-Alert. Därför kanske du inte ser dem visas i Plane-Alert omedelbart."
+        "stationInfo.planeAlert.candidates.manualAdd": "Alla automatiskt upptäckta nya flygplan sparas i en lista så att Plane-Alert-operatören kan granska dem och lägga till dem manuellt i Plane-Alert. Därför kanske du inte ser dem visas i Plane-Alert omedelbart.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Registrering",
+        "table.headers.operator": "Operatör",
+        "table.headers.type": "Typ"
       }
     },
     "pt-BR": {
@@ -3078,7 +3146,11 @@
         "history.menu.aria": "Datas do histórico",
         "history.empty": "Nenhum histórico disponível",
         "stationInfo.planeAlert.candidates.autoAdd": "Qualquer nova aeronave detectada automaticamente é disponibilizada automaticamente no Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Qualquer nova aeronave detectada automaticamente é salva em uma lista para que o operador do Plane-Alert faça a revisão e adicione manualmente ao Plane-Alert. Como resultado, você pode não vê-la aparecer no Plane-Alert imediatamente."
+        "stationInfo.planeAlert.candidates.manualAdd": "Qualquer nova aeronave detectada automaticamente é salva em uma lista para que o operador do Plane-Alert faça a revisão e adicione manualmente ao Plane-Alert. Como resultado, você pode não vê-la aparecer no Plane-Alert imediatamente.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matrícula",
+        "table.headers.operator": "Operador",
+        "table.headers.type": "Tipo"
       }
     },
     "fr-CJ": {
@@ -3250,7 +3322,11 @@
         "history.empty": "Aucun historique disponible",
         "history.locale": "fr-FR",
         "stationInfo.planeAlert.candidates.autoAdd": "Toute nouvelle aéronef détectée automatiquement est rendue disponible automatiquement dans Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Toute nouvelle aéronef détectée automatiquement est gardée dans une liste pour que l'opérateur Plane-Alert la vérifie et l'ajoute à la main dans Plane-Alert. Donc, vous la verrez peut-être pas apparaître tout de suite dans Plane-Alert."
+        "stationInfo.planeAlert.candidates.manualAdd": "Toute nouvelle aéronef détectée automatiquement est gardée dans une liste pour que l'opérateur Plane-Alert la vérifie et l'ajoute à la main dans Plane-Alert. Donc, vous la verrez peut-être pas apparaître tout de suite dans Plane-Alert.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Immatriculation",
+        "table.headers.operator": "Opérateur",
+        "table.headers.type": "Type"
       }
     },
     "pap-CW": {
@@ -3422,7 +3498,11 @@
         "history.empty": "No tin historia disponibel",
         "history.locale": "pap",
         "stationInfo.planeAlert.candidates.autoAdd": "Tur avion nobo ku wordu detectá automáticamente ta wordu disponibel automáticamente den Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Tur avion nobo ku wordu detectá automáticamente ta wordu warda den un lista pa e operador di Plane-Alert por revisá i agrega e manualmente na Plane-Alert. P'esey, bo por no mira e aparece na Plane-Alert mesora."
+        "stationInfo.planeAlert.candidates.manualAdd": "Tur avion nobo ku wordu detectá automáticamente ta wordu warda den un lista pa e operador di Plane-Alert por revisá i agrega e manualmente na Plane-Alert. P'esey, bo por no mira e aparece na Plane-Alert mesora.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Matríkula",
+        "table.headers.operator": "Operadó",
+        "table.headers.type": "Tipo"
       }
     },
     "jam-JM": {
@@ -3594,7 +3674,11 @@
         "history.empty": "No istrih deh ya",
         "history.locale": "en",
         "stationInfo.planeAlert.candidates.autoAdd": "Any new aircraft weh detect automatically, dem get put inna Plane-Alert automatically.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Any new aircraft weh detect automatically save inna one list fi di Plane-Alert operator vet an manually add to Plane-Alert. So yuh might not see dem show up inna Plane-Alert right away."
+        "stationInfo.planeAlert.candidates.manualAdd": "Any new aircraft weh detect automatically save inna one list fi di Plane-Alert operator vet an manually add to Plane-Alert. So yuh might not see dem show up inna Plane-Alert right away.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Tail",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     },
     "uk-UA": {
@@ -3765,7 +3849,11 @@
         "history.menu.aria": "Дати історії",
         "history.empty": "Історія недоступна",
         "stationInfo.planeAlert.candidates.autoAdd": "Усі нові літаки, виявлені автоматично, автоматично стають доступними в Plane-Alert.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Усі нові літаки, виявлені автоматично, зберігаються у списку, щоб оператор Plane-Alert міг перевірити їх і вручну додати до Plane-Alert. Тому ви можете не побачити їх у Plane-Alert одразу."
+        "stationInfo.planeAlert.candidates.manualAdd": "Усі нові літаки, виявлені автоматично, зберігаються у списку, щоб оператор Plane-Alert міг перевірити їх і вручну додати до Plane-Alert. Тому ви можете не побачити їх у Plane-Alert одразу.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Бортовий номер",
+        "table.headers.operator": "Оператор",
+        "table.headers.type": "Тип"
       }
     },
     "tlh-QA": {
@@ -3936,7 +4024,11 @@
         "fatalConfig.body.bothDisabled": "PLANEFENCE je PLANEALERT je, chaH Hoch QotlhHa'lu'. DaH muD Duj De' pagh Suqlu'.",
         "fatalConfig.body.contactOperator": "SeH Qagh law' qaSta' 'e' vItul. Planefence ghomvam po'wI' yIghoS, yIqawmoH, yIqonchoH.",
         "stationInfo.planeAlert.candidates.autoAdd": "automatically tu'lu'bogh muD Dujmey chu' Hoch Plane-AlertDaq automatically cha'lu'.",
-        "stationInfo.planeAlert.candidates.manualAdd": "automatically tu'lu'bogh muD Dujmey chu' Hoch tlhomDaq poltaHlu', vaj Plane-Alert operator leghnIStaH 'ej ghItlhmey'e' ghotpu'vaD manually chellIS. vaj nom Plane-AlertDaq cha'be'law'."
+        "stationInfo.planeAlert.candidates.manualAdd": "automatically tu'lu'bogh muD Dujmey chu' Hoch tlhomDaq poltaHlu', vaj Plane-Alert operator leghnIStaH 'ej ghItlhmey'e' ghotpu'vaD manually chellIS. vaj nom Plane-AlertDaq cha'be'law'.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "teH pong",
+        "table.headers.operator": "poH SeHwI'",
+        "table.headers.type": "Segh"
       }
     },
     "en-PI": {
@@ -4108,7 +4200,11 @@
         "history.empty": "No history fer ye",
         "history.locale": "en",
         "stationInfo.planeAlert.candidates.autoAdd": "Anyway automaticallyway etectedday ewnay aircraftway areway automaticallyway ademay availableway inway Ane-AlertPlay.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Anyway automaticallyway etectedday ewnay aircraftway areway avedsay inway away istlay orfay ethay Ane-AlertPlay operatorway otay etvay andway anuallymay addway otay Ane-AlertPlay. Asway away esultray, ouyay aymay otnay eesay emthay appearway inway Ane-AlertPlay immediatelyway."
+        "stationInfo.planeAlert.candidates.manualAdd": "Anyway automaticallyway etectedday ewnay aircraftway areway avedsay inway away istlay orfay ethay Ane-AlertPlay operatorway otay etvay andway anuallymay addway otay Ane-AlertPlay. Asway away esultray, ouyay aymay otnay eesay emthay appearway inway Ane-AlertPlay immediatelyway.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Ailtay",
+        "table.headers.operator": "Operatorway",
+        "table.headers.type": "Ypetay"
       }
     },
     "en-PT": {
@@ -4280,7 +4376,11 @@
         "history.empty": "No history available",
         "history.locale": "en",
         "stationInfo.planeAlert.candidates.autoAdd": "Any automatically spotted new sky ship be made available in Plane-Alert straight away.",
-        "stationInfo.planeAlert.candidates.manualAdd": "Any automatically spotted new sky ship be saved in a list for the Plane-Alert operator to vet an' add by hand to Plane-Alert. As a result, ye may not see 'em appear in Plane-Alert right away."
+        "stationInfo.planeAlert.candidates.manualAdd": "Any automatically spotted new sky ship be saved in a list for the Plane-Alert operator to vet an' add by hand to Plane-Alert. As a result, ye may not see 'em appear in Plane-Alert right away.",
+        "table.headers.icao": "ICAO",
+        "table.headers.tail": "Tail",
+        "table.headers.operator": "Operator",
+        "table.headers.type": "Type"
       }
     }
   }

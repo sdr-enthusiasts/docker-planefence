@@ -118,6 +118,8 @@
     .pa-candidates-table-wrap { overflow: auto; flex: 1; scrollbar-width: none; -ms-overflow-style: none; }
     .pa-candidates-table-wrap::-webkit-scrollbar { width: 0; height: 0; }
     .pa-candidates-table { width: 100%; border-collapse: collapse; }
+    .pa-candidates-table thead th { text-align: left; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: .35rem .35rem .5rem; border-bottom: 1px solid var(--soft); }
+    html.dark .pa-candidates-table thead th { border-color: rgba(255,255,255,0.1); }
     .pa-candidates-table tbody tr { border-top: 1px solid var(--soft); }
     html.dark .pa-candidates-table tbody tr { border-color: rgba(255,255,255,0.08); }
     .pa-candidates-table td { padding: .48rem .35rem; vertical-align: middle; }
@@ -593,6 +595,9 @@
           <p id="paCandidatesStatus" class="pa-candidates-status"></p>
           <div class="pa-candidates-table-wrap">
             <table class="pa-candidates-table" aria-label="Plane-Alert candidates">
+              <thead>
+                <tr id="paCandidatesHeadRow"></tr>
+              </thead>
               <tbody id="paCandidatesBody"></tbody>
             </table>
           </div>
@@ -902,7 +907,7 @@
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
   let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
-  let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl;
+  let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl, paCandidatesHeadRowEl;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
@@ -1379,6 +1384,7 @@ ${messagesDesc}
     paCandidatesCloseBtn = document.getElementById('paCandidatesClose');
     paCandidatesBodyEl = document.getElementById('paCandidatesBody');
     paCandidatesStatusEl = document.getElementById('paCandidatesStatus');
+    paCandidatesHeadRowEl = document.getElementById('paCandidatesHeadRow');
     heatmapModal = document.getElementById('heatmapModal');
     heatmapFrame = document.getElementById('heatmapFrame');
     heatmapCloseBtn = document.getElementById('heatmapClose');
@@ -1660,6 +1666,7 @@ ${messagesDesc}
     if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
     if (paCandidatesOverlay) paCandidatesOverlay.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.modalLabel', {}, 'Plane-Alert candidates'));
     if (paCandidatesCloseBtn) paCandidatesCloseBtn.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.close', {}, 'Close list'));
+    renderPaCandidatesHeader();
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
@@ -1984,6 +1991,16 @@ ${messagesDesc}
     return `<img class="pa-candidates-thumb" src="${safe}" alt="${escapeHtml(t('image.photo.alt', {}, 'Aircraft photo'))}" loading="lazy">`;
   }
 
+  function renderPaCandidatesHeader() {
+    if (!paCandidatesHeadRowEl) return;
+    const imageLabel = escapeHtml(t('table.headers.image', {}, 'Image'));
+    const icaoLabel = escapeHtml(t('table.headers.icao', {}, 'ICAO'));
+    const tailLabel = escapeHtml(t('table.headers.tail', {}, 'Tail'));
+    const operatorLabel = escapeHtml(t('table.headers.operator', {}, 'Operator'));
+    const typeLabel = escapeHtml(t('table.headers.type', {}, 'Type'));
+    paCandidatesHeadRowEl.innerHTML = `<th>${imageLabel}</th><th>${icaoLabel}</th><th>${tailLabel}</th><th>${operatorLabel}</th><th>${typeLabel}</th>`;
+  }
+
   function renderPaCandidatesRows(rows) {
     if (!paCandidatesBodyEl) return;
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -2033,6 +2050,7 @@ ${messagesDesc}
 
   async function openPaCandidatesOverlay() {
     if (!paCandidatesOverlay) return;
+    renderPaCandidatesHeader();
     paCandidatesOverlay.classList.add('open');
     paCandidatesOverlay.setAttribute('aria-hidden', 'false');
     if (paCandidatesBodyEl) paCandidatesBodyEl.innerHTML = '';
