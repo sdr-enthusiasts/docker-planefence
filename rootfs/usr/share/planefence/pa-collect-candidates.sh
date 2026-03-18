@@ -54,7 +54,7 @@ CANDIDATE_FILE="/usr/share/planefence/persist/${CANDIDATE_FILE##*/}"
 
 CANDIDATE_LOG="$(GET_PARAM base PA_COLLECT_CANDIDATES_LOG || true)"
 CANDIDATE_LOG="${CANDIDATE_LOG:-plane-alert-candidates.log}"
-CANDIDATE_LOG="/usr/share/planefence/persist/${CANDIDATE_LOG##*/}}"
+CANDIDATE_LOG="/usr/share/planefence/persist/${CANDIDATE_LOG##*/}"
 
 if [[ -n "$CANDIDATE_LOG" ]]; then
   log_print DEBUG "Logging candidate details to output=${CANDIDATE_LOG##*/}"
