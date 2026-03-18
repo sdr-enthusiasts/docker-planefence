@@ -112,7 +112,6 @@ DATABASE:typecode:AMX
 DATABASE:typecode:AN*
 DATABASE:typecode:AS*
 DATABASE:typecode:AS55
-DATABASE:typecode:AT76
 DATABASE:typecode:B1
 DATABASE:typecode:B105
 DATABASE:typecode:B17
@@ -170,7 +169,6 @@ DATABASE:typecode:T206
 DATABASE:typecode:T214
 DATABASE:typecode:T34
 DATABASE:typecode:T38
-DATABASE:typecode:TBM7
 DATABASE:typecode:TEX2
 DATABASE:typecode:TOR
 DATABASE:typecode:U2
