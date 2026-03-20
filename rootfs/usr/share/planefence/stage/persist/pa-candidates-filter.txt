@@ -19,66 +19,102 @@
 
 # Callsign-based filters
 
-# Military / Government Flight
-CALLSIGN:REACH?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:RCH?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:SAM?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:TEXACO?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:SHELL?(-)[0-9][0-9]*:United States Air Force
+# Military/government callsign prefixes (optional hyphen before numeric flight number)
+CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
+CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
+CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ASY?(-)[0-9][0-9]*:Royal Australian Air Force
+CALLSIGN:BAF?(-)[0-9][0-9]*:Belgian Air Component
+CALLSIGN:BOBBY?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:BRK?(-)[0-9][0-9]*:Strategic Airlift Capability (SAC) / BARTOK
+CALLSIGN:CEF?(-)[0-9][0-9]*:Czech Air Force
+CALLSIGN:CFC?(-)[0-9][0-9]*:Royal Canadian Air Force
+CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
+CALLSIGN:CLEAN?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:CMB?(-)[0-9][0-9]*:United States military transportation
+CALLSIGN:CNV?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:CTM?(-)[0-9][0-9]*:France Armee de lAir
+CALLSIGN:DAF?(-)[0-9][0-9]*:Royal Danish Air Force
+CALLSIGN:DUKE?(-)[0-9][0-9]*:United States Army
+CALLSIGN:ESSO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:ETHYL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:EXXON?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:EXTENDER?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:FAB?(-)[0-9][0-9]*:Brazilian Air Force
+CALLSIGN:FAF?(-)[0-9][0-9]*:French Air and Space Force
+CALLSIGN:FNF?(-)[0-9][0-9]*:Finnish Air Force
+CALLSIGN:FNY?(-)[0-9][0-9]*:French Navy
+CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
+CALLSIGN:GETFUEL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:GOLD?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:ROMA?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:PYREX?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:QUAD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
+CALLSIGN:HERKY?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:HKY?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:HUF?(-)[0-9][0-9]*:Hungarian Air Force
+CALLSIGN:HVK?(-)[0-9][0-9]*:Turkish Air Force
+CALLSIGN:IAF?(-)[0-9][0-9]*:Israeli Air Force
+CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
+CALLSIGN:IFC?(-)[0-9][0-9]*:Indian Air Force
+CALLSIGN:IRL?(-)[0-9][0-9]*:Irish Air Corps
+CALLSIGN:KAF?(-)[0-9][0-9]*:Kuwait Air Force
+CALLSIGN:KIW?(-)[0-9][0-9]*:Royal New Zealand Air Force
+CALLSIGN:LMG?(-)[0-9]*:South African Air Force
+CALLSIGN:LSV?(-)[0-9][0-9]*:Slovenian Ministry of Defence (Air Force)
+CALLSIGN:LYF?(-)[0-9][0-9]*:Lithuanian Air Force
+CALLSIGN:MARINE?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:MJN?(-)[0-9][0-9]*:Royal Air Force of Oman
+CALLSIGN:MMF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:MRS?(-)[0-9][0-9]*:Morocco Government
+CALLSIGN:NACHO?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:NATO?(-)[0-9]*:NATO air component
+CALLSIGN:NAVY?(-)[0-9][0-9]*:United States Navy
 CALLSIGN:OILER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:OILGATE?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:OPEC?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:ESSO?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:ETHYL?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:EXTENDER?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:GETFUEL?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ORCA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PLF?(-)[0-9][0-9]*:Polish Air Force
 CALLSIGN:PRIMO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PYREX?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:QID?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:QUID?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:QUAD?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:QUEST?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RANGR?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:RANGER?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:RCH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:REACH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RFR?(-)[0-9][0-9]*:Rafair - Royal Air Force
+CALLSIGN:ROMA?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ROVING?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:RTAF?(-)[0-9][0-9]*:Royal Thai Air Force
+CALLSIGN:SAM?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SHELL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SHAMU?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SPAR?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SPUR?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SUI?(-)[0-9][0-9]*:Swiss Air Force
+CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
+CALLSIGN:TEXACO?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TKF?(-)[0-9]*:The King's Flight
 CALLSIGN:TOGA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TUN?(-)[0-9][0-9]*:Tunisian Air Force
+CALLSIGN:UAF?(-)[0-9][0-9]*:United Arab Emirates Air Force
 CALLSIGN:UNIVERSAL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USAF?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
+CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:USN?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:VALOR?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:WHISTLER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:WRESTLER?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:NAVY?(-)[0-9][0-9]*:United States Navy
-CALLSIGN:MARINE?(-)[0-9][0-9]*:United States Marine Corps
-CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
-CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:USAF?(-)[0-9][0-9]*:United States Air Force
-CALLSIGN:USN?(-)[0-9][0-9]*:United States Navy
-CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
-CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
-CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
-
-CALLSIGN:NATO?(-)[0-9]*:NATO air component
+CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
 
 # Callsign exclusion examples (exclusions overrule includes)
 CALLSIGN:!KAPT*
 CALLSIGN:!TEST*
-
-# European military callsign prefixes (optional hyphen before numeric flight number)
-CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
-CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
-CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
-CALLSIGN:CTM?(-)[0-9][0-9]*:France Armee de lAir
-CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
-CALLSIGN:MMF?(-)[0-9][0-9]*:Royal Netherlands Air Force
-CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
-CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
-CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
-CALLSIGN:DAF?(-)[0-9][0-9]*:Royal Danish Air Force
-CALLSIGN:BAF?(-)[0-9][0-9]*:Belgian Air Component
-CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
-CALLSIGN:FNF?(-)[0-9][0-9]*:Finnish Air Force
-CALLSIGN:PLF?(-)[0-9][0-9]*:Polish Air Force
 
 # Additional callsign formats
 CALLSIGN:[0-9][0-9]+\+[0-9][0-9]+:Germany Luftwaffe
@@ -90,13 +126,16 @@ CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
 CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*([A-Z]):Military / Government Flight
 
 #  Military aircraft by owner name or type code:
-DATABASE:owner:*AIR?( )FORCE*
-DATABASE:owner:*army*
+DATABASE:owner:*air?( )force*
+DATABASE:owner:*air?( )corps*
 DATABASE:owner:*armee*
-DATABASE:owner:*luftwaffe*
+DATABASE:owner:*army*
 DATABASE:owner:*Guardia Di Finanza*
+DATABASE:owner:*luftwaffe*
+DATABASE:owner:*Marine Corps*
+DATABASE:owner:*military*
 DATABASE:owner:*navy*
-DATABASE:owner: *Marine Corps*
+DATABASE:owner:*space force*
 DATABASE:typecode:22-72479
 DATABASE:typecode:22-72481
 DATABASE:typecode:A10
@@ -258,8 +297,8 @@ ICAO:E494A*:Brazilian Air Force
 
 # Non-military aircraft filters
 DATABASE:owner:* Oil*
-DATABASE:owner:* Petrol*
 DATABASE:owner:* Patrol*
+DATABASE:owner:* Petrol*
 
 
 
