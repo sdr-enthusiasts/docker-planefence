@@ -743,7 +743,7 @@ tmpfile="$(mktemp)"
 } > "$tmpfile"
 
 mv -f "$tmpfile" "$CANDIDATE_FILE"
-chmod a+r "$CANDIDATE_FILE"
+chmod a+rw "$CANDIDATE_FILE"
 now_epoch="$(date +%s)"
 log_print DEBUG "Stage write-output completed in $((now_epoch - stage_epoch))s"
 
