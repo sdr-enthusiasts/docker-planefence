@@ -108,6 +108,7 @@ CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
 CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
 CALLSIGN:USN?(-)[0-9][0-9]*:United States Navy
 CALLSIGN:VALOR?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:VINYL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:WHISTLER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:WRESTLER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ZZZ?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
@@ -122,8 +123,8 @@ CALLSIGN:Q-[0-9][0-9]*:Royal Netherlands Air Force - helicopter
 CALLSIGN:T-[0-9][0-9]*:Royal Netherlands Air Force - MRTT transport
 CALLSIGN:V-[0-9][0-9]*:Royal Netherlands Air Force - VIP transport
 
-# Unidentified military-style callsign (4+ letters, optional '-', then 2+ digits, then optional letters)
-CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9][0-9]*([A-Z]):Military / Government Flight
+# Unidentified military-style callsign (4+ letters, optional '-', then 1+ digits, then optional letters)
+CALLSIGN:[A-Z][A-Z][A-Z][A-Z]*([A-Z])?(-)[0-9]*([0-9])*([A-Z]):Military / Government Flight
 
 #  Military aircraft by owner name or type code:
 DATABASE:owner:*air?( )force*
