@@ -3051,6 +3051,12 @@ ${messagesDesc}
         if (!/^\d{6}$/.test(dateKey)) return;
         if (insightsSelectedDateKey === dateKey) return;
         insightsSelectedDateKey = dateKey;
+        const baseDateKey = effectiveHistoryParam() || 'today';
+        const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
+        if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === dateKey)) {
+          renderInsights({ ...insightsCache.data, selected_date: dateKey });
+          return;
+        }
         loadInsights(generation);
       });
     });
@@ -3242,14 +3248,19 @@ ${messagesDesc}
   async function loadInsights(generation){
     ensureInsightsRefs();
     if (!insightsPanelEl) return;
-    const dateKey = insightsSelectedDateKey || effectiveHistoryParam() || 'today';
+    const dateKey = effectiveHistoryParam() || 'today';
     const reqKey = insightsRequestKey(dataMode, dateKey);
     updateInsightsStaticText();
     if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
     if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
 
     if (insightsCache.key === reqKey && insightsCache.data) {
-      renderInsights(insightsCache.data);
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === selected)) {
+        renderInsights({ ...insightsCache.data, selected_date: selected });
+      } else {
+        renderInsights(insightsCache.data);
+      }
       return;
     }
 
@@ -3263,7 +3274,12 @@ ${messagesDesc}
       if (data && data.error) throw new Error(String(data.error));
       insightsCache.key = reqKey;
       insightsCache.data = data;
-      renderInsights(data);
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(data.series) && data.series.some((s)=> s && s.date === selected)) {
+        renderInsights({ ...data, selected_date: selected });
+      } else {
+        renderInsights(data);
+      }
     } catch (e) {
       if (generation !== modeGeneration) return;
       if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('error.subtitle', {}, 'Unable to load analytics right now.');
