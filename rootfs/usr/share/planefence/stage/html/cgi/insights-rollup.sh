@@ -18,7 +18,7 @@ if [[ ! -x "$insights_script" ]]; then
   exit 0
 fi
 
-json="$(INSIGHTS_RAW=1 "$insights_script" "$@" 2>/dev/null || true)"
+json="$(INSIGHTS_RAW=1 bash "$insights_script" "$@" 2>/dev/null || true)"
 if [[ -z "$json" ]]; then
   printf '{"error":"failed to retrieve insights payload"}\n'
   exit 0

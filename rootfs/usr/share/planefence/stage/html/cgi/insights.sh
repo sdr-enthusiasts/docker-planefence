@@ -277,7 +277,7 @@ payload="$(jq -s \
   def median: (map(select(type=="number")) | sort) as $a | ($a|length) as $n | if $n==0 then null elif ($n % 2)==1 then $a[($n/2|floor)] else (($a[$n/2 - 1] + $a[$n/2]) / 2) end;
   def abs($x): if $x < 0 then -$x else $x end;
   def mad($arr): ($arr | median) as $m | if $m == null then null else ($arr | map(abs(. - $m)) | median) end;
-  def robust_z($x; $arr): ($arr | median) as $m | ($arr | mad) as $d | if ($m == null or $d == null or $d == 0) then null else ((($x - $m) / (1.4826 * $d)) * 100 | round / 100) end;
+  def robust_z($x; $arr): ($arr | median) as $m | (mad($arr)) as $d | if ($m == null or $d == null or $d == 0) then null else ((($x - $m) / (1.4826 * $d)) * 100 | round / 100) end;
   def pct($x; $b): if ($b == null or $b == 0) then null else ((($x - $b) / $b) * 100) end;
   def round1($v): if $v == null then null else (($v * 10 | round) / 10) end;
   def share($part; $total): if ($total|tonumber) > 0 then ($part / $total) else 0 end;
