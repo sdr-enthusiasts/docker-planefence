@@ -7,6 +7,7 @@
       "flag": "us",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -183,6 +184,7 @@
       "flag": "es",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -358,6 +360,7 @@
       "flag": "es-ct",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -533,6 +536,7 @@
       "flag": "es-pv",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -708,6 +712,7 @@
       "flag": "es-ga",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -883,6 +888,7 @@
       "flag": "ie",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1058,6 +1064,7 @@
       "flag": "pe",
       "flag_path": "./assets/flags/Wiphala.jpg",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1234,6 +1241,7 @@
       "flag": "nl",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1409,6 +1417,7 @@
       "flag": "nl",
       "flag_path": "./assets/flags/Friesland.gif",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1585,6 +1594,7 @@
       "flag": "nl",
       "flag_path": "./assets/flags/Limburg.gif",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1761,6 +1771,7 @@
       "flag": "de",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1936,6 +1947,7 @@
       "flag": "ch",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2111,6 +2123,7 @@
       "flag": "fr",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2282,6 +2295,7 @@
       "flag": "it",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2457,6 +2471,7 @@
       "flag": "va",
       "flag_path": "./assets/flags/Roman_Empire.jpg",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2633,6 +2648,7 @@
       "flag": "fi",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2808,6 +2824,7 @@
       "flag": "se",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2983,6 +3000,7 @@
       "flag": "br",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3158,6 +3176,7 @@
       "flag": "us",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3334,6 +3353,7 @@
       "flag": "cw",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3510,6 +3530,7 @@
       "flag": "jm",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3686,6 +3707,7 @@
       "flag": "ua",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3861,6 +3883,7 @@
       "flag": "tlh",
       "flag_path": "./assets/flags/Klingon.gif",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -4036,6 +4059,7 @@
       "flag": "us",
       "flag_path": "",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Anefenceplay",
         "header.planefenceTitle": "Anefenceplay",
         "header.planeAlertTitle": "Aneplay-Alertal",
@@ -4212,6 +4236,7 @@
       "flag": "pirate",
       "flag_path": "./assets/flags/Jolly_Roger.png",
       "strings": {
+        "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",

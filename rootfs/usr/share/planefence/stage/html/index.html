@@ -437,6 +437,7 @@
   .insight-kpi .value { font-size: 1.05rem; font-weight: 700; }
   .insights-trend-wrap { overflow-x: auto; }
   .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
+  .insights-trend-hit { cursor: pointer; }
   .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
   .insights-stacked-svg { min-width: 620px; width: 100%; height: 190px; display: block; }
   .insights-stacked-bar-hit { cursor: pointer; }
@@ -459,8 +460,11 @@
   html.dark .insights-subtypes { border-color: rgba(255,255,255,0.08); }
   .insights-table-wrap { overflow: auto; margin-top: .65rem; }
   .insights-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .insights-table tbody tr { cursor: pointer; }
   .insights-table th, .insights-table td { padding: .35rem .45rem; border-bottom: 1px solid var(--soft); text-align: right; }
   .insights-table th:first-child, .insights-table td:first-child { text-align: left; }
+  .insights-table tbody tr.is-selected td { background: color-mix(in srgb, var(--accent) 14%, var(--bg)); box-shadow: inset 0 0 0 1px var(--accent); }
+  .insights-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
   html.dark .insights-table th, html.dark .insights-table td { border-color: rgba(255,255,255,0.08); }
   .insights-muted { color: var(--muted); font-size: .88rem; }
   .severity-normal { color: #0a7d2d; }
@@ -2819,6 +2823,7 @@ ${messagesDesc}
 
   function fmtDateKeyHuman(key){
     if (!key || String(key).length !== 6) return String(key || '--');
+    if (key === toYYMMDD(utcToday())) return insightsText('actions.today', {}, 'Today');
     const y = Number(String(key).slice(0,2));
     const m = Number(String(key).slice(2,4));
     const d = Number(String(key).slice(4,6));
@@ -2941,7 +2946,7 @@ ${messagesDesc}
     const selected = points.find((p)=> p.date === selectedDate) || points[points.length - 1];
     const dots = points.map((p)=> {
       const active = p.date === (selected && selected.date);
-      return `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${active ? 4 : 2.5}" fill="${active ? 'var(--accent)' : 'var(--muted)'}"></circle>`;
+      return `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${active ? 4 : 2.5}" fill="${active ? 'var(--accent)' : 'var(--muted)'}"></circle><circle class="insights-trend-hit" data-insights-date="${p.date}" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="10" fill="transparent"></circle>`;
     }).join('');
     const xLabels = [0, Math.max(0, Math.floor((points.length - 1) / 2)), points.length - 1]
       .filter((v, i, a)=> a.indexOf(v) === i)
@@ -3042,9 +3047,93 @@ ${messagesDesc}
     </svg>${legend}`;
   }
 
-  function bindInsightsStackedInteractions(generation){
-    if (!insightsStackedEl) return;
-    const targets = insightsStackedEl.querySelectorAll('[data-insights-date]');
+  function pickSeverity(deltaPct){
+    const d = Math.abs(Number(deltaPct) || 0);
+    if (d >= 60) return 'exceptional';
+    if (d >= 30) return 'high';
+    if (d >= 12) return 'elevated';
+    return 'normal';
+  }
+
+  function deriveSelectedInsightsContext(data, selected){
+    const series = Array.isArray(data?.series) ? data.series : [];
+    const idx = series.findIndex((r)=> r && r.date === selected?.date);
+    const prev = idx > 0 ? series.slice(Math.max(0, idx - 7), idx) : [];
+    if (!prev.length) {
+      return {
+        baseline_total: null,
+        baseline_category_shares: { military: 0, government: 0, airline: 0, other: 0 },
+        anomaly_total: { delta: null, delta_pct: null, severity: 'normal' }
+      };
+    }
+    const totals = prev.map((r)=> Number(r?.total) || 0).sort((a,b)=> a - b);
+    const mid = Math.floor(totals.length / 2);
+    const baselineTotal = totals.length % 2 ? totals[mid] : ((totals[mid - 1] + totals[mid]) / 2);
+    const sumTotals = prev.reduce((acc, r)=> acc + (Number(r?.total) || 0), 0);
+    const cats = ['military','government','airline','other'];
+    const baselineCategoryShares = {};
+    cats.forEach((k)=> {
+      const catTotal = prev.reduce((acc, r)=> acc + (Number(r?.[k]) || 0), 0);
+      baselineCategoryShares[k] = sumTotals > 0 ? (100 * catTotal / sumTotals) : 0;
+    });
+    const selectedTotal = Number(selected?.total) || 0;
+    const delta = selectedTotal - baselineTotal;
+    const deltaPct = baselineTotal > 0 ? (100 * delta / baselineTotal) : null;
+    return {
+      baseline_total: baselineTotal,
+      baseline_category_shares: baselineCategoryShares,
+      anomaly_total: {
+        delta,
+        delta_pct: deltaPct,
+        severity: pickSeverity(deltaPct)
+      }
+    };
+  }
+
+  function selectInsightsDate(dateKey, generation){
+    if (!/^\d{6}$/.test(String(dateKey || ''))) return;
+    if (insightsSelectedDateKey === dateKey) return;
+    insightsSelectedDateKey = dateKey;
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
+    if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === dateKey)) {
+      renderInsights({ ...insightsCache.data, selected_date: dateKey });
+      return;
+    }
+    loadInsights(generation);
+  }
+
+  function bindInsightsDateInteractions(generation){
+    if (insightsStackedEl) {
+      const stackedTargets = insightsStackedEl.querySelectorAll('[data-insights-date]');
+      stackedTargets.forEach((el)=> {
+        el.addEventListener('click', ()=> {
+          const dateKey = String(el.getAttribute('data-insights-date') || '');
+          selectInsightsDate(dateKey, generation);
+        });
+      });
+    }
+    if (insightsTrendEl) {
+      const trendTargets = insightsTrendEl.querySelectorAll('[data-insights-date]');
+      trendTargets.forEach((el)=> {
+        el.addEventListener('click', ()=> {
+          const dateKey = String(el.getAttribute('data-insights-date') || '');
+          selectInsightsDate(dateKey, generation);
+        });
+      });
+    }
+    if (insightsTableBodyEl) {
+      const tableTargets = insightsTableBodyEl.querySelectorAll('[data-insights-date]');
+      tableTargets.forEach((row)=> {
+        row.addEventListener('click', ()=> {
+          const dateKey = String(row.getAttribute('data-insights-date') || '');
+          selectInsightsDate(dateKey, generation);
+        });
+      });
+    }
+  }
+
+  function renderInsightsMix(selected){
     targets.forEach((el)=> {
       el.addEventListener('click', ()=> {
         const dateKey = String(el.getAttribute('data-insights-date') || '');
@@ -3138,7 +3227,7 @@ ${messagesDesc}
   function renderInsightsKpis(data){
     if (!insightsKpisEl) return;
     const sel = data.selected || {};
-    const an = data.anomalies?.total || {};
+    const an = data.selectedContext?.anomaly_total || data.anomalies?.total || {};
     const sev = String(an.severity || 'normal');
     const sevClass = severityClass(sev, an.delta_pct);
     const sevLabel = insightSeverityDirectionLabel(sev, an.delta_pct);
@@ -3155,8 +3244,8 @@ ${messagesDesc}
     if (!insightsBulletsWrapEl) return;
     const sel = data.selected || {};
     const shares = sel.shares || {};
-    const an = data.anomalies?.total || {};
-    const baselineShares = data.baselines?.previous_7d_category_shares || {};
+    const an = data.selectedContext?.anomaly_total || data.anomalies?.total || {};
+    const baselineShares = data.selectedContext?.baseline_category_shares || data.baselines?.previous_7d_category_shares || {};
     const cats = ['military','government','airline','other'];
     const dom = cats
       .map((k)=> ({ key: k, pct: Number(shares[k]) || 0, count: Number(sel.categories?.[k]) || 0 }))
@@ -3178,8 +3267,9 @@ ${messagesDesc}
       other_military: insightsText('subtype.other_military', {}, 'Other')
     })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
     const dominantLabel = insightsText(`category.${dom.key}`, {}, dom.key.charAt(0).toUpperCase() + dom.key.slice(1));
+    const dayLabel = fmtDateKeyHuman(sel.date || data.selected_date || '--');
     const bullets = [
-      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `Today's traffic is <span class="${sevClass}">${escapeHtml(sevLabel)}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
+      `${insightsText('bullet.totalTraffic', { dayLabel, severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `${dayLabel}: <span class="${sevClass}">${escapeHtml(sevLabel)}</span> (${pctText(an.delta_pct)}).`)}`,
       `${insightsText('bullet.dominantCategory', { category: dominantLabel, pct: dom.pct.toFixed(1), count: numberFmt0.format(dom.count) }, `${dominantLabel} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`)}`,
       `${insightsText('bullet.shareShift', { shift: `${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)}` }, `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`)}`,
       `${insightsText('bullet.topSubtype', { subtype: subtypeLabel, count: numberFmt0.format(Number(topSubtype[1]) || 0) }, `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`)}`
@@ -3194,8 +3284,9 @@ ${messagesDesc}
       insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
+    const selectedDate = data.selected_date || data.selected?.date || '';
     insightsTableBodyEl.innerHTML = rows.map((r)=> `
-      <tr>
+      <tr data-insights-date="${r.date}" class="${r.date === selectedDate ? 'is-selected' : ''}">
         <td>${fmtDateKeyHuman(r.date)}</td>
         <td>${numberFmt0.format(Number(r.total) || 0)}</td>
         <td>${numberFmt0.format(Number(r.military) || 0)}</td>
@@ -3222,27 +3313,29 @@ ${messagesDesc}
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
     const selected = data.selected || data.series.find((s)=> s.date === selectedDate) || data.series[data.series.length - 1];
+    const selectedContext = deriveSelectedInsightsContext(data, selected);
+    const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext };
     if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
       ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
       : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
     if (insightsSubtitleEl) {
-      const baseline = data.baselines?.previous_7d_median_total;
+      const baseline = selectedContext.baseline_total;
       insightsSubtitleEl.textContent = insightsText(
         'subtitle',
         { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0) },
         `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
       );
     }
-    renderInsightsKpis(data);
+    renderInsightsKpis(dataForSelected);
     if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(data.series, selectedDate);
     if (insightsStackedEl) {
       insightsStackedEl.innerHTML = buildStackedSvg(data.series, selectedDate);
-      bindInsightsStackedInteractions(modeGeneration);
     }
-    renderInsightsBullets({ ...data, selected });
-    renderInsightsMix({ ...data, selected });
+    renderInsightsBullets(dataForSelected);
+    renderInsightsMix(dataForSelected);
     renderMilitarySubtypeMix(selected);
-    renderInsightsTable(data);
+    renderInsightsTable(dataForSelected);
+    bindInsightsDateInteractions(modeGeneration);
   }
 
   async function loadInsights(generation){
