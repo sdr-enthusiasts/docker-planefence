@@ -104,12 +104,27 @@ if [[ -n "$REQUESTED_DAYS" ]]; then
   (( HISTORY_DAYS > 120 )) && HISTORY_DAYS=120
 fi
 
+cache_key="${FILTER_MODE}:${REQUESTED_DATE:-today}:${HISTORY_DAYS}"
+cache_hash="$(printf '%s' "$cache_key" | sha256sum | awk '{print $1}')"
+cache_file="/tmp/insights-cache-${cache_hash}.json"
+cache_ttl_sec=30
+
+if [[ -s "$cache_file" ]]; then
+  now_ts="$(date +%s)"
+  cache_ts="$(stat -c %Y "$cache_file" 2>/dev/null || printf '0')"
+  if [[ "$cache_ts" =~ ^[0-9]+$ ]] && (( now_ts - cache_ts <= cache_ttl_sec )); then
+    cat "$cache_file"
+    exit 0
+  fi
+fi
+
 series_file="$(mktemp)"
 tmp_callsign="$(mktemp)"
 tmp_icao="$(mktemp)"
 tmp_typecode="$(mktemp)"
 tmp_owner="$(mktemp)"
-trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_owner"' EXIT
+tmp_airline_prefix="$(mktemp)"
+trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_owner" "$tmp_airline_prefix"' EXIT
 
 extract_pattern_signals() {
   local filter_file="" cand
@@ -180,10 +195,38 @@ extract_pattern_signals() {
 
 extract_pattern_signals
 
+extract_airline_codes() {
+  local airline_file="" cand
+  for cand in \
+    "/usr/share/planefence/airlinecodes.txt" \
+    "/usr/share/planefence/stage/airlinecodes.txt"; do
+    if [[ -r "$cand" ]]; then
+      airline_file="$cand"
+      break
+    fi
+  done
+  [[ -n "$airline_file" ]] || return 0
+
+  awk -F, \
+    -v prefix_file="$tmp_airline_prefix" \
+  '
+    function trim(s){ gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", s); return s }
+    function norm(s){ s=toupper(trim(s)); gsub(/[^A-Z0-9]/, "", s); return s }
+    /^[ \t]*#/ || /^[ \t]*$/ { next }
+    {
+      prefix=norm($1)
+      if (prefix ~ /^[A-Z0-9]{3}$/) print prefix >> prefix_file
+    }
+  ' "$airline_file"
+}
+
+extract_airline_codes
+
 MIL_CALLSIGN_PREFIXES_JSON="$(jq -Rsc 'split("\n") | map(select(length>0)) | unique' "$tmp_callsign")"
 MIL_ICAO_PREFIXES_JSON="$(jq -Rsc 'split("\n") | map(select(length>0)) | unique' "$tmp_icao")"
 MIL_TYPE_PREFIXES_JSON="$(jq -Rsc 'split("\n") | map(select(length>0)) | unique' "$tmp_typecode")"
 MIL_OWNER_KEYWORDS_JSON="$(jq -Rsc 'split("\n") | map(select(length>0)) | unique' "$tmp_owner")"
+AIRLINE_PREFIX_MAP_JSON="$(jq -Rn '[inputs | select(length>0)] | unique | reduce .[] as $p ({}; .[$p] = true)' < "$tmp_airline_prefix")"
 
 for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
   req_date="$(date -u -d "-${day} days" +%y%m%d 2>/dev/null || true)"
@@ -193,53 +236,77 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
 
   jq -c \
     --arg date "$req_date" \
+    --arg mode "$FILTER_MODE" \
     --argjson mil_callsign_prefixes "$MIL_CALLSIGN_PREFIXES_JSON" \
     --argjson mil_icao_prefixes "$MIL_ICAO_PREFIXES_JSON" \
     --argjson mil_type_prefixes "$MIL_TYPE_PREFIXES_JSON" \
-    --argjson mil_owner_keywords "$MIL_OWNER_KEYWORDS_JSON" '
+    --argjson mil_owner_keywords "$MIL_OWNER_KEYWORDS_JSON" \
+    --argjson airline_prefix_map "$AIRLINE_PREFIX_MAP_JSON" '
       def clean_rows:
         if (type=="array") and (.[0]|type=="object") and (.[0]|has("index")|not) then .[1:]
         elif type=="array" then .
         else [] end;
       def low($x): (($x // "") | tostring | ascii_downcase);
       def up($x): (($x // "") | tostring | ascii_upcase);
+      def norm_up($x): (up($x) | gsub("[^A-Z0-9]"; ""));
+      def norm_low($x): (low($x) | gsub("[^a-z0-9]"; ""));
+      def cs($r): norm_up($r.callsign);
+      def tl($r): norm_up($r.tail);
+      def typ($r): norm_up($r.type);
+      def own($r): low($r.owner);
+      def dbcat($r): low($r["db:category"] // $r["db"]["category"] // "");
+      def mil_callsign_prefixes_safe: ($mil_callsign_prefixes | map(select((type=="string") and (length>=3))));
+      def mil_type_prefixes_safe: ($mil_type_prefixes | map(select((type=="string") and (length>=3))));
+      def mil_owner_keywords_safe: ($mil_owner_keywords | map(select((type=="string") and (length>=5))));
       def text_blob($r):
         [low($r.owner), low($r.callsign), low($r.type), low($r.icao), low($r.route), low($r["db:category"]), low($r["db"]["category"])] | join(" ");
-      def starts_any($s; $arr): if ($s|length)==0 then false else any($arr[]?; ($s | startswith(.))) end;
+      def starts_any($s; $arr): if ($s|length)==0 then false else any($arr[]?; . as $p | ($s | startswith($p))) end;
       def contains_any($s; $arr): if ($s|length)==0 then false else any($arr[]?; ($s | contains(.))) end;
+      def is_private($r): (cs($r) != "" and tl($r) != "" and cs($r) == tl($r));
+      def callsign_airline($r): (cs($r) | test("^[A-Z]{2,3}[0-9]{1,4}[A-Z]?$"));
+      def airline_prefix_hit($r):
+        (cs($r)) as $c
+        | if ($c|length) < 3 then false else (($airline_prefix_map[$c[0:3]] // false) == true) end;
       def is_military_by_patterns($r):
-        (up($r.callsign)) as $c
-        | (up($r.icao)) as $i
-        | (up($r.type)) as $t
-        | (low($r.owner)) as $o
-        | starts_any($c; $mil_callsign_prefixes)
-          or starts_any($i; $mil_icao_prefixes)
-          or starts_any($t; $mil_type_prefixes)
-          or contains_any($o; $mil_owner_keywords);
-      def is_military($r):
-        is_military_by_patterns($r)
-        or ((text_blob($r)) | test("(^|[^a-z])(usaf|usn|usmc|raf|nato|air force|armed forces|defen[cs]e|military|army|navy|marine corps|coast guard|luftwaffe|space force|air corps|air national guard|guardia di finanza)([^a-z]|$)"; "i"))
+        if $mode != "plane-alert" then false
+        else
+          starts_any(cs($r); mil_callsign_prefixes_safe)
+          or starts_any(typ($r); mil_type_prefixes_safe)
+          or contains_any(own($r); mil_owner_keywords_safe)
+        end;
+      def is_military_hard($r):
+        (dbcat($r) | test("mil|military|air force|navy|army|marines"; "i"))
         or ((up($r.icao)) | test("^(AE|AF|ADF[89A-F])"));
+      def is_military($r):
+        is_military_hard($r)
+        or is_military_by_patterns($r)
+        or ((text_blob($r)) | test("(^|[^a-z])(usaf|usn|usmc|raf|nato|air force|armed forces|defen[cs]e|military|army|navy|marine corps|coast guard|luftwaffe|space force|air corps|air national guard|guardia di finanza)([^a-z]|$)"; "i"))
+        ;
       def is_government($r):
-        (text_blob($r)) | test("(^|[^a-z])(government|govt|state|royal flight|president|prime minister|ministry|department|police|customs|border patrol|king.?s flight|queen.?s flight)([^a-z]|$)"; "i");
+        (dbcat($r) | test("gov|government|state"; "i"))
+        or ((text_blob($r)) | test("(^|[^a-z])(government|govt|state|royal flight|president|prime minister|ministry|department|police|customs|border patrol|king.?s flight|queen.?s flight)([^a-z]|$)"; "i"));
       def is_airline($r):
-        ((up($r.callsign)) | test("^[A-Z]{3}-?[0-9]{1,5}[A-Z]?$"))
-        or ((text_blob($r)) | test("(^|[^a-z])(airlines?|airways|air line|cargo|express|easyjet|ryanair|lufthansa|delta|american airlines|united airlines|southwest|air france|klm|emirates)([^a-z]|$)"; "i"));
+        (dbcat($r) | test("airline|commercial|cargo"; "i"))
+        or airline_prefix_hit($r)
+        or (callsign_airline($r) and (is_private($r) | not))
+        or ((own($r)) | test("(^|[^a-z])(airlines?|airways|air line|cargo|express|delta|american|united|southwest|jetblue|alaska|spirit|frontier|porter|lufthansa|air france|klm|emirates|qatar|british airways)([^a-z]|$)"; "i"))
+        or ((typ($r) | starts_any(.; ["A3","A2","B7","B73","B74","B75","B76","B77","B78","E17","E19","E75","E90","CRJ","AT7","AT4","DH8"])) and ((low($r.route) | contains("-")) or callsign_airline($r)));
       def category($r):
-        if is_military($r) then "military"
-        elif is_government($r) then "government"
+        if is_military_hard($r) then "military"
         elif is_airline($r) then "airline"
+        elif is_military($r) then "military"
+        elif is_government($r) then "government"
         else "other" end;
       def military_role($r):
-        (up($r.type)) as $t
-        | (up($r.callsign)) as $c
-        | if starts_any($t; ["KC","K35","A330M","A330","A310","B707","B767","IL78","R135"]) or starts_any($c; ["QID","QUID","OILER","OILGATE","TEXACO","SHELL","ESSO","EXXON","EXTENDER","GETFUEL","NACHO","BOBBY","CLEAN","SHAMU","SPUR","TOGA","PYREX","VALOR","VINYL","WHISTLER","WRESTLER"]) then "tanker"
-          elif starts_any($t; ["C17","C5","C130","C135","C160","C27","C295","C30","C414","A400","IL76","IL96","AN","YUN8","B412","DOVE"]) or starts_any($c; ["RCH","REACH","RRR","SAM","SPAR","RFR","DUKE","ROMA","PLF","MMF","NAF","CTM"]) then "transport"
+        (typ($r)) as $t
+        | (cs($r)) as $c
+        | if starts_any($t; ["KC10","KC135","KC46","KC130","A330M","MRTT","IL78","KC390","K35R"]) or starts_any($c; ["QID","QUID","OILER","OILGATE","TEXACO","EXTENDER","GETFUEL","SHELL","ESSO","EXXON","SHAMU","SPUR"]) then "tanker"
+          elif starts_any($t; ["C17","C5","C130","C160","C27","C295","A400","IL76","IL96","AN12","AN22","AN72","Y8","Y20"]) or starts_any($c; ["RCH","REACH","RRR","MMF","NAF","CTM","DUKE","ROMA","PLF","RFR"]) then "transport"
           elif starts_any($t; ["F15","F16","F18","F18S","A10","EUFI","EUF1","MIG","SU","RFAL"]) or starts_any($c; ["IAF","HAF","FAF","GAF","HVK","TUN","RTAF","BAF","AME","UAF"]) then "fighter"
-          elif starts_any($t; ["H53","H53S","UH1","AS55","PUMA","V22","EC25"]) or starts_any($c; ["Q-","USCG","CG","USN","NAVY"]) then "helicopter"
+          elif starts_any($t; ["AH","UH","HH","MH","CH","NH","H47","H60","H53","V22","EC25"]) or starts_any($c; ["USCG","NAVY","COAST"]) then "helicopter"
           elif starts_any($t; ["T34","T38","T134","T154","T206","T214","TEX2"]) then "trainer"
-          elif starts_any($t; ["P3","P8","E2","E3","E6","E8","R135","SF34"]) or starts_any($c; ["NATO","SVF"]) then "patrol"
-          elif starts_any($t; ["DRON","Q4"]) then "uav"
+          elif starts_any($t; ["P3","P8","E2","E3","E6","E8","R135","RQ4","RQ170","RQ180"]) or starts_any($c; ["NATO","SVF"]) then "patrol"
+          elif starts_any($t; ["RQ","MQ","UAV","DRON","Q4"]) then "uav"
           elif starts_any($c; ["TKF","SAM","SPAR","V-","T-","UNIVERSAL","QUEST"]) then "vip"
           else "other_military" end;
       (clean_rows) as $rows
@@ -265,7 +332,7 @@ if [[ ! -s "$series_file" ]]; then
 fi
 
 jq_err_file="$(mktemp)"
-trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_owner" "$jq_err_file"' EXIT
+trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_owner" "$tmp_airline_prefix" "$jq_err_file"' EXIT
 
 payload="$(jq -s \
   --arg mode "$FILTER_MODE" \
@@ -361,4 +428,5 @@ if [[ -z "$payload" ]]; then
   exit 0
 fi
 
+printf '%s\n' "$payload" > "$cache_file" 2>/dev/null || true
 printf '%s\n' "$payload"

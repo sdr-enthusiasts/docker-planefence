@@ -439,6 +439,14 @@
   .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
   .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
   .insights-stacked-svg { min-width: 620px; width: 100%; height: 190px; display: block; }
+  .insights-stacked-bar-hit { cursor: pointer; }
+  .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
+  .insights-stacked-legend-item { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
+  .insights-stacked-legend-swatch { width: .8rem; height: .8rem; border-radius: 2px; display: inline-block; }
+  .insights-stacked-bar-hit { cursor: pointer; }
+  .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
+  .insights-stacked-legend-item { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
+  .insights-stacked-legend-swatch { width: .8rem; height: .8rem; border-radius: 2px; display: inline-block; }
   .insights-bullets { margin: 0; padding-left: 1rem; }
   .insights-bullets li { margin: .3rem 0; }
   .insights-mix { display: grid; gap: .35rem; }
@@ -459,6 +467,9 @@
   .severity-elevated { color: #ad6b00; }
   .severity-high { color: #b84800; }
   .severity-exceptional { color: #b00020; font-weight: 700; }
+  .severity-elevated-low { color: #2b74b7; }
+  .severity-high-low { color: #185f9f; font-weight: 600; }
+  .severity-exceptional-low { color: #0d4f84; font-weight: 700; }
   .table-shell { overflow: auto; margin-top: .35rem; }
   .table-shell { scrollbar-width: none; -ms-overflow-style: none; }
   .table-shell::-webkit-scrollbar { width: 0; height: 0; }
@@ -1007,6 +1018,7 @@
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
   const insightsCache = { key: '', data: null };
   let insightsLastFocus = null;
+  let insightsSelectedDateKey = null;
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -2688,6 +2700,7 @@ ${messagesDesc}
 
   function openInsightsModal() {
     if (!insightsModal) return;
+    insightsSelectedDateKey = null;
     insightsLastFocus = document.activeElement;
     insightsModal.classList.add('open');
     insightsModal.setAttribute('aria-hidden', 'false');
@@ -2818,11 +2831,13 @@ ${messagesDesc}
     }
   }
 
-  function severityClass(sev){
+  function severityClass(sev, deltaPct){
     const s = String(sev || 'normal').toLowerCase();
-    if (s === 'exceptional') return 'severity-exceptional';
-    if (s === 'high') return 'severity-high';
-    if (s === 'elevated') return 'severity-elevated';
+    const d = Number(deltaPct);
+    const isLower = Number.isFinite(d) && d < 0;
+    if (s === 'exceptional') return isLower ? 'severity-exceptional-low' : 'severity-exceptional';
+    if (s === 'high') return isLower ? 'severity-high-low' : 'severity-high';
+    if (s === 'elevated') return isLower ? 'severity-elevated-low' : 'severity-elevated';
     return 'severity-normal';
   }
 
@@ -2972,7 +2987,8 @@ ${messagesDesc}
       }
       const active = d.date === selectedDate;
       const marker = active ? `<rect x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="none" stroke="var(--accent)" stroke-width="2"></rect>` : '';
-      return `${rects.join('')}${marker}`;
+      const hit = `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"></rect>`;
+      return `${rects.join('')}${marker}${hit}`;
     }).join('');
 
     const xLabels = [0, Math.max(0, Math.floor((series.length - 1) / 2)), series.length - 1]
@@ -2987,6 +3003,13 @@ ${messagesDesc}
       v: Math.round(scaleMax * f)
     }));
 
+    const legend = `<div class="insights-stacked-legend" aria-hidden="true">
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.military};"></span>${escapeHtml(insightsText('category.military', {}, 'Military'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.government};"></span>${escapeHtml(insightsText('category.government', {}, 'Government'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.airline};"></span>${escapeHtml(insightsText('category.airline', {}, 'Airline'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.other};"></span>${escapeHtml(insightsText('category.other', {}, 'Other'))}</span>
+    </div>`;
+
     return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.composition', {}, 'Daily category composition'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
       ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
@@ -2994,7 +3017,21 @@ ${messagesDesc}
       <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
       ${bars}
       ${xLabels}
-    </svg>`;
+    </svg>${legend}`;
+  }
+
+  function bindInsightsStackedInteractions(generation){
+    if (!insightsStackedEl) return;
+    const targets = insightsStackedEl.querySelectorAll('[data-insights-date]');
+    targets.forEach((el)=> {
+      el.addEventListener('click', ()=> {
+        const dateKey = String(el.getAttribute('data-insights-date') || '');
+        if (!/^\d{6}$/.test(dateKey)) return;
+        if (insightsSelectedDateKey === dateKey) return;
+        insightsSelectedDateKey = dateKey;
+        loadInsights(generation);
+      });
+    });
   }
 
   function renderInsightsMix(selected){
@@ -3075,13 +3112,13 @@ ${messagesDesc}
     const sel = data.selected || {};
     const an = data.anomalies?.total || {};
     const sev = String(an.severity || 'normal');
-    const sevClass = severityClass(sev);
+    const sevClass = severityClass(sev, an.delta_pct);
     const sevLabel = insightSeverityDirectionLabel(sev, an.delta_pct);
     const cards = [
       { label: insightsText('kpi.selectedDay', {}, 'Selected Day'), value: fmtDateKeyHuman(sel.date || data.selected_date || '--') },
       { label: insightsText('kpi.flights', {}, 'Flights'), value: numberFmt0.format(Number(sel.total) || 0) },
       { label: insightsText('kpi.vsBaseline', {}, 'Vs Baseline'), value: pctText(an.delta_pct) },
-      { label: insightsText('kpi.severity', {}, 'Severity'), value: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, html: true }
+      { label: insightsText('kpi.severity', {}, 'Traffic'), value: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, html: true }
     ];
     insightsKpisEl.innerHTML = cards.map((c)=> `<div class="insight-kpi"><div class="label">${c.label}</div><div class="value">${c.html ? c.value : escapeHtml(c.value)}</div></div>`).join('');
   }
@@ -3097,7 +3134,7 @@ ${messagesDesc}
       .map((k)=> ({ key: k, pct: Number(shares[k]) || 0, count: Number(sel.categories?.[k]) || 0 }))
       .sort((a,b)=> b.pct - a.pct)[0] || { key: 'other', pct: 0, count: 0 };
     const shareDelta = (Number(shares[dom.key]) || 0) - (Number(baselineShares[dom.key]) || 0);
-    const sevClass = severityClass(an.severity);
+    const sevClass = severityClass(an.severity, an.delta_pct);
     const sevLabel = insightSeverityDirectionLabel(an.severity || 'normal', an.delta_pct);
     const subtypes = sel.military_types || {};
     const topSubtype = Object.entries(subtypes).sort((a,b)=> (Number(b[1]) || 0) - (Number(a[1]) || 0))[0] || ['other_military', 0];
@@ -3114,7 +3151,7 @@ ${messagesDesc}
     })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
     const dominantLabel = insightsText(`category.${dom.key}`, {}, dom.key.charAt(0).toUpperCase() + dom.key.slice(1));
     const bullets = [
-      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `Total traffic is <span class="${sevClass}">${escapeHtml(sevLabel)}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
+      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `Today's traffic is <span class="${sevClass}">${escapeHtml(sevLabel)}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
       `${insightsText('bullet.dominantCategory', { category: dominantLabel, pct: dom.pct.toFixed(1), count: numberFmt0.format(dom.count) }, `${dominantLabel} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`)}`,
       `${insightsText('bullet.shareShift', { shift: `${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)}` }, `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`)}`,
       `${insightsText('bullet.topSubtype', { subtype: subtypeLabel, count: numberFmt0.format(Number(topSubtype[1]) || 0) }, `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`)}`
@@ -3170,7 +3207,10 @@ ${messagesDesc}
     }
     renderInsightsKpis(data);
     if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(data.series, selectedDate);
-    if (insightsStackedEl) insightsStackedEl.innerHTML = buildStackedSvg(data.series, selectedDate);
+    if (insightsStackedEl) {
+      insightsStackedEl.innerHTML = buildStackedSvg(data.series, selectedDate);
+      bindInsightsStackedInteractions(modeGeneration);
+    }
     renderInsightsBullets({ ...data, selected });
     renderInsightsMix({ ...data, selected });
     renderMilitarySubtypeMix(selected);
@@ -3180,7 +3220,7 @@ ${messagesDesc}
   async function loadInsights(generation){
     ensureInsightsRefs();
     if (!insightsPanelEl) return;
-    const dateKey = effectiveHistoryParam() || 'today';
+    const dateKey = insightsSelectedDateKey || effectiveHistoryParam() || 'today';
     const reqKey = insightsRequestKey(dataMode, dateKey);
     updateInsightsStaticText();
     if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
@@ -5194,6 +5234,7 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       return;
     }
     modeGeneration++;
+    insightsSelectedDateKey = null;
     resetTableState();
     stopStreamReader();
     stopPollingLoop();
