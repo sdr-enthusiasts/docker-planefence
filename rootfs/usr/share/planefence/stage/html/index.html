@@ -456,6 +456,7 @@
   .insights-bullets li { margin: .3rem 0; }
   .insights-mix { display: grid; gap: .35rem; }
   .mix-row { display: grid; grid-template-columns: 96px 1fr 52px; gap: .45rem; align-items: center; }
+  .mix-section-title { margin: .35rem 0 .2rem; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
   .mix-label { font-size: .82rem; color: var(--muted); }
   .mix-track { width: 100%; height: .62rem; background: var(--soft); border-radius: 999px; overflow: hidden; }
   .mix-fill { height: 100%; border-radius: 999px; }
@@ -3389,10 +3390,12 @@ ${messagesDesc}
     insightsMixEl.innerHTML = rows.join('');
   }
 
-  function renderMilitarySubtypeMix(selected){
+  function renderMilitarySubtypeMix(data){
     if (!insightsSubtypesEl) return;
-    const shares = selected?.military_type_shares || {};
+    const selected = data?.selected || {};
+    const totalFlights = Number(selected?.total) || 0;
     const counts = selected?.military_types || {};
+    const categories = selected?.categories || {};
     const labels = {
       tanker: insightsText('subtype.tanker', {}, 'Tanker'),
       transport: insightsText('subtype.transport', {}, 'Transport'),
@@ -3415,24 +3418,47 @@ ${messagesDesc}
       uav: '#455a64',
       other_military: '#607d8b'
     };
+    const nonMilitaryPalette = {
+      government: '#1f7a8c',
+      airline: '#246b2a',
+      other: '#6a5acd'
+    };
 
-    const totalMilitary = Number(selected?.categories?.military) || 0;
-    if (!totalMilitary) {
-      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.noMilitary', {}, 'No military flights in selected day.'))}</div>`;
+    if (totalFlights <= 0) {
+      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
       return;
     }
 
-    const rows = Object.keys(labels).map((k)=> {
-      const pct = Math.max(0, Math.min(100, Number(shares[k]) || 0));
-      const cnt = Number(counts[k]) || 0;
-      return { k, pct, cnt };
-    }).sort((a,b)=> b.pct - a.pct).map((r)=> `<div class="mix-row">
-      <div class="mix-label">${labels[r.k]}</div>
-      <div class="mix-track"><div class="mix-fill" style="width:${r.pct.toFixed(1)}%; background:${palette[r.k]};"></div></div>
+    const renderRows = (rows, colors)=> rows.map((r)=> `<div class="mix-row">
+      <div class="mix-label">${r.label}</div>
+      <div class="mix-track"><div class="mix-fill" style="width:${r.pct.toFixed(1)}%; background:${colors[r.key]};"></div></div>
       <div class="mix-val">${r.pct.toFixed(1)}% (${numberFmt0.format(r.cnt)})</div>
-    </div>`);
+    </div>`).join('');
 
-    insightsSubtypesEl.innerHTML = rows.join('');
+    const militaryRows = Object.keys(labels).map((k)=> {
+      const cnt = Number(counts[k]) || 0;
+      return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: labels[k] };
+    }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
+
+    const nonMilitaryRows = ['government','airline','other'].map((k)=> {
+      const cnt = Number(categories[k]) || 0;
+      return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: insightsText(`category.${k}`, {}, k) };
+    }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
+
+    const sections = [];
+    if (militaryRows.length) {
+      sections.push(`<div class="mix-section-title">${escapeHtml(insightsText('subtype.section.military', {}, 'Military Flights'))}</div>${renderRows(militaryRows, palette)}`);
+    }
+    if (nonMilitaryRows.length) {
+      sections.push(`<div class="mix-section-title">${escapeHtml(insightsText('subtype.section.nonMilitary', {}, 'Other Flights'))}</div>${renderRows(nonMilitaryRows, nonMilitaryPalette)}`);
+    }
+
+    if (!sections.length) {
+      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
+      return;
+    }
+
+    insightsSubtypesEl.innerHTML = sections.join('');
   }
 
   function renderInsightsKpis(data){
@@ -3523,7 +3549,8 @@ ${messagesDesc}
       return;
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
-    const selected = data.selected || data.series.find((s)=> s.date === selectedDate) || data.series[data.series.length - 1];
+    const selectedFromSeries = data.series.find((s)=> s.date === selectedDate);
+    const selected = selectedFromSeries || data.selected || data.series[data.series.length - 1];
     const window = computeDisplayWindow(data.series);
     const selectedContext = deriveSelectedInsightsContext(data, selected);
     const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext };
@@ -3552,7 +3579,7 @@ ${messagesDesc}
     }
     renderInsightsBullets(dataForSelected);
     renderInsightsMix(dataForSelected);
-    renderMilitarySubtypeMix(selected);
+    renderMilitarySubtypeMix(dataForSelected);
     renderInsightsTable(dataForSelected);
     bindInsightsDateInteractions(modeGeneration);
   }
