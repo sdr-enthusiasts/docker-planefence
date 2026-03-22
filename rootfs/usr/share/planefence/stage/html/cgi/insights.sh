@@ -352,7 +352,12 @@ payload="$(jq -s \
   ' "$series_file" 2>"$jq_err_file" || true)"
 
 if [[ -z "$payload" ]]; then
-  printf '{"error":"failed to aggregate insights data"}\n'
+  jq_err_line="$(head -n 1 "$jq_err_file" 2>/dev/null || true)"
+  if [[ -n "$jq_err_line" ]]; then
+    jq -cn --arg error "failed to aggregate insights data" --arg detail "$jq_err_line" '{error:$error, detail:$detail}'
+  else
+    printf '{"error":"failed to aggregate insights data"}\n'
+  fi
   exit 0
 fi
 
