@@ -309,7 +309,9 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
           else null
           end;
       def row_second_of_day($r):
-        (parse_hms($r["time:firstseen"]) // parse_hms($r["time:time_at_mindist"]) // parse_hms($r["time:lastseen"]));
+        (parse_hms($r["time:firstseen"] // $r.time.firstseen)
+         // parse_hms($r["time:time_at_mindist"] // $r.time.time_at_mindist)
+         // parse_hms($r["time:lastseen"] // $r.time.lastseen));
       def within_cutoff($r):
         ((row_second_of_day($r) // 86400) <= $cutoff_sec);
       def military_role($r):
