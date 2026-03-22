@@ -108,6 +108,11 @@
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
     html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
     .station-info-card p { margin: .35rem 0; }
+    .insights-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.72); display: none; align-items: flex-start; justify-content: center; z-index: 1090; padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1rem 1.25rem; }
+    .insights-modal.open { display: flex; }
+    .insights-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; width: min(1100px, 96vw); max-width: calc(100vw - 2rem); max-height: 92vh; overflow-y: auto; padding: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); }
+    html.dark .insights-card { border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+    .insights-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: max(.45rem, env(safe-area-inset-top, 0px) * 0.5); right: .6rem; cursor: pointer; padding: .25rem; line-height: 1; }
     .pa-candidates-link { font-weight: 600; text-decoration: underline; text-underline-offset: .15em; }
     .pa-candidates-overlay { position: absolute; inset: 0; background: rgba(0, 3, 12, 0.72); display: none; align-items: center; justify-content: center; border-radius: 1rem; z-index: 12; padding: 1rem; }
     .pa-candidates-overlay.open { display: flex; }
@@ -418,7 +423,7 @@
   .pf-controls .pf-right .dataTables_paginate { margin: 0; }
   .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
   .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
-  .insights-panel { margin: .35rem 0 .85rem; background: var(--soft); border: 1px solid var(--muted); border-radius: .75rem; padding: .75rem .85rem; }
+  .insights-panel { margin: 0; background: var(--soft); border: 1px solid var(--muted); border-radius: .75rem; padding: .75rem .85rem; }
   .insights-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .55rem; }
   .insights-title { margin: 0; font-size: 1rem; font-weight: 700; }
   .insights-subtitle { color: var(--muted); font-size: .88rem; }
@@ -536,11 +541,13 @@
 
   @media (max-width: 640px) {
     .station-info-modal,
+    .insights-modal,
     .heatmap-modal,
     .photo-modal {
       padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
     }
     .station-info-card,
+    .insights-card,
     .heatmap-card,
     .photo-card {
       width: min(100%, calc(100vw - 1.5rem));
@@ -604,6 +611,7 @@
             </div>
             <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
             <button id="stationInfoBtn" title="Show station information">Station Info</button>
+            <button id="insightsBtn" title="Show traffic insights">Insights</button>
             <button id="reload" title="Update data">Update</button>
             <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
           </div>
@@ -664,44 +672,50 @@
     </div>
   </div>
 
-  <main style="padding: 0 1rem 1rem;">
-    <section id="insightsPanel" class="insights-panel" aria-live="polite">
-      <div class="insights-head">
-        <h2 id="insightsTitle" class="insights-title">Traffic Insights</h2>
-        <div id="insightsSubtitle" class="insights-subtitle">Loading analytics...</div>
-      </div>
-      <div id="insightsKpis" class="insights-kpis"></div>
-      <div class="insights-grid">
-        <div class="insights-block">
-          <div id="insightsTrend" class="insights-trend-wrap"></div>
-          <div id="insightsStacked" class="insights-stacked-wrap"></div>
-          <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
+  <div id="insightsModal" class="insights-modal" role="dialog" aria-modal="true" aria-labelledby="insightsTitle" aria-hidden="true">
+    <div class="insights-card">
+      <button type="button" id="insightsClose" class="insights-close" aria-label="Close traffic insights">&times;</button>
+      <section id="insightsPanel" class="insights-panel" aria-live="polite">
+        <div class="insights-head">
+          <h2 id="insightsTitle" class="insights-title">Traffic Insights</h2>
+          <div id="insightsSubtitle" class="insights-subtitle">Loading analytics...</div>
         </div>
-        <div class="insights-block">
-          <h3 style="margin:0 0 .45rem; font-size:.92rem;">Category Mix</h3>
-          <div id="insightsMix" class="insights-mix"></div>
-          <div class="insights-subtypes">
-            <h3 style="margin:0 0 .45rem; font-size:.92rem;">Military Mission Mix</h3>
-            <div id="insightsSubtypes" class="insights-mix"></div>
+        <div id="insightsKpis" class="insights-kpis"></div>
+        <div class="insights-grid">
+          <div class="insights-block">
+            <div id="insightsTrend" class="insights-trend-wrap"></div>
+            <div id="insightsStacked" class="insights-stacked-wrap"></div>
+            <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
+          </div>
+          <div class="insights-block">
+            <h3 id="insightsCategoryTitle" style="margin:0 0 .45rem; font-size:.92rem;">Category Mix</h3>
+            <div id="insightsMix" class="insights-mix"></div>
+            <div class="insights-subtypes">
+              <h3 id="insightsSubtypeTitle" style="margin:0 0 .45rem; font-size:.92rem;">Military Mission Mix</h3>
+              <div id="insightsSubtypes" class="insights-mix"></div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="insights-table-wrap">
-        <table class="insights-table" aria-label="Daily traffic summary">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Military</th>
-              <th>Government</th>
-              <th>Airline</th>
-              <th>Other</th>
-            </tr>
-          </thead>
-          <tbody id="insightsTableBody"></tbody>
-        </table>
-      </div>
-    </section>
+        <div class="insights-table-wrap">
+          <table class="insights-table" aria-label="Daily traffic summary">
+            <thead>
+              <tr>
+                <th id="insightsHeadDate">Date</th>
+                <th id="insightsHeadTotal">Total</th>
+                <th id="insightsHeadMilitary">Military</th>
+                <th id="insightsHeadGovernment">Government</th>
+                <th id="insightsHeadAirline">Airline</th>
+                <th id="insightsHeadOther">Other</th>
+              </tr>
+            </thead>
+            <tbody id="insightsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <main style="padding: 0 1rem 1rem;">
     <div class="table-shell">
       <table id="t" class="display compact stripe" style="width:100%;">
         <thead id="thead">
@@ -984,6 +998,7 @@
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
   let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
+  let insightsBtn, insightsModal, insightsCloseBtn;
   let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl, paCandidatesHeadRowEl;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
@@ -991,6 +1006,7 @@
   let historyButtonEl, historyMenuEl, historyControlEl;
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
   const insightsCache = { key: '', data: null };
+  let insightsLastFocus = null;
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -1356,6 +1372,7 @@ ${messagesDesc}
       applyDataModeAvailabilityUI();
       updateHistorySupport();
       updateHeatmapButtonState();
+      updateInsightsStaticText();
     }
     applyDataModeUI();
     let modeGeneration = 0;
@@ -1471,6 +1488,9 @@ ${messagesDesc}
     stationInfoModal = document.getElementById('stationInfoModal');
     stationInfoContentEl = document.getElementById('stationInfoContent');
     stationInfoCloseBtn = document.getElementById('stationInfoClose');
+    insightsBtn = document.getElementById('insightsBtn');
+    insightsModal = document.getElementById('insightsModal');
+    insightsCloseBtn = document.getElementById('insightsClose');
     paCandidatesOverlay = document.getElementById('paCandidatesOverlay');
     paCandidatesCloseBtn = document.getElementById('paCandidatesClose');
     paCandidatesBodyEl = document.getElementById('paCandidatesBody');
@@ -1504,6 +1524,11 @@ ${messagesDesc}
     // Wire up interactive controls immediately so they respond even while data loads.
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
+    insightsBtn?.addEventListener('click', openInsightsModal);
+    insightsCloseBtn?.addEventListener('click', closeInsightsModal);
+    insightsModal?.addEventListener('click', (ev) => {
+      if (ev.target === insightsModal) closeInsightsModal();
+    });
     stationInfoModal?.addEventListener('click', (ev) => {
       if (ev.target === stationInfoModal) closeStationInfoModal();
     });
@@ -1751,6 +1776,7 @@ ${messagesDesc}
     }
     if (heatmapBtn) { heatmapBtn.textContent = t('actions.heatmap', {}, 'Heatmap'); heatmapBtn.title = t('actions.heatmap.title', {}, 'Show station heatmap'); }
     if (stationInfoBtn) { stationInfoBtn.textContent = t('actions.stationInfo', {}, 'Station Info'); stationInfoBtn.title = t('actions.stationInfo.title', {}, 'Show station information'); }
+    if (insightsBtn) { insightsBtn.textContent = t('actions.insights', {}, 'Insights'); insightsBtn.title = t('actions.insights.title', {}, 'Show traffic insights'); }
     if (reloadBtn) { reloadBtn.textContent = t('actions.reload', {}, 'Update'); reloadBtn.title = t('actions.reload.title', {}, 'Update data'); }
     if (newUpdatesBtn) { newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available'); newUpdatesBtn.title = t('actions.newUpdates.title', {}, 'Show new updates'); }
     if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
@@ -1764,10 +1790,13 @@ ${messagesDesc}
     if (heatmapCloseBtn) heatmapCloseBtn.setAttribute('aria-label', t('heatmap.modal.close', {}, 'Close heatmap'));
     if (photoModal) photoModal.setAttribute('aria-label', t('photo.modal.label', {}, 'Aircraft photo'));
     if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
+    if (insightsModal) insightsModal.setAttribute('aria-label', t('insights.modal.label', {}, 'Traffic insights'));
+    if (insightsCloseBtn) insightsCloseBtn.setAttribute('aria-label', t('insights.modal.close', {}, 'Close traffic insights'));
     if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
     if (paCandidatesOverlay) paCandidatesOverlay.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.modalLabel', {}, 'Plane-Alert candidates'));
     if (paCandidatesCloseBtn) paCandidatesCloseBtn.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.close', {}, 'Close list'));
     renderPaCandidatesHeader();
+    updateInsightsStaticText();
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
@@ -2034,7 +2063,9 @@ ${messagesDesc}
     if (!heatmapModal) return;
     heatmapModal.classList.remove('open');
     heatmapModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!stationInfoModal?.classList.contains('open') && !insightsModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (heatmapFrame) {
       heatmapFrame.srcdoc = '';
     }
@@ -2067,7 +2098,9 @@ ${messagesDesc}
     if (!photoModal) return;
     photoModal.classList.remove('open');
     photoModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!stationInfoModal?.classList.contains('open') && !insightsModal?.classList.contains('open') && !heatmapModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (photoModalImg) photoModalImg.src = '';
     if (photoModalLastFocus && typeof photoModalLastFocus.focus === 'function') {
       photoModalLastFocus.focus({ preventScroll: true });
@@ -2653,12 +2686,36 @@ ${messagesDesc}
     stationInfoCloseBtn?.focus({ preventScroll: true });
   }
 
+  function openInsightsModal() {
+    if (!insightsModal) return;
+    insightsLastFocus = document.activeElement;
+    insightsModal.classList.add('open');
+    insightsModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    insightsCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeInsightsModal() {
+    if (!insightsModal) return;
+    insightsModal.classList.remove('open');
+    insightsModal.setAttribute('aria-hidden', 'true');
+    if (!stationInfoModal?.classList.contains('open') && !heatmapModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
+    if (insightsLastFocus && typeof insightsLastFocus.focus === 'function') {
+      insightsLastFocus.focus({ preventScroll: true });
+    }
+    insightsLastFocus = null;
+  }
+
   function closeStationInfoModal() {
     if (!stationInfoModal) return;
     closePaCandidatesOverlay();
     stationInfoModal.classList.remove('open');
     stationInfoModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!insightsModal?.classList.contains('open') && !heatmapModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (stationInfoLastFocus && typeof stationInfoLastFocus.focus === 'function') {
       stationInfoLastFocus.focus({ preventScroll: true });
     }
@@ -2776,6 +2833,39 @@ ${messagesDesc}
     return `${sign}${n.toFixed(1)}%`;
   }
 
+  function insightsText(key, params, fallback){
+    return t(`insights.${key}`, params || {}, fallback);
+  }
+
+  function insightSeverityLabel(sev){
+    const s = String(sev || 'normal').toLowerCase();
+    return insightsText(`severity.${s}`, {}, s);
+  }
+
+  function updateInsightsStaticText(){
+    const categoryTitleEl = document.getElementById('insightsCategoryTitle');
+    const subtypeTitleEl = document.getElementById('insightsSubtypeTitle');
+    const headDateEl = document.getElementById('insightsHeadDate');
+    const headTotalEl = document.getElementById('insightsHeadTotal');
+    const headMilitaryEl = document.getElementById('insightsHeadMilitary');
+    const headGovernmentEl = document.getElementById('insightsHeadGovernment');
+    const headAirlineEl = document.getElementById('insightsHeadAirline');
+    const headOtherEl = document.getElementById('insightsHeadOther');
+
+    if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
+      ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
+      : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
+    if (insightsSubtitleEl && !insightsCache.data) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+    if (categoryTitleEl) categoryTitleEl.textContent = insightsText('categoryMixTitle', {}, 'Category Mix');
+    if (subtypeTitleEl) subtypeTitleEl.textContent = insightsText('subtypeMixTitle', {}, 'Military Mission Mix');
+    if (headDateEl) headDateEl.textContent = insightsText('table.date', {}, 'Date');
+    if (headTotalEl) headTotalEl.textContent = insightsText('table.total', {}, 'Total');
+    if (headMilitaryEl) headMilitaryEl.textContent = insightsText('table.military', {}, 'Military');
+    if (headGovernmentEl) headGovernmentEl.textContent = insightsText('table.government', {}, 'Government');
+    if (headAirlineEl) headAirlineEl.textContent = insightsText('table.airline', {}, 'Airline');
+    if (headOtherEl) headOtherEl.textContent = insightsText('table.other', {}, 'Other');
+  }
+
   function ensureInsightsRefs(){
     insightsPanelEl = insightsPanelEl || document.getElementById('insightsPanel');
     insightsTitleEl = insightsTitleEl || document.getElementById('insightsTitle');
@@ -2790,7 +2880,7 @@ ${messagesDesc}
   }
 
   function buildTrendSvg(series, selectedDate){
-    if (!Array.isArray(series) || !series.length) return '<div class="insights-muted">No trend data available.</div>';
+    if (!Array.isArray(series) || !series.length) return `<div class="insights-muted">${escapeHtml(insightsText('empty.trend', {}, 'No trend data available.'))}</div>`;
     const width = 760;
     const height = 230;
     const padL = 42;
@@ -2823,7 +2913,7 @@ ${messagesDesc}
         const p = points[idx];
         return `<text x="${p.x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(p.date)}</text>`;
       }).join('');
-    return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily traffic trend">
+    return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
       ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
       <line x1="${padL}" y1="${(padT + innerH - ((5000 / scaleMax) * innerH)).toFixed(2)}" x2="${(width-padR)}" y2="${(padT + innerH - ((5000 / scaleMax) * innerH)).toFixed(2)}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 4"></line>
@@ -2835,7 +2925,7 @@ ${messagesDesc}
   }
 
   function buildStackedSvg(series, selectedDate){
-    if (!Array.isArray(series) || !series.length) return '<div class="insights-muted">No composition data available.</div>';
+    if (!Array.isArray(series) || !series.length) return `<div class="insights-muted">${escapeHtml(insightsText('empty.composition', {}, 'No composition data available.'))}</div>`;
     const width = 760;
     const height = 180;
     const padL = 42;
@@ -2871,7 +2961,7 @@ ${messagesDesc}
         return `<text x="${x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(series[idx].date)}</text>`;
       }).join('');
 
-    return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily category composition">
+    return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.composition', {}, 'Daily category composition'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
       <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
       <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
@@ -2892,10 +2982,10 @@ ${messagesDesc}
       other: '#6a5acd'
     };
     const labels = {
-      military: 'Military',
-      government: 'Government',
-      airline: 'Airline',
-      other: 'Other'
+      military: insightsText('category.military', {}, 'Military'),
+      government: insightsText('category.government', {}, 'Government'),
+      airline: insightsText('category.airline', {}, 'Airline'),
+      other: insightsText('category.other', {}, 'Other')
     };
     const rows = ['military','government','airline','other'].map((k)=> {
       const pct = Number(shares[k]) || 0;
@@ -2914,15 +3004,15 @@ ${messagesDesc}
     const shares = selected?.military_type_shares || {};
     const counts = selected?.military_types || {};
     const labels = {
-      tanker: 'Tanker',
-      transport: 'Transport',
-      fighter: 'Fighter',
-      helicopter: 'Helicopter',
-      trainer: 'Trainer',
-      patrol: 'Patrol/AEW',
-      vip: 'VIP',
-      uav: 'UAV',
-      other_military: 'Other'
+      tanker: insightsText('subtype.tanker', {}, 'Tanker'),
+      transport: insightsText('subtype.transport', {}, 'Transport'),
+      fighter: insightsText('subtype.fighter', {}, 'Fighter'),
+      helicopter: insightsText('subtype.helicopter', {}, 'Helicopter'),
+      trainer: insightsText('subtype.trainer', {}, 'Trainer'),
+      patrol: insightsText('subtype.patrol', {}, 'Patrol/AEW'),
+      vip: insightsText('subtype.vip', {}, 'VIP'),
+      uav: insightsText('subtype.uav', {}, 'UAV'),
+      other_military: insightsText('subtype.other_military', {}, 'Other')
     };
     const palette = {
       tanker: '#9c2f2f',
@@ -2938,7 +3028,7 @@ ${messagesDesc}
 
     const totalMilitary = Number(selected?.categories?.military) || 0;
     if (!totalMilitary) {
-      insightsSubtypesEl.innerHTML = '<div class="insights-muted">No military flights in selected day.</div>';
+      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.noMilitary', {}, 'No military flights in selected day.'))}</div>`;
       return;
     }
 
@@ -2962,10 +3052,10 @@ ${messagesDesc}
     const sev = String(an.severity || 'normal');
     const sevClass = severityClass(sev);
     const cards = [
-      { label: 'Selected Day', value: fmtDateKeyHuman(sel.date || data.selected_date || '--') },
-      { label: 'Flights', value: numberFmt0.format(Number(sel.total) || 0) },
-      { label: 'Vs Baseline', value: pctText(an.delta_pct) },
-      { label: 'Severity', value: `<span class="${sevClass}">${sev}</span>`, html: true }
+      { label: insightsText('kpi.selectedDay', {}, 'Selected Day'), value: fmtDateKeyHuman(sel.date || data.selected_date || '--') },
+      { label: insightsText('kpi.flights', {}, 'Flights'), value: numberFmt0.format(Number(sel.total) || 0) },
+      { label: insightsText('kpi.vsBaseline', {}, 'Vs Baseline'), value: pctText(an.delta_pct) },
+      { label: insightsText('kpi.severity', {}, 'Severity'), value: `<span class="${sevClass}">${escapeHtml(insightSeverityLabel(sev))}</span>`, html: true }
     ];
     insightsKpisEl.innerHTML = cards.map((c)=> `<div class="insight-kpi"><div class="label">${c.label}</div><div class="value">${c.html ? c.value : escapeHtml(c.value)}</div></div>`).join('');
   }
@@ -2984,12 +3074,23 @@ ${messagesDesc}
     const sevClass = severityClass(an.severity);
     const subtypes = sel.military_types || {};
     const topSubtype = Object.entries(subtypes).sort((a,b)=> (Number(b[1]) || 0) - (Number(a[1]) || 0))[0] || ['other_military', 0];
-    const subtypeLabel = ({tanker:'tanker',transport:'transport',fighter:'fighter',helicopter:'helicopter',trainer:'trainer',patrol:'patrol/AEW',vip:'VIP',uav:'UAV',other_military:'other'})[topSubtype[0]] || 'other';
+    const subtypeLabel = ({
+      tanker: insightsText('subtype.tanker', {}, 'Tanker'),
+      transport: insightsText('subtype.transport', {}, 'Transport'),
+      fighter: insightsText('subtype.fighter', {}, 'Fighter'),
+      helicopter: insightsText('subtype.helicopter', {}, 'Helicopter'),
+      trainer: insightsText('subtype.trainer', {}, 'Trainer'),
+      patrol: insightsText('subtype.patrol', {}, 'Patrol/AEW'),
+      vip: insightsText('subtype.vip', {}, 'VIP'),
+      uav: insightsText('subtype.uav', {}, 'UAV'),
+      other_military: insightsText('subtype.other_military', {}, 'Other')
+    })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
+    const dominantLabel = insightsText(`category.${dom.key}`, {}, dom.key.charAt(0).toUpperCase() + dom.key.slice(1));
     const bullets = [
-      `Total traffic is <span class="${sevClass}">${an.severity || 'normal'}</span> vs baseline (${pctText(an.delta_pct)}).`,
-      `${dom.key.charAt(0).toUpperCase() + dom.key.slice(1)} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`,
-      `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`,
-      `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`
+      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(insightSeverityLabel(an.severity || 'normal'))}</span>`, delta: pctText(an.delta_pct) }, `Total traffic is <span class="${sevClass}">${escapeHtml(insightSeverityLabel(an.severity || 'normal'))}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
+      `${insightsText('bullet.dominantCategory', { category: dominantLabel, pct: dom.pct.toFixed(1), count: numberFmt0.format(dom.count) }, `${dominantLabel} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`)}`,
+      `${insightsText('bullet.shareShift', { shift: `${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)}` }, `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`)}`,
+      `${insightsText('bullet.topSubtype', { subtype: subtypeLabel, count: numberFmt0.format(Number(topSubtype[1]) || 0) }, `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`)}`
     ];
     insightsBulletsWrapEl.innerHTML = `<ul class="insights-bullets">${bullets.map((b)=> `<li>${b}</li>`).join('')}</ul>`;
   }
@@ -2998,7 +3099,7 @@ ${messagesDesc}
     if (!insightsTableBodyEl) return;
     const rows = Array.isArray(data.series) ? data.series.slice(-14).reverse() : [];
     if (!rows.length) {
-      insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">No recent daily data.</td></tr>`;
+      insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
     insightsTableBodyEl.innerHTML = rows.map((r)=> `
@@ -3016,22 +3117,29 @@ ${messagesDesc}
     ensureInsightsRefs();
     if (!insightsPanelEl) return;
     if (!data || !Array.isArray(data.series) || !data.series.length) {
-      if (insightsSubtitleEl) insightsSubtitleEl.textContent = 'Insights are unavailable for the selected range.';
-      if (insightsTrendEl) insightsTrendEl.innerHTML = '<div class="insights-muted">No analytics data available.</div>';
+      updateInsightsStaticText();
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('empty.subtitle', {}, 'Insights are unavailable for the selected range.');
+      if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
       if (insightsStackedEl) insightsStackedEl.innerHTML = '';
       if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
-      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">No recent daily data.</td></tr>`;
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
     const selected = data.selected || data.series.find((s)=> s.date === selectedDate) || data.series[data.series.length - 1];
-    if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode() ? 'Plane-Alert Traffic Insights' : 'Planefence Traffic Insights';
+    if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
+      ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
+      : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
     if (insightsSubtitleEl) {
       const baseline = data.baselines?.previous_7d_median_total;
-      insightsSubtitleEl.textContent = `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}. Designed for up to 5000 flights/day.`;
+      insightsSubtitleEl.textContent = insightsText(
+        'subtitle',
+        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0), max: '5000' },
+        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}. Designed for up to 5000 flights/day.`
+      );
     }
     renderInsightsKpis(data);
     if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(data.series, selectedDate);
@@ -3047,8 +3155,9 @@ ${messagesDesc}
     if (!insightsPanelEl) return;
     const dateKey = effectiveHistoryParam() || 'today';
     const reqKey = insightsRequestKey(dataMode, dateKey);
-    if (insightsSubtitleEl) insightsSubtitleEl.textContent = 'Loading analytics...';
-    if (insightsTrendEl) insightsTrendEl.innerHTML = '<div class="insights-muted">Computing trend data...</div>';
+    updateInsightsStaticText();
+    if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+    if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('computing', {}, 'Computing trend data...'))}</div>`;
 
     if (insightsCache.key === reqKey && insightsCache.data) {
       renderInsights(insightsCache.data);
@@ -3068,14 +3177,14 @@ ${messagesDesc}
       renderInsights(data);
     } catch (e) {
       if (generation !== modeGeneration) return;
-      if (insightsSubtitleEl) insightsSubtitleEl.textContent = 'Unable to load analytics right now.';
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('error.subtitle', {}, 'Unable to load analytics right now.');
       if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(String(e && e.message ? e.message : e))}</div>`;
       if (insightsStackedEl) insightsStackedEl.innerHTML = '';
       if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
-      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">No recent daily data.</td></tr>`;
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
     }
   }
 
@@ -3083,6 +3192,9 @@ ${messagesDesc}
     if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
       ev.preventDefault();
       closePaCandidatesOverlay();
+    } else if (ev.key === 'Escape' && insightsModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeInsightsModal();
     } else if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
       ev.preventDefault();
       closeStationInfoModal();
