@@ -438,6 +438,10 @@
   .insights-trend-wrap { overflow-x: auto; }
   .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
   .insights-trend-hit { cursor: pointer; }
+  .insights-chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .35rem; }
+  .insights-chart-nav { display: inline-flex; align-items: center; gap: .35rem; }
+  .insights-chart-nav button { min-height: 30px; padding: .2rem .55rem; font-size: .9rem; }
+  .insights-chart-range { font-size: .82rem; color: var(--muted); }
   .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
   .insights-stacked-svg { min-width: 620px; width: 100%; height: 190px; display: block; }
   .insights-stacked-bar-hit { cursor: pointer; }
@@ -698,7 +702,21 @@
         <div id="insightsKpis" class="insights-kpis"></div>
         <div class="insights-grid">
           <div class="insights-block">
+            <div class="insights-chart-toolbar">
+              <div class="insights-chart-nav">
+                <button type="button" id="insightsTrendPrev" aria-label="Show previous 14 days">&#x2039;</button>
+                <button type="button" id="insightsTrendNext" aria-label="Show next 14 days">&#x203A;</button>
+              </div>
+              <div id="insightsTrendRange" class="insights-chart-range"></div>
+            </div>
             <div id="insightsTrend" class="insights-trend-wrap"></div>
+            <div class="insights-chart-toolbar" style="margin-top:.45rem;">
+              <div class="insights-chart-nav">
+                <button type="button" id="insightsStackedPrev" aria-label="Show previous 14 days">&#x2039;</button>
+                <button type="button" id="insightsStackedNext" aria-label="Show next 14 days">&#x203A;</button>
+              </div>
+              <div id="insightsStackedRange" class="insights-chart-range"></div>
+            </div>
             <div id="insightsStacked" class="insights-stacked-wrap"></div>
             <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
           </div>
@@ -1020,9 +1038,13 @@
   let appVersionEl, footerYearEl;
   let historyButtonEl, historyMenuEl, historyControlEl;
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
+  let insightsTrendPrevBtn, insightsTrendNextBtn, insightsStackedPrevBtn, insightsStackedNextBtn, insightsTrendRangeEl, insightsStackedRangeEl;
   const insightsCache = { key: '', data: null };
   let insightsLastFocus = null;
   let insightsSelectedDateKey = null;
+  let insightsWindowStart = null;
+  let insightsScrollSyncBusy = false;
+  const INSIGHTS_WINDOW_DAYS = 14;
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -2705,6 +2727,7 @@ ${messagesDesc}
   function openInsightsModal() {
     if (!insightsModal) return;
     insightsSelectedDateKey = null;
+    insightsWindowStart = null;
     insightsLastFocus = document.activeElement;
     insightsModal.classList.add('open');
     insightsModal.setAttribute('aria-hidden', 'false');
@@ -2892,6 +2915,10 @@ ${messagesDesc}
     const headGovernmentEl = document.getElementById('insightsHeadGovernment');
     const headAirlineEl = document.getElementById('insightsHeadAirline');
     const headOtherEl = document.getElementById('insightsHeadOther');
+    const trendPrevEl = document.getElementById('insightsTrendPrev');
+    const trendNextEl = document.getElementById('insightsTrendNext');
+    const stackedPrevEl = document.getElementById('insightsStackedPrev');
+    const stackedNextEl = document.getElementById('insightsStackedNext');
 
     if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
       ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
@@ -2905,6 +2932,10 @@ ${messagesDesc}
     if (headGovernmentEl) headGovernmentEl.textContent = insightsText('table.government', {}, 'Government');
     if (headAirlineEl) headAirlineEl.textContent = insightsText('table.airline', {}, 'Airline');
     if (headOtherEl) headOtherEl.textContent = insightsText('table.other', {}, 'Other');
+    if (trendPrevEl) { const txt = insightsText('nav.prev', {}, 'Show previous 14 days'); trendPrevEl.title = txt; trendPrevEl.setAttribute('aria-label', txt); }
+    if (trendNextEl) { const txt = insightsText('nav.next', {}, 'Show next 14 days'); trendNextEl.title = txt; trendNextEl.setAttribute('aria-label', txt); }
+    if (stackedPrevEl) { const txt = insightsText('nav.prev', {}, 'Show previous 14 days'); stackedPrevEl.title = txt; stackedPrevEl.setAttribute('aria-label', txt); }
+    if (stackedNextEl) { const txt = insightsText('nav.next', {}, 'Show next 14 days'); stackedNextEl.title = txt; stackedNextEl.setAttribute('aria-label', txt); }
   }
 
   function ensureInsightsRefs(){
@@ -2918,6 +2949,112 @@ ${messagesDesc}
     insightsMixEl = insightsMixEl || document.getElementById('insightsMix');
     insightsSubtypesEl = insightsSubtypesEl || document.getElementById('insightsSubtypes');
     insightsTableBodyEl = insightsTableBodyEl || document.getElementById('insightsTableBody');
+    insightsTrendPrevBtn = insightsTrendPrevBtn || document.getElementById('insightsTrendPrev');
+    insightsTrendNextBtn = insightsTrendNextBtn || document.getElementById('insightsTrendNext');
+    insightsStackedPrevBtn = insightsStackedPrevBtn || document.getElementById('insightsStackedPrev');
+    insightsStackedNextBtn = insightsStackedNextBtn || document.getElementById('insightsStackedNext');
+    insightsTrendRangeEl = insightsTrendRangeEl || document.getElementById('insightsTrendRange');
+    insightsStackedRangeEl = insightsStackedRangeEl || document.getElementById('insightsStackedRange');
+  }
+
+  function parseDateKeyUtc(key){
+    if (!/^\d{6}$/.test(String(key || ''))) return null;
+    const y = Number(String(key).slice(0,2));
+    const m = Number(String(key).slice(2,4));
+    const d = Number(String(key).slice(4,6));
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    return new Date(Date.UTC(2000 + y, m - 1, d));
+  }
+
+  function dateKeyFromDateUtc(d){
+    if (!(d instanceof Date)) return null;
+    const y = String(d.getUTCFullYear() % 100).padStart(2, '0');
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+  }
+
+  function defaultInsightsWindowStart(total){
+    const n = Number(total) || 0;
+    return Math.max(0, n - INSIGHTS_WINDOW_DAYS);
+  }
+
+  function chunkWindowStartForIndex(total, idx){
+    const n = Number(total) || 0;
+    if (n <= INSIGHTS_WINDOW_DAYS) return 0;
+    const latestStart = n - INSIGHTS_WINDOW_DAYS;
+    const distanceFromEnd = Math.max(0, (n - 1) - Math.max(0, Number(idx) || 0));
+    const pagesFromEnd = Math.floor(distanceFromEnd / INSIGHTS_WINDOW_DAYS);
+    return Math.max(0, latestStart - (pagesFromEnd * INSIGHTS_WINDOW_DAYS));
+  }
+
+  function clampInsightsWindowStart(total, start){
+    const n = Number(total) || 0;
+    const maxStart = Math.max(0, n - INSIGHTS_WINDOW_DAYS);
+    const s = Number(start);
+    if (!Number.isFinite(s)) return defaultInsightsWindowStart(n);
+    return Math.max(0, Math.min(maxStart, Math.floor(s)));
+  }
+
+  function computeDisplayWindow(series){
+    const rows = Array.isArray(series) ? series.filter(Boolean) : [];
+    const total = rows.length;
+    const start = clampInsightsWindowStart(total, insightsWindowStart);
+    insightsWindowStart = start;
+    const end = Math.min(total, start + INSIGHTS_WINDOW_DAYS);
+    const windowData = rows.slice(start, end);
+    const hasPrev = start > 0;
+    const hasNext = end < total;
+
+    if (!windowData.length) {
+      return {
+        start,
+        end,
+        total,
+        hasPrev,
+        hasNext,
+        windowData,
+        displaySeries: [],
+        rangeText: ''
+      };
+    }
+
+    let displaySeries;
+    if (windowData.length >= INSIGHTS_WINDOW_DAYS) {
+      displaySeries = windowData.map((d)=> ({ ...d, _empty: false, _slotDate: d.date }));
+    } else {
+      const pad = INSIGHTS_WINDOW_DAYS - windowData.length;
+      const lastDate = parseDateKeyUtc(windowData[windowData.length - 1].date);
+      const slotDates = [];
+      for (let i = 0; i < INSIGHTS_WINDOW_DAYS; i++) {
+        if (lastDate) {
+          const dt = new Date(lastDate);
+          dt.setUTCDate(lastDate.getUTCDate() - (INSIGHTS_WINDOW_DAYS - 1 - i));
+          slotDates.push(dateKeyFromDateUtc(dt));
+        } else {
+          slotDates.push('');
+        }
+      }
+      displaySeries = slotDates.map((k, i)=> {
+        if (i < pad) return { date: k, total: 0, military: 0, government: 0, airline: 0, other: 0, _empty: true, _slotDate: k };
+        const d = windowData[i - pad];
+        return { ...d, _empty: false, _slotDate: k || d.date };
+      });
+    }
+
+    const firstDate = windowData[0]?.date || '';
+    const lastDateKey = windowData[windowData.length - 1]?.date || '';
+    const rangeText = `${fmtDateKeyHuman(firstDate)} - ${fmtDateKeyHuman(lastDateKey)}`;
+    return {
+      start,
+      end,
+      total,
+      hasPrev,
+      hasNext,
+      windowData,
+      displaySeries,
+      rangeText
+    };
   }
 
   function buildTrendSvg(series, selectedDate){
@@ -2930,13 +3067,13 @@ ${messagesDesc}
     const padB = 34;
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
-    const maxTotal = Math.max(...series.map((d)=> Number(d.total) || 0), 1);
+    const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
     const scaleMax = niceAxisMax(maxTotal);
     const dx = series.length > 1 ? innerW / (series.length - 1) : 0;
     const points = series.map((d, i) => {
       const x = padL + (dx * i);
-      const y = padT + innerH - ((Math.max(0, Number(d.total) || 0) / scaleMax) * innerH);
-      return { x, y, date: d.date, total: Number(d.total) || 0 };
+      const y = padT + innerH - ((Math.max(0, Number(d?._empty ? 0 : d.total) || 0) / scaleMax) * innerH);
+      return { x, y, date: d.date, total: Number(d?._empty ? 0 : d.total) || 0, empty: !!d?._empty, slotDate: d?._slotDate || d?.date };
     });
     const path = points.map((p, i)=> `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({
@@ -2946,13 +3083,15 @@ ${messagesDesc}
     const selected = points.find((p)=> p.date === selectedDate) || points[points.length - 1];
     const dots = points.map((p)=> {
       const active = p.date === (selected && selected.date);
-      return `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${active ? 4 : 2.5}" fill="${active ? 'var(--accent)' : 'var(--muted)'}"></circle><circle class="insights-trend-hit" data-insights-date="${p.date}" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="10" fill="transparent"></circle>`;
+      const dot = p.empty ? '' : `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${active ? 4 : 2.5}" fill="${active ? 'var(--accent)' : 'var(--muted)'}"></circle>`;
+      const hit = p.empty ? '' : `<circle class="insights-trend-hit" data-insights-date="${p.date}" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="10" fill="transparent"></circle>`;
+      return `${dot}${hit}`;
     }).join('');
     const xLabels = [0, Math.max(0, Math.floor((points.length - 1) / 2)), points.length - 1]
       .filter((v, i, a)=> a.indexOf(v) === i)
       .map((idx)=> {
         const p = points[idx];
-        return `<text x="${p.x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(p.date)}</text>`;
+        return `<text x="${p.x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(p.slotDate || p.date)}</text>`;
       }).join('');
     return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
@@ -2996,7 +3135,7 @@ ${messagesDesc}
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
     const barW = Math.max(6, innerW / Math.max(1, series.length));
-    const maxTotal = Math.max(...series.map((d)=> Number(d.total) || 0), 1);
+    const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
     const scaleMax = niceAxisMax(maxTotal);
     const palette = { military: '#c84800', government: '#1f7a8c', airline: '#246b2a', other: '#6a5acd' };
 
@@ -3006,14 +3145,14 @@ ${messagesDesc}
       let y = padT + innerH;
       const rects = [];
       for (const k of parts) {
-        const v = Number(d[k]) || 0;
+        const v = Number(d?._empty ? 0 : d[k]) || 0;
         const h = (v / scaleMax) * innerH;
         y -= h;
         rects.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${Math.max(0.1, h).toFixed(2)}" fill="${palette[k]}"></rect>`);
       }
-      const active = d.date === selectedDate;
+      const active = !d?._empty && d.date === selectedDate;
       const marker = active ? `<rect x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="none" stroke="var(--accent)" stroke-width="2"></rect>` : '';
-      const hit = `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"></rect>`;
+      const hit = d?._empty ? '' : `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"></rect>`;
       return `${rects.join('')}${marker}${hit}`;
     }).join('');
 
@@ -3021,7 +3160,7 @@ ${messagesDesc}
       .filter((v, i, a)=> a.indexOf(v) === i)
       .map((idx)=> {
         const x = padL + (idx * barW) + (barW / 2);
-        return `<text x="${x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(series[idx].date)}</text>`;
+        return `<text x="${x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(series[idx]._slotDate || series[idx].date)}</text>`;
       }).join('');
 
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({
@@ -3058,28 +3197,40 @@ ${messagesDesc}
   function deriveSelectedInsightsContext(data, selected){
     const series = Array.isArray(data?.series) ? data.series : [];
     const idx = series.findIndex((r)=> r && r.date === selected?.date);
-    const prev = idx > 0 ? series.slice(Math.max(0, idx - 7), idx) : [];
+    const selectedIsToday = String(selected?.date || '') === toYYMMDD(utcToday());
+    const effValue = (row, key)=> {
+      if (!row) return 0;
+      if (selectedIsToday) {
+        const cut = Number(row[`${key}_cutoff`]);
+        if (Number.isFinite(cut)) return cut;
+      }
+      const raw = Number(row[key]);
+      return Number.isFinite(raw) ? raw : 0;
+    };
+    const prev = idx > 0 ? series.slice(Math.max(0, idx - INSIGHTS_WINDOW_DAYS), idx) : [];
     if (!prev.length) {
       return {
+        baseline_days_used: 0,
         baseline_total: null,
         baseline_category_shares: { military: 0, government: 0, airline: 0, other: 0 },
         anomaly_total: { delta: null, delta_pct: null, severity: 'normal' }
       };
     }
-    const totals = prev.map((r)=> Number(r?.total) || 0).sort((a,b)=> a - b);
+    const totals = prev.map((r)=> effValue(r, 'total')).sort((a,b)=> a - b);
     const mid = Math.floor(totals.length / 2);
     const baselineTotal = totals.length % 2 ? totals[mid] : ((totals[mid - 1] + totals[mid]) / 2);
     const sumTotals = prev.reduce((acc, r)=> acc + (Number(r?.total) || 0), 0);
     const cats = ['military','government','airline','other'];
     const baselineCategoryShares = {};
     cats.forEach((k)=> {
-      const catTotal = prev.reduce((acc, r)=> acc + (Number(r?.[k]) || 0), 0);
+      const catTotal = prev.reduce((acc, r)=> acc + effValue(r, k), 0);
       baselineCategoryShares[k] = sumTotals > 0 ? (100 * catTotal / sumTotals) : 0;
     });
-    const selectedTotal = Number(selected?.total) || 0;
+    const selectedTotal = effValue(selected, 'total');
     const delta = selectedTotal - baselineTotal;
     const deltaPct = baselineTotal > 0 ? (100 * delta / baselineTotal) : null;
     return {
+      baseline_days_used: prev.length,
       baseline_total: baselineTotal,
       baseline_category_shares: baselineCategoryShares,
       anomaly_total: {
@@ -3096,11 +3247,54 @@ ${messagesDesc}
     insightsSelectedDateKey = dateKey;
     const baseDateKey = effectiveHistoryParam() || 'today';
     const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
+    if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series)) {
+      const idx = insightsCache.data.series.findIndex((s)=> s && s.date === dateKey);
+      if (idx >= 0) {
+        insightsWindowStart = chunkWindowStartForIndex(insightsCache.data.series.length, idx);
+      }
+    }
     if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === dateKey)) {
       renderInsights({ ...insightsCache.data, selected_date: dateKey });
       return;
     }
     loadInsights(generation);
+  }
+
+  function bindInsightsScrollSync(){
+    if (!insightsTrendEl || !insightsStackedEl) return;
+    if (insightsTrendEl.dataset.syncBound === '1' && insightsStackedEl.dataset.syncBound === '1') return;
+
+    const syncToStacked = ()=> {
+      if (insightsScrollSyncBusy) return;
+      insightsScrollSyncBusy = true;
+      insightsStackedEl.scrollLeft = insightsTrendEl.scrollLeft;
+      insightsScrollSyncBusy = false;
+    };
+    const syncToTrend = ()=> {
+      if (insightsScrollSyncBusy) return;
+      insightsScrollSyncBusy = true;
+      insightsTrendEl.scrollLeft = insightsStackedEl.scrollLeft;
+      insightsScrollSyncBusy = false;
+    };
+    insightsTrendEl.addEventListener('scroll', syncToStacked);
+    insightsStackedEl.addEventListener('scroll', syncToTrend);
+    insightsTrendEl.dataset.syncBound = '1';
+    insightsStackedEl.dataset.syncBound = '1';
+  }
+
+  function shiftInsightsWindow(deltaPages){
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
+    if (!(insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.length)) return;
+    const total = insightsCache.data.series.length;
+    const nextStart = clampInsightsWindowStart(total, (insightsWindowStart == null ? defaultInsightsWindowStart(total) : insightsWindowStart) + (deltaPages * INSIGHTS_WINDOW_DAYS));
+    insightsWindowStart = nextStart;
+    const end = Math.min(total, insightsWindowStart + INSIGHTS_WINDOW_DAYS);
+    const visible = insightsCache.data.series.slice(insightsWindowStart, end);
+    if (!visible.some((r)=> r && r.date === insightsSelectedDateKey)) {
+      insightsSelectedDateKey = visible.length ? visible[visible.length - 1].date : insightsSelectedDateKey;
+    }
+    renderInsights({ ...insightsCache.data, selected_date: insightsSelectedDateKey });
   }
 
   function bindInsightsDateInteractions(generation){
@@ -3131,6 +3325,23 @@ ${messagesDesc}
         });
       });
     }
+    if (insightsTrendPrevBtn && insightsTrendPrevBtn.dataset.bound !== '1') {
+      insightsTrendPrevBtn.addEventListener('click', ()=> shiftInsightsWindow(-1));
+      insightsTrendPrevBtn.dataset.bound = '1';
+    }
+    if (insightsTrendNextBtn && insightsTrendNextBtn.dataset.bound !== '1') {
+      insightsTrendNextBtn.addEventListener('click', ()=> shiftInsightsWindow(1));
+      insightsTrendNextBtn.dataset.bound = '1';
+    }
+    if (insightsStackedPrevBtn && insightsStackedPrevBtn.dataset.bound !== '1') {
+      insightsStackedPrevBtn.addEventListener('click', ()=> shiftInsightsWindow(-1));
+      insightsStackedPrevBtn.dataset.bound = '1';
+    }
+    if (insightsStackedNextBtn && insightsStackedNextBtn.dataset.bound !== '1') {
+      insightsStackedNextBtn.addEventListener('click', ()=> shiftInsightsWindow(1));
+      insightsStackedNextBtn.dataset.bound = '1';
+    }
+    bindInsightsScrollSync();
   }
 
   function renderInsightsMix(selected){
@@ -3313,6 +3524,7 @@ ${messagesDesc}
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
     const selected = data.selected || data.series.find((s)=> s.date === selectedDate) || data.series[data.series.length - 1];
+    const window = computeDisplayWindow(data.series);
     const selectedContext = deriveSelectedInsightsContext(data, selected);
     const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext };
     if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
@@ -3320,16 +3532,23 @@ ${messagesDesc}
       : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
     if (insightsSubtitleEl) {
       const baseline = selectedContext.baseline_total;
+      const baseDays = Number(selectedContext.baseline_days_used) || 0;
       insightsSubtitleEl.textContent = insightsText(
         'subtitle',
-        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0) },
-        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
+        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0), days: String(baseDays || INSIGHTS_WINDOW_DAYS) },
+        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (${baseDays || INSIGHTS_WINDOW_DAYS}d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
       );
     }
+    if (insightsTrendRangeEl) insightsTrendRangeEl.textContent = window.rangeText;
+    if (insightsStackedRangeEl) insightsStackedRangeEl.textContent = window.rangeText;
+    if (insightsTrendPrevBtn) insightsTrendPrevBtn.disabled = !window.hasPrev;
+    if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !window.hasPrev;
+    if (insightsTrendNextBtn) insightsTrendNextBtn.disabled = !window.hasNext;
+    if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
     renderInsightsKpis(dataForSelected);
-    if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(data.series, selectedDate);
+    if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(window.displaySeries, selectedDate);
     if (insightsStackedEl) {
-      insightsStackedEl.innerHTML = buildStackedSvg(data.series, selectedDate);
+      insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate);
     }
     renderInsightsBullets(dataForSelected);
     renderInsightsMix(dataForSelected);
@@ -3352,6 +3571,7 @@ ${messagesDesc}
       if (selected && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === selected)) {
         renderInsights({ ...insightsCache.data, selected_date: selected });
       } else {
+        insightsWindowStart = defaultInsightsWindowStart(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0);
         renderInsights(insightsCache.data);
       }
       return;
@@ -3367,6 +3587,7 @@ ${messagesDesc}
       if (data && data.error) throw new Error(String(data.error));
       insightsCache.key = reqKey;
       insightsCache.data = data;
+      insightsWindowStart = defaultInsightsWindowStart(Array.isArray(data.series) ? data.series.length : 0);
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(data.series) && data.series.some((s)=> s && s.date === selected)) {
         renderInsights({ ...data, selected_date: selected });

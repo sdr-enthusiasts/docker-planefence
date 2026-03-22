@@ -8,6 +8,8 @@ source /scripts/pf-common
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
 utc_today="$(date -u +%y%m%d)"
+utc_now_hms="$(date -u +%H:%M:%S)"
+utc_cutoff_sec="$((10#${utc_now_hms:0:2}*3600 + 10#${utc_now_hms:3:2}*60 + 10#${utc_now_hms:6:2}))"
 
 EMIT_HEADERS=true
 if [[ "${INSIGHTS_RAW:-0}" == "1" ]]; then
@@ -237,6 +239,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
   jq -c \
     --arg date "$req_date" \
     --arg mode "$FILTER_MODE" \
+    --argjson cutoff_sec "$utc_cutoff_sec" \
     --argjson mil_callsign_prefixes "$MIL_CALLSIGN_PREFIXES_JSON" \
     --argjson mil_icao_prefixes "$MIL_ICAO_PREFIXES_JSON" \
     --argjson mil_type_prefixes "$MIL_TYPE_PREFIXES_JSON" \
@@ -297,6 +300,16 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
         elif is_military($r) then "military"
         elif is_government($r) then "government"
         else "other" end;
+      def parse_hms($s):
+        (($s // "") | tostring) as $t
+        | if ($t | test("^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$"))
+          then (($t[0:2] | tonumber) * 3600 + ($t[3:5] | tonumber) * 60 + (if ($t|length) >= 8 then ($t[6:8] | tonumber) else 0 end))
+          else null
+          end;
+      def row_second_of_day($r):
+        (parse_hms($r["time:firstseen"]) // parse_hms($r["time:time_at_mindist"]) // parse_hms($r["time:lastseen"]));
+      def within_cutoff($r):
+        ((row_second_of_day($r) // 86400) <= $cutoff_sec);
       def military_role($r):
         (typ($r)) as $t
         | (cs($r)) as $c
@@ -313,14 +326,19 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
       | reduce $rows[] as $r (
           {
             date:$date,total:0,military:0,government:0,airline:0,other:0,
+            total_cutoff:0,military_cutoff:0,government_cutoff:0,airline_cutoff:0,other_cutoff:0,
             military_types:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}
+            ,military_types_cutoff:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}
           };
           (category($r)) as $cat
+          | (within_cutoff($r)) as $in_cutoff
           | .total += 1
           | .[$cat] += 1
+          | if $in_cutoff then .total_cutoff += 1 | .[($cat + "_cutoff")] += 1 else . end
           | if $cat == "military" then
               (military_role($r)) as $role
               | .military_types[$role] += 1
+              | if $in_cutoff then .military_types_cutoff[$role] += 1 else . end
             else . end
         )
     ' "$json_file" >> "$series_file" 2>/dev/null || true
@@ -338,6 +356,8 @@ payload="$(jq -s \
   --arg mode "$FILTER_MODE" \
   --arg req_date "$REQUESTED_DATE" \
   --arg today "$utc_today" \
+  --arg now_hms "$utc_now_hms" \
+  --argjson cutoff_sec "$utc_cutoff_sec" \
   --argjson hist_days "$HISTORY_DAYS" '
   def sort_by_date: sort_by(.date);
   def tail($n): if ($n <= 0) then [] else (if (length <= $n) then . else .[(length-$n):] end) end;
@@ -360,22 +380,29 @@ payload="$(jq -s \
   (sort_by_date) as $series
   | ($series[-1]) as $latest
   | (if ($req_date|length) == 6 and ($series | any(.date == $req_date)) then $req_date elif $req_date == "today" and ($series | any(.date == $today)) then $today else $latest.date end) as $selected_date
+  | ($selected_date == $today) as $selected_is_today
+  | def eff_total($r): (if $selected_is_today then ($r.total_cutoff // $r.total // 0) else ($r.total // 0) end);
+  | def eff_military($r): (if $selected_is_today then ($r.military_cutoff // $r.military // 0) else ($r.military // 0) end);
+  | def eff_government($r): (if $selected_is_today then ($r.government_cutoff // $r.government // 0) else ($r.government // 0) end);
+  | def eff_airline($r): (if $selected_is_today then ($r.airline_cutoff // $r.airline // 0) else ($r.airline // 0) end);
+  | def eff_other($r): (if $selected_is_today then ($r.other_cutoff // $r.other // 0) else ($r.other // 0) end);
+  | def eff_mil_types($r): (if $selected_is_today then ($r.military_types_cutoff // $r.military_types // {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}) else ($r.military_types // {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}) end);
   | ($series | map(select(.date == $selected_date)) | .[0]) as $selected
   | ($series | map(select(.date < $selected_date))) as $previous
-  | ($previous | map(.total) | tail(7)) as $prev7_totals
+  | ($previous | map(eff_total(.)) | tail(14)) as $prev7_totals
   | ($previous | map(.total) | tail(28)) as $prev28_totals
   | (epoch_for_date($selected_date) | gmtime | .[6]) as $sel_wday
   | ($previous | map(select((epoch_for_date(.date) | gmtime | .[6]) == $sel_wday))) as $same_wday
-  | ($same_wday | map(.total) | tail(8)) as $weekday_totals
+  | ($same_wday | map(eff_total(.)) | tail(8)) as $weekday_totals
   | ($prev7_totals | median) as $m7
   | ($prev28_totals | median) as $m28
   | ($weekday_totals | median) as $mwd
-  | ($selected.total | tonumber) as $actual
+  | (eff_total($selected) | tonumber) as $actual
   | (if $m7 != null then $m7 elif $m28 != null then $m28 elif $mwd != null then $mwd else null end) as $baseline_total
-  | ($previous | tail(7)) as $prev7_rows
-  | (if ($prev7_rows|length) > 0 then {total: ($prev7_rows | map(.total) | add), military: ($prev7_rows | map(.military) | add), government: ($prev7_rows | map(.government) | add), airline: ($prev7_rows | map(.airline) | add), other: ($prev7_rows | map(.other) | add)} else {total:0,military:0,government:0,airline:0,other:0} end) as $prev7_sum
-  | (subtype_sum([$selected])) as $selected_subtypes
-  | (subtype_sum($prev7_rows)) as $prev7_subtypes
+  | ($previous | tail(14)) as $prev7_rows
+  | (if ($prev7_rows|length) > 0 then {total: ($prev7_rows | map(eff_total(.)) | add), military: ($prev7_rows | map(eff_military(.)) | add), government: ($prev7_rows | map(eff_government(.)) | add), airline: ($prev7_rows | map(eff_airline(.)) | add), other: ($prev7_rows | map(eff_other(.)) | add)} else {total:0,military:0,government:0,airline:0,other:0} end) as $prev7_sum
+  | (subtype_sum([{"military_types": eff_mil_types($selected)}])) as $selected_subtypes
+  | (subtype_sum($prev7_rows | map({"military_types": eff_mil_types(.)}))) as $prev7_subtypes
   | ($series | map(. + { key: week_key(.date) }) | group_by(.key) | rollup_group(.)) as $weekly_rollup
   | ($series | map(. + { key: month_key(.date) }) | group_by(.key) | rollup_group(.)) as $monthly_rollup
   | {
@@ -386,10 +413,10 @@ payload="$(jq -s \
       selected: {
         date: $selected.date,
         total: $actual,
-        categories: {military: $selected.military, government: $selected.government, airline: $selected.airline, other: $selected.other},
-        shares: {military: round1(share($selected.military; $actual) * 100), government: round1(share($selected.government; $actual) * 100), airline: round1(share($selected.airline; $actual) * 100), other: round1(share($selected.other; $actual) * 100)},
+        categories: {military: eff_military($selected), government: eff_government($selected), airline: eff_airline($selected), other: eff_other($selected)},
+        shares: {military: round1(share(eff_military($selected); $actual) * 100), government: round1(share(eff_government($selected); $actual) * 100), airline: round1(share(eff_airline($selected); $actual) * 100), other: round1(share(eff_other($selected); $actual) * 100)},
         military_types: $selected_subtypes,
-        military_type_shares: subtype_share($selected_subtypes; ($selected.military // 0))
+        military_type_shares: subtype_share($selected_subtypes; (eff_military($selected) // 0))
       },
       baselines: {
         previous_7d_median_total: $m7,
@@ -398,6 +425,9 @@ payload="$(jq -s \
         previous_7d_count: ($prev7_totals | length),
         previous_28d_count: ($prev28_totals | length),
         same_weekday_count: ($weekday_totals | length),
+        baseline_days_used: ($prev7_totals | length),
+        selected_is_today_partial: $selected_is_today,
+        selected_cutoff_hms_utc: (if $selected_is_today then $now_hms else null end),
         previous_7d_category_shares: {military: round1(share($prev7_sum.military; $prev7_sum.total) * 100), government: round1(share($prev7_sum.government; $prev7_sum.total) * 100), airline: round1(share($prev7_sum.airline; $prev7_sum.total) * 100), other: round1(share($prev7_sum.other; $prev7_sum.total) * 100)},
         previous_7d_military_types: $prev7_subtypes,
         previous_7d_military_type_shares: subtype_share($prev7_subtypes; ($prev7_sum.military // 0))

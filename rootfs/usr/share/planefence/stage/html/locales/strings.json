@@ -8,6 +8,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -185,6 +188,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -361,6 +367,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -537,6 +546,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -713,6 +725,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -889,6 +904,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1065,6 +1083,9 @@
       "flag_path": "./assets/flags/Wiphala.jpg",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1242,6 +1263,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1418,6 +1442,9 @@
       "flag_path": "./assets/flags/Friesland.gif",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1595,6 +1622,9 @@
       "flag_path": "./assets/flags/Limburg.gif",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1772,6 +1802,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -1948,6 +1981,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2124,6 +2160,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2296,6 +2335,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2472,6 +2514,9 @@
       "flag_path": "./assets/flags/Roman_Empire.jpg",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2649,6 +2694,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -2825,6 +2873,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3001,6 +3052,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3177,6 +3231,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3354,6 +3411,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3531,6 +3591,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3708,6 +3771,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -3884,6 +3950,9 @@
       "flag_path": "./assets/flags/Klingon.gif",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
@@ -4060,6 +4129,9 @@
       "flag_path": "",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Anefenceplay",
         "header.planefenceTitle": "Anefenceplay",
         "header.planeAlertTitle": "Aneplay-Alertal",
@@ -4237,6 +4309,9 @@
       "flag_path": "./assets/flags/Jolly_Roger.png",
       "strings": {
         "insights.bullet.totalTraffic": "{dayLabel}: {severity} ({delta}).",
+        "insights.subtitle": "Selected {date}. Baseline ({days}d median): {baseline}.",
+        "insights.nav.prev": "Show previous 14 days",
+        "insights.nav.next": "Show next 14 days",
         "page.title": "Planefence",
         "header.planefenceTitle": "Planefence",
         "header.planeAlertTitle": "Plane-Alert",
