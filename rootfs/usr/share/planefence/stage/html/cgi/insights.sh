@@ -123,7 +123,12 @@ extract_pattern_signals() {
   done
   [[ -n "$filter_file" ]] || return 0
 
-  awk -F: '
+  awk -F: \
+    -v callsign_file="$tmp_callsign" \
+    -v icao_file="$tmp_icao" \
+    -v typecode_file="$tmp_typecode" \
+    -v owner_file="$tmp_owner" \
+  '
     function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
     function clean_prefix(s){
       s=toupper(trim(s))
@@ -170,12 +175,7 @@ extract_pattern_signals() {
       if (length(own)>=3) print own >> owner_file
       next
     }
-  ' \
-    -v callsign_file="$tmp_callsign" \
-    -v icao_file="$tmp_icao" \
-    -v typecode_file="$tmp_typecode" \
-    -v owner_file="$tmp_owner" \
-    "$filter_file"
+  ' "$filter_file"
 }
 
 extract_pattern_signals
