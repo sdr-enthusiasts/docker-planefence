@@ -135,8 +135,8 @@ PLANEFENCE=enabled
 PF_MOTD="<b>Welcome to my Planefence Instance!</b>"
 # ---------------------------------------------------------------------
 # PF_DELETEAFTER: days to keep logs and JSON/CSV files.
-# Empty → default 14; 0 → keep forever (risk of disk fill-up).
-PF_DELETEAFTER=
+# Empty → default 90; 0 → keep forever (risk of disk fill-up).
+PF_DELETEAFTER=90
 # ---------------------------------------------------------------------
 # PF_NOISECAPT: base URL of your NoiseCapt container (optional).
 # See https://github.com/kx1t/docker-noisecapt.

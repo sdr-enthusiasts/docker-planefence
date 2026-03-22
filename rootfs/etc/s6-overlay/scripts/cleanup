@@ -32,7 +32,7 @@ CACHETIME="${CACHETIME//s/ seconds}"
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 source /usr/share/planefence/persist/planefence.config
 
-OLDERTHAN=${PF_DELETEAFTER:-14}
+OLDERTHAN=${PF_DELETEAFTER:-90}
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
