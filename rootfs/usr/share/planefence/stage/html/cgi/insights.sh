@@ -264,7 +264,10 @@ if [[ ! -s "$series_file" ]]; then
   exit 0
 fi
 
-jq -s \
+jq_err_file="$(mktemp)"
+trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_owner" "$jq_err_file"' EXIT
+
+payload="$(jq -s \
   --arg mode "$FILTER_MODE" \
   --arg req_date "$REQUESTED_DATE" \
   --arg today "$utc_today" \
@@ -345,4 +348,11 @@ jq -s \
       series: $series,
       rollups: {weekly: $weekly_rollup, monthly: $monthly_rollup}
     }
-  ' "$series_file"
+  ' "$series_file" 2>"$jq_err_file")"
+
+if [[ -z "$payload" ]]; then
+  printf '{"error":"failed to aggregate insights data"}\n'
+  exit 0
+fi
+
+printf '%s\n' "$payload"
