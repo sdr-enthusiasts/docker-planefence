@@ -2951,11 +2951,32 @@ ${messagesDesc}
       }).join('');
     return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
       ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.2"></path>
       ${dots}
       ${selected ? `<circle cx="${selected.x.toFixed(2)}" cy="${selected.y.toFixed(2)}" r="6" fill="none" stroke="var(--accent)" stroke-width="2"></circle>` : ''}
       ${xLabels}
+    </svg>`;
+  }
+
+  function buildTrendFramePlaceholder(message){
+    const width = 760;
+    const height = 230;
+    const padL = 42;
+    const padR = 10;
+    const padT = 16;
+    const padB = 34;
+    const innerH = height - padT - padB;
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({ y: padT + innerH - (f * innerH) }));
+    const label = escapeHtml(message || insightsText('computing', {}, 'Computing trend data...'));
+    return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line>`).join('')}
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      <text x="${(width / 2).toFixed(2)}" y="${(height / 2).toFixed(2)}" text-anchor="middle" font-size="12" fill="var(--muted)">${label}</text>
     </svg>`;
   }
 
@@ -3012,6 +3033,7 @@ ${messagesDesc}
 
     return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.composition', {}, 'Daily category composition'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
       ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
       <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
       <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
@@ -3224,7 +3246,7 @@ ${messagesDesc}
     const reqKey = insightsRequestKey(dataMode, dateKey);
     updateInsightsStaticText();
     if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
-    if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('computing', {}, 'Computing trend data...'))}</div>`;
+    if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
 
     if (insightsCache.key === reqKey && insightsCache.data) {
       renderInsights(insightsCache.data);
