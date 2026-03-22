@@ -285,8 +285,9 @@ payload="$(jq -s \
   def sub_keys: ["tanker","transport","fighter","helicopter","trainer","patrol","vip","uav","other_military"];
   def subtype_sum($arr): reduce sub_keys[] as $k ({tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}; .[$k] = ($arr | map(.military_types[$k] // 0) | add // 0));
   def subtype_share($obj; $mil_total): if ($mil_total|tonumber) <= 0 then {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0} else reduce sub_keys[] as $k ({}; .[$k] = round1((($obj[$k] // 0) / $mil_total) * 100)) end;
-  def week_key($d): ("20" + $d[0:2] + "-" + $d[2:4] + "-" + $d[4:6] + "T00:00:00Z" | fromdateiso8601 | strftime("%G-W%V"));
-  def month_key($d): ("20" + $d[0:2] + "-" + $d[2:4] + "-" + $d[4:6] + "T00:00:00Z" | fromdateiso8601 | strftime("%Y-%m"));
+  def epoch_for_date($d): ("20" + $d[0:2] + "-" + $d[2:4] + "-" + $d[4:6] + "T00:00:00Z" | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime);
+  def week_key($d): (epoch_for_date($d) | strftime("%G-W%V"));
+  def month_key($d): (epoch_for_date($d) | strftime("%Y-%m"));
   def rollup_group($groups): $groups | map({key: .[0].key, start_date: .[0].date, end_date: .[-1].date, total: (map(.total)|add), military: (map(.military)|add), government: (map(.government)|add), airline: (map(.airline)|add), other: (map(.other)|add), military_types: subtype_sum(.)});
 
   (sort_by_date) as $series
@@ -296,8 +297,8 @@ payload="$(jq -s \
   | ($series | map(select(.date < $selected_date))) as $previous
   | ($previous | map(.total) | tail(7)) as $prev7_totals
   | ($previous | map(.total) | tail(28)) as $prev28_totals
-  | ($selected_date | "20" + .[0:2] + "-" + .[2:4] + "-" + .[4:6] + "T00:00:00Z" | fromdateiso8601 | gmtime | .[6]) as $sel_wday
-  | ($previous | map(select(("20" + .date[0:2] + "-" + .date[2:4] + "-" + .date[4:6] + "T00:00:00Z" | fromdateiso8601 | gmtime | .[6]) == $sel_wday))) as $same_wday
+  | (epoch_for_date($selected_date) | gmtime | .[6]) as $sel_wday
+  | ($previous | map(select((epoch_for_date(.date) | gmtime | .[6]) == $sel_wday))) as $same_wday
   | ($same_wday | map(.total) | tail(8)) as $weekday_totals
   | ($prev7_totals | median) as $m7
   | ($prev28_totals | median) as $m28
@@ -348,7 +349,7 @@ payload="$(jq -s \
       series: $series,
       rollups: {weekly: $weekly_rollup, monthly: $monthly_rollup}
     }
-  ' "$series_file" 2>"$jq_err_file")"
+  ' "$series_file" 2>"$jq_err_file" || true)"
 
 if [[ -z "$payload" ]]; then
   printf '{"error":"failed to aggregate insights data"}\n'
