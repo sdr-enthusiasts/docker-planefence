@@ -2842,6 +2842,27 @@ ${messagesDesc}
     return insightsText(`severity.${s}`, {}, s);
   }
 
+  function insightSeverityDirectionLabel(sev, deltaPct){
+    const s = String(sev || 'normal').toLowerCase();
+    const d = Number(deltaPct);
+    if (s === 'normal' || !Number.isFinite(d) || d === 0) {
+      return insightsText('severity.nearBaseline', {}, 'near baseline');
+    }
+    const dir = d > 0 ? 'above' : 'below';
+    if (s === 'elevated') return insightsText(`severity.elevated.${dir}`, {}, `moderately ${dir} baseline`);
+    if (s === 'high') return insightsText(`severity.high.${dir}`, {}, `significantly ${dir} baseline`);
+    if (s === 'exceptional') return insightsText(`severity.exceptional.${dir}`, {}, `extremely ${dir} baseline`);
+    return insightsText('severity.nearBaseline', {}, 'near baseline');
+  }
+
+  function niceAxisMax(maxValue){
+    const v = Number(maxValue);
+    if (!Number.isFinite(v) || v <= 0) return 1;
+    const rough = v * 1.08;
+    const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(rough))));
+    return Math.ceil(rough / magnitude) * magnitude;
+  }
+
   function updateInsightsStaticText(){
     const categoryTitleEl = document.getElementById('insightsCategoryTitle');
     const subtypeTitleEl = document.getElementById('insightsSubtypeTitle');
@@ -2890,7 +2911,7 @@ ${messagesDesc}
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
     const maxTotal = Math.max(...series.map((d)=> Number(d.total) || 0), 1);
-    const scaleMax = Math.max(5000, Math.ceil((maxTotal * 1.08) / 100) * 100);
+    const scaleMax = niceAxisMax(maxTotal);
     const dx = series.length > 1 ? innerW / (series.length - 1) : 0;
     const points = series.map((d, i) => {
       const x = padL + (dx * i);
@@ -2916,7 +2937,6 @@ ${messagesDesc}
     return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
       ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
-      <line x1="${padL}" y1="${(padT + innerH - ((5000 / scaleMax) * innerH)).toFixed(2)}" x2="${(width-padR)}" y2="${(padT + innerH - ((5000 / scaleMax) * innerH)).toFixed(2)}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 4"></line>
       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.2"></path>
       ${dots}
       ${selected ? `<circle cx="${selected.x.toFixed(2)}" cy="${selected.y.toFixed(2)}" r="6" fill="none" stroke="var(--accent)" stroke-width="2"></circle>` : ''}
@@ -2935,17 +2955,18 @@ ${messagesDesc}
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
     const barW = Math.max(6, innerW / Math.max(1, series.length));
+    const maxTotal = Math.max(...series.map((d)=> Number(d.total) || 0), 1);
+    const scaleMax = niceAxisMax(maxTotal);
     const palette = { military: '#c84800', government: '#1f7a8c', airline: '#246b2a', other: '#6a5acd' };
 
     const bars = series.map((d, i)=> {
-      const total = Math.max(1, Number(d.total) || 1);
       const x = padL + (i * barW);
       const parts = ['military','government','airline','other'];
       let y = padT + innerH;
       const rects = [];
       for (const k of parts) {
         const v = Number(d[k]) || 0;
-        const h = (v / total) * innerH;
+        const h = (v / scaleMax) * innerH;
         y -= h;
         rects.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${Math.max(0.1, h).toFixed(2)}" fill="${palette[k]}"></rect>`);
       }
@@ -2961,12 +2982,16 @@ ${messagesDesc}
         return `<text x="${x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(series[idx].date)}</text>`;
       }).join('');
 
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({
+      y: padT + innerH - (f * innerH),
+      v: Math.round(scaleMax * f)
+    }));
+
     return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.composition', {}, 'Daily category composition'))}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
       <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
       <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
-      <text x="${padL - 8}" y="${padT + 4}" text-anchor="end" font-size="11" fill="var(--muted)">100%</text>
-      <text x="${padL - 8}" y="${padT + innerH + 4}" text-anchor="end" font-size="11" fill="var(--muted)">0%</text>
       ${bars}
       ${xLabels}
     </svg>`;
@@ -3051,11 +3076,12 @@ ${messagesDesc}
     const an = data.anomalies?.total || {};
     const sev = String(an.severity || 'normal');
     const sevClass = severityClass(sev);
+    const sevLabel = insightSeverityDirectionLabel(sev, an.delta_pct);
     const cards = [
       { label: insightsText('kpi.selectedDay', {}, 'Selected Day'), value: fmtDateKeyHuman(sel.date || data.selected_date || '--') },
       { label: insightsText('kpi.flights', {}, 'Flights'), value: numberFmt0.format(Number(sel.total) || 0) },
       { label: insightsText('kpi.vsBaseline', {}, 'Vs Baseline'), value: pctText(an.delta_pct) },
-      { label: insightsText('kpi.severity', {}, 'Severity'), value: `<span class="${sevClass}">${escapeHtml(insightSeverityLabel(sev))}</span>`, html: true }
+      { label: insightsText('kpi.severity', {}, 'Severity'), value: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, html: true }
     ];
     insightsKpisEl.innerHTML = cards.map((c)=> `<div class="insight-kpi"><div class="label">${c.label}</div><div class="value">${c.html ? c.value : escapeHtml(c.value)}</div></div>`).join('');
   }
@@ -3072,6 +3098,7 @@ ${messagesDesc}
       .sort((a,b)=> b.pct - a.pct)[0] || { key: 'other', pct: 0, count: 0 };
     const shareDelta = (Number(shares[dom.key]) || 0) - (Number(baselineShares[dom.key]) || 0);
     const sevClass = severityClass(an.severity);
+    const sevLabel = insightSeverityDirectionLabel(an.severity || 'normal', an.delta_pct);
     const subtypes = sel.military_types || {};
     const topSubtype = Object.entries(subtypes).sort((a,b)=> (Number(b[1]) || 0) - (Number(a[1]) || 0))[0] || ['other_military', 0];
     const subtypeLabel = ({
@@ -3087,7 +3114,7 @@ ${messagesDesc}
     })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
     const dominantLabel = insightsText(`category.${dom.key}`, {}, dom.key.charAt(0).toUpperCase() + dom.key.slice(1));
     const bullets = [
-      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(insightSeverityLabel(an.severity || 'normal'))}</span>`, delta: pctText(an.delta_pct) }, `Total traffic is <span class="${sevClass}">${escapeHtml(insightSeverityLabel(an.severity || 'normal'))}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
+      `${insightsText('bullet.totalTraffic', { severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `Total traffic is <span class="${sevClass}">${escapeHtml(sevLabel)}</span> vs baseline (${pctText(an.delta_pct)}).`)}`,
       `${insightsText('bullet.dominantCategory', { category: dominantLabel, pct: dom.pct.toFixed(1), count: numberFmt0.format(dom.count) }, `${dominantLabel} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`)}`,
       `${insightsText('bullet.shareShift', { shift: `${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)}` }, `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`)}`,
       `${insightsText('bullet.topSubtype', { subtype: subtypeLabel, count: numberFmt0.format(Number(topSubtype[1]) || 0) }, `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`)}`
@@ -3137,8 +3164,8 @@ ${messagesDesc}
       const baseline = data.baselines?.previous_7d_median_total;
       insightsSubtitleEl.textContent = insightsText(
         'subtitle',
-        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0), max: '5000' },
-        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}. Designed for up to 5000 flights/day.`
+        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0) },
+        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (7d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
       );
     }
     renderInsightsKpis(data);
