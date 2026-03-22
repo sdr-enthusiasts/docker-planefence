@@ -302,7 +302,9 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
         else "other" end;
       def parse_hms($s):
         (($s // "") | tostring) as $t
-        | if ($t | test("^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$"))
+        | if ($t | test("^[0-9]{9,}$"))
+          then ((($t | tonumber) % 86400 + 86400) % 86400)
+          elif ($t | test("^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$"))
           then (($t[0:2] | tonumber) * 3600 + ($t[3:5] | tonumber) * 60 + (if ($t|length) >= 8 then ($t[6:8] | tonumber) else 0 end))
           else null
           end;
