@@ -427,7 +427,7 @@
   .insights-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .55rem; }
   .insights-title { margin: 0; font-size: 1rem; font-weight: 700; }
   .insights-subtitle { color: var(--muted); font-size: .88rem; }
-  .insights-grid { display: grid; grid-template-columns: 2fr 1.2fr; gap: .75rem; }
+  .insights-grid { display: grid; grid-template-columns: 2fr 1.2fr; gap: .75rem; align-items: start; }
   .insights-block { background: var(--bg); border: 1px solid var(--soft); border-radius: .65rem; padding: .6rem .65rem; }
   html.dark .insights-block { border-color: rgba(255,255,255,0.08); }
   .insights-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .45rem; margin-bottom: .55rem; }
@@ -455,9 +455,10 @@
   }
   .insights-chart-nav button:first-child { left: .35rem; }
   .insights-chart-nav button:last-child { right: .35rem; }
+  .insights-hydration-status { margin-right: auto; font-size: .8rem; color: var(--muted); }
   .insights-chart-range { font-size: .82rem; color: var(--muted); }
   .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
-  .insights-stacked-svg { min-width: 620px; width: 100%; height: 190px; display: block; }
+  .insights-stacked-svg { min-width: 620px; width: 100%; height: 160px; display: block; }
   .insights-stacked-bar-hit { cursor: pointer; }
   .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
   .insights-stacked-legend-item { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
@@ -477,6 +478,21 @@
   .mix-val { font-size: .82rem; text-align: right; }
   .insights-subtypes { margin-top: .6rem; padding-top: .45rem; border-top: 1px solid var(--soft); }
   html.dark .insights-subtypes { border-color: rgba(255,255,255,0.08); }
+  .insights-mini { font-size: .84rem; }
+  .insights-mini .mini-row { display: flex; align-items: center; justify-content: space-between; gap: .45rem; padding: .15rem 0; border-bottom: 1px dashed var(--soft); }
+  .insights-mini .mini-row:last-child { border-bottom: 0; }
+  .insights-mini .mini-key { color: var(--muted); }
+  .insights-mini .mini-val { text-align: right; }
+  .insights-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .insights-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .15rem .45rem; border-radius: 999px; border: 1px solid var(--soft); font-size: .76rem; }
+  .insights-badge.sev-high, .insights-badge.sev-exceptional { border-color: #b00020; color: #b00020; }
+  .insights-badge.sev-elevated { border-color: #ad6b00; color: #ad6b00; }
+  .insights-badge.sev-normal { border-color: #0a7d2d; color: #0a7d2d; }
+  .insights-hourly-wrap { overflow-x: auto; }
+  .insights-hourly-svg { min-width: 620px; width: 100%; height: 220px; display: block; }
+  .insights-hourly-legend { display: flex; flex-wrap: wrap; gap: .45rem .9rem; margin-top: .3rem; font-size: .8rem; color: var(--muted); }
+  .insights-hourly-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+  .insights-hourly-legend-line { width: 1.2rem; height: 0; border-top: 3px solid transparent; display: inline-block; }
   .insights-table-wrap { overflow: auto; margin-top: .65rem; }
   .insights-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
   .insights-table tbody tr { cursor: pointer; }
@@ -718,6 +734,7 @@
         <div class="insights-grid">
           <div class="insights-block">
             <div class="insights-chart-toolbar">
+              <div id="insightsStackedHydrationStatus" class="insights-hydration-status" hidden></div>
               <div id="insightsStackedRange" class="insights-chart-range"></div>
             </div>
             <div class="insights-graph-shell">
@@ -728,6 +745,10 @@
               <div id="insightsStacked" class="insights-stacked-wrap"></div>
             </div>
             <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
+            <div class="insights-subtypes" style="margin-top:.5rem;">
+              <h3 id="insightsHourlyTitle" style="margin:0 0 .45rem; font-size:.92rem;">Cumulative Through Day (UTC)</h3>
+              <div id="insightsHourly" class="insights-hourly-wrap"></div>
+            </div>
           </div>
           <div class="insights-block">
             <h3 id="insightsCategoryTitle" style="margin:0 0 .45rem; font-size:.92rem;">Category Mix</h3>
@@ -735,6 +756,20 @@
             <div class="insights-subtypes">
               <h3 id="insightsSubtypeTitle" style="margin:0 0 .45rem; font-size:.92rem;">Military Mission Mix</h3>
               <div id="insightsSubtypes" class="insights-mix"></div>
+            </div>
+            <div class="insights-subtypes">
+              <h3 id="insightsEnhancementsTitle" style="margin:0 0 .45rem; font-size:.92rem;">Advanced Insights</h3>
+              <div id="insightsConfidence" class="insights-mini"></div>
+              <div id="insightsWeekday" class="insights-mini" style="margin-top:.45rem;"></div>
+              <div id="insightsAlerts" class="insights-mini" style="margin-top:.45rem;"></div>
+            </div>
+            <div class="insights-subtypes">
+            <h3 id="insightsFlowTitle" style="margin:0 0 .45rem; font-size:.92rem;">Directional Flow</h3>
+            <div id="insightsFlow" class="insights-mini"></div>
+            <h3 id="insightsFamilyTitle" style="margin:.65rem 0 .45rem; font-size:.92rem;">Aircraft Family Trends</h3>
+            <div id="insightsFamilies" class="insights-mini"></div>
+            <h3 id="insightsOutlierTitle" style="margin:.65rem 0 .45rem; font-size:.92rem;">Outlier Spotlight</h3>
+            <div id="insightsOutliers" class="insights-mini"></div>
             </div>
           </div>
         </div>
@@ -1049,12 +1084,76 @@
   let appVersionEl, footerYearEl;
   let historyButtonEl, historyMenuEl, historyControlEl;
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
-  let insightsStackedPrevBtn, insightsStackedNextBtn, insightsStackedRangeEl;
+  let insightsConfidenceEl, insightsWeekdayEl, insightsAlertsEl, insightsHourlyEl, insightsFlowEl, insightsFamiliesEl, insightsOutliersEl;
+  let insightsStackedPrevBtn, insightsStackedNextBtn, insightsStackedRangeEl, insightsStackedHydrationStatusEl;
   const insightsCache = { key: '', data: null };
+  const insightsCacheByReqKey = new Map();
+  const insightsFetchPromises = new Map();
+  const insightsResolvedSelectedByDate = new Map();
   let insightsLastFocus = null;
   let insightsSelectedDateKey = null;
   let insightsWindowStart = null;
+  let insightsRefreshTimer = null;
+  let insightsBaseLoadedDays = 0;
+  let insightsPendingWindowShiftPages = 0;
+  const INSIGHTS_CACHE_LIMIT = 60;
   const INSIGHTS_WINDOW_DAYS = 14;
+  const INSIGHTS_DEBUG_LOG = !!(cfg && cfg.insightsDebug === true);
+  let insightsPerfSeq = 0;
+  const insightsPerfByDate = new Map();
+
+  function insightsNowMs(){
+    try {
+      if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') return performance.now();
+    } catch (e) { /* ignore */ }
+    return Date.now();
+  }
+
+  function insightsLog(eventName, data){
+    if (!INSIGHTS_DEBUG_LOG || typeof console === 'undefined' || !console.log) return;
+    const payload = data && typeof data === 'object' ? data : {};
+    console.log(`[insights:${eventName}]`, payload);
+  }
+
+  function beginInsightsPerf(dateKey, reason, extra){
+    const key = String(dateKey || 'unknown');
+    const token = {
+      id: ++insightsPerfSeq,
+      dateKey: key,
+      reason: String(reason || 'unknown'),
+      t0: insightsNowMs(),
+      renderMs: null,
+      cumulativeMs: null
+    };
+    insightsPerfByDate.set(key, token);
+    insightsLog('select', { id: token.id, date: key, reason: token.reason, ...(extra || {}) });
+    return token;
+  }
+
+  function currentInsightsPerf(dateKey){
+    return insightsPerfByDate.get(String(dateKey || '')) || null;
+  }
+
+  function payloadEnhancementDateMatches(payload, dateKey){
+    const want = String(dateKey || '');
+    if (!want) return false;
+    const got = String(payload?.selected?.date || payload?.selected_date || '');
+    return got === want;
+  }
+
+  function markInsightsRenderComplete(dateKey, details){
+    const token = currentInsightsPerf(dateKey);
+    if (!token || token.renderMs != null) return;
+    token.renderMs = Math.round((insightsNowMs() - token.t0) * 10) / 10;
+    insightsLog('render-complete', { id: token.id, date: token.dateKey, ms: token.renderMs, ...(details || {}) });
+  }
+
+  function markInsightsCumulativeComplete(dateKey, details){
+    const token = currentInsightsPerf(dateKey);
+    if (!token || token.cumulativeMs != null) return;
+    token.cumulativeMs = Math.round((insightsNowMs() - token.t0) * 10) / 10;
+    insightsLog('cumulative-complete', { id: token.id, date: token.dateKey, ms: token.cumulativeMs, ...(details || {}) });
+  }
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -1412,6 +1511,7 @@ ${messagesDesc}
       if (heading) heading.textContent = isPlaneAlertMode()
         ? t('header.planeAlertTitle', {}, 'Plane-Alert')
         : t('header.planefenceTitle', {}, 'Planefence');
+      updateInsightsTriggerButton();
       const body = document.body;
       if (body) {
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
@@ -1438,17 +1538,92 @@ ${messagesDesc}
         const qs = params.toString();
         return qs ? `${base}?${qs}` : base;
       }
-    function buildInsightsUrl(mode, dateKey){
+    function insightsFullDays(){
+      return 30;
+    }
+    function insightsFastDays(){
+      return Math.min(14, insightsFullDays());
+    }
+    function buildInsightsUrl(mode, dateKey, daysOverride){
       const base = './cgi/insights.sh';
       const params = new URLSearchParams();
       params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
       params.set('date', dateKey || 'today');
-      params.set('days', String(Math.max(30, historyDayLimit())));
+      const days = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+      params.set('days', String(days));
       params.set('ts', String(Date.now()));
       return `${base}?${params.toString()}`;
     }
-    function insightsRequestKey(mode, dateKey){
-      return `${mode || dataMode}:${dateKey || 'today'}:${Math.max(30, historyDayLimit())}`;
+    function insightsRequestKey(mode, dateKey, daysOverride){
+      const days = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+      return `${mode || dataMode}:${dateKey || 'today'}:${days}`;
+    }
+    function getCachedInsights(reqKey){
+      return insightsCacheByReqKey.get(reqKey) || null;
+    }
+    function rememberInsightsCache(reqKey, data){
+      if (!reqKey || !data) return;
+      if (insightsCacheByReqKey.has(reqKey)) insightsCacheByReqKey.delete(reqKey);
+      insightsCacheByReqKey.set(reqKey, data);
+      while (insightsCacheByReqKey.size > INSIGHTS_CACHE_LIMIT) {
+        const oldest = insightsCacheByReqKey.keys().next();
+        if (oldest && !oldest.done) insightsCacheByReqKey.delete(oldest.value);
+        else break;
+      }
+    }
+    function seedSelectedDateCacheAlias(mode, requestedDays, payload){
+      const selectedDate = String(payload?.selected?.date || payload?.selected_date || '');
+      if (!/^\d{6}$/.test(selectedDate)) return;
+      const aliasKey = insightsRequestKey(mode, selectedDate, requestedDays);
+      rememberInsightsCache(aliasKey, payload);
+      insightsLog('seed-selected-alias', { selectedDate, requestedDays, aliasKey });
+    }
+    function scheduleInsightsRefresh(generation, dateKey, daysOverride){
+      if (insightsRefreshTimer) {
+        clearTimeout(insightsRefreshTimer);
+        insightsRefreshTimer = null;
+      }
+      insightsRefreshTimer = setTimeout(() => {
+        insightsRefreshTimer = null;
+        if (generation !== modeGeneration) return;
+        const refreshDays = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+        insightsLog('schedule-refresh', { date: dateKey, days: refreshDays, generation });
+        loadInsights(generation, { dateKey, background: true, days: refreshDays });
+      }, 80);
+    }
+    function prefetchInsightsDate(generation, dateKey){
+      if (!/^\d{6}$/.test(String(dateKey || ''))) return;
+      const prefetchDays = isDateInRecentWindow(dateKey, insightsFastDays()) ? insightsFastDays() : insightsFullDays();
+      const reqKey = insightsRequestKey(dataMode, dateKey, prefetchDays);
+      if (insightsCache.key === reqKey || getCachedInsights(reqKey) || insightsFetchPromises.has(reqKey)) return;
+      const modeForRun = dataMode;
+      const prefetchPromise = (async () => {
+        const resp = await fetch(buildInsightsUrl(modeForRun, dateKey, prefetchDays), { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`Insights endpoint failed (${resp.status})`);
+        const payload = await resp.json();
+        if (payload && payload.error) throw new Error(String(payload.error));
+        return payload;
+      })();
+      insightsFetchPromises.set(reqKey, prefetchPromise);
+      prefetchPromise
+        .then((data) => {
+          insightsFetchPromises.delete(reqKey);
+          if (generation !== modeGeneration) return;
+          rememberInsightsCache(reqKey, data);
+        })
+        .catch((e) => {
+          insightsFetchPromises.delete(reqKey);
+          console.warn('insights prefetch failed', dateKey, e);
+        });
+    }
+    function prefetchAdjacentInsightsDates(generation, centerDateKey){
+      const centerDate = parseDateKeyUtc(centerDateKey);
+      if (!centerDate) return;
+      for (const delta of [-1, 1]) {
+        const d = new Date(centerDate);
+        d.setUTCDate(centerDate.getUTCDate() + delta);
+        prefetchInsightsDate(generation, dateKeyFromDateUtc(d));
+      }
     }
     function currentStreamUrl(){
       return buildStreamUrl(dataMode);
@@ -1824,7 +1999,7 @@ ${messagesDesc}
     }
     if (heatmapBtn) { heatmapBtn.textContent = t('actions.heatmap', {}, 'Heatmap'); heatmapBtn.title = t('actions.heatmap.title', {}, 'Show station heatmap'); }
     if (stationInfoBtn) { stationInfoBtn.textContent = t('actions.stationInfo', {}, 'Station Info'); stationInfoBtn.title = t('actions.stationInfo.title', {}, 'Show station information'); }
-    if (insightsBtn) { insightsBtn.textContent = t('actions.insights', {}, 'Insights'); insightsBtn.title = t('actions.insights.title', {}, 'Show traffic insights'); }
+    updateInsightsTriggerButton();
     if (reloadBtn) { reloadBtn.textContent = t('actions.reload', {}, 'Update'); reloadBtn.title = t('actions.reload.title', {}, 'Update data'); }
     if (newUpdatesBtn) { newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available'); newUpdatesBtn.title = t('actions.newUpdates.title', {}, 'Show new updates'); }
     if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
@@ -1849,6 +2024,17 @@ ${messagesDesc}
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
     updatePrivacyBannerTexts();
+  }
+
+  function updateInsightsTriggerButton(){
+    if (!insightsBtn) return;
+    const isPa = isPlaneAlertMode();
+    insightsBtn.textContent = isPa
+      ? t('insights.button.pa', {}, 'Insights PA')
+      : t('insights.button.pf', {}, 'Insights PF');
+    insightsBtn.title = isPa
+      ? t('insights.button.pa.title', {}, 'Show Plane-Alert traffic insights')
+      : t('insights.button.pf.title', {}, 'Show Planefence traffic insights');
   }
 
   function setupPrivacyBanner(){
@@ -2919,6 +3105,11 @@ ${messagesDesc}
   function updateInsightsStaticText(){
     const categoryTitleEl = document.getElementById('insightsCategoryTitle');
     const subtypeTitleEl = document.getElementById('insightsSubtypeTitle');
+    const enhancementsTitleEl = document.getElementById('insightsEnhancementsTitle');
+    const hourlyTitleEl = document.getElementById('insightsHourlyTitle');
+    const flowTitleEl = document.getElementById('insightsFlowTitle');
+    const familyTitleEl = document.getElementById('insightsFamilyTitle');
+    const outlierTitleEl = document.getElementById('insightsOutlierTitle');
     const headDateEl = document.getElementById('insightsHeadDate');
     const headTotalEl = document.getElementById('insightsHeadTotal');
     const headMilitaryEl = document.getElementById('insightsHeadMilitary');
@@ -2936,6 +3127,11 @@ ${messagesDesc}
     if (insightsSubtitleEl && !insightsCache.data) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
     if (categoryTitleEl) categoryTitleEl.textContent = insightsText('categoryMixTitle', {}, 'Category Mix');
     if (subtypeTitleEl) subtypeTitleEl.textContent = insightsText('subtypeMixTitle', {}, 'Military Mission Mix');
+    if (enhancementsTitleEl) enhancementsTitleEl.textContent = insightsText('enhancements.title', {}, 'Advanced Insights');
+    if (hourlyTitleEl) hourlyTitleEl.textContent = insightsText('enhancements.hourly.title', {}, 'Cumulative Through Day (UTC)');
+    if (flowTitleEl) flowTitleEl.textContent = insightsText('enhancements.flow.title', {}, 'Directional Flow');
+    if (familyTitleEl) familyTitleEl.textContent = insightsText('enhancements.family.title', {}, 'Aircraft Family Trends');
+    if (outlierTitleEl) outlierTitleEl.textContent = insightsText('enhancements.outlier.title', {}, 'Outlier Spotlight');
     if (headDateEl) headDateEl.textContent = insightsText('table.date', {}, 'Date');
     if (headTotalEl) headTotalEl.textContent = insightsText('table.total', {}, 'Total');
     if (headMilitaryEl) headMilitaryEl.textContent = insightsText('table.military', {}, 'Military');
@@ -2959,9 +3155,31 @@ ${messagesDesc}
     insightsMixEl = insightsMixEl || document.getElementById('insightsMix');
     insightsSubtypesEl = insightsSubtypesEl || document.getElementById('insightsSubtypes');
     insightsTableBodyEl = insightsTableBodyEl || document.getElementById('insightsTableBody');
+    insightsConfidenceEl = insightsConfidenceEl || document.getElementById('insightsConfidence');
+    insightsWeekdayEl = insightsWeekdayEl || document.getElementById('insightsWeekday');
+    insightsAlertsEl = insightsAlertsEl || document.getElementById('insightsAlerts');
+    insightsHourlyEl = insightsHourlyEl || document.getElementById('insightsHourly');
+    insightsFlowEl = insightsFlowEl || document.getElementById('insightsFlow');
+    insightsFamiliesEl = insightsFamiliesEl || document.getElementById('insightsFamilies');
+    insightsOutliersEl = insightsOutliersEl || document.getElementById('insightsOutliers');
     insightsStackedPrevBtn = insightsStackedPrevBtn || document.getElementById('insightsStackedPrev');
     insightsStackedNextBtn = insightsStackedNextBtn || document.getElementById('insightsStackedNext');
     insightsStackedRangeEl = insightsStackedRangeEl || document.getElementById('insightsStackedRange');
+    insightsStackedHydrationStatusEl = insightsStackedHydrationStatusEl || document.getElementById('insightsStackedHydrationStatus');
+  }
+
+  function updateInsightsHydrationStatus(show){
+    if (!insightsStackedHydrationStatusEl) return;
+    if (show) {
+      const mobile = !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+      insightsStackedHydrationStatusEl.hidden = false;
+      insightsStackedHydrationStatusEl.textContent = mobile
+        ? insightsText('loadingShort', {}, 'Loading...')
+        : insightsText('loadingAdditionalData', {}, 'Loading additional data...');
+      return;
+    }
+    insightsStackedHydrationStatusEl.hidden = true;
+    insightsStackedHydrationStatusEl.textContent = '';
   }
 
   function parseDateKeyUtc(key){
@@ -2971,6 +3189,17 @@ ${messagesDesc}
     const d = Number(String(key).slice(4,6));
     if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
     return new Date(Date.UTC(2000 + y, m - 1, d));
+  }
+
+  function isDateInRecentWindow(dateKey, days){
+    const n = Number(days);
+    if (!Number.isFinite(n) || n < 1) return false;
+    const d = parseDateKeyUtc(dateKey);
+    if (!d) return false;
+    const today = utcToday();
+    const earliest = new Date(today);
+    earliest.setUTCDate(today.getUTCDate() - (Math.floor(n) - 1));
+    return d >= earliest && d <= today;
   }
 
   function dateKeyFromDateUtc(d){
@@ -3153,20 +3382,41 @@ ${messagesDesc}
       other: '#6a5acd'
     };
 
+    const partKeys = ['military','government','airline','private_jet','general_aviation','other'];
+    const partLabels = {
+      military: insightsText('category.military', {}, 'Military'),
+      government: insightsText('category.government', {}, 'Government'),
+      airline: insightsText('category.airline', {}, 'Airline'),
+      private_jet: insightsText('category.private_jet', {}, 'Private Jets'),
+      general_aviation: insightsText('category.general_aviation', {}, 'General Aviation'),
+      other: insightsText('category.other', {}, 'Other')
+    };
+
     const bars = series.map((d, i)=> {
       const x = padL + (i * barW);
-      const parts = ['military','government','airline','private_jet','general_aviation','other'];
       let y = padT + innerH;
       const rects = [];
-      for (const k of parts) {
+      for (const k of partKeys) {
         const v = Number(d?._empty ? 0 : d[k]) || 0;
         const h = (v / scaleMax) * innerH;
         y -= h;
-        rects.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${Math.max(0.1, h).toFixed(2)}" fill="${palette[k]}"></rect>`);
+        if (v > 0) {
+          rects.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${Math.max(0.1, h).toFixed(2)}" fill="${palette[k]}" stroke="var(--bg)" stroke-width="0.35"></rect>`);
+        }
       }
       const active = !d?._empty && d.date === selectedDate;
       const marker = active ? `<rect x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="none" stroke="var(--accent)" stroke-width="2"></rect>` : '';
-      const hit = d?._empty ? '' : `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"></rect>`;
+      const total = Number(d?._empty ? 0 : d.total) || 0;
+      const tooltip = d?._empty ? '' : [
+        fmtDateKeyHuman(d.date),
+        `${insightsText('table.total', {}, 'Total')}: ${numberFmt0.format(total)}`,
+        ...partKeys.map((k)=> {
+          const count = Number(d[k]) || 0;
+          const pct = total > 0 ? ((count * 100) / total) : 0;
+          return `${partLabels[k]}: ${numberFmt0.format(count)} (${pct.toFixed(1)}%)`;
+        })
+      ].join('\n');
+      const hit = d?._empty ? '' : `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"><title>${escapeHtml(tooltip)}</title></rect>`;
       return `${rects.join('')}${marker}${hit}`;
     }).join('');
 
@@ -3257,38 +3507,187 @@ ${messagesDesc}
     };
   }
 
+  function normalizeSelectedInsights(data, selectedDate){
+    const series = Array.isArray(data?.series) ? data.series : [];
+    const fromSeries = series.find((s)=> s && s.date === selectedDate);
+    const fallback = data?.selected || series[series.length - 1] || {};
+    const base = fromSeries || fallback;
+    const categories = base.categories || {
+      military: Number(base.military) || 0,
+      government: Number(base.government) || 0,
+      airline: Number(base.airline) || 0,
+      private_jet: Number(base.private_jet) || 0,
+      general_aviation: Number(base.general_aviation) || 0,
+      other: Number(base.other) || 0
+    };
+    const total = Number(base.total) || Object.values(categories).reduce((a, b)=> a + (Number(b) || 0), 0);
+    const shares = base.shares || {
+      military: total > 0 ? (100 * categories.military / total) : 0,
+      government: total > 0 ? (100 * categories.government / total) : 0,
+      airline: total > 0 ? (100 * categories.airline / total) : 0,
+      private_jet: total > 0 ? (100 * categories.private_jet / total) : 0,
+      general_aviation: total > 0 ? (100 * categories.general_aviation / total) : 0,
+      other: total > 0 ? (100 * categories.other / total) : 0
+    };
+    const milTypes = (data?.selected?.date === selectedDate && data?.selected?.military_types)
+      ? data.selected.military_types
+      : (base.military_types || {});
+    return {
+      date: selectedDate,
+      total,
+      categories,
+      shares,
+      military_types: milTypes
+    };
+  }
+
   function selectInsightsDate(dateKey, generation){
     if (!/^\d{6}$/.test(String(dateKey || ''))) return;
     if (insightsSelectedDateKey === dateKey) return;
+    beginInsightsPerf(dateKey, 'user-select', { generation, mode: dataMode });
     insightsSelectedDateKey = dateKey;
     const baseDateKey = effectiveHistoryParam() || 'today';
-    const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
+    const selectedReqKey = insightsRequestKey(dataMode, dateKey, insightsFullDays());
+    const selectedReqKeyFast = insightsRequestKey(dataMode, dateKey, insightsFastDays());
+    const canUseFastSelectedCache = isDateInRecentWindow(dateKey, insightsFastDays());
+    const cachedSelected = getCachedInsights(selectedReqKey) || (canUseFastSelectedCache ? getCachedInsights(selectedReqKeyFast) : null);
+    const cacheKeyUsed = getCachedInsights(selectedReqKey) ? selectedReqKey : selectedReqKeyFast;
+    const cacheMatchesEnhancementDate = cachedSelected ? payloadEnhancementDateMatches(cachedSelected, dateKey) : false;
+    let renderSource = null;
     if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series)) {
-      const idx = insightsCache.data.series.findIndex((s)=> s && s.date === dateKey);
-      if (idx >= 0) {
-        insightsWindowStart = chunkWindowStartForIndex(insightsCache.data.series.length, idx);
+      renderSource = insightsCache.data;
+    } else {
+      const baseCached = getCachedInsights(baseReqKey);
+      if (baseCached && Array.isArray(baseCached.series)) {
+        renderSource = baseCached;
+      } else if (insightsCache.data && Array.isArray(insightsCache.data.series)) {
+        renderSource = insightsCache.data;
+      } else {
+        for (const [, candidate] of insightsCacheByReqKey.entries()) {
+          if (candidate && Array.isArray(candidate.series) && candidate.series.some((s)=> s && s.date === dateKey)) {
+            renderSource = candidate;
+            break;
+          }
+        }
       }
     }
-    if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === dateKey)) {
-      renderInsights({ ...insightsCache.data, selected_date: dateKey });
-      return;
+    if (renderSource && Array.isArray(renderSource.series)) {
+      const idx = renderSource.series.findIndex((s)=> s && s.date === dateKey);
+      if (idx >= 0) {
+        const total = renderSource.series.length;
+        const curStart = clampInsightsWindowStart(total, insightsWindowStart);
+        const curEnd = Math.min(total, curStart + INSIGHTS_WINDOW_DAYS);
+        // Keep current bar range in place when the clicked date is already visible.
+        if (idx < curStart || idx >= curEnd) {
+          insightsWindowStart = chunkWindowStartForIndex(total, idx);
+        }
+        if (cachedSelected && cacheMatchesEnhancementDate) {
+          insightsLog('selected-cache-hit', { date: dateKey, key: cacheKeyUsed, matchesEnhancementDate: true });
+          renderInsights(withBaseSeriesIfAvailable(cachedSelected, dateKey));
+          prefetchAdjacentInsightsDates(generation, dateKey);
+          return;
+        }
+        // Keep the hourly chart/date in a pending state until date-specific enhancements arrive.
+        insightsLog('base-render-source', { date: dateKey, source: 'window/base-cache', seriesLen: renderSource.series.length });
+        renderInsights({ ...renderSource, selected_date: dateKey, _deferEnhancementsDate: true });
+      }
     }
-    loadInsights(generation);
+    prefetchAdjacentInsightsDates(generation, dateKey);
+    if (cachedSelected) {
+      insightsLog('selected-cache-hit', { date: dateKey, key: cacheKeyUsed, matchesEnhancementDate: cacheMatchesEnhancementDate });
+      if (cacheMatchesEnhancementDate) {
+        renderInsights(withBaseSeriesIfAvailable(cachedSelected, dateKey));
+        return;
+      }
+      insightsLog('selected-cache-stale-enhancements', {
+        date: dateKey,
+        key: cacheKeyUsed,
+        payloadDate: String(cachedSelected?.selected?.date || cachedSelected?.selected_date || '')
+      });
+    }
+    insightsLog('selected-cache-miss', { date: dateKey, fullKey: selectedReqKey, fastKey: selectedReqKeyFast, canUseFastSelectedCache });
+    // Refresh enhancement panels for the selected day without blocking chart interactions.
+    const refreshDays = canUseFastSelectedCache ? insightsFastDays() : insightsFullDays();
+    scheduleInsightsRefresh(generation, dateKey, refreshDays);
   }
 
   function shiftInsightsWindow(deltaPages){
     const baseDateKey = effectiveHistoryParam() || 'today';
-    const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
-    if (!(insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.length)) return;
-    const total = insightsCache.data.series.length;
+    const fullDays = insightsFullDays();
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, fullDays);
+    const baseData = (insightsCache.key === baseReqKey && insightsCache.data)
+      ? insightsCache.data
+      : getCachedInsights(baseReqKey);
+    if (!(baseData && Array.isArray(baseData.series) && baseData.series.length)) return;
+    if (insightsCache.key !== baseReqKey) {
+      insightsCache.key = baseReqKey;
+      insightsCache.data = baseData;
+    }
+    const total = baseData.series.length;
+    const likelyHydrationGap = total <= INSIGHTS_WINDOW_DAYS && insightsBaseLoadedDays < fullDays;
+    if (deltaPages < 0 && likelyHydrationGap) {
+      insightsPendingWindowShiftPages += deltaPages;
+      insightsLog('queue-window-shift', {
+        deltaPages,
+        queuedPages: insightsPendingWindowShiftPages,
+        total,
+        baseLoadedDays: insightsBaseLoadedDays,
+        fullDays
+      });
+      loadInsights(modeGeneration, { dateKey: baseDateKey, background: true, days: fullDays });
+      return;
+    }
     const nextStart = clampInsightsWindowStart(total, (insightsWindowStart == null ? defaultInsightsWindowStart(total) : insightsWindowStart) + (deltaPages * INSIGHTS_WINDOW_DAYS));
     insightsWindowStart = nextStart;
-    const end = Math.min(total, insightsWindowStart + INSIGHTS_WINDOW_DAYS);
-    const visible = insightsCache.data.series.slice(insightsWindowStart, end);
-    if (!visible.some((r)=> r && r.date === insightsSelectedDateKey)) {
-      insightsSelectedDateKey = visible.length ? visible[visible.length - 1].date : insightsSelectedDateKey;
+    // Keep selected date sticky while paging the bar window; user must explicitly click a date to change selection.
+    const selectedDate = String(
+      insightsSelectedDateKey
+      || baseData?.selected_date
+      || baseData?.selected?.date
+      || (Array.isArray(baseData?.series) && baseData.series.length ? (baseData.series[baseData.series.length - 1]?.date || '') : '')
+    );
+    if (/^\d{6}$/.test(selectedDate)) insightsSelectedDateKey = selectedDate;
+    const resolvedSelected = selectedDate ? insightsResolvedSelectedByDate.get(selectedDate) : null;
+    if (resolvedSelected) {
+      // Preserve the previously resolved selected-day enhancement context while only shifting the visible bar window.
+      renderInsights({ ...resolvedSelected, series: baseData.series, selected_date: selectedDate, _deferEnhancementsDate: false });
+      return;
     }
-    renderInsights({ ...insightsCache.data, selected_date: insightsSelectedDateKey });
+    renderInsights({ ...baseData, selected_date: selectedDate });
+  }
+
+  function applyQueuedWindowShiftIfReady(seriesLen, requestedDays, fullDays){
+    if (insightsPendingWindowShiftPages === 0) return;
+    const n = Number(seriesLen) || 0;
+    if (n <= INSIGHTS_WINDOW_DAYS) return;
+    if (!Number.isFinite(Number(requestedDays)) || Number(requestedDays) < Number(fullDays)) return;
+    const queued = insightsPendingWindowShiftPages;
+    insightsPendingWindowShiftPages = 0;
+    const curStart = clampInsightsWindowStart(n, insightsWindowStart);
+    insightsWindowStart = clampInsightsWindowStart(n, curStart + (queued * INSIGHTS_WINDOW_DAYS));
+    insightsLog('apply-queued-window-shift', {
+      queuedPages: queued,
+      seriesLen: n,
+      newWindowStart: insightsWindowStart,
+      requestedDays
+    });
+  }
+
+  function getBaseInsightsSeries(){
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
+    const baseData = (insightsCache.key === baseReqKey && insightsCache.data)
+      ? insightsCache.data
+      : getCachedInsights(baseReqKey);
+    if (baseData && Array.isArray(baseData.series) && baseData.series.length) return baseData.series;
+    return null;
+  }
+
+  function withBaseSeriesIfAvailable(payload, selectedDate){
+    const baseSeries = getBaseInsightsSeries();
+    if (baseSeries) return { ...payload, series: baseSeries, selected_date: selectedDate };
+    return { ...payload, selected_date: selectedDate };
   }
 
   function bindInsightsDateInteractions(generation){
@@ -3486,6 +3885,158 @@ ${messagesDesc}
     insightsBulletsWrapEl.innerHTML = `<ul class="insights-bullets">${bullets.map((b)=> `<li>${b}</li>`).join('')}</ul>`;
   }
 
+  function buildHourlyCumulativeSvg(profile, selectedDateKey){
+    const selected = Array.isArray(profile?.cumulative_selected) ? profile.cumulative_selected : [];
+    const baseline = Array.isArray(profile?.cumulative_baseline_median) ? profile.cumulative_baseline_median : [];
+    if (!selected.length || !baseline.length) {
+      return `<div class="insights-muted">${escapeHtml(insightsText('empty.trend', {}, 'No trend data available.'))}</div>`;
+    }
+    const width = 760;
+    const height = 224;
+    const padL = 40;
+    const padR = 10;
+    const padT = 14;
+    const padB = 42;
+    const innerW = width - padL - padR;
+    const innerH = height - padT - padB;
+    const maxY = Math.max(...selected, ...baseline, 1);
+    const scaleMax = niceAxisMax(maxY);
+    const toY = (v)=> padT + innerH - ((Math.max(0, Number(v) || 0) / scaleMax) * innerH);
+    const dx = innerW / 23;
+
+    function pathForSeries(vals, maxX){
+      const maxFinite = Number.isFinite(maxX) ? Math.max(0, Math.min(23, maxX)) : 23;
+      const fullIdx = Math.floor(maxFinite);
+      const points = [];
+      for (let i = 0; i <= fullIdx && i < vals.length; i += 1) {
+        points.push({ x: i, y: Number(vals[i]) || 0 });
+      }
+      if (fullIdx < 23 && maxFinite > fullIdx && fullIdx < vals.length) {
+        points.push({ x: maxFinite, y: Number(vals[fullIdx]) || 0 });
+      }
+      if (!points.length) {
+        points.push({ x: 0, y: 0 });
+      }
+      return points.map((p, idx)=> `${idx ? 'L' : 'M'}${(padL + (dx * p.x)).toFixed(2)} ${toY(p.y).toFixed(2)}`).join(' ');
+    }
+
+    const now = new Date();
+    const nowKey = toYYMMDD(utcToday());
+    const isTodaySelection = String(selectedDateKey || '') === nowKey;
+    const nowHourUtc = now.getUTCHours();
+    const nowSecWithinHour = (now.getUTCMinutes() * 60) + now.getUTCSeconds();
+    const nowHourFraction = Math.max(0, Math.min(1, nowSecWithinHour / 3600));
+    const nowXHour = Math.min(23, nowHourUtc + nowHourFraction);
+
+    const selPath = pathForSeries(selected, isTodaySelection ? nowXHour : 23);
+    const basePath = baseline.map((v, i)=> `${i ? 'L' : 'M'}${(padL + (dx * i)).toFixed(2)} ${toY(v).toFixed(2)}`).join(' ');
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({ y: padT + innerH - (f * innerH), v: Math.round(scaleMax * f) }));
+    const xTicks = [0, 6, 12, 18, 23].map((h)=> ({ x: padL + (dx * h), l: `${String(h).padStart(2, '0')}:00` }));
+    const dateLabel = fmtDateKeyHuman(selectedDateKey || '');
+    const xAxisLabel = insightsText('enhancements.hourly.xaxis', { date: dateLabel }, `UTC hours on ${dateLabel}`);
+    const nowMarker = isTodaySelection
+      ? `<line x1="${(padL + (dx * nowXHour)).toFixed(2)}" y1="${padT}" x2="${(padL + (dx * nowXHour)).toFixed(2)}" y2="${(padT + innerH)}" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="3 3"></line>
+         <text x="${Math.min(width - padR - 4, (padL + (dx * nowXHour) + 5)).toFixed(2)}" y="${(padT + 11).toFixed(2)}" text-anchor="start" font-size="10" fill="#c2185b">Now (UTC)</text>`
+      : '';
+    const legend = `<div class="insights-hourly-legend" aria-hidden="true">
+      <span class="insights-hourly-legend-item"><span class="insights-hourly-legend-line" style="border-top-color: var(--accent);"></span>${escapeHtml(insightsText('enhancements.hourly.legend.selected', {}, 'Selected day cumulative'))}</span>
+      <span class="insights-hourly-legend-item"><span class="insights-hourly-legend-line" style="border-top-color: #2a7f62; border-top-style: dashed;"></span>${escapeHtml(insightsText('enhancements.hourly.legend.baseline', {}, '7-day median cumulative'))}</span>
+    </div>`;
+    return `<svg class="insights-hourly-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('enhancements.hourly.aria', {}, 'Cumulative hourly comparison'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width - padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL - 6}" y="${(t.y + 4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
+      ${nowMarker}
+      <path d="${basePath}" fill="none" stroke="#2a7f62" stroke-width="2" stroke-dasharray="5 4"></path>
+      <path d="${selPath}" fill="none" stroke="var(--accent)" stroke-width="2.4"></path>
+      ${xTicks.map((t)=> `<text x="${t.x.toFixed(2)}" y="${(height - 18)}" text-anchor="middle" font-size="11" fill="var(--muted)">${t.l}</text>`).join('')}
+      <text x="${(width / 2).toFixed(2)}" y="${(height - 4)}" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(xAxisLabel)}</text>
+    </svg>${legend}`;
+  }
+
+  function renderEnhancements(data){
+    const deferEnhancementsDate = !!data?._deferEnhancementsDate;
+    const enh = data?.enhancements || {};
+    const confidence = enh?.confidence || {};
+    const weekday = enh?.weekday_context || {};
+    const alerts = Array.isArray(enh?.alerts?.active) ? enh.alerts.active : [];
+    const flow = Array.isArray(enh?.directional_flow?.top_routes) ? enh.directional_flow.top_routes : [];
+    const qualifyingFlow = flow.filter((r)=> (Number(r?.count) || 0) >= 4);
+    const families = enh?.family_trends || {};
+    const outliers = enh?.outliers || {};
+    const profile = enh?.hourly_profile || {};
+
+    if (insightsHourlyEl) {
+      if (deferEnhancementsDate) {
+        insightsHourlyEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('enhancements.hourly.pending', {}, 'Updating cumulative profile...'))}</div>`;
+        insightsLog('cumulative-pending', { date: String(data?.selected_date || data?.selected?.date || '') });
+      } else {
+        insightsHourlyEl.innerHTML = buildHourlyCumulativeSvg(profile, data?.selected_date || data?.selected?.date);
+        markInsightsCumulativeComplete(String(data?.selected_date || data?.selected?.date || ''), { deferEnhancementsDate: false });
+      }
+    }
+    const hourlyTitleEl = document.getElementById('insightsHourlyTitle');
+    if (hourlyTitleEl) {
+      if (deferEnhancementsDate) {
+        hourlyTitleEl.textContent = insightsText('enhancements.hourly.title', {}, 'Cumulative Through Day (UTC)');
+      } else {
+        const dayLabel = fmtDateKeyHuman(data?.selected_date || data?.selected?.date || '');
+        hourlyTitleEl.textContent = insightsText('enhancements.hourly.title.withDate', { date: dayLabel }, `Cumulative Through Day (UTC) - ${dayLabel}`);
+      }
+    }
+
+    if (insightsConfidenceEl) {
+      const score = Number(confidence?.score);
+      const band = String(confidence?.band || 'unknown');
+      const counts = confidence?.counts || {};
+      insightsConfidenceEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.confidenceBand', {}, 'Summarizes how trustworthy the day\'s category classifications are. Higher is better and means fewer ambiguous identifications.'))}">${escapeHtml(insightsText('enhancements.confidence.band', {}, 'Confidence'))}</span><span class="mini-val">${escapeHtml(band)}${Number.isFinite(score) ? ` (${score.toFixed(1)}%)` : ''}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.signalQuality', {}, 'Breakdown of classification certainty. H uses strong matches; M uses pattern matches; L is least certain and should be interpreted cautiously.'))}">${escapeHtml(insightsText('enhancements.confidence.breakdown', {}, 'Signal quality'))}</span><span class="mini-val">H ${numberFmt0.format(Number(counts.high) || 0)} / M ${numberFmt0.format(Number(counts.medium) || 0)} / L ${numberFmt0.format(Number(counts.low) || 0)}</span></div>`;
+    }
+
+    if (insightsWeekdayEl) {
+      insightsWeekdayEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayMedian', {}, 'Expected \"typical\" traffic for this weekday from recent history (robust median, less sensitive to outliers).'))}">${escapeHtml(insightsText('enhancements.weekday.median', {}, 'Same-weekday median'))}</span><span class="mini-val">${numberFmt0.format(Number(weekday.median) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayRange', {}, 'Typical spread for this weekday. Values outside this p25-p75 band indicate unusually low/high activity.'))}">${escapeHtml(insightsText('enhancements.weekday.range', {}, 'Normal range (p25-p75)'))}</span><span class="mini-val">${numberFmt0.format(Number(weekday.p25) || 0)} - ${numberFmt0.format(Number(weekday.p75) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayDelta', {}, 'How far the selected day deviates from typical weekday traffic. Positive means busier than normal, negative means quieter.'))}">${escapeHtml(insightsText('enhancements.weekday.delta', {}, 'Delta vs median'))}</span><span class="mini-val">${pctText(weekday.delta_pct_vs_weekday_median)}</span></div>`;
+    }
+
+    if (insightsAlertsEl) {
+      if (!alerts.length) {
+        insightsAlertsEl.innerHTML = `<div class="insights-badges"><span class="insights-badge sev-normal">${escapeHtml(insightsText('enhancements.alerts.none', {}, 'No active alerts'))}</span></div>`;
+      } else {
+        insightsAlertsEl.innerHTML = `<div class="insights-badges">${alerts.map((a)=> `<span class="insights-badge sev-${escapeHtml(String(a.severity || 'normal'))}" title="${escapeHtml(String(a.message || ''))}">${escapeHtml(String(a.id || 'alert'))}</span>`).join('')}</div>`;
+      }
+    }
+
+    if (insightsFlowEl) {
+      const flowTitleEl = document.getElementById('insightsFlowTitle');
+      if (flowTitleEl) flowTitleEl.style.display = qualifyingFlow.length ? '' : 'none';
+      insightsFlowEl.style.display = qualifyingFlow.length ? '' : 'none';
+      if (!qualifyingFlow.length) {
+        insightsFlowEl.innerHTML = '';
+      } else {
+        insightsFlowEl.innerHTML = qualifyingFlow.slice(0, 4).map((r)=> `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.flow', {}, 'Origin-to-destination routes with at least four flights on the selected day. Percentage shows change versus recent daily average for the same route.'))}">${escapeHtml(String(r.route || '--'))}</span><span class="mini-val">${numberFmt0.format(Number(r.count) || 0)} (${pctText(r.delta_pct)})</span></div>`).join('');
+      }
+    }
+
+    if (insightsFamiliesEl) {
+      const selectedCounts = families?.selected_counts || {};
+      const baselineAvg = families?.baseline_daily_avg || {};
+      const labels = { jet: 'Jet', turboprop: 'Turboprop', piston: 'Piston', rotorcraft: 'Rotorcraft', uav: 'UAV', other: 'Other' };
+      insightsFamiliesEl.innerHTML = Object.keys(labels).map((k)=> {
+        const s = Number(selectedCounts[k]) || 0;
+        const b = Number(baselineAvg[k]) || 0;
+        const d = b > 0 ? ((s - b) / b) * 100 : null;
+        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily average. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${b.toFixed(1)} avg (${pctText(d)})</span></div>`;
+      }).join('');
+    }
+
+    if (insightsOutliersEl) {
+      const shift = outliers?.top_category_share_shift || {};
+      insightsOutliersEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeak', {}, 'Hour where traffic peaked on the selected day. Use with the baseline below to gauge spike intensity.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHour', {}, 'Peak UTC hour'))}</span><span class="mini-val">${String(Number(outliers.peak_hour_utc) || 0).padStart(2,'0')}:00 (${numberFmt0.format(Number(outliers.peak_hour_count) || 0)})</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeakBaseline', {}, 'Typical traffic level for that same hour over recent days. Compare directly with peak-hour count to detect surges.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHourBaseline', {}, 'Peak-hour baseline'))}</span><span class="mini-val">${numberFmt0.format(Number(outliers.peak_hour_baseline_median) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierShareShift', {}, 'Category whose traffic share moved the most versus recent baseline composition. Helps identify what changed, not just how much.'))}">${escapeHtml(insightsText('enhancements.outlier.shareShift', {}, 'Largest share shift'))}</span><span class="mini-val">${escapeHtml(String(shift.key || '--'))}: ${pctText(shift.value)}</span></div>`;
+    }
+  }
+
   function renderInsightsTable(data){
     if (!insightsTableBodyEl) return;
     const rows = Array.isArray(data.series) ? data.series.slice().reverse() : [];
@@ -3512,22 +4063,47 @@ ${messagesDesc}
     if (!insightsPanelEl) return;
     if (!data || !Array.isArray(data.series) || !data.series.length) {
       updateInsightsStaticText();
+      updateInsightsHydrationStatus(false);
       if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('empty.subtitle', {}, 'Insights are unavailable for the selected range.');
       if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
       if (insightsStackedEl) insightsStackedEl.innerHTML = '';
       if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
+      if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
+      if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
+      if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
+      if (insightsFlowEl) insightsFlowEl.innerHTML = '';
+      if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
+      if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
       if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
-    const selectedFromSeries = data.series.find((s)=> s.date === selectedDate);
-    const selected = selectedFromSeries || data.selected || data.series[data.series.length - 1];
+    if (/^\d{6}$/.test(String(selectedDate || ''))) {
+      insightsSelectedDateKey = String(selectedDate);
+    }
+    const selected = normalizeSelectedInsights(data, selectedDate);
     const window = computeDisplayWindow(data.series);
+    insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, Number(data?.history_days) || 0, Array.isArray(data?.series) ? data.series.length : 0);
     const selectedContext = deriveSelectedInsightsContext(data, selected);
-    const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext };
+    const enhancementsBaseDate = String(data?.selected?.date || data?.selected_date || '');
+    const deferEnhancementsDate = !!(data?._deferEnhancementsDate || (enhancementsBaseDate && enhancementsBaseDate !== selectedDate));
+    const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext, _deferEnhancementsDate: deferEnhancementsDate };
+    if (!deferEnhancementsDate) {
+      insightsResolvedSelectedByDate.set(String(selectedDate), {
+        ...dataForSelected,
+        selected_date: selectedDate,
+        _deferEnhancementsDate: false
+      });
+      while (insightsResolvedSelectedByDate.size > INSIGHTS_CACHE_LIMIT) {
+        const oldest = insightsResolvedSelectedByDate.keys().next();
+        if (oldest && !oldest.done) insightsResolvedSelectedByDate.delete(oldest.value);
+        else break;
+      }
+    }
     if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
       ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
       : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
@@ -3541,7 +4117,10 @@ ${messagesDesc}
       );
     }
     if (insightsStackedRangeEl) insightsStackedRangeEl.textContent = window.rangeText;
-    if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !window.hasPrev;
+    const awaitingAdditionalData = window.total < insightsFullDays() && insightsBaseLoadedDays < insightsFullDays();
+    updateInsightsHydrationStatus(awaitingAdditionalData);
+    const canExpandPrevAfterHydration = window.total <= INSIGHTS_WINDOW_DAYS && insightsBaseLoadedDays < insightsFullDays();
+    if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !(window.hasPrev || canExpandPrevAfterHydration);
     if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
     renderInsightsKpis(dataForSelected);
     if (insightsStackedEl) {
@@ -3550,54 +4129,195 @@ ${messagesDesc}
     renderInsightsBullets(dataForSelected);
     renderInsightsMix(dataForSelected);
     renderMilitarySubtypeMix(dataForSelected);
+    renderEnhancements(dataForSelected);
     renderInsightsTable(dataForSelected);
+    markInsightsRenderComplete(selectedDate, {
+      seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
+      windowStart: window.start,
+      windowEnd: window.end,
+      deferEnhancementsDate
+    });
     bindInsightsDateInteractions(modeGeneration);
   }
 
-  async function loadInsights(generation){
+  async function loadInsights(generation, opts = {}){
     ensureInsightsRefs();
     if (!insightsPanelEl) return;
-    const dateKey = effectiveHistoryParam() || 'today';
-    const reqKey = insightsRequestKey(dataMode, dateKey);
-    updateInsightsStaticText();
-    if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
-    if (insightsStackedEl) insightsStackedEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
+    const dateKey = opts.dateKey || insightsSelectedDateKey || effectiveHistoryParam() || 'today';
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const isBaseRequest = dateKey === baseDateKey;
+    const background = !!opts.background;
+    const fullDays = insightsFullDays();
+    const fastDays = insightsFastDays();
+    const requestedDays = Number.isFinite(Number(opts.days))
+      ? Number(opts.days)
+      : (background ? fullDays : fastDays);
+    const reqKey = insightsRequestKey(dataMode, dateKey, requestedDays);
+    const requestStartedAt = insightsNowMs();
+
+    if (!background && !currentInsightsPerf(dateKey)) {
+      beginInsightsPerf(dateKey, 'load-insights', { generation, mode: dataMode, requestedDays, reqKey });
+    }
+
+    insightsLog('load-start', {
+      generation,
+      mode: dataMode,
+      date: dateKey,
+      baseDate: baseDateKey,
+      requestedDays,
+      background,
+      reqKey
+    });
+
+    const scheduleHydration = () => {
+      if (background || !isBaseRequest || requestedDays >= fullDays) return;
+      const fullReqKey = insightsRequestKey(dataMode, dateKey, fullDays);
+      if (insightsCache.key === fullReqKey || getCachedInsights(fullReqKey) || insightsFetchPromises.has(fullReqKey)) return;
+      setTimeout(() => {
+        if (generation !== modeGeneration) return;
+        loadInsights(generation, { dateKey, background: true, days: fullDays });
+      }, 0);
+    };
+
+    if (!background) {
+      updateInsightsStaticText();
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+      if (insightsStackedEl) insightsStackedEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
+    }
 
     if (insightsCache.key === reqKey && insightsCache.data) {
+      insightsLog('cache-hit-active', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
+      seedSelectedDateCacheAlias(dataMode, requestedDays, insightsCache.data);
+      if (isBaseRequest) {
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays);
+        applyQueuedWindowShiftIfReady(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0, requestedDays, fullDays);
+      }
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === selected)) {
-        renderInsights({ ...insightsCache.data, selected_date: selected });
+        if (isBaseRequest) renderInsights({ ...insightsCache.data, selected_date: selected });
+        else renderInsights(withBaseSeriesIfAvailable(insightsCache.data, selected));
       } else {
         insightsWindowStart = defaultInsightsWindowStart(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0);
         renderInsights(insightsCache.data);
       }
+      scheduleHydration();
+      return;
+    }
+
+    const cached = getCachedInsights(reqKey);
+    if (cached) {
+      insightsLog('cache-hit-map', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
+      seedSelectedDateCacheAlias(dataMode, requestedDays, cached);
+      if (isBaseRequest) {
+        insightsCache.key = reqKey;
+        insightsCache.data = cached;
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays);
+        applyQueuedWindowShiftIfReady(Array.isArray(cached.series) ? cached.series.length : 0, requestedDays, fullDays);
+      }
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(cached.series) && cached.series.some((s)=> s && s.date === selected)) {
+        if (isBaseRequest) renderInsights({ ...cached, selected_date: selected });
+        else renderInsights(withBaseSeriesIfAvailable(cached, selected));
+      } else {
+        if (isBaseRequest) {
+          insightsWindowStart = defaultInsightsWindowStart(Array.isArray(cached.series) ? cached.series.length : 0);
+        }
+        renderInsights(cached);
+      }
+      scheduleHydration();
       return;
     }
 
     try {
-      const modeForRun = dataMode;
-      const resp = await fetch(buildInsightsUrl(modeForRun, dateKey), { cache: 'no-store' });
+      let fetchPromise = insightsFetchPromises.get(reqKey);
+      const reusingInflight = !!fetchPromise;
+      if (!fetchPromise) {
+        const modeForRun = dataMode;
+        insightsLog('fetch-start', { date: dateKey, reqKey, requestedDays, background, mode: modeForRun });
+        fetchPromise = (async () => {
+          const resp = await fetch(buildInsightsUrl(modeForRun, dateKey, requestedDays), { cache: 'no-store' });
+          if (!resp.ok) throw new Error(`Insights endpoint failed (${resp.status})`);
+          const payload = await resp.json();
+          if (payload && payload.error) throw new Error(String(payload.error));
+          return payload;
+        })();
+        insightsFetchPromises.set(reqKey, fetchPromise);
+      } else {
+        insightsLog('fetch-reuse-inflight', { date: dateKey, reqKey, requestedDays, background });
+      }
+
+      const data = await fetchPromise;
+      const fetchMs = Math.round((insightsNowMs() - requestStartedAt) * 10) / 10;
+      insightsLog('fetch-complete', {
+        date: dateKey,
+        reqKey,
+        requestedDays,
+        background,
+        reusedInflight: reusingInflight,
+        ms: fetchMs,
+        seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
+        selectedDate: String(data?.selected_date || data?.selected?.date || '')
+      });
+      insightsFetchPromises.delete(reqKey);
       if (generation !== modeGeneration) return;
-      if (!resp.ok) throw new Error(`Insights endpoint failed (${resp.status})`);
-      const data = await resp.json();
-      if (generation !== modeGeneration) return;
-      if (data && data.error) throw new Error(String(data.error));
-      insightsCache.key = reqKey;
-      insightsCache.data = data;
-      insightsWindowStart = defaultInsightsWindowStart(Array.isArray(data.series) ? data.series.length : 0);
+      if (isBaseRequest) {
+        insightsCache.key = reqKey;
+        insightsCache.data = data;
+      }
+      rememberInsightsCache(reqKey, data);
+      seedSelectedDateCacheAlias(dataMode, requestedDays, data);
+      if (isBaseRequest) {
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays, Number(data?.history_days) || 0, Array.isArray(data?.series) ? data.series.length : 0);
+        insightsWindowStart = defaultInsightsWindowStart(Array.isArray(data.series) ? data.series.length : 0);
+        applyQueuedWindowShiftIfReady(Array.isArray(data.series) ? data.series.length : 0, requestedDays, fullDays);
+      }
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(data.series) && data.series.some((s)=> s && s.date === selected)) {
-        renderInsights({ ...data, selected_date: selected });
+        const selectedEnhancementMatch = payloadEnhancementDateMatches(data, selected);
+        if (selectedEnhancementMatch) {
+          if (isBaseRequest) renderInsights({ ...data, selected_date: selected });
+          else renderInsights(withBaseSeriesIfAvailable(data, selected));
+        } else if (background && isBaseRequest) {
+          insightsLog('skip-base-background-render-stale-enhancements', {
+            date: dateKey,
+            reqKey,
+            selectedDate: selected,
+            payloadDate: String(data?.selected?.date || data?.selected_date || '')
+          });
+        } else {
+          renderInsights({ ...data, selected_date: selected, _deferEnhancementsDate: true });
+        }
       } else {
         renderInsights(data);
       }
+      scheduleHydration();
     } catch (e) {
+      insightsFetchPromises.delete(reqKey);
+      insightsLog('fetch-error', {
+        date: dateKey,
+        reqKey,
+        requestedDays,
+        background,
+        ms: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10,
+        error: String(e && e.message ? e.message : e)
+      });
       if (generation !== modeGeneration) return;
+      if (background) {
+        console.warn('background insights refresh failed', e);
+        return;
+      }
       if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('error.subtitle', {}, 'Unable to load analytics right now.');
       if (insightsStackedEl) insightsStackedEl.innerHTML = `<div class="insights-muted">${escapeHtml(String(e && e.message ? e.message : e))}</div>`;
       if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
+      if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
+      if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
+      if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
+      if (insightsFlowEl) insightsFlowEl.innerHTML = '';
+      if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
+      if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
       if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
     }
@@ -5582,6 +6302,12 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       return;
     }
     modeGeneration++;
+    if (insightsRefreshTimer) {
+      clearTimeout(insightsRefreshTimer);
+      insightsRefreshTimer = null;
+    }
+    insightsBaseLoadedDays = 0;
+    insightsPendingWindowShiftPages = 0;
     insightsSelectedDateKey = null;
     resetTableState();
     stopStreamReader();

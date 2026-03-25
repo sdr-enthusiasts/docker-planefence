@@ -15,6 +15,9 @@ if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
     source /usr/share/planefence/persist/planefence.config
 fi
 
+PA_HISTTIME_MIGRATION_CUTOFF_EPOCH=1742929200
+PA_HISTTIME_MIGRATION_TARGET_FILE="/usr/share/planefence/persist/planefence.config"
+
 "${s6wrap[@]}" echo "Initial Planefence check..."
 
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
@@ -62,4 +65,59 @@ if [[ -f "$CANDIDATE_FILE" && ! -f /usr/share/planefence/persist/.internal/.cand
     /scripts/update-pa-candidates.sh "$CANDIDATE_FILE"
     echo "$FIX_VERSION" > /usr/share/planefence/persist/.internal/.candidate_file_updated
 fi
+
+# One-time migration by mtime gate only: for legacy configs older than
+# 2025-03-25 19:00:00 UTC, bump PA_HISTTIME from 14 to 30.
+if [[ -f "$PA_HISTTIME_MIGRATION_TARGET_FILE" ]]; then
+    file_mtime="$(stat -c %Y "$PA_HISTTIME_MIGRATION_TARGET_FILE" 2>/dev/null || printf '0')"
+    pa_histtime_val="$(GET_PARAM base PA_HISTTIME || true)"
+    pa_histtime_val="${pa_histtime_val//[[:space:]]/}"
+    if [[ "$file_mtime" =~ ^[0-9]+$ ]] && (( file_mtime < PA_HISTTIME_MIGRATION_CUTOFF_EPOCH )) && [[ "$pa_histtime_val" == "14" ]]; then
+        log_print INFO "Applying PA_HISTTIME migration (14 -> 30) for legacy planefence.config"
+        sed -i -E 's|^([[:space:]]*(export[[:space:]]+)?)PA_HISTTIME[[:space:]]*=.*$|\1PA_HISTTIME=30|' "$PA_HISTTIME_MIGRATION_TARGET_FILE"
+        touch -d "@$((PA_HISTTIME_MIGRATION_CUTOFF_EPOCH + 1))" "$PA_HISTTIME_MIGRATION_TARGET_FILE" 2>/dev/null || touch "$PA_HISTTIME_MIGRATION_TARGET_FILE" 2>/dev/null || true
+    fi
+fi
+
+hist_days_for_mode() {
+    local section="$1" val
+    val="$(GET_PARAM "$section" HISTTIME || true)"
+    val="${val//[[:space:]]/}"
+    [[ "$val" =~ ^[0-9]+$ ]] || val=14
+    (( val < 1 )) && val=14
+    (( val > 120 )) && val=120
+    printf '%s' "$val"
+}
+
+# Pre-warm historical insights cache in the background to make date switching snappy.
+# We cap prewarm depth to avoid very long startup CPU bursts on large HISTTIME settings.
+if [[ -x /usr/share/planefence/html/cgi/insights.sh ]]; then
+    (
+        sleep 8
+        local_max_days=30
+
+        if ! chk_disabled "${PLANEFENCE:-$PF_PLANEFENCE}"; then
+            pf_days="$(hist_days_for_mode pf)"
+            (( pf_days < local_max_days )) && pf_days=$local_max_days
+            (( pf_days > local_max_days )) && pf_days=$local_max_days
+            for (( day=1; day<pf_days; day++ )); do
+                req_date="$(date -u -d "${day} day ago" +%y%m%d 2>/dev/null || true)"
+                [[ "$req_date" =~ ^[0-9]{6}$ ]] || continue
+                INSIGHTS_RAW=1 /usr/share/planefence/html/cgi/insights.sh "mode=planefence" "date=${req_date}" "days=${pf_days}" >/dev/null 2>&1 || true
+            done
+        fi
+
+        if ! chk_disabled "${PLANEALERT:-$PF_PLANEALERT}"; then
+            pa_days="$(hist_days_for_mode plane-alert)"
+            (( pa_days < local_max_days )) && pa_days=$local_max_days
+            (( pa_days > local_max_days )) && pa_days=$local_max_days
+            for (( day=1; day<pa_days; day++ )); do
+                req_date="$(date -u -d "${day} day ago" +%y%m%d 2>/dev/null || true)"
+                [[ "$req_date" =~ ^[0-9]{6}$ ]] || continue
+                INSIGHTS_RAW=1 /usr/share/planefence/html/cgi/insights.sh "mode=plane-alert" "date=${req_date}" "days=${pa_days}" >/dev/null 2>&1 || true
+            done
+        fi
+    ) &
+fi
+
 "${s6wrap[@]}" echo "Initial Planefence check complete."

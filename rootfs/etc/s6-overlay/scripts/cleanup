@@ -33,6 +33,28 @@ while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; do
 source /usr/share/planefence/persist/planefence.config
 
 OLDERTHAN=${PF_DELETEAFTER:-90}
+
+get_insights_cache_ttl_minutes()
+{
+  local cfg val max_hours minutes
+  max_hours=12
+
+  for cfg in /usr/share/planefence/planefence.conf /usr/share/planefence/plane-alert.conf
+  do
+    [[ -r "$cfg" ]] || continue
+    val="$(awk -F= '/^[[:space:]]*INSIGHTS_HISTORICAL_CACHE_TTL_HOURS[[:space:]]*=/{v=$2; sub(/#.*/, "", v); gsub(/[[:space:]]/, "", v); print v; exit}' "$cfg" 2>/dev/null || true)"
+    if [[ "$val" =~ ^[0-9]+$ ]]; then
+      (( val < 1 )) && val=12
+      (( val > 168 )) && val=168
+      (( val > max_hours )) && max_hours=$val
+    fi
+  done
+
+  minutes=$((max_hours * 60))
+  printf '%s' "$minutes"
+}
+
+INSIGHTS_CACHE_TTL_MINUTES="$(get_insights_cache_ttl_minutes)"
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
 MAXLOGLINES=500
@@ -58,6 +80,8 @@ CLEANUP ()
     find /usr/share/planefence/persist/.internal/*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/*.log -type f ! -newer /tmp/timestamp -delete 2>/dev/null
     find /usr/share/planefence/persist/.internal/dump1090-pf-*.tmp -type f ! -newer /tmp/timestamp -delete 2>/dev/null
+    # Keep Insights historical cache retention aligned with mode config TTL.
+    find /usr/share/planefence/persist/.internal/insights-cache -type f -mmin +"$INSIGHTS_CACHE_TTL_MINUTES" -delete 2>/dev/null
     find /usr/share/planefence/persist/planepix/cache/* -type f -mtime +"$OLDERTHAN" -delete 2>/dev/null
     find /usr/share/planefence/persist/planepix/cache/plane*-screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null

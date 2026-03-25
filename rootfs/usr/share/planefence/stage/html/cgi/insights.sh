@@ -28,6 +28,18 @@ history_days_for_mode() {
   printf '%s' "$val"
 }
 
+historical_cache_ttl_sec_for_mode() {
+  local mode="$1" section val
+  section="pf"
+  [[ "$mode" == "plane-alert" ]] && section="plane-alert"
+  val="$(GET_PARAM "$section" INSIGHTS_HISTORICAL_CACHE_TTL_HOURS || true)"
+  val="${val//[[:space:]]/}"
+  [[ "$val" =~ ^[0-9]+$ ]] || val=12
+  (( val < 1 )) && val=12
+  (( val > 168 )) && val=168
+  printf '%s' "$((val * 3600))"
+}
+
 choose_json_for_date() {
   local mode="$1" req_date="$2" cand
   [[ "$req_date" =~ ^[0-9]{6}$ ]] || { printf ''; return; }
@@ -110,6 +122,27 @@ cache_key="${FILTER_MODE}:${REQUESTED_DATE:-today}:${HISTORY_DAYS}"
 cache_hash="$(printf '%s' "$cache_key" | sha256sum | awk '{print $1}')"
 cache_file="/tmp/insights-cache-${cache_hash}.json"
 cache_ttl_sec=30
+historical_cache_dir="/usr/share/planefence/persist/.internal/insights-cache"
+historical_cache_file="${historical_cache_dir}/${cache_hash}.json"
+historical_cache_ttl_sec="$(historical_cache_ttl_sec_for_mode "$FILTER_MODE")"
+historical_cache_enabled=false
+
+if [[ "$REQUESTED_DATE" =~ ^[0-9]{6}$ && "$REQUESTED_DATE" != "$utc_today" ]]; then
+  historical_cache_enabled=true
+fi
+
+if [[ "$historical_cache_enabled" == true ]]; then
+  mkdir -p "$historical_cache_dir" 2>/dev/null || true
+  if [[ -s "$historical_cache_file" ]]; then
+    now_ts="$(date +%s)"
+    cache_ts="$(stat -c %Y "$historical_cache_file" 2>/dev/null || printf '0')"
+    if [[ "$cache_ts" =~ ^[0-9]+$ ]] && (( now_ts - cache_ts <= historical_cache_ttl_sec )); then
+      printf '%s\n' "$(cat "$historical_cache_file")" > "$cache_file" 2>/dev/null || true
+      cat "$historical_cache_file"
+      exit 0
+    fi
+  fi
+fi
 
 if [[ -s "$cache_file" ]]; then
   now_ts="$(date +%s)"
@@ -302,6 +335,42 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
         (dbcat($r) | test("ga|general aviation|private"; "i"))
         or (typ($r) | starts_any(.; ["C1","C2","C3","C4","BE","PA","P28","P32","SR2","DA4","DA6","RV","AT6","UL","GLID"]))
         or (is_private($r));
+      def confidence_bucket($r; $cat):
+        if $cat == "military" then
+          if is_military_hard($r) then "high"
+          elif is_military_by_patterns($r) then "medium"
+          else "low" end
+        elif $cat == "airline" then
+          if (dbcat($r) | test("airline|commercial|cargo"; "i")) or airline_prefix_hit($r) then "high"
+          elif callsign_airline($r) then "medium"
+          else "low" end
+        elif $cat == "government" then
+          if (dbcat($r) | test("gov|government|state"; "i")) then "high"
+          elif ((text_blob($r)) | test("(^|[^a-z])(government|govt|state|royal flight|president|prime minister|ministry|department|police|customs|border patrol)([^a-z]|$)"; "i")) then "medium"
+          else "low" end
+        elif $cat == "private_jet" then
+          if (dbcat($r) | test("biz|business|corporate|private"; "i")) then "high"
+          elif (typ($r) | starts_any(.; ["C25","C27","C28","C30","C5","C56","C68","C7","CL3","CL6","E35","E45","E50","E55","FA","F2","F9","GL","LJ","H25","PRM","PC24"])) then "medium"
+          else "low" end
+        elif $cat == "general_aviation" then
+          if (dbcat($r) | test("ga|general aviation"; "i")) then "high"
+          elif is_private($r) then "medium"
+          else "low" end
+        else
+          "low"
+        end;
+      def route_pair($r):
+        (($r.route // "") | tostring | ascii_upcase | gsub("[^A-Z0-9\\- ]"; "")) as $rt
+        | ($rt | split("-") | map(gsub("^ +| +$"; "") | select(length >= 3))) as $parts
+        | if ($parts | length) >= 2 then ($parts[0] + "->" + $parts[-1]) else null end;
+      def type_family($r):
+        (typ($r)) as $t
+        | if ($t | starts_any(.; ["MQ","RQ","UAV","DRON"])) then "uav"
+          elif ($t | starts_any(.; ["AH","UH","HH","MH","CH","NH","H47","H60","H53","V22","EC","AS","BK","R44","R66"])) then "rotorcraft"
+          elif ($t | starts_any(.; ["AT","DH","SF3","J31","J32","C208","B190","E120","L4","C46"])) then "turboprop"
+          elif ($t | starts_any(.; ["PA","C1","C2","C3","C4","P28","P32","SR2","DA4","DA6","BE3","BE2","M20","RV","UL"])) then "piston"
+          elif ($t | starts_any(.; ["A","B7","B73","B74","B75","B76","B77","B78","E17","E19","E75","E90","CRJ","C5","C56","C68","C7","CL","E35","E45","E50","E55","FA","F2","F9","GL","LJ","H25","PRM","PC24"])) then "jet"
+          else "other" end;
       def category($r):
         if is_military_hard($r) then "military"
         elif is_airline($r) then "airline"
@@ -341,14 +410,37 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
           {
             date:$date,total:0,military:0,government:0,airline:0,private_jet:0,general_aviation:0,other:0,
             total_cutoff:0,military_cutoff:0,government_cutoff:0,airline_cutoff:0,private_jet_cutoff:0,general_aviation_cutoff:0,other_cutoff:0,
-            military_types:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}
-            ,military_types_cutoff:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}
+            military_types:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0},
+            military_types_cutoff:{tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0},
+            hourly:[range(0;24) | 0],
+            hourly_cutoff:[range(0;24) | 0],
+            route_pairs:{},
+            route_pairs_cutoff:{},
+            type_families:{jet:0,turboprop:0,piston:0,rotorcraft:0,uav:0,other:0},
+            type_families_cutoff:{jet:0,turboprop:0,piston:0,rotorcraft:0,uav:0,other:0},
+            confidence:{high:0,medium:0,low:0},
+            confidence_cutoff:{high:0,medium:0,low:0}
           };
           (category($r)) as $cat
           | (within_cutoff($r)) as $in_cutoff
+          | (row_second_of_day($r)) as $sec
+          | (if $sec == null then null else (($sec / 3600) | floor) end) as $hour
+          | (route_pair($r)) as $route_pair
+          | (type_family($r)) as $family
+          | (confidence_bucket($r; $cat)) as $confidence
           | .total += 1
           | .[$cat] += 1
+          | .type_families[$family] += 1
+          | .confidence[$confidence] += 1
+          | if ($hour != null and $hour >= 0 and $hour < 24) then .hourly[$hour] += 1 else . end
+          | if ($route_pair != null and ($route_pair | length) > 0) then .route_pairs[$route_pair] = ((.route_pairs[$route_pair] // 0) + 1) else . end
           | if $in_cutoff then .total_cutoff += 1 | .[($cat + "_cutoff")] += 1 else . end
+          | if $in_cutoff then
+              .type_families_cutoff[$family] += 1
+              | .confidence_cutoff[$confidence] += 1
+              | if ($hour != null and $hour >= 0 and $hour < 24) then .hourly_cutoff[$hour] += 1 else . end
+              | if ($route_pair != null and ($route_pair | length) > 0) then .route_pairs_cutoff[$route_pair] = ((.route_pairs_cutoff[$route_pair] // 0) + 1) else . end
+            else . end
           | if $cat == "military" then
               (military_role($r)) as $role
               | .military_types[$role] += 1
@@ -383,9 +475,18 @@ payload="$(jq -s \
   def round1($v): if $v == null then null else (($v * 10 | round) / 10) end;
   def share($part; $total): if ($total|tonumber) > 0 then ($part / $total) else 0 end;
   def severity($delta_pct; $z): ((if $delta_pct == null then 0 else ($delta_pct | if . < 0 then -. else . end) end)) as $d | ((if $z == null then 0 else ($z | if . < 0 then -. else . end) end)) as $az | if ($d >= 60 or $az >= 3.5) then "exceptional" elif ($d >= 35 or $az >= 2.5) then "high" elif ($d >= 15 or $az >= 1.5) then "elevated" else "normal" end;
+  def percentile($arr; $p): ($arr | map(select(type=="number")) | sort) as $a | ($a|length) as $n | if $n == 0 then null else $a[((($n - 1) * $p) | round)] end;
   def sub_keys: ["tanker","transport","fighter","helicopter","trainer","patrol","vip","uav","other_military"];
+  def family_keys: ["jet","turboprop","piston","rotorcraft","uav","other"];
   def subtype_sum($arr): reduce sub_keys[] as $k ({tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}; .[$k] = ($arr | map(.military_types[$k] // 0) | add // 0));
   def subtype_share($obj; $mil_total): if ($mil_total|tonumber) <= 0 then {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0} else reduce sub_keys[] as $k ({}; .[$k] = round1((($obj[$k] // 0) / $mil_total) * 100)) end;
+  def families_zero: {jet:0,turboprop:0,piston:0,rotorcraft:0,uav:0,other:0};
+  def confidence_zero: {high:0,medium:0,low:0};
+  def arr24_zero: [range(0;24) | 0];
+  def cum24($arr): reduce range(0;24) as $i ({sum:0,out:[]}; .sum += ($arr[$i] // 0) | .out += [.sum]) | .out;
+  def argmax_index($arr): reduce range(0; ($arr|length)) as $i ({idx:0,val:-1}; if (($arr[$i] // 0) > .val) then {idx:$i,val:($arr[$i] // 0)} else . end) | .idx;
+  def merge_maps($rows; $field): reduce $rows[] as $r ({}; reduce (($r[$field] // {}) | to_entries[]) as $e (. ; .[$e.key] = ((.[$e.key] // 0) + ($e.value // 0))));
+  def top_entries($obj; $n): ($obj | to_entries | sort_by(-(.value // 0)) | .[:$n]);
   def epoch_for_date($d): ("20" + $d[0:2] + "-" + $d[2:4] + "-" + $d[4:6] + "T00:00:00Z" | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime);
   def week_key($d): (epoch_for_date($d) | strftime("%G-W%V"));
   def month_key($d): (epoch_for_date($d) | strftime("%Y-%m"));
@@ -399,6 +500,10 @@ payload="$(jq -s \
   def eff_general_aviation($r; $selected_is_today): (if $selected_is_today then ($r.general_aviation_cutoff // $r.general_aviation // 0) else ($r.general_aviation // 0) end);
   def eff_other($r; $selected_is_today): (if $selected_is_today then ($r.other_cutoff // $r.other // 0) else ($r.other // 0) end);
   def eff_mil_types($r; $selected_is_today): (if $selected_is_today then ($r.military_types_cutoff // $r.military_types // {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}) else ($r.military_types // {tanker:0,transport:0,fighter:0,helicopter:0,trainer:0,patrol:0,vip:0,uav:0,other_military:0}) end);
+  def eff_hourly($r; $selected_is_today): (if $selected_is_today then ($r.hourly_cutoff // $r.hourly // arr24_zero) else ($r.hourly // arr24_zero) end);
+  def eff_families($r; $selected_is_today): (if $selected_is_today then ($r.type_families_cutoff // $r.type_families // families_zero) else ($r.type_families // families_zero) end);
+  def eff_confidence($r; $selected_is_today): (if $selected_is_today then ($r.confidence_cutoff // $r.confidence // confidence_zero) else ($r.confidence // confidence_zero) end);
+  def eff_routes($r; $selected_is_today): (if $selected_is_today then ($r.route_pairs_cutoff // $r.route_pairs // {}) else ($r.route_pairs // {}) end);
 
   (sort_by_date) as $series
   | ($series[-1]) as $latest
@@ -406,7 +511,7 @@ payload="$(jq -s \
   | ($selected_date == $today) as $selected_is_today
   | ($series | map(select(.date == $selected_date)) | .[0]) as $selected
   | ($series | map(select(.date < $selected_date))) as $previous
-  | ($previous | map(eff_total(.; $selected_is_today)) | tail(14)) as $prev7_totals
+  | ($previous | map(eff_total(.; $selected_is_today)) | tail(7)) as $prev7_totals
   | ($previous | map(eff_total(.; $selected_is_today)) | tail(28)) as $prev28_totals
   | (epoch_for_date($selected_date) | gmtime | .[6]) as $sel_wday
   | ($previous | map(select((epoch_for_date(.date) | gmtime | .[6]) == $sel_wday))) as $same_wday
@@ -416,10 +521,41 @@ payload="$(jq -s \
   | ($weekday_totals | median) as $mwd
   | (eff_total($selected; $selected_is_today) | tonumber) as $actual
   | (if $m7 != null then $m7 elif $m28 != null then $m28 elif $mwd != null then $mwd else null end) as $baseline_total
-  | ($previous | tail(14)) as $prev7_rows
+  | ($previous | tail(7)) as $prev7_rows
   | (if ($prev7_rows|length) > 0 then {total: ($prev7_rows | map(eff_total(.; $selected_is_today)) | add), military: ($prev7_rows | map(eff_military(.; $selected_is_today)) | add), government: ($prev7_rows | map(eff_government(.; $selected_is_today)) | add), airline: ($prev7_rows | map(eff_airline(.; $selected_is_today)) | add), private_jet: ($prev7_rows | map(eff_private_jet(.; $selected_is_today)) | add), general_aviation: ($prev7_rows | map(eff_general_aviation(.; $selected_is_today)) | add), other: ($prev7_rows | map(eff_other(.; $selected_is_today)) | add)} else {total:0,military:0,government:0,airline:0,private_jet:0,general_aviation:0,other:0} end) as $prev7_sum
   | (subtype_sum([{"military_types": eff_mil_types($selected; $selected_is_today)}])) as $selected_subtypes
   | (subtype_sum($prev7_rows | map({"military_types": eff_mil_types(.; $selected_is_today)}))) as $prev7_subtypes
+  | (eff_hourly($selected; $selected_is_today)) as $selected_hourly
+  | (if ($prev7_rows|length) > 0 then [range(0;24) as $h | ([$prev7_rows[] | ((.hourly // arr24_zero)[$h] // 0)] | median // 0)] else $selected_hourly end) as $baseline_hourly_median
+  | (if ($prev7_rows|length) > 0 then [range(0;24) as $h | ([$prev7_rows[] | ((.hourly // arr24_zero)[$h] // 0)] | percentile(.; 0.25) // 0)] else $selected_hourly end) as $baseline_hourly_p25
+  | (if ($prev7_rows|length) > 0 then [range(0;24) as $h | ([$prev7_rows[] | ((.hourly // arr24_zero)[$h] // 0)] | percentile(.; 0.75) // 0)] else $selected_hourly end) as $baseline_hourly_p75
+  | (eff_families($selected; $selected_is_today)) as $selected_families
+  | (if ($prev7_rows|length) > 0 then reduce family_keys[] as $k (families_zero; .[$k] = (($prev7_rows | map(eff_families(.; $selected_is_today)[$k] // 0) | add // 0) / ($prev7_rows|length))) else families_zero end) as $baseline_families_avg
+  | (eff_confidence($selected; $selected_is_today)) as $selected_confidence
+  | (($selected_confidence.high + $selected_confidence.medium + $selected_confidence.low) // 0) as $confidence_total
+  | (if $confidence_total > 0 then round1((((($selected_confidence.high // 0) * 1.0) + (($selected_confidence.medium // 0) * 0.6) + (($selected_confidence.low // 0) * 0.25)) * 100) / $confidence_total) else null end) as $confidence_score
+  | (merge_maps($prev7_rows; "route_pairs")) as $prev7_route_sum
+  | (top_entries(eff_routes($selected; $selected_is_today); 5) | map({route: .key, count: (.value // 0), baseline_daily_avg: (if ($prev7_rows|length) > 0 then round1((($prev7_route_sum[.key] // 0) / ($prev7_rows|length)) ) else 0 end), delta_pct: (if ($prev7_rows|length) > 0 then round1(pct((.value // 0); (($prev7_route_sum[.key] // 0) / ($prev7_rows|length)))) else null end)})) as $route_flow
+  | ({
+      military: round1((share(eff_military($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.military; $prev7_sum.total) * 100)),
+      government: round1((share(eff_government($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.government; $prev7_sum.total) * 100)),
+      airline: round1((share(eff_airline($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.airline; $prev7_sum.total) * 100)),
+      private_jet: round1((share(eff_private_jet($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.private_jet; $prev7_sum.total) * 100)),
+      general_aviation: round1((share(eff_general_aviation($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.general_aviation; $prev7_sum.total) * 100)),
+      other: round1((share(eff_other($selected; $selected_is_today); $actual) * 100) - (share($prev7_sum.other; $prev7_sum.total) * 100))
+    }) as $category_share_shift
+  | (($category_share_shift | to_entries | sort_by(((.value // 0) | if . < 0 then -. else . end)) | reverse | .[0])) as $top_share_shift
+  | (argmax_index($selected_hourly)) as $peak_hour
+  | (($selected_hourly[$peak_hour] // 0)) as $peak_hour_count
+  | (($baseline_hourly_median[$peak_hour] // 0)) as $peak_hour_baseline
+  | ([
+      (if (round1(pct($actual; $baseline_total)) // 0) >= 35 then {id:"total_spike", severity:"high", message:"Daily total is >=35% above baseline."} else empty end),
+      (if (round1(share(eff_military($selected; $selected_is_today); $actual) * 100) // 0) >= 45 then {id:"mil_share_high", severity:"elevated", message:"Military share is above 45%."} else empty end),
+      (if ($peak_hour_count >= (($peak_hour_baseline * 1.8) + 6)) then {id:"hourly_spike", severity:"elevated", message:"Peak hour traffic is sharply above normal."} else empty end),
+      (if (($route_flow[0].delta_pct // 0) >= 120 and ($route_flow[0].count // 0) >= 4) then {id:"route_surge", severity:"elevated", message:"Top route pair surged above its recent average."} else empty end)
+    ]) as $alerts
+  | (percentile($weekday_totals; 0.25)) as $weekday_p25
+  | (percentile($weekday_totals; 0.75)) as $weekday_p75
   | ($series | map(. + { key: week_key(.date) }) | group_by(.key) | rollup_group(.)) as $weekly_rollup
   | ($series | map(. + { key: month_key(.date) }) | group_by(.key) | rollup_group(.)) as $monthly_rollup
   | {
@@ -433,12 +569,18 @@ payload="$(jq -s \
         categories: {military: eff_military($selected; $selected_is_today), government: eff_government($selected; $selected_is_today), airline: eff_airline($selected; $selected_is_today), private_jet: eff_private_jet($selected; $selected_is_today), general_aviation: eff_general_aviation($selected; $selected_is_today), other: eff_other($selected; $selected_is_today)},
         shares: {military: round1(share(eff_military($selected; $selected_is_today); $actual) * 100), government: round1(share(eff_government($selected; $selected_is_today); $actual) * 100), airline: round1(share(eff_airline($selected; $selected_is_today); $actual) * 100), private_jet: round1(share(eff_private_jet($selected; $selected_is_today); $actual) * 100), general_aviation: round1(share(eff_general_aviation($selected; $selected_is_today); $actual) * 100), other: round1(share(eff_other($selected; $selected_is_today); $actual) * 100)},
         military_types: $selected_subtypes,
-        military_type_shares: subtype_share($selected_subtypes; (eff_military($selected; $selected_is_today) // 0))
+        military_type_shares: subtype_share($selected_subtypes; (eff_military($selected; $selected_is_today) // 0)),
+        hourly: $selected_hourly,
+        type_families: $selected_families,
+        confidence: $selected_confidence,
+        routes_top: $route_flow
       },
       baselines: {
         previous_7d_median_total: $m7,
         previous_28d_median_total: $m28,
         same_weekday_median_total: $mwd,
+        same_weekday_p25_total: $weekday_p25,
+        same_weekday_p75_total: $weekday_p75,
         previous_7d_count: ($prev7_totals | length),
         previous_28d_count: ($prev28_totals | length),
         same_weekday_count: ($weekday_totals | length),
@@ -458,9 +600,45 @@ payload="$(jq -s \
           severity: severity(round1(pct($actual; $baseline_total)); robust_z($actual; ($previous | map(eff_total(.; $selected_is_today)) | tail(28))))
         }
       },
+      enhancements: {
+        hourly_profile: {
+          selected: $selected_hourly,
+          baseline_median: $baseline_hourly_median,
+          baseline_p25: $baseline_hourly_p25,
+          baseline_p75: $baseline_hourly_p75,
+          cumulative_selected: cum24($selected_hourly),
+          cumulative_baseline_median: cum24($baseline_hourly_median)
+        },
+        directional_flow: {top_routes: $route_flow},
+        family_trends: {
+          selected_counts: $selected_families,
+          baseline_daily_avg: (reduce family_keys[] as $k ({}; .[$k] = round1($baseline_families_avg[$k])) )
+        },
+        confidence: {
+          counts: $selected_confidence,
+          score: $confidence_score,
+          band: (if $confidence_score == null then "unknown" elif $confidence_score >= 80 then "high" elif $confidence_score >= 55 then "medium" else "low" end)
+        },
+        outliers: {
+          peak_hour_utc: $peak_hour,
+          peak_hour_count: $peak_hour_count,
+          peak_hour_baseline_median: $peak_hour_baseline,
+          top_category_share_shift: $top_share_shift
+        },
+        weekday_context: {
+          selected: $actual,
+          median: $mwd,
+          p25: $weekday_p25,
+          p75: $weekday_p75,
+          delta_pct_vs_weekday_median: round1(pct($actual; $mwd))
+        },
+        alerts: {
+          active: $alerts
+        }
+      },
       limits: {daily_count_design_max: 5000, expected_typical_fraction_of_max: 0.25},
       dates_available: ($series | map(.date)),
-      series: $series,
+      series: ($series | map(del(.hourly, .hourly_cutoff, .route_pairs, .route_pairs_cutoff, .type_families, .type_families_cutoff, .confidence, .confidence_cutoff))),
       rollups: {weekly: $weekly_rollup, monthly: $monthly_rollup}
     }
   ' "$series_file" 2>"$jq_err_file" || true)"
@@ -476,4 +654,7 @@ if [[ -z "$payload" ]]; then
 fi
 
 printf '%s\n' "$payload" > "$cache_file" 2>/dev/null || true
+if [[ "$historical_cache_enabled" == true ]]; then
+  printf '%s\n' "$payload" > "$historical_cache_file" 2>/dev/null || true
+fi
 printf '%s\n' "$payload"
