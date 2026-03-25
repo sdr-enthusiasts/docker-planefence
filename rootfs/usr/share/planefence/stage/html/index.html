@@ -3096,10 +3096,9 @@ ${messagesDesc}
 
   function niceAxisMax(maxValue){
     const v = Number(maxValue);
-    if (!Number.isFinite(v) || v <= 0) return 1;
+    if (!Number.isFinite(v) || v <= 0) return 25;
     const rough = v * 1.08;
-    const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(rough))));
-    return Math.ceil(rough / magnitude) * magnitude;
+    return Math.ceil(rough / 25) * 25;
   }
 
   function updateInsightsStaticText(){
