@@ -60,6 +60,7 @@ choose_json_for_date() {
 FILTER_MODE="planefence"
 REQUESTED_DATE=""
 REQUESTED_DAYS=""
+INSIGHTS_CACHE_SCHEMA_VERSION="2"
 
 parse_params() {
   local method key val pair
@@ -118,7 +119,7 @@ if [[ -n "$REQUESTED_DAYS" ]]; then
   (( HISTORY_DAYS > 120 )) && HISTORY_DAYS=120
 fi
 
-cache_key="${FILTER_MODE}:${REQUESTED_DATE:-today}:${HISTORY_DAYS}"
+cache_key="v${INSIGHTS_CACHE_SCHEMA_VERSION}:${FILTER_MODE}:${REQUESTED_DATE:-today}:${HISTORY_DAYS}"
 cache_hash="$(printf '%s' "$cache_key" | sha256sum | awk '{print $1}')"
 cache_file="/tmp/insights-cache-${cache_hash}.json"
 cache_ttl_sec=30
@@ -287,6 +288,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
       def norm_up($x): (up($x) | gsub("[^A-Z0-9]"; ""));
       def norm_low($x): (low($x) | gsub("[^a-z0-9]"; ""));
       def safe_txt($x): (($x // "") | tostring | gsub("[\r\n\t]+"; " ") | gsub("^ +| +$"; ""));
+      def icao_of($r): norm_up($r.icao // $r.hex_ident // $r.hex // $r.hexid // $r.icao24 // $r["icao:hex"]);
       def cs($r): norm_up($r.callsign);
       def tl($r): norm_up($r.tail);
       def typ($r): norm_up($r.type);
@@ -296,7 +298,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
       def mil_type_prefixes_safe: ($mil_type_prefixes | map(select((type=="string") and (length>=3))));
       def mil_owner_keywords_safe: ($mil_owner_keywords | map(select((type=="string") and (length>=5))));
       def text_blob($r):
-        [low($r.owner), low($r.callsign), low($r.type), low($r.icao), low($r.route), low($r["db:category"]), low($r["db"]["category"])] | join(" ");
+        [low($r.owner), low($r.callsign), low($r.type), low(($r.icao // $r.hex_ident // $r.hex // $r.hexid // $r.icao24 // $r["icao:hex"])), low($r.route), low($r["db:category"]), low($r["db"]["category"])] | join(" ");
       def starts_any($s; $arr): if ($s|length)==0 then false else any($arr[]?; . as $p | ($s | startswith($p))) end;
       def contains_any($s; $arr): if ($s|length)==0 then false else any($arr[]?; ($s | contains(.))) end;
       def is_private($r): (cs($r) != "" and tl($r) != "" and cs($r) == tl($r));
@@ -313,7 +315,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
         end;
       def is_military_hard($r):
         (dbcat($r) | test("mil|military|air force|navy|army|marines"; "i"))
-        or ((up($r.icao)) | test("^(AE|AF|ADF[89A-F])"));
+        or ((icao_of($r)) | test("^(AE|AF|ADF[89A-F])"));
       def is_military($r):
         is_military_hard($r)
         or is_military_by_patterns($r)
@@ -431,7 +433,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
           | (route_pair($r)) as $route_pair
           | (type_family($r)) as $family
           | (confidence_bucket($r; $cat)) as $confidence
-          | (norm_up($r.icao)) as $icao
+          | (icao_of($r)) as $icao
           | (if ($icao | test("^[0-9A-F]{6}$")) then {
               icao: $icao,
               callsign: safe_txt($r.callsign),
