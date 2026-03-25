@@ -112,3 +112,5 @@ acars-decoder-typescript.tgz
 rootfs/usr/lib/python3/dist-packages/pflib/__pycache__
 __pycache__/
 *.pyc
+.RData
+.Rhistory

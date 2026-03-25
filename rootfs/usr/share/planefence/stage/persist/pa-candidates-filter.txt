@@ -163,7 +163,6 @@ DATABASE:typecode:C135
 DATABASE:typecode:C160
 DATABASE:typecode:C17
 DATABASE:typecode:C2
-DATABASE:typecode:C208
 DATABASE:typecode:C212
 DATABASE:typecode:C27J
 DATABASE:typecode:C295
@@ -171,6 +170,7 @@ DATABASE:typecode:C30J
 DATABASE:typecode:C414
 DATABASE:typecode:C5
 DATABASE:typecode:C5M
+DATABASE:typecode:CL2T
 DATABASE:typecode:CORS
 DATABASE:typecode:DOVE
 DATABASE:typecode:DRON
@@ -300,6 +300,7 @@ ICAO:E494A*:Brazilian Air Force
 DATABASE:owner:* Oil*
 DATABASE:owner:* Patrol*
 DATABASE:owner:* Petrol*
+DATABASE:owner:* Police*
 
 
 
