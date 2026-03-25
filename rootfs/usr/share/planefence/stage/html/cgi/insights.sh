@@ -102,7 +102,7 @@ choose_json_for_date() {
 FILTER_MODE="planefence"
 REQUESTED_DATE=""
 REQUESTED_DAYS=""
-INSIGHTS_CACHE_SCHEMA_VERSION="2"
+INSIGHTS_CACHE_SCHEMA_VERSION="3"
 
 parse_params() {
   local method key val pair
@@ -168,10 +168,19 @@ if [[ -n "$REQUESTED_DAYS" ]]; then
   (( HISTORY_DAYS > 120 )) && HISTORY_DAYS=120
 fi
 
-cache_key="v${INSIGHTS_CACHE_SCHEMA_VERSION}:${FILTER_MODE}:${REQUESTED_DATE:-today}:${HISTORY_DAYS}"
+cache_ttl_sec="${INSIGHTS_REQUEST_CACHE_TTL_SEC:-600}"
+if [[ ! "$cache_ttl_sec" =~ ^[0-9]+$ ]] || (( cache_ttl_sec < 1 )); then
+  cache_ttl_sec=600
+fi
+
+cache_date_key="${REQUESTED_DATE:-today}"
+if [[ -z "$REQUESTED_DATE" || "$REQUESTED_DATE" == "today" ]]; then
+  cache_date_key="$utc_today"
+fi
+
+cache_key="v${INSIGHTS_CACHE_SCHEMA_VERSION}:${FILTER_MODE}:${cache_date_key}:${HISTORY_DAYS}"
 cache_hash="$(printf '%s' "$cache_key" | sha256sum | awk '{print $1}')"
 cache_file="/tmp/insights-cache-${cache_hash}.json"
-cache_ttl_sec=30
 historical_cache_dir="/usr/share/planefence/persist/.internal/insights-cache"
 historical_cache_file="${historical_cache_dir}/${cache_hash}.json"
 historical_cache_ttl_sec="$(historical_cache_ttl_sec_for_mode "$FILTER_MODE")"

@@ -1,0 +1,54 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC1091,SC2154
+
+source /scripts/common
+source /scripts/pf-common
+
+INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS="${INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS:-600}"
+
+if [[ ! "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" =~ ^[0-9]+$ ]] || (( INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS < 1 )); then
+  "${s6wrap[@]}" echo "Invalid INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS='$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS' - using 600"
+  INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS=600
+fi
+
+get_collapsewithin_sec_for_mode() {
+  local mode="$1" section value
+  section="pf"
+  [[ "$mode" == "plane-alert" ]] && section="plane-alert"
+
+  value="$(GET_PARAM "$section" COLLAPSEWITHIN || true)"
+  value="${value//[[:space:]]/}"
+  [[ "$value" =~ ^[0-9]+$ ]] || value=300
+  (( value < 1 )) && value=300
+  (( value > 86399 )) && value=86399
+  printf '%s' "$value"
+}
+
+precompute_for_mode() {
+  local mode="$1" today yesterday collapsewithin_sec utc_now_hms utc_now_sec
+  today="$(date -u +%y%m%d)"
+  yesterday="$(date -u -d '1 day ago' +%y%m%d)"
+  utc_now_hms="$(date -u +%H:%M:%S)"
+  utc_now_sec="$((10#${utc_now_hms:0:2}*3600 + 10#${utc_now_hms:3:2}*60 + 10#${utc_now_hms:6:2}))"
+  collapsewithin_sec="$(get_collapsewithin_sec_for_mode "$mode")"
+
+  bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$today" raw=1 >/dev/null 2>&1 \
+    || "${s6wrap[@]}" echo "insights-precompute mode=$mode date=$today failed"
+
+  if (( utc_now_sec < collapsewithin_sec )); then
+    bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$yesterday" raw=1 >/dev/null 2>&1 \
+      || "${s6wrap[@]}" echo "insights-precompute mode=$mode date=$yesterday failed"
+  fi
+}
+
+while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
+  sleep 5
+ done
+
+"${s6wrap[@]}" echo "$0 started as an s6 service"
+
+while true; do
+  precompute_for_mode "planefence"
+  precompute_for_mode "plane-alert"
+  sleep "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" & wait
+ done
