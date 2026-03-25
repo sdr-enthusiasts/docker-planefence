@@ -209,7 +209,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Tail",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.empty": "No never-seen-before aircraft for this date.",
+        "insights.enhancements.newAircraft.count": "{count} aircraft",
+        "insights.enhancements.newAircraft.modalLabel": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.close": "Close list",
+        "insights.enhancements.help.newAircraft": "Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.",
+        "table.headers.callsign": "Callsign",
+        "insights.table.category": "Category"
       }
     },
     "es-ES": {
@@ -420,7 +428,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrícula",
         "table.headers.operator": "Operador",
-        "table.headers.type": "Tipo"
+        "table.headers.type": "Tipo",
+        "insights.enhancements.newAircraft.label": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.empty": "No hay aeronaves nunca vistas antes para esta fecha.",
+        "insights.enhancements.newAircraft.count": "{count} aeronaves",
+        "insights.enhancements.newAircraft.modalLabel": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.close": "Cerrar lista",
+        "insights.enhancements.help.newAircraft": "Aeronaves ICAO unicas presentes en la fecha seleccionada que no aparecieron en fechas anteriores dentro de la ventana de historial cargada.",
+        "table.headers.callsign": "Indicativo",
+        "insights.table.category": "Categoria"
       }
     },
     "ca-ES": {
@@ -630,7 +646,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrícula",
         "table.headers.operator": "Operador",
-        "table.headers.type": "Tipus"
+        "table.headers.type": "Tipus",
+        "insights.enhancements.newAircraft.label": "Aeronaus mai vistes abans",
+        "insights.enhancements.newAircraft.empty": "No hi ha aeronaus mai vistes abans per a aquesta data.",
+        "insights.enhancements.newAircraft.count": "{count} aeronaus",
+        "insights.enhancements.newAircraft.modalLabel": "Aeronaus mai vistes abans",
+        "insights.enhancements.newAircraft.close": "Tanca la llista",
+        "insights.enhancements.help.newAircraft": "Aeronaus ICAO uniques presents en la data seleccionada que no s han vist en cap data anterior dins la finestra d historial carregada.",
+        "table.headers.callsign": "Indicatiu",
+        "insights.table.category": "Categoria"
       }
     },
     "eu-ES": {
@@ -840,7 +864,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrikula",
         "table.headers.operator": "Operadorea",
-        "table.headers.type": "Mota"
+        "table.headers.type": "Mota",
+        "insights.enhancements.newAircraft.label": "Inoiz ikusi gabeko hegazkinak",
+        "insights.enhancements.newAircraft.empty": "Ez dago data honetarako inoiz ikusi gabeko hegazkinik.",
+        "insights.enhancements.newAircraft.count": "{count} hegazkin",
+        "insights.enhancements.newAircraft.modalLabel": "Inoiz ikusi gabeko hegazkinak",
+        "insights.enhancements.newAircraft.close": "Itxi zerrenda",
+        "insights.enhancements.help.newAircraft": "Hautatutako datan agertzen diren ICAO hegazkin bakarrak, kargatutako historian lehenagoko datetan agertu ez direnak.",
+        "table.headers.callsign": "Dei-seinalea",
+        "insights.table.category": "Kategoria"
       }
     },
     "gl-ES": {
@@ -1050,7 +1082,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrícula",
         "table.headers.operator": "Operador",
-        "table.headers.type": "Tipo"
+        "table.headers.type": "Tipo",
+        "insights.enhancements.newAircraft.label": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.empty": "Non hai aeronaves nunca vistas antes para esta data.",
+        "insights.enhancements.newAircraft.count": "{count} aeronaves",
+        "insights.enhancements.newAircraft.modalLabel": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.close": "Pechar lista",
+        "insights.enhancements.help.newAircraft": "Aeronaves ICAO unicas presentes na data seleccionada que non se viron en datas anteriores dentro da xanela de historial cargada.",
+        "table.headers.callsign": "Indicativo",
+        "insights.table.category": "Categoria"
       }
     },
     "ga-IE": {
@@ -1260,7 +1300,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Clárúchán",
         "table.headers.operator": "Oibreoir",
-        "table.headers.type": "Cineál"
+        "table.headers.type": "Cineál",
+        "insights.enhancements.newAircraft.label": "Aerai nach bhfacthas riamh roimhe",
+        "insights.enhancements.newAircraft.empty": "Níl aon aerárthach nua don dáta seo.",
+        "insights.enhancements.newAircraft.count": "{count} aerárthach",
+        "insights.enhancements.newAircraft.modalLabel": "Aerai nach bhfacthas riamh roimhe",
+        "insights.enhancements.newAircraft.close": "Dún an liosta",
+        "insights.enhancements.help.newAircraft": "Aerárthaí ICAO uathúla ar an dáta roghnaithe nach bhfacthas ar aon dáta níos luaithe sa stair luchtaithe.",
+        "table.headers.callsign": "Comhartha glao",
+        "insights.table.category": "Catagóir"
       }
     },
     "qu-PE": {
@@ -1471,7 +1519,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrikula",
         "table.headers.operator": "Operador",
-        "table.headers.type": "Laya"
+        "table.headers.type": "Laya",
+        "insights.enhancements.newAircraft.label": "Mana qawarqanchu ñawpaqmanta avionkuna",
+        "insights.enhancements.newAircraft.empty": "Kay p unchaypaq manam kashanchu avionkuna musuq rikusqa.",
+        "insights.enhancements.newAircraft.count": "{count} avionkuna",
+        "insights.enhancements.newAircraft.modalLabel": "Mana qawarqanchu ñawpaqmanta avionkuna",
+        "insights.enhancements.newAircraft.close": "Lista wisqay",
+        "insights.enhancements.help.newAircraft": "Huklla ICAO avionkuna akllasqa p unchaypi rikurispa mana ñawpaq p unchaykunapi rikusqachu, kargado historial ukupi.",
+        "table.headers.callsign": "Suti señal",
+        "insights.table.category": "Categoria"
       }
     },
     "nl-NL": {
@@ -1681,7 +1737,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Registratie",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Nooit eerder geziene vliegtuigen",
+        "insights.enhancements.newAircraft.empty": "Geen nooit eerder geziene vliegtuigen voor deze datum.",
+        "insights.enhancements.newAircraft.count": "{count} vliegtuigen",
+        "insights.enhancements.newAircraft.modalLabel": "Nooit eerder geziene vliegtuigen",
+        "insights.enhancements.newAircraft.close": "Lijst sluiten",
+        "insights.enhancements.help.newAircraft": "Unieke ICAO vliegtuigen op de geselecteerde datum die in geen eerdere datum binnen het geladen historievenster voorkwamen.",
+        "table.headers.callsign": "Roepnaam",
+        "insights.table.category": "Categorie"
       }
     },
     "fy-NL": {
@@ -1892,7 +1956,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Registraasje",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Fleantugen nea earder sjoen",
+        "insights.enhancements.newAircraft.empty": "Gjin nea earder sjoen fleantugen foar dizze datum.",
+        "insights.enhancements.newAircraft.count": "{count} fleantugen",
+        "insights.enhancements.newAircraft.modalLabel": "Fleantugen nea earder sjoen",
+        "insights.enhancements.newAircraft.close": "List slute",
+        "insights.enhancements.help.newAircraft": "Unike ICAO fleantugen op de keazen datum dy t net op eardere datums yn it laden skiednisfinster foarkamen.",
+        "table.headers.callsign": "Ropnamme",
+        "insights.table.category": "Kategory"
       }
     },
     "li-NL": {
@@ -2103,7 +2175,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Registrasie",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Vleegtuuge noets eerde gezeen",
+        "insights.enhancements.newAircraft.empty": "Gein noets eerde gezeen vleegtuuge veur dizze daetum.",
+        "insights.enhancements.newAircraft.count": "{count} vleegtuuge",
+        "insights.enhancements.newAircraft.modalLabel": "Vleegtuuge noets eerde gezeen",
+        "insights.enhancements.newAircraft.close": "Lies sjloete",
+        "insights.enhancements.help.newAircraft": "Unieke ICAO vleegtuuge op de geselekteerde daetum die in gein ierdere daetum binne t geladen historievenster veurkwoame.",
+        "table.headers.callsign": "Roepnaam",
+        "insights.table.category": "Categorie"
       }
     },
     "de-DE": {
@@ -2313,7 +2393,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Kennzeichen",
         "table.headers.operator": "Betreiber",
-        "table.headers.type": "Typ"
+        "table.headers.type": "Typ",
+        "insights.enhancements.newAircraft.label": "Nie zuvor gesehene Luftfahrzeuge",
+        "insights.enhancements.newAircraft.empty": "Keine nie zuvor gesehenen Luftfahrzeuge fuer dieses Datum.",
+        "insights.enhancements.newAircraft.count": "{count} Luftfahrzeuge",
+        "insights.enhancements.newAircraft.modalLabel": "Nie zuvor gesehene Luftfahrzeuge",
+        "insights.enhancements.newAircraft.close": "Liste schliessen",
+        "insights.enhancements.help.newAircraft": "Eindeutige ICAO Luftfahrzeuge am ausgewaehlten Datum, die an keinem frueheren Datum im geladenen Verlaufsfenster gesehen wurden.",
+        "table.headers.callsign": "Rufzeichen",
+        "insights.table.category": "Kategorie"
       }
     },
     "de-CH": {
@@ -2523,7 +2611,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Kennzeiche",
         "table.headers.operator": "Betreiber",
-        "table.headers.type": "Typ"
+        "table.headers.type": "Typ",
+        "insights.enhancements.newAircraft.label": "Nie zuvor gsehni Luftfahrzüg",
+        "insights.enhancements.newAircraft.empty": "Kei nie zuvor gsehni Luftfahrzüg fuer das Datum.",
+        "insights.enhancements.newAircraft.count": "{count} Luftfahrzüg",
+        "insights.enhancements.newAircraft.modalLabel": "Nie zuvor gsehni Luftfahrzüg",
+        "insights.enhancements.newAircraft.close": "Liste schliesse",
+        "insights.enhancements.help.newAircraft": "Eindeutigi ICAO Luftfahrzüg am usgwaehlte Datum, wo im glade Verlauf no nie zuvor gseh worde sind.",
+        "table.headers.callsign": "Rufzeiche",
+        "insights.table.category": "Kategorie"
       }
     },
     "fr-FR": {
@@ -2729,7 +2825,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Immatriculation",
         "table.headers.operator": "Opérateur",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Aéronefs jamais vus auparavant",
+        "insights.enhancements.newAircraft.empty": "Aucun aéronef jamais vu auparavant pour cette date.",
+        "insights.enhancements.newAircraft.count": "{count} aéronefs",
+        "insights.enhancements.newAircraft.modalLabel": "Aéronefs jamais vus auparavant",
+        "insights.enhancements.newAircraft.close": "Fermer la liste",
+        "insights.enhancements.help.newAircraft": "Aéronefs ICAO uniques présents à la date sélectionnée et absents de toutes les dates antérieures dans la fenêtre d historique chargée.",
+        "table.headers.callsign": "Indicatif",
+        "insights.table.category": "Catégorie"
       }
     },
     "it-IT": {
@@ -2939,7 +3043,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matricola",
         "table.headers.operator": "Operatore",
-        "table.headers.type": "Tipo"
+        "table.headers.type": "Tipo",
+        "insights.enhancements.newAircraft.label": "Aeromobili mai visti prima",
+        "insights.enhancements.newAircraft.empty": "Nessun aeromobile mai visto prima per questa data.",
+        "insights.enhancements.newAircraft.count": "{count} aeromobili",
+        "insights.enhancements.newAircraft.modalLabel": "Aeromobili mai visti prima",
+        "insights.enhancements.newAircraft.close": "Chiudi elenco",
+        "insights.enhancements.help.newAircraft": "Aeromobili ICAO unici presenti nella data selezionata che non comparivano in alcuna data precedente nella finestra di storico caricata.",
+        "table.headers.callsign": "Nominativo",
+        "insights.table.category": "Categoria"
       }
     },
     "la": {
@@ -3150,7 +3262,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Registrum",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Typus"
+        "table.headers.type": "Typus",
+        "insights.enhancements.newAircraft.label": "Aeria numquam ante visa",
+        "insights.enhancements.newAircraft.empty": "Nulla aeria numquam ante visa hac die.",
+        "insights.enhancements.newAircraft.count": "{count} aeria",
+        "insights.enhancements.newAircraft.modalLabel": "Aeria numquam ante visa",
+        "insights.enhancements.newAircraft.close": "Indicem claude",
+        "insights.enhancements.help.newAircraft": "Aeria ICAO singularia die electa visa, quae nullis diebus prioribus intra historiam oneratam visa sunt.",
+        "table.headers.callsign": "Signum vocationis",
+        "insights.table.category": "Categoria"
       }
     },
     "fi-FI": {
@@ -3360,7 +3480,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Rekisteritunnus",
         "table.headers.operator": "Operaattori",
-        "table.headers.type": "Tyyppi"
+        "table.headers.type": "Tyyppi",
+        "insights.enhancements.newAircraft.label": "Lentokoneet joita ei ole nähty aiemmin",
+        "insights.enhancements.newAircraft.empty": "Tälle päivälle ei ole aiemmin näkemättömiä lentokoneita.",
+        "insights.enhancements.newAircraft.count": "{count} lentokonetta",
+        "insights.enhancements.newAircraft.modalLabel": "Lentokoneet joita ei ole nähty aiemmin",
+        "insights.enhancements.newAircraft.close": "Sulje lista",
+        "insights.enhancements.help.newAircraft": "Valitun päivän yksilölliset ICAO lentokoneet, joita ei ole nähty millään aiemmalla päivällä ladatussa historiassa.",
+        "table.headers.callsign": "Kutsutunnus",
+        "insights.table.category": "Kategoria"
       }
     },
     "sv-SE": {
@@ -3570,7 +3698,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Registrering",
         "table.headers.operator": "Operatör",
-        "table.headers.type": "Typ"
+        "table.headers.type": "Typ",
+        "insights.enhancements.newAircraft.label": "Flygplan som aldrig setts tidigare",
+        "insights.enhancements.newAircraft.empty": "Inga flygplan som aldrig setts tidigare för detta datum.",
+        "insights.enhancements.newAircraft.count": "{count} flygplan",
+        "insights.enhancements.newAircraft.modalLabel": "Flygplan som aldrig setts tidigare",
+        "insights.enhancements.newAircraft.close": "Stäng listan",
+        "insights.enhancements.help.newAircraft": "Unika ICAO flygplan på valt datum som inte setts på något tidigare datum i det laddade historikfönstret.",
+        "table.headers.callsign": "Anropssignal",
+        "insights.table.category": "Kategori"
       }
     },
     "pt-BR": {
@@ -3780,7 +3916,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matrícula",
         "table.headers.operator": "Operador",
-        "table.headers.type": "Tipo"
+        "table.headers.type": "Tipo",
+        "insights.enhancements.newAircraft.label": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.empty": "Nenhuma aeronave nunca vista antes para esta data.",
+        "insights.enhancements.newAircraft.count": "{count} aeronaves",
+        "insights.enhancements.newAircraft.modalLabel": "Aeronaves nunca vistas antes",
+        "insights.enhancements.newAircraft.close": "Fechar lista",
+        "insights.enhancements.help.newAircraft": "Aeronaves ICAO unicas presentes na data selecionada que nao apareceram em nenhuma data anterior dentro da janela de historico carregada.",
+        "table.headers.callsign": "Indicativo",
+        "insights.table.category": "Categoria"
       }
     },
     "fr-CJ": {
@@ -3991,7 +4135,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Immatriculation",
         "table.headers.operator": "Opérateur",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Aéronefs jamais vus auparavant",
+        "insights.enhancements.newAircraft.empty": "Aucun aéronef jamais vu auparavant pour cette date.",
+        "insights.enhancements.newAircraft.count": "{count} aéronefs",
+        "insights.enhancements.newAircraft.modalLabel": "Aéronefs jamais vus auparavant",
+        "insights.enhancements.newAircraft.close": "Fermer la liste",
+        "insights.enhancements.help.newAircraft": "Aéronefs ICAO uniques présents à la date sélectionnée et absents de toutes les dates antérieures dans la fenêtre d historique chargée.",
+        "table.headers.callsign": "Indicatif",
+        "insights.table.category": "Catégorie"
       }
     },
     "pap-CW": {
@@ -4202,7 +4354,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Matríkula",
         "table.headers.operator": "Operadó",
-        "table.headers.type": "Tipo"
+        "table.headers.type": "Tipo",
+        "insights.enhancements.newAircraft.label": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.empty": "No never-seen-before aircraft for this date.",
+        "insights.enhancements.newAircraft.count": "{count} aircraft",
+        "insights.enhancements.newAircraft.modalLabel": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.close": "Close list",
+        "insights.enhancements.help.newAircraft": "Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.",
+        "table.headers.callsign": "Callsign",
+        "insights.table.category": "Category"
       }
     },
     "jam-JM": {
@@ -4413,7 +4573,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Tail",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.empty": "No never-seen-before aircraft for this date.",
+        "insights.enhancements.newAircraft.count": "{count} aircraft",
+        "insights.enhancements.newAircraft.modalLabel": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.close": "Close list",
+        "insights.enhancements.help.newAircraft": "Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.",
+        "table.headers.callsign": "Callsign",
+        "insights.table.category": "Category"
       }
     },
     "uk-UA": {
@@ -4623,7 +4791,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Бортовий номер",
         "table.headers.operator": "Оператор",
-        "table.headers.type": "Тип"
+        "table.headers.type": "Тип",
+        "insights.enhancements.newAircraft.label": "Літаки, яких раніше не бачили",
+        "insights.enhancements.newAircraft.empty": "Для цієї дати немає літаків, яких раніше не бачили.",
+        "insights.enhancements.newAircraft.count": "{count} літаків",
+        "insights.enhancements.newAircraft.modalLabel": "Літаки, яких раніше не бачили",
+        "insights.enhancements.newAircraft.close": "Закрити список",
+        "insights.enhancements.help.newAircraft": "Унікальні літаки за ICAO на вибрану дату, яких не було в жодну попередню дату в завантаженому вікні історії.",
+        "table.headers.callsign": "Позивний",
+        "insights.table.category": "Категорія"
       }
     },
     "tlh-QA": {
@@ -4833,7 +5009,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "teH pong",
         "table.headers.operator": "poH SeHwI'",
-        "table.headers.type": "Segh"
+        "table.headers.type": "Segh",
+        "insights.enhancements.newAircraft.label": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.empty": "No never-seen-before aircraft for this date.",
+        "insights.enhancements.newAircraft.count": "{count} aircraft",
+        "insights.enhancements.newAircraft.modalLabel": "Aircraft never seen before",
+        "insights.enhancements.newAircraft.close": "Close list",
+        "insights.enhancements.help.newAircraft": "Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.",
+        "table.headers.callsign": "Callsign",
+        "insights.table.category": "Category"
       }
     },
     "en-PI": {
@@ -5044,7 +5228,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Ailtay",
         "table.headers.operator": "Operatorway",
-        "table.headers.type": "Ypetay"
+        "table.headers.type": "Ypetay",
+        "insights.enhancements.newAircraft.label": "Ships ne er seen afore",
+        "insights.enhancements.newAircraft.empty": "No ne er seen ships fer this date.",
+        "insights.enhancements.newAircraft.count": "{count} ships",
+        "insights.enhancements.newAircraft.modalLabel": "Ships ne er seen afore",
+        "insights.enhancements.newAircraft.close": "Close list, matey",
+        "insights.enhancements.help.newAircraft": "Unique ICAO ships on the chosen date that be not seen on any earlier date in the loaded history window.",
+        "table.headers.callsign": "Callsign",
+        "insights.table.category": "Category"
       }
     },
     "en-PT": {
@@ -5255,7 +5447,15 @@
         "table.headers.icao": "ICAO",
         "table.headers.tail": "Tail",
         "table.headers.operator": "Operator",
-        "table.headers.type": "Type"
+        "table.headers.type": "Type",
+        "insights.enhancements.newAircraft.label": "Aircraftyay evernay eensay orefay",
+        "insights.enhancements.newAircraft.empty": "Onay evernay eensay orefay aircraftyay orfay isthay ateday.",
+        "insights.enhancements.newAircraft.count": "{count} aircraftyay",
+        "insights.enhancements.newAircraft.modalLabel": "Aircraftyay evernay eensay orefay",
+        "insights.enhancements.newAircraft.close": "Oseclay istlay",
+        "insights.enhancements.help.newAircraft": "Uniqueyay ICAOyay aircraftyay onay ethay electedsay ateday atthay ereway otnay eensay onay anyyay earlieryay ateday inway ethay oadedlay isthoryhay indowway.",
+        "table.headers.callsign": "Allsigncay",
+        "insights.table.category": "Ategorycay"
       }
     }
   }
