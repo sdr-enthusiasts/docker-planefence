@@ -286,6 +286,7 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
       def up($x): (($x // "") | tostring | ascii_upcase);
       def norm_up($x): (up($x) | gsub("[^A-Z0-9]"; ""));
       def norm_low($x): (low($x) | gsub("[^a-z0-9]"; ""));
+      def safe_txt($x): (($x // "") | tostring | gsub("[\r\n\t]+"; " ") | gsub("^ +| +$"; ""));
       def cs($r): norm_up($r.callsign);
       def tl($r): norm_up($r.tail);
       def typ($r): norm_up($r.type);
@@ -419,7 +420,9 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
             type_families:{jet:0,turboprop:0,piston:0,rotorcraft:0,uav:0,other:0},
             type_families_cutoff:{jet:0,turboprop:0,piston:0,rotorcraft:0,uav:0,other:0},
             confidence:{high:0,medium:0,low:0},
-            confidence_cutoff:{high:0,medium:0,low:0}
+            confidence_cutoff:{high:0,medium:0,low:0},
+            icao_items:{},
+            icao_items_cutoff:{}
           };
           (category($r)) as $cat
           | (within_cutoff($r)) as $in_cutoff
@@ -428,16 +431,27 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
           | (route_pair($r)) as $route_pair
           | (type_family($r)) as $family
           | (confidence_bucket($r; $cat)) as $confidence
+          | (norm_up($r.icao)) as $icao
+          | (if ($icao | test("^[0-9A-F]{6}$")) then {
+              icao: $icao,
+              callsign: safe_txt($r.callsign),
+              tail: safe_txt($r.tail),
+              operator: safe_txt($r.owner),
+              type: safe_txt($r.type),
+              category: $cat
+            } else null end) as $icao_item
           | .total += 1
           | .[$cat] += 1
           | .type_families[$family] += 1
           | .confidence[$confidence] += 1
+          | if $icao_item != null then .icao_items[$icao] = (.icao_items[$icao] // $icao_item) else . end
           | if ($hour != null and $hour >= 0 and $hour < 24) then .hourly[$hour] += 1 else . end
           | if ($route_pair != null and ($route_pair | length) > 0) then .route_pairs[$route_pair] = ((.route_pairs[$route_pair] // 0) + 1) else . end
           | if $in_cutoff then .total_cutoff += 1 | .[($cat + "_cutoff")] += 1 else . end
           | if $in_cutoff then
               .type_families_cutoff[$family] += 1
               | .confidence_cutoff[$confidence] += 1
+              | if $icao_item != null then .icao_items_cutoff[$icao] = (.icao_items_cutoff[$icao] // $icao_item) else . end
               | if ($hour != null and $hour >= 0 and $hour < 24) then .hourly_cutoff[$hour] += 1 else . end
               | if ($route_pair != null and ($route_pair | length) > 0) then .route_pairs_cutoff[$route_pair] = ((.route_pairs_cutoff[$route_pair] // 0) + 1) else . end
             else . end
@@ -504,6 +518,7 @@ payload="$(jq -s \
   def eff_families($r; $selected_is_today): (if $selected_is_today then ($r.type_families_cutoff // $r.type_families // families_zero) else ($r.type_families // families_zero) end);
   def eff_confidence($r; $selected_is_today): (if $selected_is_today then ($r.confidence_cutoff // $r.confidence // confidence_zero) else ($r.confidence // confidence_zero) end);
   def eff_routes($r; $selected_is_today): (if $selected_is_today then ($r.route_pairs_cutoff // $r.route_pairs // {}) else ($r.route_pairs // {}) end);
+  def eff_icao_items($r; $selected_is_today): (if $selected_is_today then ($r.icao_items_cutoff // $r.icao_items // {}) else ($r.icao_items // {}) end);
 
   (sort_by_date) as $series
   | ($series[-1]) as $latest
@@ -511,6 +526,10 @@ payload="$(jq -s \
   | ($selected_date == $today) as $selected_is_today
   | ($series | map(select(.date == $selected_date)) | .[0]) as $selected
   | ($series | map(select(.date < $selected_date))) as $previous
+  | (eff_icao_items($selected; $selected_is_today)) as $selected_icao_map
+  | ($previous | map(eff_icao_items(.; $selected_is_today) | keys[]) | unique) as $previous_icao_keys
+  | ($selected_icao_map | to_entries | map(.value) | map(select(((.icao // "") | length) > 0)) | map(select((.icao as $i | ($previous_icao_keys | index($i)) == null))) | sort_by(.icao)) as $new_aircraft_list
+  | ($new_aircraft_list | length) as $new_aircraft_count
   | ($previous | map(eff_total(.; $selected_is_today)) | tail(7)) as $prev7_totals
   | ($previous | map(eff_total(.; $selected_is_today)) | tail(28)) as $prev28_totals
   | (epoch_for_date($selected_date) | gmtime | .[6]) as $sel_wday
@@ -634,11 +653,18 @@ payload="$(jq -s \
         },
         alerts: {
           active: $alerts
+        },
+        new_aircraft: {
+          count: $new_aircraft_count,
+          pct_of_daily_total: (if $actual > 0 then round1(($new_aircraft_count * 100) / $actual) else 0 end),
+          selected_unique_icao_count: ($selected_icao_map | length),
+          previous_unique_icao_count: ($previous_icao_keys | length),
+          list: $new_aircraft_list
         }
       },
       limits: {daily_count_design_max: 5000, expected_typical_fraction_of_max: 0.25},
       dates_available: ($series | map(.date)),
-      series: ($series | map(del(.hourly, .hourly_cutoff, .route_pairs, .route_pairs_cutoff, .type_families, .type_families_cutoff, .confidence, .confidence_cutoff))),
+      series: ($series | map(del(.hourly, .hourly_cutoff, .route_pairs, .route_pairs_cutoff, .type_families, .type_families_cutoff, .confidence, .confidence_cutoff, .icao_items, .icao_items_cutoff))),
       rollups: {weekly: $weekly_rollup, monthly: $monthly_rollup}
     }
   ' "$series_file" 2>"$jq_err_file" || true)"

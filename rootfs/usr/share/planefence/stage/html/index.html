@@ -762,6 +762,7 @@
               <div id="insightsConfidence" class="insights-mini"></div>
               <div id="insightsWeekday" class="insights-mini" style="margin-top:.45rem;"></div>
               <div id="insightsAlerts" class="insights-mini" style="margin-top:.45rem;"></div>
+              <div id="insightsNovel" class="insights-mini" style="margin-top:.45rem;"></div>
             </div>
             <div class="insights-subtypes">
             <h3 id="insightsFlowTitle" style="margin:0 0 .45rem; font-size:.92rem;">Directional Flow</h3>
@@ -789,6 +790,20 @@
             </thead>
             <tbody id="insightsTableBody"></tbody>
           </table>
+        </div>
+        <div id="insightsNovelOverlay" class="pa-candidates-overlay" role="dialog" aria-modal="true" aria-label="Aircraft never seen before" aria-hidden="true">
+          <div class="pa-candidates-card">
+            <button type="button" id="insightsNovelClose" class="pa-candidates-close" aria-label="Close list">&times;</button>
+            <p id="insightsNovelStatus" class="pa-candidates-status"></p>
+            <div class="pa-candidates-table-wrap">
+              <table class="pa-candidates-table" aria-label="Aircraft never seen before">
+                <thead>
+                  <tr id="insightsNovelHeadRow"></tr>
+                </thead>
+                <tbody id="insightsNovelBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -1079,13 +1094,15 @@
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
   let insightsBtn, insightsModal, insightsCloseBtn;
   let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl, paCandidatesHeadRowEl;
+  let insightsNovelOverlay, insightsNovelCloseBtn, insightsNovelBodyEl, insightsNovelStatusEl, insightsNovelHeadRowEl;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
   let historyButtonEl, historyMenuEl, historyControlEl;
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
-  let insightsConfidenceEl, insightsWeekdayEl, insightsAlertsEl, insightsHourlyEl, insightsFlowEl, insightsFamiliesEl, insightsOutliersEl;
+  let insightsConfidenceEl, insightsWeekdayEl, insightsAlertsEl, insightsNovelEl, insightsHourlyEl, insightsFlowEl, insightsFamiliesEl, insightsOutliersEl;
   let insightsStackedPrevBtn, insightsStackedNextBtn, insightsStackedRangeEl, insightsStackedHydrationStatusEl;
+  let insightsNovelRows = [];
   const insightsCache = { key: '', data: null };
   const insightsCacheByReqKey = new Map();
   const insightsFetchPromises = new Map();
@@ -1719,6 +1736,11 @@ ${messagesDesc}
     paCandidatesBodyEl = document.getElementById('paCandidatesBody');
     paCandidatesStatusEl = document.getElementById('paCandidatesStatus');
     paCandidatesHeadRowEl = document.getElementById('paCandidatesHeadRow');
+    insightsNovelOverlay = document.getElementById('insightsNovelOverlay');
+    insightsNovelCloseBtn = document.getElementById('insightsNovelClose');
+    insightsNovelBodyEl = document.getElementById('insightsNovelBody');
+    insightsNovelStatusEl = document.getElementById('insightsNovelStatus');
+    insightsNovelHeadRowEl = document.getElementById('insightsNovelHeadRow');
     heatmapModal = document.getElementById('heatmapModal');
     heatmapFrame = document.getElementById('heatmapFrame');
     heatmapCloseBtn = document.getElementById('heatmapClose');
@@ -1742,6 +1764,7 @@ ${messagesDesc}
     insightsMixEl = document.getElementById('insightsMix');
     insightsSubtypesEl = document.getElementById('insightsSubtypes');
     insightsTableBodyEl = document.getElementById('insightsTableBody');
+    insightsNovelEl = document.getElementById('insightsNovel');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
 
     // Wire up interactive controls immediately so they respond even while data loads.
@@ -1759,11 +1782,21 @@ ${messagesDesc}
     paCandidatesOverlay?.addEventListener('click', (ev) => {
       if (ev.target === paCandidatesOverlay) closePaCandidatesOverlay();
     });
+    insightsNovelCloseBtn?.addEventListener('click', closeInsightsNovelOverlay);
+    insightsNovelOverlay?.addEventListener('click', (ev) => {
+      if (ev.target === insightsNovelOverlay) closeInsightsNovelOverlay();
+    });
     stationInfoContentEl?.addEventListener('click', (ev) => {
       const trigger = ev.target && ev.target.closest ? ev.target.closest('[data-action="open-pa-candidates"]') : null;
       if (!trigger) return;
       ev.preventDefault();
       openPaCandidatesOverlay();
+    });
+    insightsPanelEl?.addEventListener('click', (ev) => {
+      const trigger = ev.target && ev.target.closest ? ev.target.closest('[data-action="open-insights-novel-list"]') : null;
+      if (!trigger) return;
+      ev.preventDefault();
+      openInsightsNovelOverlay();
     });
     heatmapBtn?.addEventListener('click', openHeatmapModal);
     heatmapCloseBtn?.addEventListener('click', closeHeatmapModal);
@@ -2015,10 +2048,13 @@ ${messagesDesc}
     if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
     if (insightsModal) insightsModal.setAttribute('aria-label', t('insights.modal.label', {}, 'Traffic insights'));
     if (insightsCloseBtn) insightsCloseBtn.setAttribute('aria-label', t('insights.modal.close', {}, 'Close traffic insights'));
+    if (insightsNovelOverlay) insightsNovelOverlay.setAttribute('aria-label', t('insights.enhancements.newAircraft.modalLabel', {}, 'Aircraft never seen before'));
+    if (insightsNovelCloseBtn) insightsNovelCloseBtn.setAttribute('aria-label', t('insights.enhancements.newAircraft.close', {}, 'Close list'));
     if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
     if (paCandidatesOverlay) paCandidatesOverlay.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.modalLabel', {}, 'Plane-Alert candidates'));
     if (paCandidatesCloseBtn) paCandidatesCloseBtn.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.close', {}, 'Close list'));
     renderPaCandidatesHeader();
+    renderInsightsNovelHeader();
     updateInsightsStaticText();
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
@@ -2447,6 +2483,70 @@ ${messagesDesc}
     paCandidatesOverlay.setAttribute('aria-hidden', 'true');
     if (paCandidatesBodyEl) paCandidatesBodyEl.innerHTML = '';
     if (paCandidatesStatusEl) paCandidatesStatusEl.textContent = '';
+  }
+
+  function normalizeInsightsNovelRow(row) {
+    const obj = row && typeof row === 'object' ? row : {};
+    return {
+      icao: String(obj.icao || obj.ICAO || '').trim().toUpperCase(),
+      callsign: String(obj.callsign || '').trim(),
+      tail: String(obj.tail || obj.registration || '').trim(),
+      operator: String(obj.operator || obj.owner || '').trim(),
+      type: String(obj.type || obj.model || '').trim(),
+      category: String(obj.category || '').trim()
+    };
+  }
+
+  function renderInsightsNovelHeader() {
+    if (!insightsNovelHeadRowEl) return;
+    const icaoLabel = escapeHtml(t('table.headers.icao', {}, 'ICAO'));
+    const callsignLabel = escapeHtml(t('table.headers.callsign', {}, 'Callsign'));
+    const tailLabel = escapeHtml(t('table.headers.tail', {}, 'Tail'));
+    const operatorLabel = escapeHtml(t('table.headers.operator', {}, 'Operator'));
+    const typeLabel = escapeHtml(t('table.headers.type', {}, 'Type'));
+    const categoryLabel = escapeHtml(insightsText('table.category', {}, 'Category'));
+    insightsNovelHeadRowEl.innerHTML = `<th>${icaoLabel}</th><th>${callsignLabel}</th><th>${tailLabel}</th><th>${operatorLabel}</th><th>${typeLabel}</th><th>${categoryLabel}</th>`;
+  }
+
+  function renderInsightsNovelRows(rows) {
+    if (!insightsNovelBodyEl) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      insightsNovelBodyEl.innerHTML = `<tr><td class="muted" colspan="6">${escapeHtml(insightsText('enhancements.newAircraft.empty', {}, 'No never-seen-before aircraft for this date.'))}</td></tr>`;
+      return;
+    }
+
+    const html = rows.map((raw) => {
+      const row = normalizeInsightsNovelRow(raw);
+      const icao = escapeHtml(row.icao || '--');
+      const callsign = escapeHtml(row.callsign || '--');
+      const tail = escapeHtml(row.tail || '--');
+      const oper = escapeHtml(row.operator || '--');
+      const type = escapeHtml(row.type || '--');
+      const category = escapeHtml(row.category ? insightsText(`category.${row.category}`, {}, row.category) : '--');
+      return `<tr><td class="mono">${icao}</td><td>${callsign}</td><td>${tail}</td><td>${oper}</td><td>${type}</td><td>${category}</td></tr>`;
+    }).join('');
+
+    insightsNovelBodyEl.innerHTML = html;
+  }
+
+  function openInsightsNovelOverlay() {
+    if (!insightsNovelOverlay) return;
+    renderInsightsNovelHeader();
+    insightsNovelOverlay.classList.add('open');
+    insightsNovelOverlay.setAttribute('aria-hidden', 'false');
+    renderInsightsNovelRows(insightsNovelRows);
+    if (insightsNovelStatusEl) {
+      insightsNovelStatusEl.textContent = insightsText('enhancements.newAircraft.count', { count: insightsNovelRows.length }, `${insightsNovelRows.length} aircraft`);
+    }
+    insightsNovelCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeInsightsNovelOverlay() {
+    if (!insightsNovelOverlay) return;
+    insightsNovelOverlay.classList.remove('open');
+    insightsNovelOverlay.setAttribute('aria-hidden', 'true');
+    if (insightsNovelBodyEl) insightsNovelBodyEl.innerHTML = '';
+    if (insightsNovelStatusEl) insightsNovelStatusEl.textContent = '';
   }
 
   function thumbnailTargetData(target) {
@@ -2933,6 +3033,7 @@ ${messagesDesc}
 
   function closeInsightsModal() {
     if (!insightsModal) return;
+    closeInsightsNovelOverlay();
     insightsModal.classList.remove('open');
     insightsModal.setAttribute('aria-hidden', 'true');
     if (!stationInfoModal?.classList.contains('open') && !heatmapModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
@@ -3169,6 +3270,7 @@ ${messagesDesc}
     insightsConfidenceEl = insightsConfidenceEl || document.getElementById('insightsConfidence');
     insightsWeekdayEl = insightsWeekdayEl || document.getElementById('insightsWeekday');
     insightsAlertsEl = insightsAlertsEl || document.getElementById('insightsAlerts');
+    insightsNovelEl = insightsNovelEl || document.getElementById('insightsNovel');
     insightsHourlyEl = insightsHourlyEl || document.getElementById('insightsHourly');
     insightsFlowEl = insightsFlowEl || document.getElementById('insightsFlow');
     insightsFamiliesEl = insightsFamiliesEl || document.getElementById('insightsFamilies');
@@ -3981,6 +4083,7 @@ ${messagesDesc}
     const families = enh?.family_trends || {};
     const outliers = enh?.outliers || {};
     const profile = enh?.hourly_profile || {};
+    const novelAircraft = enh?.new_aircraft || {};
 
     if (insightsHourlyEl) {
       if (deferEnhancementsDate) {
@@ -4021,6 +4124,16 @@ ${messagesDesc}
       } else {
         insightsAlertsEl.innerHTML = `<div class="insights-badges">${alerts.map((a)=> `<span class="insights-badge sev-${escapeHtml(String(a.severity || 'normal'))}" title="${escapeHtml(String(a.message || ''))}">${escapeHtml(String(a.id || 'alert'))}</span>`).join('')}</div>`;
       }
+    }
+
+    if (insightsNovelEl) {
+      const count = Number(novelAircraft?.count) || 0;
+      const pct = Number(novelAircraft?.pct_of_daily_total) || 0;
+      const list = Array.isArray(novelAircraft?.list) ? novelAircraft.list : [];
+      insightsNovelRows = list;
+      const label = escapeHtml(insightsText('enhancements.newAircraft.label', {}, 'Aircraft never seen before'));
+      const val = `${numberFmt0.format(count)} (${pct.toFixed(1)}%)`;
+      insightsNovelEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.newAircraft', {}, 'Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.'))}"><a href="#" class="pa-candidates-link" data-action="open-insights-novel-list">${label}</a></span><span class="mini-val">${escapeHtml(val)}</span></div>`;
     }
 
     if (insightsFlowEl) {
@@ -4090,10 +4203,12 @@ ${messagesDesc}
       if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
       if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
       if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsNovelEl) insightsNovelEl.innerHTML = '';
       if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
       if (insightsFlowEl) insightsFlowEl.innerHTML = '';
       if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
       if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
+      insightsNovelRows = [];
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
       if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
@@ -4332,17 +4447,22 @@ ${messagesDesc}
       if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
       if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
       if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsNovelEl) insightsNovelEl.innerHTML = '';
       if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
       if (insightsFlowEl) insightsFlowEl.innerHTML = '';
       if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
       if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
+      insightsNovelRows = [];
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
       if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
     }
   }
 
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
+    if (ev.key === 'Escape' && insightsNovelOverlay?.classList.contains('open')) {
+      ev.preventDefault();
+      closeInsightsNovelOverlay();
+    } else if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
       ev.preventDefault();
       closePaCandidatesOverlay();
     } else if (ev.key === 'Escape' && insightsModal?.classList.contains('open')) {
