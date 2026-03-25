@@ -1,13 +1,12 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC1091,SC2154
 
-source /scripts/common
 source /scripts/pf-common
 
 INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS="${INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS:-600}"
 
 if [[ ! "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" =~ ^[0-9]+$ ]] || (( INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS < 1 )); then
-  "${s6wrap[@]}" echo "Invalid INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS='$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS' - using 600"
+  log_print ERR "Invalid INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS='$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS' - using 600"
   INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS=600
 fi
 
@@ -33,11 +32,11 @@ precompute_for_mode() {
   collapsewithin_sec="$(get_collapsewithin_sec_for_mode "$mode")"
 
   bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$today" raw=1 >/dev/null 2>&1 \
-    || "${s6wrap[@]}" echo "insights-precompute mode=$mode date=$today failed"
+    || log_print ERR "insights-precompute mode=$mode date=$today failed"
 
   if (( utc_now_sec < collapsewithin_sec )); then
     bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$yesterday" raw=1 >/dev/null 2>&1 \
-      || "${s6wrap[@]}" echo "insights-precompute mode=$mode date=$yesterday failed"
+      || log_print ERR "insights-precompute mode=$mode date=$yesterday failed"
   fi
 }
 
