@@ -36,19 +36,34 @@ OLDERTHAN=${PF_DELETEAFTER:-90}
 
 get_insights_cache_ttl_minutes()
 {
-  local cfg val max_hours minutes
-  max_hours=12
+  local cfg val hist val_hours ttl_hours max_hours minutes
+  max_hours=0
 
   for cfg in /usr/share/planefence/planefence.conf /usr/share/planefence/plane-alert.conf
   do
     [[ -r "$cfg" ]] || continue
+
+    # Keep cache retention at least as long as HISTTIME for each mode file.
+    hist="$(awk -F= '/^[[:space:]]*HISTTIME[[:space:]]*=/{v=$2; sub(/#.*/, "", v); gsub(/[[:space:]]/, "", v); print v; exit}' "$cfg" 2>/dev/null || true)"
+    [[ "$hist" =~ ^[0-9]+$ ]] || hist=14
+    (( hist < 1 )) && hist=14
+    (( hist > 120 )) && hist=120
+    val_hours=$((hist * 24))
+
     val="$(awk -F= '/^[[:space:]]*INSIGHTS_HISTORICAL_CACHE_TTL_HOURS[[:space:]]*=/{v=$2; sub(/#.*/, "", v); gsub(/[[:space:]]/, "", v); print v; exit}' "$cfg" 2>/dev/null || true)"
     if [[ "$val" =~ ^[0-9]+$ ]]; then
-      (( val < 1 )) && val=12
-      (( val > 168 )) && val=168
-      (( val > max_hours )) && max_hours=$val
+      ttl_hours="$val"
+      (( ttl_hours < 1 )) && ttl_hours="$val_hours"
+    else
+      ttl_hours="$val_hours"
     fi
+
+    (( ttl_hours > 2880 )) && ttl_hours=2880
+    (( ttl_hours < val_hours )) && ttl_hours="$val_hours"
+    (( ttl_hours > max_hours )) && max_hours="$ttl_hours"
   done
+
+  (( max_hours < 24 )) && max_hours=24
 
   minutes=$((max_hours * 60))
   printf '%s' "$minutes"

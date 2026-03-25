@@ -30,14 +30,27 @@ history_days_for_mode() {
 
 historical_cache_ttl_sec_for_mode() {
   local mode="$1" section val
+  local ttl_hours hist_days hist_hours
   section="pf"
   [[ "$mode" == "plane-alert" ]] && section="plane-alert"
+
+  # Historical Insights payloads should remain reusable for at least HISTTIME.
+  hist_days="$(GET_PARAM "$section" HISTTIME || true)"
+  hist_days="${hist_days//[[:space:]]/}"
+  [[ "$hist_days" =~ ^[0-9]+$ ]] || hist_days=14
+  (( hist_days < 1 )) && hist_days=14
+  (( hist_days > 120 )) && hist_days=120
+  hist_hours=$((hist_days * 24))
+
   val="$(GET_PARAM "$section" INSIGHTS_HISTORICAL_CACHE_TTL_HOURS || true)"
   val="${val//[[:space:]]/}"
-  [[ "$val" =~ ^[0-9]+$ ]] || val=12
-  (( val < 1 )) && val=12
-  (( val > 168 )) && val=168
-  printf '%s' "$((val * 3600))"
+  [[ "$val" =~ ^[0-9]+$ ]] || val="$hist_hours"
+  (( val < 1 )) && val="$hist_hours"
+  (( val > 2880 )) && val=2880
+
+  ttl_hours="$val"
+  (( ttl_hours < hist_hours )) && ttl_hours="$hist_hours"
+  printf '%s' "$((ttl_hours * 3600))"
 }
 
 collapsewithin_sec_for_mode() {
