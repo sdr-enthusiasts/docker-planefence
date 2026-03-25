@@ -3097,8 +3097,20 @@ ${messagesDesc}
   function niceAxisMax(maxValue){
     const v = Number(maxValue);
     if (!Number.isFinite(v) || v <= 0) return 25;
-    const rough = v * 1.08;
+    const rough = v * 1.05;
     return Math.ceil(rough / 25) * 25;
+  }
+
+  function computeInsightsSharedScaleMax(displaySeries, hourlyProfile){
+    const barMax = Array.isArray(displaySeries) && displaySeries.length
+      ? Math.max(...displaySeries.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1)
+      : 1;
+    const selected = Array.isArray(hourlyProfile?.cumulative_selected) ? hourlyProfile.cumulative_selected : [];
+    const baseline = Array.isArray(hourlyProfile?.cumulative_baseline_median) ? hourlyProfile.cumulative_baseline_median : [];
+    const hourlyMax = (selected.length || baseline.length)
+      ? Math.max(...selected, ...baseline, 1)
+      : 1;
+    return niceAxisMax(Math.max(barMax, hourlyMax, 1));
   }
 
   function updateInsightsStaticText(){
@@ -3359,7 +3371,7 @@ ${messagesDesc}
     </svg>`;
   }
 
-  function buildStackedSvg(series, selectedDate){
+  function buildStackedSvg(series, selectedDate, scaleMaxOverride){
     if (!Array.isArray(series) || !series.length) return `<div class="insights-muted">${escapeHtml(insightsText('empty.composition', {}, 'No composition data available.'))}</div>`;
     const width = 760;
     const height = 180;
@@ -3371,7 +3383,10 @@ ${messagesDesc}
     const innerH = height - padT - padB;
     const barW = Math.max(6, innerW / Math.max(1, series.length));
     const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
-    const scaleMax = niceAxisMax(maxTotal);
+    const parsedOverride = Number(scaleMaxOverride);
+    const scaleMax = Number.isFinite(parsedOverride) && parsedOverride > 0
+      ? parsedOverride
+      : niceAxisMax(maxTotal);
     const palette = {
       military: '#c84800',
       government: '#1f7a8c',
@@ -3884,7 +3899,7 @@ ${messagesDesc}
     insightsBulletsWrapEl.innerHTML = `<ul class="insights-bullets">${bullets.map((b)=> `<li>${b}</li>`).join('')}</ul>`;
   }
 
-  function buildHourlyCumulativeSvg(profile, selectedDateKey){
+  function buildHourlyCumulativeSvg(profile, selectedDateKey, scaleMaxOverride){
     const selected = Array.isArray(profile?.cumulative_selected) ? profile.cumulative_selected : [];
     const baseline = Array.isArray(profile?.cumulative_baseline_median) ? profile.cumulative_baseline_median : [];
     if (!selected.length || !baseline.length) {
@@ -3899,7 +3914,10 @@ ${messagesDesc}
     const innerW = width - padL - padR;
     const innerH = height - padT - padB;
     const maxY = Math.max(...selected, ...baseline, 1);
-    const scaleMax = niceAxisMax(maxY);
+    const parsedOverride = Number(scaleMaxOverride);
+    const scaleMax = Number.isFinite(parsedOverride) && parsedOverride > 0
+      ? parsedOverride
+      : niceAxisMax(maxY);
     const toY = (v)=> padT + innerH - ((Math.max(0, Number(v) || 0) / scaleMax) * innerH);
     const dx = innerW / 23;
 
@@ -3952,7 +3970,7 @@ ${messagesDesc}
     </svg>${legend}`;
   }
 
-  function renderEnhancements(data){
+  function renderEnhancements(data, scaleMax){
     const deferEnhancementsDate = !!data?._deferEnhancementsDate;
     const enh = data?.enhancements || {};
     const confidence = enh?.confidence || {};
@@ -3969,7 +3987,7 @@ ${messagesDesc}
         insightsHourlyEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('enhancements.hourly.pending', {}, 'Updating cumulative profile...'))}</div>`;
         insightsLog('cumulative-pending', { date: String(data?.selected_date || data?.selected?.date || '') });
       } else {
-        insightsHourlyEl.innerHTML = buildHourlyCumulativeSvg(profile, data?.selected_date || data?.selected?.date);
+        insightsHourlyEl.innerHTML = buildHourlyCumulativeSvg(profile, data?.selected_date || data?.selected?.date, scaleMax);
         markInsightsCumulativeComplete(String(data?.selected_date || data?.selected?.date || ''), { deferEnhancementsDate: false });
       }
     }
@@ -4091,6 +4109,7 @@ ${messagesDesc}
     const enhancementsBaseDate = String(data?.selected?.date || data?.selected_date || '');
     const deferEnhancementsDate = !!(data?._deferEnhancementsDate || (enhancementsBaseDate && enhancementsBaseDate !== selectedDate));
     const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext, _deferEnhancementsDate: deferEnhancementsDate };
+    const sharedScaleMax = computeInsightsSharedScaleMax(window.displaySeries, dataForSelected?.enhancements?.hourly_profile);
     if (!deferEnhancementsDate) {
       insightsResolvedSelectedByDate.set(String(selectedDate), {
         ...dataForSelected,
@@ -4123,12 +4142,12 @@ ${messagesDesc}
     if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
     renderInsightsKpis(dataForSelected);
     if (insightsStackedEl) {
-      insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate);
+      insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate, sharedScaleMax);
     }
     renderInsightsBullets(dataForSelected);
     renderInsightsMix(dataForSelected);
     renderMilitarySubtypeMix(dataForSelected);
-    renderEnhancements(dataForSelected);
+    renderEnhancements(dataForSelected, sharedScaleMax);
     renderInsightsTable(dataForSelected);
     markInsightsRenderComplete(selectedDate, {
       seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
