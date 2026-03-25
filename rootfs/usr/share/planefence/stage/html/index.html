@@ -438,9 +438,23 @@
   .insights-trend-wrap { overflow-x: auto; }
   .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
   .insights-trend-hit { cursor: pointer; }
-  .insights-chart-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .35rem; }
-  .insights-chart-nav { display: inline-flex; align-items: center; gap: .35rem; }
-  .insights-chart-nav button { min-height: 30px; padding: .2rem .55rem; font-size: .9rem; }
+  .insights-chart-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-bottom: .35rem; }
+  .insights-graph-shell { position: relative; }
+  .insights-chart-nav { position: absolute; inset: 0; pointer-events: none; }
+  .insights-chart-nav button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    min-height: 30px;
+    padding: .2rem .55rem;
+    font-size: .9rem;
+    pointer-events: auto;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border: 1px solid var(--soft);
+  }
+  .insights-chart-nav button:first-child { left: .35rem; }
+  .insights-chart-nav button:last-child { right: .35rem; }
   .insights-chart-range { font-size: .82rem; color: var(--muted); }
   .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
   .insights-stacked-svg { min-width: 620px; width: 100%; height: 190px; display: block; }
@@ -704,21 +718,15 @@
         <div class="insights-grid">
           <div class="insights-block">
             <div class="insights-chart-toolbar">
-              <div class="insights-chart-nav">
-                <button type="button" id="insightsTrendPrev" aria-label="Show previous 14 days">&#x2039;</button>
-                <button type="button" id="insightsTrendNext" aria-label="Show next 14 days">&#x203A;</button>
-              </div>
-              <div id="insightsTrendRange" class="insights-chart-range"></div>
+              <div id="insightsStackedRange" class="insights-chart-range"></div>
             </div>
-            <div id="insightsTrend" class="insights-trend-wrap"></div>
-            <div class="insights-chart-toolbar" style="margin-top:.45rem;">
+            <div class="insights-graph-shell">
               <div class="insights-chart-nav">
                 <button type="button" id="insightsStackedPrev" aria-label="Show previous 14 days">&#x2039;</button>
                 <button type="button" id="insightsStackedNext" aria-label="Show next 14 days">&#x203A;</button>
               </div>
-              <div id="insightsStackedRange" class="insights-chart-range"></div>
+              <div id="insightsStacked" class="insights-stacked-wrap"></div>
             </div>
-            <div id="insightsStacked" class="insights-stacked-wrap"></div>
             <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
           </div>
           <div class="insights-block">
@@ -739,6 +747,8 @@
                 <th id="insightsHeadMilitary">Military</th>
                 <th id="insightsHeadGovernment">Government</th>
                 <th id="insightsHeadAirline">Airline</th>
+                <th id="insightsHeadPrivateJets">Private Jets</th>
+                <th id="insightsHeadGeneralAviation">General Aviation</th>
                 <th id="insightsHeadOther">Other</th>
               </tr>
             </thead>
@@ -1039,12 +1049,11 @@
   let appVersionEl, footerYearEl;
   let historyButtonEl, historyMenuEl, historyControlEl;
   let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
-  let insightsTrendPrevBtn, insightsTrendNextBtn, insightsStackedPrevBtn, insightsStackedNextBtn, insightsTrendRangeEl, insightsStackedRangeEl;
+  let insightsStackedPrevBtn, insightsStackedNextBtn, insightsStackedRangeEl;
   const insightsCache = { key: '', data: null };
   let insightsLastFocus = null;
   let insightsSelectedDateKey = null;
   let insightsWindowStart = null;
-  let insightsScrollSyncBusy = false;
   const INSIGHTS_WINDOW_DAYS = 14;
 
   function stationInfoTemplate(){
@@ -1434,12 +1443,12 @@ ${messagesDesc}
       const params = new URLSearchParams();
       params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
       params.set('date', dateKey || 'today');
-      params.set('days', String(Math.max(14, historyDayLimit())));
+      params.set('days', String(Math.max(30, historyDayLimit())));
       params.set('ts', String(Date.now()));
       return `${base}?${params.toString()}`;
     }
     function insightsRequestKey(mode, dateKey){
-      return `${mode || dataMode}:${dateKey || 'today'}:${Math.max(14, historyDayLimit())}`;
+      return `${mode || dataMode}:${dateKey || 'today'}:${Math.max(30, historyDayLimit())}`;
     }
     function currentStreamUrl(){
       return buildStreamUrl(dataMode);
@@ -2915,9 +2924,9 @@ ${messagesDesc}
     const headMilitaryEl = document.getElementById('insightsHeadMilitary');
     const headGovernmentEl = document.getElementById('insightsHeadGovernment');
     const headAirlineEl = document.getElementById('insightsHeadAirline');
+    const headPrivateJetsEl = document.getElementById('insightsHeadPrivateJets');
+    const headGeneralAviationEl = document.getElementById('insightsHeadGeneralAviation');
     const headOtherEl = document.getElementById('insightsHeadOther');
-    const trendPrevEl = document.getElementById('insightsTrendPrev');
-    const trendNextEl = document.getElementById('insightsTrendNext');
     const stackedPrevEl = document.getElementById('insightsStackedPrev');
     const stackedNextEl = document.getElementById('insightsStackedNext');
 
@@ -2932,9 +2941,9 @@ ${messagesDesc}
     if (headMilitaryEl) headMilitaryEl.textContent = insightsText('table.military', {}, 'Military');
     if (headGovernmentEl) headGovernmentEl.textContent = insightsText('table.government', {}, 'Government');
     if (headAirlineEl) headAirlineEl.textContent = insightsText('table.airline', {}, 'Airline');
+    if (headPrivateJetsEl) headPrivateJetsEl.textContent = insightsText('table.private_jets', {}, 'Private Jets');
+    if (headGeneralAviationEl) headGeneralAviationEl.textContent = insightsText('table.general_aviation', {}, 'General Aviation');
     if (headOtherEl) headOtherEl.textContent = insightsText('table.other', {}, 'Other');
-    if (trendPrevEl) { const txt = insightsText('nav.prev', {}, 'Show previous 14 days'); trendPrevEl.title = txt; trendPrevEl.setAttribute('aria-label', txt); }
-    if (trendNextEl) { const txt = insightsText('nav.next', {}, 'Show next 14 days'); trendNextEl.title = txt; trendNextEl.setAttribute('aria-label', txt); }
     if (stackedPrevEl) { const txt = insightsText('nav.prev', {}, 'Show previous 14 days'); stackedPrevEl.title = txt; stackedPrevEl.setAttribute('aria-label', txt); }
     if (stackedNextEl) { const txt = insightsText('nav.next', {}, 'Show next 14 days'); stackedNextEl.title = txt; stackedNextEl.setAttribute('aria-label', txt); }
   }
@@ -2950,11 +2959,8 @@ ${messagesDesc}
     insightsMixEl = insightsMixEl || document.getElementById('insightsMix');
     insightsSubtypesEl = insightsSubtypesEl || document.getElementById('insightsSubtypes');
     insightsTableBodyEl = insightsTableBodyEl || document.getElementById('insightsTableBody');
-    insightsTrendPrevBtn = insightsTrendPrevBtn || document.getElementById('insightsTrendPrev');
-    insightsTrendNextBtn = insightsTrendNextBtn || document.getElementById('insightsTrendNext');
     insightsStackedPrevBtn = insightsStackedPrevBtn || document.getElementById('insightsStackedPrev');
     insightsStackedNextBtn = insightsStackedNextBtn || document.getElementById('insightsStackedNext');
-    insightsTrendRangeEl = insightsTrendRangeEl || document.getElementById('insightsTrendRange');
     insightsStackedRangeEl = insightsStackedRangeEl || document.getElementById('insightsStackedRange');
   }
 
@@ -3037,7 +3043,7 @@ ${messagesDesc}
         }
       }
       displaySeries = slotDates.map((k, i)=> {
-        if (i < pad) return { date: k, total: 0, military: 0, government: 0, airline: 0, other: 0, _empty: true, _slotDate: k };
+        if (i < pad) return { date: k, total: 0, military: 0, government: 0, airline: 0, private_jet: 0, general_aviation: 0, other: 0, _empty: true, _slotDate: k };
         const d = windowData[i - pad];
         return { ...d, _empty: false, _slotDate: k || d.date };
       });
@@ -3138,11 +3144,18 @@ ${messagesDesc}
     const barW = Math.max(6, innerW / Math.max(1, series.length));
     const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
     const scaleMax = niceAxisMax(maxTotal);
-    const palette = { military: '#c84800', government: '#1f7a8c', airline: '#246b2a', other: '#6a5acd' };
+    const palette = {
+      military: '#c84800',
+      government: '#1f7a8c',
+      airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
+      other: '#6a5acd'
+    };
 
     const bars = series.map((d, i)=> {
       const x = padL + (i * barW);
-      const parts = ['military','government','airline','other'];
+      const parts = ['military','government','airline','private_jet','general_aviation','other'];
       let y = padT + innerH;
       const rects = [];
       for (const k of parts) {
@@ -3173,6 +3186,8 @@ ${messagesDesc}
       <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.military};"></span>${escapeHtml(insightsText('category.military', {}, 'Military'))}</span>
       <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.government};"></span>${escapeHtml(insightsText('category.government', {}, 'Government'))}</span>
       <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.airline};"></span>${escapeHtml(insightsText('category.airline', {}, 'Airline'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.private_jet};"></span>${escapeHtml(insightsText('category.private_jet', {}, 'Private Jets'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.general_aviation};"></span>${escapeHtml(insightsText('category.general_aviation', {}, 'General Aviation'))}</span>
       <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.other};"></span>${escapeHtml(insightsText('category.other', {}, 'Other'))}</span>
     </div>`;
 
@@ -3213,15 +3228,15 @@ ${messagesDesc}
       return {
         baseline_days_used: 0,
         baseline_total: null,
-        baseline_category_shares: { military: 0, government: 0, airline: 0, other: 0 },
+        baseline_category_shares: { military: 0, government: 0, airline: 0, private_jet: 0, general_aviation: 0, other: 0 },
         anomaly_total: { delta: null, delta_pct: null, severity: 'normal' }
       };
     }
     const totals = prev.map((r)=> effValue(r, 'total')).sort((a,b)=> a - b);
     const mid = Math.floor(totals.length / 2);
     const baselineTotal = totals.length % 2 ? totals[mid] : ((totals[mid - 1] + totals[mid]) / 2);
-    const sumTotals = prev.reduce((acc, r)=> acc + (Number(r?.total) || 0), 0);
-    const cats = ['military','government','airline','other'];
+    const sumTotals = prev.reduce((acc, r)=> acc + effValue(r, 'total'), 0);
+    const cats = ['military','government','airline','private_jet','general_aviation','other'];
     const baselineCategoryShares = {};
     cats.forEach((k)=> {
       const catTotal = prev.reduce((acc, r)=> acc + effValue(r, k), 0);
@@ -3261,28 +3276,6 @@ ${messagesDesc}
     loadInsights(generation);
   }
 
-  function bindInsightsScrollSync(){
-    if (!insightsTrendEl || !insightsStackedEl) return;
-    if (insightsTrendEl.dataset.syncBound === '1' && insightsStackedEl.dataset.syncBound === '1') return;
-
-    const syncToStacked = ()=> {
-      if (insightsScrollSyncBusy) return;
-      insightsScrollSyncBusy = true;
-      insightsStackedEl.scrollLeft = insightsTrendEl.scrollLeft;
-      insightsScrollSyncBusy = false;
-    };
-    const syncToTrend = ()=> {
-      if (insightsScrollSyncBusy) return;
-      insightsScrollSyncBusy = true;
-      insightsTrendEl.scrollLeft = insightsStackedEl.scrollLeft;
-      insightsScrollSyncBusy = false;
-    };
-    insightsTrendEl.addEventListener('scroll', syncToStacked);
-    insightsStackedEl.addEventListener('scroll', syncToTrend);
-    insightsTrendEl.dataset.syncBound = '1';
-    insightsStackedEl.dataset.syncBound = '1';
-  }
-
   function shiftInsightsWindow(deltaPages){
     const baseDateKey = effectiveHistoryParam() || 'today';
     const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
@@ -3308,15 +3301,6 @@ ${messagesDesc}
         });
       });
     }
-    if (insightsTrendEl) {
-      const trendTargets = insightsTrendEl.querySelectorAll('[data-insights-date]');
-      trendTargets.forEach((el)=> {
-        el.addEventListener('click', ()=> {
-          const dateKey = String(el.getAttribute('data-insights-date') || '');
-          selectInsightsDate(dateKey, generation);
-        });
-      });
-    }
     if (insightsTableBodyEl) {
       const tableTargets = insightsTableBodyEl.querySelectorAll('[data-insights-date]');
       tableTargets.forEach((row)=> {
@@ -3326,14 +3310,6 @@ ${messagesDesc}
         });
       });
     }
-    if (insightsTrendPrevBtn && insightsTrendPrevBtn.dataset.bound !== '1') {
-      insightsTrendPrevBtn.addEventListener('click', ()=> shiftInsightsWindow(-1));
-      insightsTrendPrevBtn.dataset.bound = '1';
-    }
-    if (insightsTrendNextBtn && insightsTrendNextBtn.dataset.bound !== '1') {
-      insightsTrendNextBtn.addEventListener('click', ()=> shiftInsightsWindow(1));
-      insightsTrendNextBtn.dataset.bound = '1';
-    }
     if (insightsStackedPrevBtn && insightsStackedPrevBtn.dataset.bound !== '1') {
       insightsStackedPrevBtn.addEventListener('click', ()=> shiftInsightsWindow(-1));
       insightsStackedPrevBtn.dataset.bound = '1';
@@ -3342,43 +3318,29 @@ ${messagesDesc}
       insightsStackedNextBtn.addEventListener('click', ()=> shiftInsightsWindow(1));
       insightsStackedNextBtn.dataset.bound = '1';
     }
-    bindInsightsScrollSync();
   }
 
-  function renderInsightsMix(selected){
-    targets.forEach((el)=> {
-      el.addEventListener('click', ()=> {
-        const dateKey = String(el.getAttribute('data-insights-date') || '');
-        if (!/^\d{6}$/.test(dateKey)) return;
-        if (insightsSelectedDateKey === dateKey) return;
-        insightsSelectedDateKey = dateKey;
-        const baseDateKey = effectiveHistoryParam() || 'today';
-        const baseReqKey = insightsRequestKey(dataMode, baseDateKey);
-        if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === dateKey)) {
-          renderInsights({ ...insightsCache.data, selected_date: dateKey });
-          return;
-        }
-        loadInsights(generation);
-      });
-    });
-  }
-
-  function renderInsightsMix(selected){
+  function renderInsightsMix(data){
+    const selected = data?.selected || data;
     if (!insightsMixEl || !selected || !selected.categories) return;
     const shares = selected.shares || {};
     const palette = {
       military: '#c84800',
       government: '#1f7a8c',
       airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
       other: '#6a5acd'
     };
     const labels = {
       military: insightsText('category.military', {}, 'Military'),
       government: insightsText('category.government', {}, 'Government'),
       airline: insightsText('category.airline', {}, 'Airline'),
+      private_jet: insightsText('category.private_jet', {}, 'Private Jets'),
+      general_aviation: insightsText('category.general_aviation', {}, 'General Aviation'),
       other: insightsText('category.other', {}, 'Other')
     };
-    const rows = ['military','government','airline','other'].map((k)=> {
+    const rows = ['military','government','airline','private_jet','general_aviation','other'].map((k)=> {
       const pct = Number(shares[k]) || 0;
       const safePct = Math.max(0, Math.min(100, pct));
       return `<div class="mix-row">
@@ -3421,6 +3383,8 @@ ${messagesDesc}
     const nonMilitaryPalette = {
       government: '#1f7a8c',
       airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
       other: '#6a5acd'
     };
 
@@ -3440,7 +3404,7 @@ ${messagesDesc}
       return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: labels[k] };
     }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
 
-    const nonMilitaryRows = ['government','airline','other'].map((k)=> {
+    const nonMilitaryRows = ['government','airline','private_jet','general_aviation','other'].map((k)=> {
       const cnt = Number(categories[k]) || 0;
       return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: insightsText(`category.${k}`, {}, k) };
     }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
@@ -3483,7 +3447,7 @@ ${messagesDesc}
     const shares = sel.shares || {};
     const an = data.selectedContext?.anomaly_total || data.anomalies?.total || {};
     const baselineShares = data.selectedContext?.baseline_category_shares || data.baselines?.previous_7d_category_shares || {};
-    const cats = ['military','government','airline','other'];
+    const cats = ['military','government','airline','private_jet','general_aviation','other'];
     const dom = cats
       .map((k)=> ({ key: k, pct: Number(shares[k]) || 0, count: Number(sel.categories?.[k]) || 0 }))
       .sort((a,b)=> b.pct - a.pct)[0] || { key: 'other', pct: 0, count: 0 };
@@ -3503,7 +3467,15 @@ ${messagesDesc}
       uav: insightsText('subtype.uav', {}, 'UAV'),
       other_military: insightsText('subtype.other_military', {}, 'Other')
     })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
-    const dominantLabel = insightsText(`category.${dom.key}`, {}, dom.key.charAt(0).toUpperCase() + dom.key.slice(1));
+    const dominantFallbackMap = {
+      military: 'Military',
+      government: 'Government',
+      airline: 'Airline',
+      private_jet: 'Private Jets',
+      general_aviation: 'General Aviation',
+      other: 'Other'
+    };
+    const dominantLabel = insightsText(`category.${dom.key}`, {}, dominantFallbackMap[dom.key] || 'Other');
     const dayLabel = fmtDateKeyHuman(sel.date || data.selected_date || '--');
     const bullets = [
       `${insightsText('bullet.totalTraffic', { dayLabel, severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `${dayLabel}: <span class="${sevClass}">${escapeHtml(sevLabel)}</span> (${pctText(an.delta_pct)}).`)}`,
@@ -3516,9 +3488,9 @@ ${messagesDesc}
 
   function renderInsightsTable(data){
     if (!insightsTableBodyEl) return;
-    const rows = Array.isArray(data.series) ? data.series.slice(-14).reverse() : [];
+    const rows = Array.isArray(data.series) ? data.series.slice().reverse() : [];
     if (!rows.length) {
-      insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+      insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
     const selectedDate = data.selected_date || data.selected?.date || '';
@@ -3529,6 +3501,8 @@ ${messagesDesc}
         <td>${numberFmt0.format(Number(r.military) || 0)}</td>
         <td>${numberFmt0.format(Number(r.government) || 0)}</td>
         <td>${numberFmt0.format(Number(r.airline) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.private_jet) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.general_aviation) || 0)}</td>
         <td>${numberFmt0.format(Number(r.other) || 0)}</td>
       </tr>`).join('');
   }
@@ -3545,7 +3519,7 @@ ${messagesDesc}
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
-      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
       return;
     }
     const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
@@ -3566,14 +3540,10 @@ ${messagesDesc}
         `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (${baseDays || INSIGHTS_WINDOW_DAYS}d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
       );
     }
-    if (insightsTrendRangeEl) insightsTrendRangeEl.textContent = window.rangeText;
     if (insightsStackedRangeEl) insightsStackedRangeEl.textContent = window.rangeText;
-    if (insightsTrendPrevBtn) insightsTrendPrevBtn.disabled = !window.hasPrev;
     if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !window.hasPrev;
-    if (insightsTrendNextBtn) insightsTrendNextBtn.disabled = !window.hasNext;
     if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
     renderInsightsKpis(dataForSelected);
-    if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendSvg(window.displaySeries, selectedDate);
     if (insightsStackedEl) {
       insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate);
     }
@@ -3591,7 +3561,7 @@ ${messagesDesc}
     const reqKey = insightsRequestKey(dataMode, dateKey);
     updateInsightsStaticText();
     if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
-    if (insightsTrendEl) insightsTrendEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
+    if (insightsStackedEl) insightsStackedEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
 
     if (insightsCache.key === reqKey && insightsCache.data) {
       const selected = insightsSelectedDateKey;
@@ -3624,13 +3594,12 @@ ${messagesDesc}
     } catch (e) {
       if (generation !== modeGeneration) return;
       if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('error.subtitle', {}, 'Unable to load analytics right now.');
-      if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(String(e && e.message ? e.message : e))}</div>`;
-      if (insightsStackedEl) insightsStackedEl.innerHTML = '';
+      if (insightsStackedEl) insightsStackedEl.innerHTML = `<div class="insights-muted">${escapeHtml(String(e && e.message ? e.message : e))}</div>`;
       if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
       if (insightsMixEl) insightsMixEl.innerHTML = '';
       if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
       if (insightsKpisEl) insightsKpisEl.innerHTML = '';
-      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="6" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
     }
   }
 
