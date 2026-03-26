@@ -21,14 +21,16 @@
 source /scripts/pf-common
 source /usr/share/planefence/prep-planefence.sh
 
-LOOPTIME=$(GET_PARAM base PF_INTERVAL)
+VERSION="$(GET_PARAM pf VERSION)"
+
+LOOPTIME="$(GET_PARAM base PF_INTERVAL)"
 LOOPTIME="${LOOPTIME:-60}"
 
 PLANEFENCEDIR=/usr/share/planefence
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then
-    "${s6wrap[@]}" echo "$0 started as an s6 service"
-    "${s6wrap[@]}" echo "Planefence build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
+    log_print INFO "$0 started as an s6 service"
+    log_print INFO "Planefence version $VERSION build: $(grep 'PF_NAME' /usr/share/planefence/persist/planefence.config | awk -F '=' '{ print $2 }' | tr -dc '[:alnum:]')_bld_$([[ -f /usr/share/planefence/branch ]] && cat /usr/share/planefence/branch || cat /root/.buildtime)"
 fi
 
 #--------------------------------------------------------------------------------
@@ -39,12 +41,12 @@ fi
 initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
 
 if [[ "$LOGLEVEL" != "ERROR" ]]; then 
-    "${s6wrap[@]}" echo "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
+    log_print INFO "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
 else
-    "${s6wrap[@]}" echo "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
+    log_print INFO "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."
 fi
 sleep "$initial_looptime"
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Planefence starting its initial run now"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Planefence starting its initial run now"; fi
 
 while true
 do
@@ -54,16 +56,14 @@ do
         # BASETIME is used for run time measurements
         # shellcheck disable=SC2155
         if [[ -n "$TIMING" ]]; then export BASETIME=$(date +%s.%2N); else unset BASETIME; fi
-        [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Starting Planefence run..." || true
+        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Starting Planefence run..." || true
         $PLANEFENCEDIR/pf-run.sh
         endtime=$(date +%s)
-        [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")." || true
+        [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Planefence ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")." || true
     else
-        "${s6wrap[@]}" echo "/run/socket30003/dump1090-*-$(date +%y%m%d).txt not found or socket30003 not running."
-        "${s6wrap[@]}" echo "If this continues to happen after 5-10 minutes, check your \$PF_SOCK30003HOST setting and check your data source"
-        "${s6wrap[@]}" echo "We will try again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")."
+        log_print WARN "/run/socket30003/dump1090-*-$(date +%y%m%d).txt not found or socket30003 not running."
+        log_print WARN "If this continues to happen after 5-10 minutes, check your \$PF_SOCK30003HOST setting and check your data source"
+        log_print WARN "We will try again at $(date -d @$(( starttime + LOOPTIME )) +"%F %T %Z")."
     fi
-	# [ -z "$TESTTIME" ] && LOOPTIME="$TESTTIME" # debug code
     wait
-	# "${s6wrap[@]}" echo "Planefence process running..."
 done
