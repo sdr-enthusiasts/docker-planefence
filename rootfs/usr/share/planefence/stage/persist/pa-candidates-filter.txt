@@ -21,60 +21,92 @@
 
 # Military/government callsign prefixes (optional hyphen before numeric flight number)
 CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:AEQ?(-)[0-9][0-9]*:Spanish Air Force (Transport Wing)
+CALLSIGN:AFB?(-)[0-9][0-9]*:Portuguese Air Force
 CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
+CALLSIGN:AMX?(-)[0-9][0-9]*:Spanish Air Force (VIP Transport Unit)
 CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
 CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ASY?(-)[0-9][0-9]*:Royal Australian Air Force
+CALLSIGN:AUS?(-)[0-9][0-9]*:Australian Government Flights
 CALLSIGN:BAF?(-)[0-9][0-9]*:Belgian Air Component
+CALLSIGN:BGE?(-)[0-9][0-9]*:Aerobridge (Disaster response)
 CALLSIGN:BOBBY?(-)[0-9][0-9]*:United States Air Force - KC-135
 CALLSIGN:BRK?(-)[0-9][0-9]*:Strategic Airlift Capability (SAC) / BARTOK
+CALLSIGN:BRS?(-)[0-9][0-9]*:Brazilian Air Force
 CALLSIGN:CEF?(-)[0-9][0-9]*:Czech Air Force
 CALLSIGN:CFC?(-)[0-9][0-9]*:Royal Canadian Air Force
 CALLSIGN:CG?(-)[0-9][0-9]*:United States Coast Guard
+CALLSIGN:CHL?(-)[0-9][0-9]*:Chilean Air Force
 CALLSIGN:CLEAN?(-)[0-9][0-9]*:United States Air Force - KC-135
+CALLSIGN:CLV?(-)[0-9][0-9]*:Czech Air Force
 CALLSIGN:CMB?(-)[0-9][0-9]*:United States military transportation
+CALLSIGN:CMF?(-)[0-9][0-9]*:Compassion (Medical transport, disaster relief)
 CALLSIGN:CNV?(-)[0-9][0-9]*:United States Navy
 CALLSIGN:CTM?(-)[0-9][0-9]*:France Armee de lAir
 CALLSIGN:DAF?(-)[0-9][0-9]*:Royal Danish Air Force
 CALLSIGN:DUKE?(-)[0-9][0-9]*:United States Army
+CALLSIGN:EAF?(-)[0-9][0-9]*:Egyptian Air Force
+CALLSIGN:EGY?(-)[0-9][0-9]*:Egyptian VIP/Government Missions
 CALLSIGN:ESSO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ETHYL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:EXXON?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:EXTENDER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:FAB?(-)[0-9][0-9]*:Brazilian Air Force
+CALLSIGN:FAC?(-)[0-9][0-9]*:Colombian Air Force
+CALLSIGN:FACH?(-)[0-9][0-9]*:Chilean Air Force
 CALLSIGN:FAF?(-)[0-9][0-9]*:French Air and Space Force
+CALLSIGN:FAM?(-)[0-9][0-9]*:Mexican Air Force
+CALLSIGN:FAP?(-)[0-9][0-9]*:Portuguese Air Force
 CALLSIGN:FNF?(-)[0-9][0-9]*:Finnish Air Force
 CALLSIGN:FNY?(-)[0-9][0-9]*:French Navy
+CALLSIGN:FRAAF?(-)[0-9][0-9]*:French Air and Space Force
 CALLSIGN:GAF?(-)[0-9][0-9]*:Germany Luftwaffe
 CALLSIGN:GETFUEL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:GOLD?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:GNY?(-)[0-9][0-9]*:German Navy
 CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
 CALLSIGN:HERKY?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:HKY?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:HUAF?(-)[0-9][0-9]*:Hungarian Air Force
 CALLSIGN:HUF?(-)[0-9][0-9]*:Hungarian Air Force
+CALLSIGN:HUNAF?(-)[0-9][0-9]*:Hungarian Air Force
 CALLSIGN:HVK?(-)[0-9][0-9]*:Turkish Air Force
 CALLSIGN:IAF?(-)[0-9][0-9]*:Israeli Air Force
 CALLSIGN:IAM?(-)[0-9][0-9]*:Italian Air Force
+CALLSIGN:IAI?(-)[0-9][0-9]*:Israel Aerospace Industries
 CALLSIGN:IFC?(-)[0-9][0-9]*:Indian Air Force
 CALLSIGN:IRL?(-)[0-9][0-9]*:Irish Air Corps
-CALLSIGN:KAF?(-)[0-9][0-9]*:Kuwait Air Force
+CALLSIGN:JAS?(-)[0-9][0-9]*:Japan Air Self-Defense Force (International missions only)
+CALLSIGN:JCG?(-)[0-9][0-9]*:Japan Coast Guard
+CALLSIGN:KAF?(-)[0-9][0-9]*:Kenyan Air Force
+CALLSIGN:KRC?(-)[0-9][0-9]*:Royal New Zealand Air Force
 CALLSIGN:KIW?(-)[0-9][0-9]*:Royal New Zealand Air Force
-CALLSIGN:LMG?(-)[0-9]*:South African Air Force
+CALLSIGN:LXA?(-)[0-9][0-9]*:Luxembourg Air Force
 CALLSIGN:LSV?(-)[0-9][0-9]*:Slovenian Ministry of Defence (Air Force)
 CALLSIGN:LYF?(-)[0-9][0-9]*:Lithuanian Air Force
 CALLSIGN:MARINE?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:MM?(-)[0-9][0-9]*:Italian Air Force
 CALLSIGN:MJN?(-)[0-9][0-9]*:Royal Air Force of Oman
 CALLSIGN:MMF?(-)[0-9][0-9]*:Royal Netherlands Air Force
+CALLSIGN:MOI?(-)[0-9][0-9]*:Ministry of Interior (Oman)
 CALLSIGN:MRS?(-)[0-9][0-9]*:Morocco Government
 CALLSIGN:NACHO?(-)[0-9][0-9]*:United States Air Force - KC-135
 CALLSIGN:NAF?(-)[0-9][0-9]*:Royal Netherlands Air Force
 CALLSIGN:NATO?(-)[0-9]*:NATO air component
 CALLSIGN:NAVY?(-)[0-9][0-9]*:United States Navy
+CALLSIGN:NGF?(-)[0-9][0-9]*:Angel Flight (Medical transport)
+CALLSIGN:NGR?(-)[0-9][0-9]*:Nigerian Air Force
+CALLSIGN:NOR?(-)[0-9][0-9]*:Norwegian Air Force
+CALLSIGN:NZL?(-)[0-9][0-9]*:New Zealand Government Flights
 CALLSIGN:OILER?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:OILGATE?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:OPEC?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ORCA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:PAF?(-)[0-9][0-9]*:Pakistan Air Force
 CALLSIGN:PLF?(-)[0-9][0-9]*:Polish Air Force
+CALLSIGN:PLZ?(-)[0-9][0-9]*:Pals Hope (Medical and humanitarian)
+CALLSIGN:POL?(-)[0-9][0-9]*:Greek VIP/Government Missions
 CALLSIGN:PRIMO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:PYREX?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:QID?(-)[0-9][0-9]*:United States Air Force - KC-135
@@ -83,26 +115,41 @@ CALLSIGN:QUAD?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:QUEST?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:RANGR?(-)[0-9][0-9]*:United States Marine Corps
 CALLSIGN:RANGER?(-)[0-9][0-9]*:United States Marine Corps
+CALLSIGN:RAFO?(-)[0-9][0-9]*:Royal Air Force of Oman
+CALLSIGN:RAX?(-)[0-9][0-9]*:Royal Australian Air Force Training flights
 CALLSIGN:RCH?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:REACH?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:RED?(-)[0-9][0-9]*:International Committee of the Red Cross
+CALLSIGN:REGNUM?(-)[0-9][0-9]*:VIP/Government Missions (Hungary)
 CALLSIGN:RFR?(-)[0-9][0-9]*:Rafair - Royal Air Force
+CALLSIGN:RFF?(-)[0-9][0-9]*:Russian Federation Government (VIP) flights
+CALLSIGN:RJAF?(-)[0-9][0-9]*:Royal Jordanian Air Force
 CALLSIGN:ROMA?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ROVING?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:RRR?(-)[0-9][0-9]*:United Kingdom RAF air transport/support flights
+CALLSIGN:RSF?(-)[0-9][0-9]*:Royal Saudi Air Force
 CALLSIGN:RTAF?(-)[0-9][0-9]*:Royal Thai Air Force
+CALLSIGN:RWA?(-)[0-9][0-9]*:Rwandan Air Force
+CALLSIGN:SAAF?(-)[0-9][0-9]*:South African Air Force
 CALLSIGN:SAM?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SHELL?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SHAMU?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:SLOVAK?(-)[0-9][0-9]*:Government Missions (Slovakia)
 CALLSIGN:SPAR?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SPUR?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:SUI?(-)[0-9][0-9]*:Swiss Air Force
 CALLSIGN:SVF?(-)[0-9][0-9]*:Swedish Armed Forces
 CALLSIGN:TEXACO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:TKF?(-)[0-9]*:The King's Flight
+CALLSIGN:TNZ?(-)[0-9][0-9]*:Tanzanian Air Force
 CALLSIGN:TOGA?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:TUAF?(-)[0-9][0-9]*:Turkish Air Force
 CALLSIGN:TUN?(-)[0-9][0-9]*:Tunisian Air Force
+CALLSIGN:TUR?(-)[0-9][0-9]*:Turkish VIP/Government Missions
 CALLSIGN:UAF?(-)[0-9][0-9]*:United Arab Emirates Air Force
+CALLSIGN:UNO?(-)[0-9][0-9]*:United Nations
 CALLSIGN:UNIVERSAL?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:UPDF?(-)[0-9][0-9]*:Uganda People's Defence Force
 CALLSIGN:USAF?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:USCG?(-)[0-9][0-9]*:United States Coast Guard
 CALLSIGN:USMC?(-)[0-9][0-9]*:United States Marine Corps
@@ -163,7 +210,6 @@ DATABASE:typecode:C135
 DATABASE:typecode:C160
 DATABASE:typecode:C17
 DATABASE:typecode:C2
-DATABASE:typecode:C208
 DATABASE:typecode:C212
 DATABASE:typecode:C27J
 DATABASE:typecode:C295
@@ -171,6 +217,7 @@ DATABASE:typecode:C30J
 DATABASE:typecode:C414
 DATABASE:typecode:C5
 DATABASE:typecode:C5M
+DATABASE:typecode:CL2T
 DATABASE:typecode:CORS
 DATABASE:typecode:DOVE
 DATABASE:typecode:DRON
@@ -300,6 +347,7 @@ ICAO:E494A*:Brazilian Air Force
 DATABASE:owner:* Oil*
 DATABASE:owner:* Patrol*
 DATABASE:owner:* Petrol*
+DATABASE:owner:* Police*
 
 
 
