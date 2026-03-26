@@ -107,19 +107,26 @@ fi
 # Now, if we got nothing, then let's try the Plane-Alert database.
 # The Plane-Alert db has the tail number in field 2 and the full name in field 3:
 if [[ -z "$b" ]] && [[ -f "$PLANEFILE" ]]; then
-  b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3;exit;}}' "$PLANEFILE")"
+  if [[ -n "$c" ]] ; then 
+    # look up by ICAO if it's provided:    
+    b="$(awk -F ',' -v a="$c" '{IGNORECASE=1; if ($1 == a){print $3;exit;}}' "$PLANEFILE")"
+  else
+    # Look up by tail number if no ICAO is provided:
+    b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($2 == a){print $3;exit;}}' "$PLANEFILE")"
+  fi
   q="${b:+pa-file}"
 fi
 
 # Still nothing? Let's see if there is a cache, and if so, if there's a match in our cache
 # The cache has the search item (probably tail number) field 1 and the full name in field 2. (Field 3 contains the time added to cache):
 if [[ -z "$b" ]] && [[ -f "$CACHEFILE" ]]; then
-  echo "$a" | grep -e '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' >/dev/null && b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
-  q="${b:+ca-a}"
-fi
-if [[ -z "$b" ]] && [[ -f "$CACHEFILE" ]]; then
-  b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $CACHEFILE)"
-  q="${b:+ca-n}"
+  if grep -qe '^[A-Za-z]\{3\}[0-9][A-Za-z0-9]*' <<< "$a" ; then
+    b="$(awk -F ',' -v a="${a:0:3}" '{IGNORECASE=1; if ($1 ~ "^"a){print $2;exit;}}' $CACHEFILE)"
+    q="${b:+ca-a}"
+  else
+    b="$(awk -F ',' -v a="$a" '{IGNORECASE=1; if ($1 == a){print $2;exit;}}' $CACHEFILE)"
+    q="${b:+ca-n}"
+  fi
 fi
 
 # Nothing? Then do an FAA DB lookup
@@ -159,6 +166,7 @@ if [[ -z "$b" ]]; then
       if [[ "${header[i]}" == "icao24" ]]; then OSDB_icao="$((i + 1))"; fi
     done
     # we pre-grep the values here because grep is much much faster than awk. Then we use awk to retrieve the correct value from the limited grepped result set
+
     if grepped="$(grep -i "$a" /run/OpenSkyDB.csv)"; then
       b="$(awk -F ","  -v p="${a,,}" -v reg="$OSDB_reg" -v own="$OSDB_owner" '{IGNORECASE=1; gsub("-",""); gsub("\047",""); if(tolower($reg)==p) {print $own;exit}}' <<< "$grepped")"
     fi
