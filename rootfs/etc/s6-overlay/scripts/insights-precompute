@@ -42,7 +42,7 @@ precompute_for_mode() {
 
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
   sleep 5
- done
+done
 
 "${s6wrap[@]}" echo "$0 started as an s6 service"
 
@@ -50,4 +50,4 @@ while true; do
   precompute_for_mode "planefence"
   precompute_for_mode "plane-alert"
   sleep "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" & wait
- done
+done
