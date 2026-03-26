@@ -5,6 +5,8 @@ set -eo pipefail
 
 source /scripts/pf-common
 
+DEBUG="${DEBUG:-false}"
+
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
 utc_today="$(date -u +%y%m%d)"
@@ -204,6 +206,7 @@ if [[ "$historical_cache_enabled" == true ]]; then
     now_ts="$(date +%s)"
     cache_ts="$(stat -c %Y "$historical_cache_file" 2>/dev/null || printf '0')"
     if [[ "$cache_ts" =~ ^[0-9]+$ ]] && (( now_ts - cache_ts <= historical_cache_ttl_sec )); then
+      log_print DEBUG "Insights render mode=warm-cache source=historical key=$cache_key age_sec=$((now_ts - cache_ts))"
       printf '%s\n' "$(cat "$historical_cache_file")" > "$cache_file" 2>/dev/null || true
       cat "$historical_cache_file"
       exit 0
@@ -215,10 +218,13 @@ if [[ -s "$cache_file" ]]; then
   now_ts="$(date +%s)"
   cache_ts="$(stat -c %Y "$cache_file" 2>/dev/null || printf '0')"
   if [[ "$cache_ts" =~ ^[0-9]+$ ]] && (( now_ts - cache_ts <= cache_ttl_sec )); then
+    log_print DEBUG "Insights render mode=warm-cache source=request key=$cache_key age_sec=$((now_ts - cache_ts))"
     cat "$cache_file"
     exit 0
   fi
 fi
+
+log_print DEBUG "Insights render mode=cold-create key=$cache_key"
 
 series_file="$(mktemp)"
 tmp_callsign="$(mktemp)"
@@ -333,8 +339,15 @@ AIRLINE_PREFIX_MAP_JSON="$(jq -Rn '[inputs | select(length>0)] | unique | reduce
 for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
   req_date="$(date -u -d "-${day} days" +%y%m%d 2>/dev/null || true)"
   [[ -n "$req_date" ]] || continue
+  date_start_epoch="$(date +%s)"
+  log_print DEBUG "Insights aggregation: start processing date=$req_date mode=$FILTER_MODE"
+
   json_file="$(choose_json_for_date "$FILTER_MODE" "$req_date")"
-  [[ -n "$json_file" ]] || continue
+  if [[ -z "$json_file" ]]; then
+    date_end_epoch="$(date +%s)"
+    log_print DEBUG "Insights aggregation: finished date=$req_date mode=$FILTER_MODE status=no-data elapsed=$((date_end_epoch - date_start_epoch))s"
+    continue
+  fi
 
   jq -c \
     --arg date "$req_date" \
@@ -537,6 +550,9 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
             else . end
         )
     ' "$json_file" >> "$series_file" 2>/dev/null || true
+
+  date_end_epoch="$(date +%s)"
+  log_print DEBUG "Insights aggregation: finished date=$req_date mode=$FILTER_MODE status=ok elapsed=$((date_end_epoch - date_start_epoch))s"
 done
 
 if [[ ! -s "$series_file" ]]; then

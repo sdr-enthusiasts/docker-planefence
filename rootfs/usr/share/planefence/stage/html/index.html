@@ -423,14 +423,17 @@
   .pf-controls .pf-right .dataTables_paginate { margin: 0; }
   .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
   .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
-  .insights-panel { margin: 0; background: var(--soft); border: 1px solid var(--muted); border-radius: .75rem; padding: .75rem .85rem; }
-  .insights-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .55rem; }
+  .insights-panel { margin: 0; background: var(--soft); border: 1px solid var(--muted); border-radius: .75rem; padding: .68rem .8rem; }
+  .insights-head { display: flex; align-items: baseline; justify-content: space-between; gap: .65rem; flex-wrap: wrap; margin-bottom: .45rem; }
   .insights-title { margin: 0; font-size: 1rem; font-weight: 700; }
   .insights-subtitle { color: var(--muted); font-size: .88rem; }
-  .insights-grid { display: grid; grid-template-columns: 2fr 1.2fr; gap: .75rem; align-items: start; }
+  .insights-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; align-items: start; margin-top: .5rem; }
+  .insights-column { display: grid; gap: .5rem; align-content: start; }
+  .insights-block-wide { margin-top: .5rem; }
+  .insights-block-title { margin: 0 0 .35rem; font-size: .92rem; }
   .insights-block { background: var(--bg); border: 1px solid var(--soft); border-radius: .65rem; padding: .6rem .65rem; }
   html.dark .insights-block { border-color: rgba(255,255,255,0.08); }
-  .insights-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .45rem; margin-bottom: .55rem; }
+  .insights-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .4rem; margin-bottom: .45rem; }
   .insight-kpi { background: var(--bg); border: 1px solid var(--soft); border-radius: .55rem; padding: .45rem .55rem; }
   html.dark .insight-kpi { border-color: rgba(255,255,255,0.08); }
   .insight-kpi .label { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -438,7 +441,7 @@
   .insights-trend-wrap { overflow-x: auto; }
   .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
   .insights-trend-hit { cursor: pointer; }
-  .insights-chart-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-bottom: .35rem; }
+  .insights-chart-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .45rem; margin-bottom: .25rem; }
   .insights-graph-shell { position: relative; }
   .insights-chart-nav { position: absolute; inset: 0; pointer-events: none; }
   .insights-chart-nav button {
@@ -457,7 +460,7 @@
   .insights-chart-nav button:last-child { right: .35rem; }
   .insights-hydration-status { margin-right: auto; font-size: .8rem; color: var(--muted); }
   .insights-chart-range { font-size: .82rem; color: var(--muted); }
-  .insights-stacked-wrap { overflow-x: auto; margin-top: .45rem; }
+  .insights-stacked-wrap { overflow-x: auto; margin-top: .3rem; }
   .insights-stacked-svg { min-width: 620px; width: 100%; height: 160px; display: block; }
   .insights-stacked-bar-hit { cursor: pointer; }
   .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
@@ -494,6 +497,7 @@
   .insights-hourly-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
   .insights-hourly-legend-line { width: 1.2rem; height: 0; border-top: 3px solid transparent; display: inline-block; }
   .insights-table-wrap { overflow: auto; margin-top: .65rem; }
+  .insights-table-title { margin: .55rem 0 .25rem; font-size: .92rem; }
   .insights-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
   .insights-table tbody tr { cursor: pointer; }
   .insights-table th, .insights-table td { padding: .35rem .45rem; border-bottom: 1px solid var(--soft); text-align: right; }
@@ -578,7 +582,7 @@
     .pf-controls .pf-right { gap: .75rem; }
     .pf-controls .pf-right .dataTables_filter { width: 100%; }
     .pf-controls .pf-right .dataTables_filter input { width: 100%; }
-    .insights-grid { grid-template-columns: 1fr; }
+    .insights-columns { grid-template-columns: 1fr; }
     .insights-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .insights-trend-svg { min-width: 540px; }
     .insights-stacked-svg { min-width: 540px; }
@@ -731,49 +735,59 @@
           <div id="insightsSubtitle" class="insights-subtitle">Loading analytics...</div>
         </div>
         <div id="insightsKpis" class="insights-kpis"></div>
-        <div class="insights-grid">
-          <div class="insights-block">
-            <div class="insights-chart-toolbar">
-              <div id="insightsStackedHydrationStatus" class="insights-hydration-status" hidden></div>
-              <div id="insightsStackedRange" class="insights-chart-range"></div>
-            </div>
-            <div class="insights-graph-shell">
-              <div class="insights-chart-nav">
-                <button type="button" id="insightsStackedPrev" aria-label="Show previous 14 days">&#x2039;</button>
-                <button type="button" id="insightsStackedNext" aria-label="Show next 14 days">&#x203A;</button>
-              </div>
-              <div id="insightsStacked" class="insights-stacked-wrap"></div>
-            </div>
-            <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
-            <div class="insights-subtypes" style="margin-top:.5rem;">
-              <h3 id="insightsHourlyTitle" style="margin:0 0 .45rem; font-size:.92rem;">Cumulative Through Day (UTC)</h3>
-              <div id="insightsHourly" class="insights-hourly-wrap"></div>
-            </div>
+        <div class="insights-block insights-block-wide">
+          <h3 id="insightsStackedTitle" class="insights-block-title">Block Chart</h3>
+          <div class="insights-chart-toolbar">
+            <div id="insightsStackedHydrationStatus" class="insights-hydration-status" hidden></div>
+            <div id="insightsStackedRange" class="insights-chart-range"></div>
           </div>
-          <div class="insights-block">
-            <h3 id="insightsCategoryTitle" style="margin:0 0 .45rem; font-size:.92rem;">Category Mix</h3>
-            <div id="insightsMix" class="insights-mix"></div>
-            <div class="insights-subtypes">
-              <h3 id="insightsSubtypeTitle" style="margin:0 0 .45rem; font-size:.92rem;">Military Mission Mix</h3>
+          <div class="insights-graph-shell">
+            <div class="insights-chart-nav">
+              <button type="button" id="insightsStackedPrev" aria-label="Show previous 14 days">&#x2039;</button>
+              <button type="button" id="insightsStackedNext" aria-label="Show next 14 days">&#x203A;</button>
+            </div>
+            <div id="insightsStacked" class="insights-stacked-wrap"></div>
+          </div>
+          <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
+        </div>
+        <div class="insights-block insights-block-wide">
+          <h3 id="insightsHourlyTitle" class="insights-block-title">Cumulative Through Day (UTC)</h3>
+          <div id="insightsHourly" class="insights-hourly-wrap"></div>
+        </div>
+        <div class="insights-columns">
+          <div class="insights-column">
+            <div class="insights-block">
+              <h3 id="insightsCategoryTitle" class="insights-block-title">Category Mix</h3>
+              <div id="insightsMix" class="insights-mix"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsSubtypeTitle" class="insights-block-title">Military Mission Mix</h3>
               <div id="insightsSubtypes" class="insights-mix"></div>
             </div>
-            <div class="insights-subtypes">
-              <h3 id="insightsEnhancementsTitle" style="margin:0 0 .45rem; font-size:.92rem;">Advanced Insights</h3>
+            <div class="insights-block">
+              <h3 id="insightsEnhancementsTitle" class="insights-block-title">Advanced Insights</h3>
               <div id="insightsConfidence" class="insights-mini"></div>
               <div id="insightsWeekday" class="insights-mini" style="margin-top:.45rem;"></div>
               <div id="insightsNovel" class="insights-mini" style="margin-top:.45rem;"></div>
               <div id="insightsAlerts" class="insights-mini" style="margin-top:.45rem;"></div>
             </div>
-            <div class="insights-subtypes">
-            <h3 id="insightsFlowTitle" style="margin:0 0 .45rem; font-size:.92rem;">Directional Flow</h3>
-            <div id="insightsFlow" class="insights-mini"></div>
-            <h3 id="insightsFamilyTitle" style="margin:.65rem 0 .45rem; font-size:.92rem;">Aircraft Family Trends</h3>
-            <div id="insightsFamilies" class="insights-mini"></div>
-            <h3 id="insightsOutlierTitle" style="margin:.65rem 0 .45rem; font-size:.92rem;">Outlier Spotlight</h3>
-            <div id="insightsOutliers" class="insights-mini"></div>
+          </div>
+          <div class="insights-column">
+            <div class="insights-block">
+              <h3 id="insightsFlowTitle" class="insights-block-title">Directional Flow</h3>
+              <div id="insightsFlow" class="insights-mini"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsFamilyTitle" class="insights-block-title">Aircraft Family Trends</h3>
+              <div id="insightsFamilies" class="insights-mini"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsOutlierTitle" class="insights-block-title">Outlier Spotlight</h3>
+              <div id="insightsOutliers" class="insights-mini"></div>
             </div>
           </div>
         </div>
+        <h3 id="insightsTableTitle" class="insights-table-title">Date / Total / Types</h3>
         <div class="insights-table-wrap">
           <table class="insights-table" aria-label="Daily traffic summary">
             <thead>
@@ -3215,6 +3229,7 @@ ${messagesDesc}
   }
 
   function updateInsightsStaticText(){
+    const stackedTitleEl = document.getElementById('insightsStackedTitle');
     const categoryTitleEl = document.getElementById('insightsCategoryTitle');
     const subtypeTitleEl = document.getElementById('insightsSubtypeTitle');
     const enhancementsTitleEl = document.getElementById('insightsEnhancementsTitle');
@@ -3222,6 +3237,7 @@ ${messagesDesc}
     const flowTitleEl = document.getElementById('insightsFlowTitle');
     const familyTitleEl = document.getElementById('insightsFamilyTitle');
     const outlierTitleEl = document.getElementById('insightsOutlierTitle');
+    const tableTitleEl = document.getElementById('insightsTableTitle');
     const headDateEl = document.getElementById('insightsHeadDate');
     const headTotalEl = document.getElementById('insightsHeadTotal');
     const headMilitaryEl = document.getElementById('insightsHeadMilitary');
@@ -3237,6 +3253,7 @@ ${messagesDesc}
       ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
       : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
     if (insightsSubtitleEl && !insightsCache.data) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+    if (stackedTitleEl) stackedTitleEl.textContent = insightsText('stackedChartTitle', {}, 'Block Chart');
     if (categoryTitleEl) categoryTitleEl.textContent = insightsText('categoryMixTitle', {}, 'Category Mix');
     if (subtypeTitleEl) subtypeTitleEl.textContent = insightsText('subtypeMixTitle', {}, 'Military Mission Mix');
     if (enhancementsTitleEl) enhancementsTitleEl.textContent = insightsText('enhancements.title', {}, 'Advanced Insights');
@@ -3244,6 +3261,7 @@ ${messagesDesc}
     if (flowTitleEl) flowTitleEl.textContent = insightsText('enhancements.flow.title', {}, 'Directional Flow');
     if (familyTitleEl) familyTitleEl.textContent = insightsText('enhancements.family.title', {}, 'Aircraft Family Trends');
     if (outlierTitleEl) outlierTitleEl.textContent = insightsText('enhancements.outlier.title', {}, 'Outlier Spotlight');
+    if (tableTitleEl) tableTitleEl.textContent = insightsText('table.title', {}, 'Date / Total / Types');
     if (headDateEl) headDateEl.textContent = insightsText('table.date', {}, 'Date');
     if (headTotalEl) headTotalEl.textContent = insightsText('table.total', {}, 'Total');
     if (headMilitaryEl) headMilitaryEl.textContent = insightsText('table.military', {}, 'Military');
