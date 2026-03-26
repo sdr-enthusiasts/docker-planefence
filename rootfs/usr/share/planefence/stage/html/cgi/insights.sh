@@ -9,9 +9,36 @@ DEBUG="${DEBUG:-false}"
 
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
-utc_today="$(date -u +%y%m%d)"
-utc_now_hms="$(date -u +%H:%M:%S)"
-utc_cutoff_sec="$((10#${utc_now_hms:0:2}*3600 + 10#${utc_now_hms:3:2}*60 + 10#${utc_now_hms:6:2}))"
+tz_today="$(date +%y%m%d)"
+tz_now_hms="$(date +%H:%M:%S)"
+tz_cutoff_sec="$((10#${tz_now_hms:0:2}*3600 + 10#${tz_now_hms:3:2}*60 + 10#${tz_now_hms:6:2}))"
+container_tz_abbr="$(date +%Z 2>/dev/null || printf 'LOCAL')"
+container_tz_offset_str="$(date +%z 2>/dev/null || printf '+0000')"
+
+offset_hhmm_to_seconds() {
+  local off="$1" sign hh mm
+  [[ "$off" =~ ^[+-][0-9]{4}$ ]] || { printf '%s' '0'; return; }
+  sign=1
+  [[ "${off:0:1}" == "-" ]] && sign=-1
+  hh=$((10#${off:1:2}))
+  mm=$((10#${off:3:2}))
+  printf '%s' "$((sign * (hh * 3600 + mm * 60)))"
+}
+
+offset_hhmm_to_minutes() {
+  local sec
+  sec="$(offset_hhmm_to_seconds "$1")"
+  printf '%s' "$((sec / 60))"
+}
+
+tz_offset_for_date_hhmm() {
+  local date_yyMMdd="$1"
+  if [[ "$date_yyMMdd" =~ ^[0-9]{6}$ ]]; then
+    date -d "20${date_yyMMdd:0:2}-${date_yyMMdd:2:2}-${date_yyMMdd:4:2} 12:00:00" +%z 2>/dev/null || printf '%s' "$container_tz_offset_str"
+  else
+    printf '%s' "$container_tz_offset_str"
+  fi
+}
 
 EMIT_HEADERS=true
 if [[ "${INSIGHTS_RAW:-0}" == "1" ]]; then
@@ -67,16 +94,16 @@ collapsewithin_sec_for_mode() {
   printf '%s' "$val"
 }
 
-date_yyMMdd_to_epoch_utc() {
+date_yyMMdd_to_epoch_tz() {
   local date_yyMMdd="$1"
   [[ "$date_yyMMdd" =~ ^[0-9]{6}$ ]] || { printf '%s' "-1"; return; }
-  date -u -d "20${date_yyMMdd:0:2}-${date_yyMMdd:2:2}-${date_yyMMdd:4:2} 00:00:00" +%s 2>/dev/null || printf '%s' "-1"
+  date -d "20${date_yyMMdd:0:2}-${date_yyMMdd:2:2}-${date_yyMMdd:4:2} 00:00:00" +%s 2>/dev/null || printf '%s' "-1"
 }
 
-age_days_from_today_utc() {
+age_days_from_today_tz() {
   local date_yyMMdd="$1" req_epoch today_epoch
-  req_epoch="$(date_yyMMdd_to_epoch_utc "$date_yyMMdd")"
-  today_epoch="$(date_yyMMdd_to_epoch_utc "$utc_today")"
+  req_epoch="$(date_yyMMdd_to_epoch_tz "$date_yyMMdd")"
+  today_epoch="$(date_yyMMdd_to_epoch_tz "$tz_today")"
   if [[ ! "$req_epoch" =~ ^-?[0-9]+$ || ! "$today_epoch" =~ ^-?[0-9]+$ || "$req_epoch" == "-1" || "$today_epoch" == "-1" ]]; then
     printf '%s' "-1"
     return
@@ -104,7 +131,7 @@ choose_json_for_date() {
 FILTER_MODE="planefence"
 REQUESTED_DATE=""
 REQUESTED_DAYS=""
-INSIGHTS_CACHE_SCHEMA_VERSION="3"
+INSIGHTS_CACHE_SCHEMA_VERSION="4"
 
 parse_params() {
   local method key val pair
@@ -151,7 +178,7 @@ SELECTED_HINT_DATE=""
 if [[ "$REQUESTED_DATE" =~ ^[0-9]{6}$ ]]; then
   SELECTED_HINT_DATE="$REQUESTED_DATE"
 elif [[ -z "$REQUESTED_DATE" || "$REQUESTED_DATE" == "today" ]]; then
-  SELECTED_HINT_DATE="$utc_today"
+  SELECTED_HINT_DATE="$tz_today"
 fi
 
 if [[ "$EMIT_HEADERS" == true ]]; then
@@ -177,7 +204,7 @@ fi
 
 cache_date_key="${REQUESTED_DATE:-today}"
 if [[ -z "$REQUESTED_DATE" || "$REQUESTED_DATE" == "today" ]]; then
-  cache_date_key="$utc_today"
+  cache_date_key="$tz_today"
 fi
 
 cache_key="v${INSIGHTS_CACHE_SCHEMA_VERSION}:${FILTER_MODE}:${cache_date_key}:${HISTORY_DAYS}"
@@ -190,11 +217,11 @@ historical_cache_enabled=false
 collapsewithin_sec="$(collapsewithin_sec_for_mode "$FILTER_MODE")"
 
 if [[ "$REQUESTED_DATE" =~ ^[0-9]{6}$ ]]; then
-  requested_age_days="$(age_days_from_today_utc "$REQUESTED_DATE")"
+  requested_age_days="$(age_days_from_today_tz "$REQUESTED_DATE")"
   if [[ "$requested_age_days" =~ ^-?[0-9]+$ ]]; then
     if (( requested_age_days >= 2 )); then
       historical_cache_enabled=true
-    elif (( requested_age_days == 1 && utc_cutoff_sec > collapsewithin_sec )); then
+    elif (( requested_age_days == 1 && tz_cutoff_sec > collapsewithin_sec )); then
       historical_cache_enabled=true
     fi
   fi
@@ -337,8 +364,10 @@ MIL_OWNER_KEYWORDS_JSON="$(jq -Rsc 'split("\n") | map(select(length>0)) | unique
 AIRLINE_PREFIX_MAP_JSON="$(jq -Rn '[inputs | select(length>0)] | unique | reduce .[] as $p ({}; .[$p] = true)' < "$tmp_airline_prefix")"
 
 for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
-  req_date="$(date -u -d "-${day} days" +%y%m%d 2>/dev/null || true)"
+  req_date="$(date -d "-${day} days" +%y%m%d 2>/dev/null || true)"
   [[ -n "$req_date" ]] || continue
+  day_tz_offset_hhmm="$(tz_offset_for_date_hhmm "$req_date")"
+  day_tz_offset_sec="$(offset_hhmm_to_seconds "$day_tz_offset_hhmm")"
   date_start_epoch="$(date +%s)"
   log_print DEBUG "Insights aggregation: start processing date=$req_date mode=$FILTER_MODE"
 
@@ -353,7 +382,8 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
     --arg date "$req_date" \
     --arg selected_hint_date "$SELECTED_HINT_DATE" \
     --arg mode "$FILTER_MODE" \
-    --argjson cutoff_sec "$utc_cutoff_sec" \
+    --argjson cutoff_sec "$tz_cutoff_sec" \
+    --argjson tz_offset_sec "$day_tz_offset_sec" \
     --argjson mil_callsign_prefixes "$MIL_CALLSIGN_PREFIXES_JSON" \
     --argjson mil_icao_prefixes "$MIL_ICAO_PREFIXES_JSON" \
     --argjson mil_type_prefixes "$MIL_TYPE_PREFIXES_JSON" \
@@ -470,10 +500,13 @@ for (( day=HISTORY_DAYS-1; day>=0; day-- )); do
           then (($t[0:2] | tonumber) * 3600 + ($t[3:5] | tonumber) * 60 + (if ($t|length) >= 8 then ($t[6:8] | tonumber) else 0 end))
           else null
           end;
-      def row_second_of_day($r):
+      def row_second_of_day_utc($r):
         (parse_hms($r["time:firstseen"] // $r.time.firstseen)
          // parse_hms($r["time:time_at_mindist"] // $r.time.time_at_mindist)
          // parse_hms($r["time:lastseen"] // $r.time.lastseen));
+      def row_second_of_day($r):
+        (row_second_of_day_utc($r)) as $sec
+        | if $sec == null then null else ((($sec + $tz_offset_sec) % 86400 + 86400) % 86400) end;
       def within_cutoff($r):
         ((row_second_of_day($r) // 86400) <= $cutoff_sec);
       def military_role($r):
@@ -566,9 +599,9 @@ trap 'rm -f "$series_file" "$tmp_callsign" "$tmp_icao" "$tmp_typecode" "$tmp_own
 payload="$(jq -s \
   --arg mode "$FILTER_MODE" \
   --arg req_date "$REQUESTED_DATE" \
-  --arg today "$utc_today" \
-  --arg now_hms "$utc_now_hms" \
-  --argjson cutoff_sec "$utc_cutoff_sec" \
+  --arg today "$tz_today" \
+  --arg now_hms "$tz_now_hms" \
+  --argjson cutoff_sec "$tz_cutoff_sec" \
   --argjson hist_days "$HISTORY_DAYS" '
   def sort_by_date: sort_by(.date);
   def tail($n): if ($n <= 0) then [] else (if (length <= $n) then . else .[(length-$n):] end) end;
@@ -697,6 +730,7 @@ payload="$(jq -s \
         same_weekday_count: ($weekday_totals | length),
         baseline_days_used: ($prev7_totals | length),
         selected_is_today_partial: $selected_is_today,
+        selected_cutoff_hms_tz: (if $selected_is_today then $now_hms else null end),
         selected_cutoff_hms_utc: (if $selected_is_today then $now_hms else null end),
         previous_7d_category_shares: {military: round1(share($prev7_sum.military; $prev7_sum.total) * 100), government: round1(share($prev7_sum.government; $prev7_sum.total) * 100), airline: round1(share($prev7_sum.airline; $prev7_sum.total) * 100), private_jet: round1(share($prev7_sum.private_jet; $prev7_sum.total) * 100), general_aviation: round1(share($prev7_sum.general_aviation; $prev7_sum.total) * 100), other: round1(share($prev7_sum.other; $prev7_sum.total) * 100)},
         previous_7d_military_types: $prev7_subtypes,
@@ -731,6 +765,7 @@ payload="$(jq -s \
           band: (if $confidence_score == null then "unknown" elif $confidence_score >= 80 then "high" elif $confidence_score >= 55 then "medium" else "low" end)
         },
         outliers: {
+          peak_hour_tz: $peak_hour,
           peak_hour_utc: $peak_hour,
           peak_hour_count: $peak_hour_count,
           peak_hour_baseline_median: $peak_hour_baseline,
@@ -770,6 +805,17 @@ if [[ -z "$payload" ]]; then
   fi
   exit 0
 fi
+
+selected_date_key="$(jq -r '.selected_date // empty' <<< "$payload" 2>/dev/null || true)"
+selected_tz_offset_str="$(tz_offset_for_date_hhmm "$selected_date_key")"
+selected_tz_offset_min="$(offset_hhmm_to_minutes "$selected_tz_offset_str")"
+payload="$(jq -c \
+  --arg day_basis "container-local" \
+  --arg tz_abbr "$container_tz_abbr" \
+  --arg tz_offset "$selected_tz_offset_str" \
+  --argjson tz_offset_min "$selected_tz_offset_min" \
+  '.time_context = {day_basis:$day_basis, container_tz_abbr:$tz_abbr, selected_tz_offset:$tz_offset, selected_tz_offset_min:$tz_offset_min}' \
+  <<< "$payload" 2>/dev/null || printf '%s' "$payload")"
 
 printf '%s\n' "$payload" > "$cache_file" 2>/dev/null || true
 if [[ "$historical_cache_enabled" == true ]]; then
