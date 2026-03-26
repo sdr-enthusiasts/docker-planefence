@@ -1685,14 +1685,6 @@ done
   pa_records["$idx":complete]=true  # mark as complete since plane-alert mode has no collapse window
 
   # ------------------------------------------------------------------------------------
-  # Plane-alert owner lookup uses the current callsign/tail plus ICAO via airlinename.sh.
-  # That helper applies sources in this order: hard-coded HMED/NATO overrides, local
-  # airline code table ($AIRLINECODES) for flight-number style callsigns, Plane-Alert's
-  # own database ($PLANEFILE), the local owner cache, FAA N-number lookup, Transport
-  # Canada C-registration lookup, OpenSkyDB (registration first, then ICAO), and finally
-  # the optional remote Planefence database for flight-number style callsigns / HMED.
-  # Note: this happens before we backfill a missing callsign below, so Plane-Alert planes
-  # without an initial callsign skip owner lookup during this pass.
   if [[ "${pa_records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then
     log_print DEBUG "Getting owner data for record $idx"
     pa_records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null)"
