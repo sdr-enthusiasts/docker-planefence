@@ -4019,10 +4019,10 @@ ${messagesDesc}
     insightsBulletsWrapEl.innerHTML = `<ul class="insights-bullets">${bullets.map((b)=> `<li>${b}</li>`).join('')}</ul>`;
   }
 
-  function browserTimeZoneAxisLabel(){
+  function browserTimeZoneAxisLabel(atDate = new Date()){
     try {
       const fmt = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' });
-      const parts = fmt.formatToParts(new Date());
+      const parts = fmt.formatToParts(atDate);
       const tzPart = parts.find((p)=> p.type === 'timeZoneName');
       const shortLabel = String(tzPart?.value || '').trim();
       if (/^[A-Za-z]{2,5}$/.test(shortLabel)) return shortLabel;
@@ -4122,6 +4122,18 @@ ${messagesDesc}
       return timeLabel;
     }
 
+    function browserDateFromContainerMoment(hourFloat){
+      const parts = selectedDatePartsFromKey(selectedDateKey);
+      if (!parts || !hasContainerOffset || !Number.isFinite(hourFloat)) return null;
+      const baseHour = Math.floor(hourFloat);
+      const minuteFloat = (hourFloat - baseHour) * 60;
+      const baseMinute = Math.floor(minuteFloat);
+      const secondFloat = (minuteFloat - baseMinute) * 60;
+      const baseSecond = Math.floor(secondFloat);
+      const utcMs = Date.UTC(parts.year, parts.month - 1, parts.day, baseHour, baseMinute, baseSecond) - (containerOffsetMin * 60 * 1000);
+      return new Date(utcMs);
+    }
+
     function pathForSeries(vals, maxX){
       const maxFinite = Number.isFinite(maxX) ? Math.max(0, Math.min(23, maxX)) : 23;
       const fullIdx = Math.floor(maxFinite);
@@ -4154,8 +4166,20 @@ ${messagesDesc}
     const dateLabel = fmtDateKeyHuman(selectedDateKey || '');
     const xAxisLabel = browserTimeZoneAxisLabel();
     const nowMarker = isTodaySelection
-      ? `<line x1="${(padL + (dx * nowXHour)).toFixed(2)}" y1="${padT}" x2="${(padL + (dx * nowXHour)).toFixed(2)}" y2="${(padT + innerH)}" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="3 3"></line>
-        <text x="${Math.min(width - padR - 4, (padL + (dx * nowXHour) + 5)).toFixed(2)}" y="${(padT + 11).toFixed(2)}" text-anchor="start" font-size="10" fill="#c2185b">Now (Container Day)</text>`
+      ? (()=> {
+          const markerDt = browserDateFromContainerMoment(nowXHour);
+          let markerClock = String(options.selectedCutoffHms || '').slice(0, 5);
+          if (markerDt && localHourFormatter) {
+            try {
+              markerClock = localHourFormatter.format(markerDt);
+            } catch (e) { /* ignore */ }
+          }
+          if (!/^\d{2}:\d{2}$/.test(markerClock)) markerClock = '--:--';
+          const markerTz = browserTimeZoneAxisLabel(markerDt || new Date());
+          const markerLabel = `Now (${markerClock} ${markerTz})`;
+          return `<line x1="${(padL + (dx * nowXHour)).toFixed(2)}" y1="${padT}" x2="${(padL + (dx * nowXHour)).toFixed(2)}" y2="${(padT + innerH)}" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="3 3"></line>
+        <text x="${Math.min(width - padR - 4, (padL + (dx * nowXHour) + 5)).toFixed(2)}" y="${(padT + 11).toFixed(2)}" text-anchor="start" font-size="10" fill="#c2185b">${escapeHtml(markerLabel)}</text>`;
+        })()
       : '';
     const legend = `<div class="insights-hourly-legend" aria-hidden="true">
       <span class="insights-hourly-legend-item"><span class="insights-hourly-legend-line" style="border-top-color: var(--accent);"></span>${escapeHtml(insightsText('enhancements.hourly.legend.selected', {}, 'Selected day cumulative'))}</span>
