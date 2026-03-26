@@ -114,3 +114,6 @@ __pycache__/
 *.pyc
 .RData
 .Rhistory
+test-results/
+.venv/
+.vscode/
