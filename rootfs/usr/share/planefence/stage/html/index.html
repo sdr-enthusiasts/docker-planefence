@@ -17,7 +17,7 @@
     tr.row-incomplete .muted { color: inherit; opacity: .9; }
 
     /* Small “still updating” */
-    .still-updating { font-size: 0.85em; }s
+    .still-updating { font-size: 0.85em; }
 
     /* Override DataTables zebra to adapt to theme */
     table.dataTable.stripe tbody tr.odd,
@@ -209,7 +209,6 @@
   img.thumb.thumb-photo { cursor: zoom-in; }
   /* Silhouette thumbnails: keep width same as thumb, preserve aspect ratio */
   img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
-    .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
   /* Position cell: give a little gap between coords and angle line */
   td.position-cell {
     display: flex;
@@ -491,8 +490,30 @@
   .insights-badge.sev-high, .insights-badge.sev-exceptional { border-color: #b00020; color: #b00020; }
   .insights-badge.sev-elevated { border-color: #ad6b00; color: #ad6b00; }
   .insights-badge.sev-normal { border-color: #0a7d2d; color: #0a7d2d; }
-  .insights-hourly-wrap { overflow-x: auto; }
+  .insights-hourly-wrap { overflow-x: auto; position: relative; }
   .insights-hourly-svg { min-width: 620px; width: 100%; height: 220px; display: block; }
+  .insights-hourly-hit { cursor: pointer; }
+  .insights-hourly-tooltip {
+    position: absolute;
+    z-index: 6;
+    min-width: 180px;
+    max-width: 260px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--soft);
+    border-radius: .5rem;
+    box-shadow: 0 10px 26px rgba(0,0,0,.26);
+    padding: .42rem .55rem;
+    font-size: .8rem;
+    line-height: 1.35;
+  }
+  .insights-hourly-tooltip.open { opacity: 1; }
+  .insights-hourly-tooltip .tip-title { font-weight: 700; margin-bottom: .25rem; }
+  .insights-hourly-tooltip .tip-row { display: flex; justify-content: space-between; gap: .4rem; }
+  html.dark .insights-hourly-tooltip { border-color: rgba(255,255,255,0.12); box-shadow: 0 12px 28px rgba(0,0,0,.55); }
   .insights-hourly-legend { display: flex; flex-wrap: wrap; gap: .45rem .9rem; margin-top: .3rem; font-size: .8rem; color: var(--muted); }
   .insights-hourly-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
   .insights-hourly-legend-line { width: 1.2rem; height: 0; border-top: 3px solid transparent; display: inline-block; }
@@ -1170,6 +1191,44 @@
     if (!want) return false;
     const got = String(payload?.selected?.date || payload?.selected_date || '');
     return got === want;
+  }
+
+  function parseCutoffHms(value){
+    const s = String(value || '');
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(s)) return null;
+    const parts = s.split(':').map((n)=> Number(n));
+    const hh = parts[0];
+    const mm = parts[1];
+    const ss = parts[2] || 0;
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || !Number.isFinite(ss)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return null;
+    return (hh * 3600) + (mm * 60) + ss;
+  }
+
+  function insightsEnhancementQualityScore(payload, dateKey){
+    const p = payload || {};
+    let score = 0;
+    if (payloadEnhancementDateMatches(p, dateKey)) score += 8;
+    const cumulative = p?.enhancements?.hourly_profile?.cumulative_selected;
+    if (Array.isArray(cumulative) && cumulative.length >= 24) score += 5;
+    else if (Array.isArray(cumulative) && cumulative.length > 0) score += 2;
+    const tzOffsetMin = Number(p?.time_context?.selected_tz_offset_min);
+    if (Number.isFinite(tzOffsetMin)) score += 2;
+    const isPartial = p?.baselines?.selected_is_today_partial === true;
+    if (isPartial) score += 3;
+    const cutoffSec = parseCutoffHms(p?.baselines?.selected_cutoff_hms_tz || p?.baselines?.selected_cutoff_hms_utc);
+    if (cutoffSec != null) score += 3;
+    if (p?._deferEnhancementsDate) score -= 20;
+    return score;
+  }
+
+  function shouldPreferResolvedEnhancements(incomingPayload, resolvedPayload, selectedDate){
+    if (!incomingPayload || !resolvedPayload || !selectedDate) return false;
+    const resolvedDate = String(resolvedPayload?.selected_date || resolvedPayload?.selected?.date || '');
+    if (resolvedDate !== String(selectedDate)) return false;
+    const incomingScore = insightsEnhancementQualityScore(incomingPayload, selectedDate);
+    const resolvedScore = insightsEnhancementQualityScore(resolvedPayload, selectedDate);
+    return resolvedScore > incomingScore;
   }
 
   function markInsightsRenderComplete(dateKey, details){
@@ -4168,8 +4227,40 @@ ${messagesDesc}
       ? new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 0, 0, 0) - (containerOffsetMin * 60 * 1000))
       : null;
     const xTicks = [0, 6, 12, 18, 24].map((h)=> ({ x: padL + (dx * h), l: browserLabelFromContainerHour(h, referenceBrowserDate) }));
-    const dateLabel = fmtDateKeyHuman(selectedDateKey || '');
-    const xAxisLabel = browserTimeZoneAxisLabel();
+    const axisDateFormatter = (()=> {
+      try {
+        return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+      } catch (e) {
+        return null;
+      }
+    })();
+    const axisDate = (()=> {
+      if (!axisDateFormatter) return '';
+      if (referenceBrowserDate) {
+        try { return axisDateFormatter.format(referenceBrowserDate); } catch (e) { /* ignore */ }
+      }
+      if (selectedParts) {
+        try {
+          const fallbackDate = new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 12, 0, 0));
+          return axisDateFormatter.format(fallbackDate);
+        } catch (e) { /* ignore */ }
+      }
+      return '';
+    })();
+    const xAxisTzLabel = browserTimeZoneAxisLabel(referenceBrowserDate || new Date());
+    const xAxisLabel = axisDate ? `${xAxisTzLabel} (${axisDate})` : xAxisTzLabel;
+    const pointCutoffHour = isTodaySelection ? nowXHour : 24;
+    const hourlyPointHits = Array.from({ length: 24 }, (_, i) => {
+      const h = i + 1;
+      if (h > pointCutoffHour) return '';
+      const x = padL + (dx * h);
+      const selectedVal = Math.max(0, Number(selected[i]) || 0);
+      const baselineVal = Math.max(0, Number(baseline[i]) || 0);
+      const ySel = toY(selectedVal);
+      const hourLabel = browserLabelFromContainerHour(h, referenceBrowserDate);
+      const hitTitle = `${hourLabel} · selected ${numberFmt0.format(selectedVal)} · median ${numberFmt0.format(baselineVal)}`;
+      return `<circle class="insights-hourly-hit" data-hour-label="${escapeHtml(hourLabel)}" data-selected="${selectedVal}" data-baseline="${baselineVal}" cx="${x.toFixed(2)}" cy="${ySel.toFixed(2)}" r="8" fill="transparent"><title>${escapeHtml(hitTitle)}</title></circle>`;
+    }).join('');
     const nowMarker = isTodaySelection
       ? (()=> {
           const markerDt = browserDateFromContainerMoment(nowXHour);
@@ -4196,9 +4287,76 @@ ${messagesDesc}
       ${nowMarker}
       <path d="${basePath}" fill="none" stroke="#2a7f62" stroke-width="2" stroke-dasharray="5 4"></path>
       <path d="${selPath}" fill="none" stroke="var(--accent)" stroke-width="2.4"></path>
+      ${hourlyPointHits}
       ${xTicks.map((t)=> `<text x="${t.x.toFixed(2)}" y="${(height - 18)}" text-anchor="middle" font-size="11" fill="var(--muted)">${t.l}</text>`).join('')}
       <text x="${(width / 2).toFixed(2)}" y="${(height - 4)}" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(xAxisLabel)}</text>
-    </svg>${legend}`;
+    </svg>${legend}<div class="insights-hourly-tooltip" aria-hidden="true"></div>`;
+  }
+
+  function bindInsightsHourlyInteractions(){
+    if (!insightsHourlyEl) return;
+    const svg = insightsHourlyEl.querySelector('.insights-hourly-svg');
+    const tooltip = insightsHourlyEl.querySelector('.insights-hourly-tooltip');
+    if (!svg || !tooltip) return;
+
+    const hideTooltip = () => {
+      tooltip.classList.remove('open');
+      tooltip.setAttribute('aria-hidden', 'true');
+    };
+
+    const showTooltipForHit = (hitEl) => {
+      if (!hitEl || !(hitEl instanceof Element)) return;
+      const hourLabel = String(hitEl.getAttribute('data-hour-label') || '--:--');
+      const selectedVal = Number(hitEl.getAttribute('data-selected') || 0);
+      const baselineVal = Number(hitEl.getAttribute('data-baseline') || 0);
+      tooltip.innerHTML = `<div class="tip-title">${escapeHtml(hourLabel)}</div>
+      <div class="tip-row"><span>${escapeHtml(insightsText('enhancements.hourly.legend.selected', {}, 'Selected day cumulative'))}</span><strong>${numberFmt0.format(selectedVal)}</strong></div>
+      <div class="tip-row"><span>${escapeHtml(insightsText('enhancements.hourly.legend.baseline', {}, '7-day median cumulative'))}</span><strong>${numberFmt0.format(baselineVal)}</strong></div>`;
+
+      const svgRect = svg.getBoundingClientRect();
+      const hostRect = insightsHourlyEl.getBoundingClientRect();
+      const vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : { width: 760, height: 224 };
+      const cx = Number(hitEl.getAttribute('cx') || 0);
+      const cy = Number(hitEl.getAttribute('cy') || 0);
+      const px = (svgRect.left - hostRect.left) + ((vb.width > 0 ? cx / vb.width : 0) * svgRect.width);
+      const py = (svgRect.top - hostRect.top) + ((vb.height > 0 ? cy / vb.height : 0) * svgRect.height);
+      const hostWidth = Math.max(0, hostRect.width);
+      const hostHeight = Math.max(0, hostRect.height);
+      const edgePad = 8;
+
+      tooltip.style.left = '0px';
+      tooltip.style.top = '0px';
+      tooltip.classList.add('open');
+      tooltip.setAttribute('aria-hidden', 'false');
+
+      const tipWidth = Math.max(0, tooltip.offsetWidth);
+      const tipHeight = Math.max(0, tooltip.offsetHeight);
+
+      let left = px - (tipWidth / 2);
+      left = Math.max(edgePad, Math.min(left, hostWidth - tipWidth - edgePad));
+
+      let top = py - tipHeight - 10;
+      if (top < edgePad) {
+        top = py + 10;
+      }
+      top = Math.max(edgePad, Math.min(top, hostHeight - tipHeight - edgePad));
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.classList.add('open');
+      tooltip.setAttribute('aria-hidden', 'false');
+    };
+
+    insightsHourlyEl.onclick = (ev) => {
+      const hit = ev.target && ev.target.closest ? ev.target.closest('.insights-hourly-hit') : null;
+      if (!hit) {
+        hideTooltip();
+        return;
+      }
+      showTooltipForHit(hit);
+    };
+
+    insightsHourlyEl.onmouseleave = hideTooltip;
   }
 
   function renderEnhancements(data, scaleMax){
@@ -4226,6 +4384,7 @@ ${messagesDesc}
           selectedIsTodayPartial: baselineMeta?.selected_is_today_partial === true,
           selectedCutoffHms: baselineMeta?.selected_cutoff_hms_tz || baselineMeta?.selected_cutoff_hms_utc || null
         });
+        bindInsightsHourlyInteractions();
         markInsightsCumulativeComplete(String(data?.selected_date || data?.selected?.date || ''), { deferEnhancementsDate: false });
       }
     }
@@ -4354,10 +4513,26 @@ ${messagesDesc}
     const enhancementsBaseDate = String(data?.selected?.date || data?.selected_date || '');
     const deferEnhancementsDate = !!(data?._deferEnhancementsDate || (enhancementsBaseDate && enhancementsBaseDate !== selectedDate));
     const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext, _deferEnhancementsDate: deferEnhancementsDate };
-    const sharedScaleMax = computeInsightsSharedScaleMax(window.displaySeries, dataForSelected?.enhancements?.hourly_profile);
-    if (!deferEnhancementsDate) {
-      insightsResolvedSelectedByDate.set(String(selectedDate), {
+    const resolvedSelected = insightsResolvedSelectedByDate.get(String(selectedDate));
+    let effectiveDataForSelected = dataForSelected;
+    if (shouldPreferResolvedEnhancements(dataForSelected, resolvedSelected, selectedDate)) {
+      effectiveDataForSelected = {
         ...dataForSelected,
+        enhancements: resolvedSelected?.enhancements,
+        time_context: resolvedSelected?.time_context,
+        baselines: resolvedSelected?.baselines,
+        _deferEnhancementsDate: false
+      };
+      insightsLog('preserve-resolved-enhancements', {
+        date: String(selectedDate),
+        incomingScore: insightsEnhancementQualityScore(dataForSelected, selectedDate),
+        resolvedScore: insightsEnhancementQualityScore(resolvedSelected, selectedDate)
+      });
+    }
+    const sharedScaleMax = computeInsightsSharedScaleMax(window.displaySeries, effectiveDataForSelected?.enhancements?.hourly_profile);
+    if (!effectiveDataForSelected._deferEnhancementsDate) {
+      insightsResolvedSelectedByDate.set(String(selectedDate), {
+        ...effectiveDataForSelected,
         selected_date: selectedDate,
         _deferEnhancementsDate: false
       });
@@ -4385,20 +4560,20 @@ ${messagesDesc}
     const canExpandPrevAfterHydration = window.total <= INSIGHTS_WINDOW_DAYS && insightsBaseLoadedDays < insightsFullDays();
     if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !(window.hasPrev || canExpandPrevAfterHydration);
     if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
-    renderInsightsKpis(dataForSelected);
+    renderInsightsKpis(effectiveDataForSelected);
     if (insightsStackedEl) {
       insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate, sharedScaleMax);
     }
-    renderInsightsBullets(dataForSelected);
-    renderInsightsMix(dataForSelected);
-    renderMilitarySubtypeMix(dataForSelected);
-    renderEnhancements(dataForSelected, sharedScaleMax);
-    renderInsightsTable(dataForSelected);
+    renderInsightsBullets(effectiveDataForSelected);
+    renderInsightsMix(effectiveDataForSelected);
+    renderMilitarySubtypeMix(effectiveDataForSelected);
+    renderEnhancements(effectiveDataForSelected, sharedScaleMax);
+    renderInsightsTable(effectiveDataForSelected);
     markInsightsRenderComplete(selectedDate, {
       seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
       windowStart: window.start,
       windowEnd: window.end,
-      deferEnhancementsDate
+      deferEnhancementsDate: effectiveDataForSelected._deferEnhancementsDate
     });
     bindInsightsDateInteractions(modeGeneration);
   }
@@ -4458,7 +4633,8 @@ ${messagesDesc}
       }
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === selected)) {
-        if (isBaseRequest) renderInsights({ ...insightsCache.data, selected_date: selected });
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (isBaseRequest) renderInsights({ ...insightsCache.data, selected_date: selected, _deferEnhancementsDate: shouldDeferFastToday });
         else renderInsights(withBaseSeriesIfAvailable(insightsCache.data, selected));
       } else {
         insightsWindowStart = defaultInsightsWindowStart(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0);
@@ -4480,7 +4656,8 @@ ${messagesDesc}
       }
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(cached.series) && cached.series.some((s)=> s && s.date === selected)) {
-        if (isBaseRequest) renderInsights({ ...cached, selected_date: selected });
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (isBaseRequest) renderInsights({ ...cached, selected_date: selected, _deferEnhancementsDate: shouldDeferFastToday });
         else renderInsights(withBaseSeriesIfAvailable(cached, selected));
       } else {
         if (isBaseRequest) {
@@ -4538,7 +4715,8 @@ ${messagesDesc}
       const selected = insightsSelectedDateKey;
       if (selected && Array.isArray(data.series) && data.series.some((s)=> s && s.date === selected)) {
         const selectedEnhancementMatch = payloadEnhancementDateMatches(data, selected);
-        if (selectedEnhancementMatch) {
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (selectedEnhancementMatch && !shouldDeferFastToday) {
           if (isBaseRequest) renderInsights({ ...data, selected_date: selected });
           else renderInsights(withBaseSeriesIfAvailable(data, selected));
         } else if (background && isBaseRequest) {
@@ -4546,7 +4724,8 @@ ${messagesDesc}
             date: dateKey,
             reqKey,
             selectedDate: selected,
-            payloadDate: String(data?.selected?.date || data?.selected_date || '')
+            payloadDate: String(data?.selected?.date || data?.selected_date || ''),
+            deferFastToday: shouldDeferFastToday
           });
         } else {
           renderInsights({ ...data, selected_date: selected, _deferEnhancementsDate: true });
