@@ -4412,7 +4412,8 @@ ${messagesDesc}
 
     if (insightsConfidenceEl) {
       const score = Number(confidence?.score);
-      const band = String(confidence?.band || 'unknown');
+      const bandRaw = String(confidence?.band || 'unknown').toLowerCase();
+      const band = insightsText(`enhancements.confidence.band.${bandRaw}`, {}, bandRaw || 'unknown');
       const counts = confidence?.counts || {};
       insightsConfidenceEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.confidenceBand', {}, 'Summarizes how trustworthy the day\'s category classifications are. Higher is better and means fewer ambiguous identifications.'))}">${escapeHtml(insightsText('enhancements.confidence.band', {}, 'Confidence'))}</span><span class="mini-val">${escapeHtml(band)}${Number.isFinite(score) ? ` (${score.toFixed(1)}%)` : ''}</span></div>
         <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.signalQuality', {}, 'Breakdown of classification certainty. H uses strong matches; M uses pattern matches; L is least certain and should be interpreted cautiously.'))}">${escapeHtml(insightsText('enhancements.confidence.breakdown', {}, 'Signal quality'))}</span><span class="mini-val">H ${numberFmt0.format(Number(counts.high) || 0)} / M ${numberFmt0.format(Number(counts.medium) || 0)} / L ${numberFmt0.format(Number(counts.low) || 0)}</span></div>`;
@@ -4428,7 +4429,11 @@ ${messagesDesc}
       if (!alerts.length) {
         insightsAlertsEl.innerHTML = `<div class="insights-badges"><span class="insights-badge sev-normal">${escapeHtml(insightsText('enhancements.alerts.none', {}, 'No active alerts'))}</span></div>`;
       } else {
-        insightsAlertsEl.innerHTML = `<div class="insights-badges">${alerts.map((a)=> `<span class="insights-badge sev-${escapeHtml(String(a.severity || 'normal'))}" title="${escapeHtml(String(a.message || ''))}">${escapeHtml(String(a.id || 'alert'))}</span>`).join('')}</div>`;
+        insightsAlertsEl.innerHTML = `<div class="insights-badges">${alerts.map((a)=> {
+          const alertId = String(a?.id || 'alert');
+          const label = insightsText(`enhancements.alert.id.${alertId}`, {}, alertId.replace(/_/g, ' '));
+          return `<span class="insights-badge sev-${escapeHtml(String(a.severity || 'normal'))}" title="${escapeHtml(String(a.message || ''))}">${escapeHtml(label)}</span>`;
+        }).join('')}</div>`;
       }
     }
 
@@ -4456,7 +4461,14 @@ ${messagesDesc}
     if (insightsFamiliesEl) {
       const selectedCounts = families?.selected_counts || {};
       const baselineAvg = families?.baseline_daily_avg || {};
-      const labels = { jet: 'Jet', turboprop: 'Turboprop', piston: 'Piston', rotorcraft: 'Rotorcraft', uav: 'UAV', other: 'Other' };
+      const labels = {
+        jet: insightsText('family.jet', {}, 'Jet'),
+        turboprop: insightsText('family.turboprop', {}, 'Turboprop'),
+        piston: insightsText('family.piston', {}, 'Piston'),
+        rotorcraft: insightsText('family.rotorcraft', {}, 'Rotorcraft'),
+        uav: insightsText('family.uav', {}, 'UAV'),
+        other: insightsText('family.other', {}, 'Other')
+      };
       insightsFamiliesEl.innerHTML = Object.keys(labels).map((k)=> {
         const s = Number(selectedCounts[k]) || 0;
         const b = Number(baselineAvg[k]) || 0;
@@ -4467,9 +4479,11 @@ ${messagesDesc}
 
     if (insightsOutliersEl) {
       const shift = outliers?.top_category_share_shift || {};
+      const shiftKeyRaw = String(shift?.key || '');
+      const shiftKeyLabel = shiftKeyRaw ? insightsText(`category.${shiftKeyRaw}`, {}, shiftKeyRaw.replace(/_/g, ' ')) : '--';
       insightsOutliersEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeak', {}, 'Hour where traffic peaked on the selected container-local day. Use with the baseline below to gauge spike intensity.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHour', {}, 'Peak container-day hour'))}</span><span class="mini-val">${String(Number(outliers.peak_hour_tz ?? outliers.peak_hour_utc) || 0).padStart(2,'0')}:00 (${numberFmt0.format(Number(outliers.peak_hour_count) || 0)})</span></div>
         <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeakBaseline', {}, 'Typical traffic level for that same hour over recent days. Compare directly with peak-hour count to detect surges.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHourBaseline', {}, 'Peak-hour baseline'))}</span><span class="mini-val">${numberFmt0.format(Number(outliers.peak_hour_baseline_median) || 0)}</span></div>
-        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierShareShift', {}, 'Category whose traffic share moved the most versus recent baseline composition. Helps identify what changed, not just how much.'))}">${escapeHtml(insightsText('enhancements.outlier.shareShift', {}, 'Largest share shift'))}</span><span class="mini-val">${escapeHtml(String(shift.key || '--'))}: ${pctText(shift.value)}</span></div>`;
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierShareShift', {}, 'Category whose traffic share moved the most versus recent baseline composition. Helps identify what changed, not just how much.'))}">${escapeHtml(insightsText('enhancements.outlier.shareShift', {}, 'Largest share shift'))}</span><span class="mini-val">${escapeHtml(shiftKeyLabel)}: ${pctText(shift.value)}</span></div>`;
     }
   }
 
