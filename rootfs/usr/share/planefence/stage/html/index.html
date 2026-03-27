@@ -4060,7 +4060,7 @@ ${messagesDesc}
       ? parsedOverride
       : niceAxisMax(maxY);
     const toY = (v)=> padT + innerH - ((Math.max(0, Number(v) || 0) / scaleMax) * innerH);
-    const dx = innerW / 23;
+    const dx = innerW / 24;
     const localHourFormatter = (()=> {
       try {
         return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -4102,7 +4102,7 @@ ${messagesDesc}
     }
 
     function browserLabelFromContainerHour(containerHour, referenceBrowserDate){
-      const h = Math.max(0, Math.min(23, Number(containerHour) || 0));
+      const h = Math.max(0, Math.min(24, Number(containerHour) || 0));
       const parts = selectedDatePartsFromKey(selectedDateKey);
       if (!parts || !hasContainerOffset) {
         return `${String(h).padStart(2, '0')}:00`;
@@ -4140,34 +4140,34 @@ ${messagesDesc}
     }
 
     function pathForSeries(vals, maxX){
-      const maxFinite = Number.isFinite(maxX) ? Math.max(0, Math.min(23, maxX)) : 23;
-      const fullIdx = Math.floor(maxFinite);
-      const points = [];
-      for (let i = 0; i <= fullIdx && i < vals.length; i += 1) {
-        points.push({ x: i, y: Number(vals[i]) || 0 });
+      const maxFinite = Number.isFinite(maxX) ? Math.max(0, Math.min(24, maxX)) : 24;
+      const fullHours = Math.floor(maxFinite);
+      const points = [{ x: 0, y: 0 }];
+
+      for (let h = 1; h <= fullHours && h <= 24; h += 1) {
+        points.push({ x: h, y: Number(vals[h - 1]) || 0 });
       }
-      if (fullIdx < 23 && maxFinite > fullIdx && fullIdx < vals.length) {
-        points.push({ x: maxFinite, y: Number(vals[fullIdx]) || 0 });
+
+      if (maxFinite > fullHours && fullHours < 24) {
+        points.push({ x: maxFinite, y: Number(vals[fullHours]) || 0 });
       }
-      if (!points.length) {
-        points.push({ x: 0, y: 0 });
-      }
+
       return points.map((p, idx)=> `${idx ? 'L' : 'M'}${(padL + (dx * p.x)).toFixed(2)} ${toY(p.y).toFixed(2)}`).join(' ');
     }
 
     const selectedIsTodayPartial = options.selectedIsTodayPartial === true;
     const cutoffHourFloat = parseHmsToHourFloat(options.selectedCutoffHms);
     const isTodaySelection = selectedIsTodayPartial && Number.isFinite(cutoffHourFloat);
-    const nowXHour = isTodaySelection ? cutoffHourFloat : 23;
+    const nowXHour = isTodaySelection ? cutoffHourFloat : 24;
 
-    const selPath = pathForSeries(selected, isTodaySelection ? nowXHour : 23);
-    const basePath = baseline.map((v, i)=> `${i ? 'L' : 'M'}${(padL + (dx * i)).toFixed(2)} ${toY(v).toFixed(2)}`).join(' ');
+    const selPath = pathForSeries(selected, isTodaySelection ? nowXHour : 24);
+    const basePath = pathForSeries(baseline, 24);
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({ y: padT + innerH - (f * innerH), v: Math.round(scaleMax * f) }));
     const selectedParts = selectedDatePartsFromKey(selectedDateKey);
     const referenceBrowserDate = (selectedParts && hasContainerOffset)
       ? new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 0, 0, 0) - (containerOffsetMin * 60 * 1000))
       : null;
-    const xTicks = [0, 6, 12, 18, 23].map((h)=> ({ x: padL + (dx * h), l: browserLabelFromContainerHour(h, referenceBrowserDate) }));
+    const xTicks = [0, 6, 12, 18, 24].map((h)=> ({ x: padL + (dx * h), l: browserLabelFromContainerHour(h, referenceBrowserDate) }));
     const dateLabel = fmtDateKeyHuman(selectedDateKey || '');
     const xAxisLabel = browserTimeZoneAxisLabel();
     const nowMarker = isTodaySelection
