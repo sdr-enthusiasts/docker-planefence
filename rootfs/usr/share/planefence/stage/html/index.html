@@ -4294,29 +4294,31 @@ ${messagesDesc}
     const referenceBrowserDate = (selectedParts && hasContainerOffset)
       ? new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 0, 0, 0) - (containerOffsetMin * 60 * 1000))
       : null;
-    const xTicks = [0, 6, 12, 18, 24].map((h)=> ({ x: padL + (dx * h), l: browserLabelFromContainerHour(h, referenceBrowserDate) }));
-    const axisDateFormatter = (()=> {
+    const xTickFormatter = (()=> {
       try {
-        return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+        return new Intl.DateTimeFormat(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
       } catch (e) {
         return null;
       }
     })();
-    const axisDate = (()=> {
-      if (!axisDateFormatter) return '';
-      if (referenceBrowserDate) {
-        try { return axisDateFormatter.format(referenceBrowserDate); } catch (e) { /* ignore */ }
-      }
-      if (selectedParts) {
+    const xTicks = [0, 6, 12, 18, 24].map((h)=> {
+      const tickDate = browserDateFromContainerMoment(h);
+      let label = `${String(h).padStart(2, '0')}:00`;
+      if (tickDate && xTickFormatter) {
         try {
-          const fallbackDate = new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 12, 0, 0));
-          return axisDateFormatter.format(fallbackDate);
+          label = xTickFormatter.format(tickDate);
         } catch (e) { /* ignore */ }
       }
-      return '';
-    })();
+      return { x: padL + (dx * h), l: label };
+    });
     const xAxisTzLabel = browserTimeZoneAxisLabel(referenceBrowserDate || new Date());
-    const xAxisLabel = axisDate ? `${xAxisTzLabel} (${axisDate})` : xAxisTzLabel;
+    const xAxisLabel = `Time (${xAxisTzLabel})`;
     const pointCutoffHour = isTodaySelection ? nowXHour : 24;
     const hourlyPointHits = Array.from({ length: 24 }, (_, i) => {
       const h = i + 1;
