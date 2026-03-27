@@ -4150,6 +4150,21 @@ ${messagesDesc}
       return Math.min(23.999, Math.max(0, hh + (mm / 60) + (ss / 3600)));
     }
 
+    function selectedCutoffHourInContainerTz(){
+      const tzCutoff = parseHmsToHourFloat(options.selectedCutoffHmsTz);
+      if (Number.isFinite(tzCutoff)) return tzCutoff;
+
+      const genericCutoff = parseHmsToHourFloat(options.selectedCutoffHms);
+      if (Number.isFinite(genericCutoff)) return genericCutoff;
+
+      const utcCutoff = parseHmsToHourFloat(options.selectedCutoffHmsUtc);
+      if (!Number.isFinite(utcCutoff)) return null;
+      if (!hasContainerOffset) return utcCutoff;
+
+      const shifted = utcCutoff + (containerOffsetMin / 60);
+      return ((shifted % 24) + 24) % 24;
+    }
+
     function selectedDatePartsFromKey(key){
       const s = String(key || '');
       if (!/^\d{6}$/.test(s)) return null;
@@ -4215,7 +4230,7 @@ ${messagesDesc}
     }
 
     const selectedIsTodayPartial = options.selectedIsTodayPartial === true;
-    const cutoffHourFloat = parseHmsToHourFloat(options.selectedCutoffHms);
+    const cutoffHourFloat = selectedCutoffHourInContainerTz();
     const isTodaySelection = selectedIsTodayPartial && Number.isFinite(cutoffHourFloat);
     const nowXHour = isTodaySelection ? cutoffHourFloat : 24;
 
@@ -4382,6 +4397,8 @@ ${messagesDesc}
         insightsHourlyEl.innerHTML = buildHourlyCumulativeSvg(profile, data?.selected_date || data?.selected?.date, scaleMax, {
           containerOffsetMin: Number(timeContext?.selected_tz_offset_min),
           selectedIsTodayPartial: baselineMeta?.selected_is_today_partial === true,
+          selectedCutoffHmsTz: baselineMeta?.selected_cutoff_hms_tz || null,
+          selectedCutoffHmsUtc: baselineMeta?.selected_cutoff_hms_utc || null,
           selectedCutoffHms: baselineMeta?.selected_cutoff_hms_tz || baselineMeta?.selected_cutoff_hms_utc || null
         });
         bindInsightsHourlyInteractions();

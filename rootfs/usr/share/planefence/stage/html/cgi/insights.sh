@@ -9,8 +9,54 @@ DEBUG="${DEBUG:-false}"
 
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
+
+# Some CGI runtimes sanitize/override TZ (often to UTC), which can skew
+# Insights day-basis calculations. Recover TZ from the parent process first
+# (typically lighttpd), then PID 1 as a fallback.
+if [[ -z "${TZ:-}" || "${TZ:-}" == "UTC" ]]; then
+  # Primary source: s6 container environment (world-readable in this image).
+  for tz_file in /run/s6/container_environment/TZ /var/run/s6/container_environment/TZ; do
+    if [[ -r "$tz_file" ]]; then
+      tz_candidate="$(tr -d '\r\n' < "$tz_file" 2>/dev/null)"
+      if [[ -n "$tz_candidate" ]]; then
+        export TZ="$tz_candidate"
+        break
+      fi
+    fi
+  done
+
+  tz_from_pid() {
+    local pid="$1"
+    [[ -n "$pid" && -r "/proc/${pid}/environ" ]] || return 1
+    tr '\0' '\n' < "/proc/${pid}/environ" 2>/dev/null | awk -F= '$1=="TZ" { print substr($0, 4); exit }'
+  }
+
+  lighttpd_pid=""
+  for comm_file in /proc/[0-9]*/comm; do
+    [[ -r "$comm_file" ]] || continue
+    if [[ "$(<"$comm_file")" == "lighttpd" ]]; then
+      lighttpd_pid="${comm_file#/proc/}"
+      lighttpd_pid="${lighttpd_pid%/comm}"
+      break
+    fi
+  done
+
+  if [[ -z "${TZ:-}" || "${TZ:-}" == "UTC" ]]; then
+    tz_candidate=""
+    for pid in "${PPID:-}" "$lighttpd_pid" 1; do
+      tz_candidate="$(tz_from_pid "$pid")"
+      [[ -n "$tz_candidate" ]] && break
+    done
+
+    if [[ -n "$tz_candidate" ]]; then
+      export TZ="$tz_candidate"
+    fi
+  fi
+fi
+
 tz_today="$(date +%y%m%d)"
 tz_now_hms="$(date +%H:%M:%S)"
+utc_now_hms="$(date -u +%H:%M:%S)"
 tz_cutoff_sec="$((10#${tz_now_hms:0:2}*3600 + 10#${tz_now_hms:3:2}*60 + 10#${tz_now_hms:6:2}))"
 container_tz_abbr="$(date +%Z 2>/dev/null || printf 'LOCAL')"
 container_tz_offset_str="$(date +%z 2>/dev/null || printf '+0000')"
@@ -131,7 +177,7 @@ choose_json_for_date() {
 FILTER_MODE="planefence"
 REQUESTED_DATE=""
 REQUESTED_DAYS=""
-INSIGHTS_CACHE_SCHEMA_VERSION="4"
+INSIGHTS_CACHE_SCHEMA_VERSION="5"
 
 parse_params() {
   local method key val pair
@@ -600,7 +646,8 @@ payload="$(jq -s \
   --arg mode "$FILTER_MODE" \
   --arg req_date "$REQUESTED_DATE" \
   --arg today "$tz_today" \
-  --arg now_hms "$tz_now_hms" \
+  --arg now_hms_tz "$tz_now_hms" \
+  --arg now_hms_utc "$utc_now_hms" \
   --argjson cutoff_sec "$tz_cutoff_sec" \
   --argjson hist_days "$HISTORY_DAYS" '
   def sort_by_date: sort_by(.date);
@@ -730,8 +777,8 @@ payload="$(jq -s \
         same_weekday_count: ($weekday_totals | length),
         baseline_days_used: ($prev7_totals | length),
         selected_is_today_partial: $selected_is_today,
-        selected_cutoff_hms_tz: (if $selected_is_today then $now_hms else null end),
-        selected_cutoff_hms_utc: (if $selected_is_today then $now_hms else null end),
+        selected_cutoff_hms_tz: (if $selected_is_today then $now_hms_tz else null end),
+        selected_cutoff_hms_utc: (if $selected_is_today then $now_hms_utc else null end),
         previous_7d_category_shares: {military: round1(share($prev7_sum.military; $prev7_sum.total) * 100), government: round1(share($prev7_sum.government; $prev7_sum.total) * 100), airline: round1(share($prev7_sum.airline; $prev7_sum.total) * 100), private_jet: round1(share($prev7_sum.private_jet; $prev7_sum.total) * 100), general_aviation: round1(share($prev7_sum.general_aviation; $prev7_sum.total) * 100), other: round1(share($prev7_sum.other; $prev7_sum.total) * 100)},
         previous_7d_military_types: $prev7_subtypes,
         previous_7d_military_type_shares: subtype_share($prev7_subtypes; ($prev7_sum.military // 0))
