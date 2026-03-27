@@ -15,6 +15,10 @@
       - [Restart the container](#restart-the-container)
       - [Update to the latest Planefence image](#update-to-the-latest-planefence-image)
   - [What does it look like when it's running?](#what-does-it-look-like-when-its-running)
+  - [Web URL Query Options](#web-url-query-options)
+    - [Supported query parameters](#supported-query-parameters)
+    - [`page` behavior notes](#page-behavior-notes)
+    - [Examples](#examples)
   - [API access to your data](#api-access-to-your-data)
     - [Introduction](#introduction)
     - [API parameters and usage examples](#api-parameters-and-usage-examples)
@@ -174,6 +178,38 @@ popd
 - BlueSky notifications: <https://bsky.app/profile/aboveboston.bsky.social>
 - Telegram notifications: <https://t.me/+B_r-DgeNEQ4yMTUx>
 - RSS feed: <https://kx1t.com/planefence-dev/planefence.rss>
+
+## Web URL Query Options
+
+The Planefence web UI supports additional URL query parameters for selecting data mode, language, and opening specific pages/modals on load.
+
+### Supported query parameters
+
+| Parameter | Values | Description |
+| --- | --- | --- |
+| `mode` | `pf`, `planefence`, `pa`, `plane-alert`, `planealert` | Selects the data mode on load. |
+| `lang` | language code such as `en-US`, `nl-NL`, `es-ES` | Selects the UI language (if available in `locales/strings.json`). |
+| `page` | `info`, `heatmap`, `insights` | Opens the corresponding UI page/modal on load. |
+
+### `page` behavior notes
+
+- `page=info` opens Station Info.
+- `page=insights` opens Insights.
+- `page=heatmap` opens Heatmap **only in Planefence mode**.
+- If `mode` resolves to Plane-Alert, `page=heatmap` is ignored and the main Plane-Alert view is shown.
+
+### Examples
+
+You can combine these options:
+
+- Open Insights in Planefence mode:
+  - <https://kx1t.com/planefence-dev?mode=pf&page=insights>
+- Open Station Info in Plane-Alert mode:
+  - <https://kx1t.com/planefence-dev?mode=pa&page=info>
+- Request Heatmap in Planefence mode:
+  - <https://kx1t.com/planefence-dev?mode=pf&page=heatmap>
+- Open in Dutch:
+  - <https://kx1t.com/planefence-dev?lang=nl-NL>
 
 ## API access to your data
 

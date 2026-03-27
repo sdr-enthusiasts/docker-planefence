@@ -1565,6 +1565,22 @@ ${messagesDesc}
       }
     }
 
+    function pageFromQuery(){
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const raw = params.get('page');
+        if (!raw) return null;
+        const normalized = raw.trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === 'info') return 'info';
+        if (normalized === 'heatmap') return 'heatmap';
+        if (normalized === 'insights') return 'insights';
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     function isPlanefenceRequestedInQuery(){
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -1585,6 +1601,8 @@ ${messagesDesc}
       safeSetItem(DATA_MODE_KEY, presetMode);
     }
     let dataMode = presetMode || currentDataMode();
+    const initialPageRequest = pageFromQuery();
+    let initialPageRequestHandled = !initialPageRequest;
     function isPlaneAlertMode(){
       return dataMode === DATA_MODES.PLANE_ALERT;
     }
@@ -1934,6 +1952,9 @@ ${messagesDesc}
         ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
         : t('status.loading', {}, 'Loading...');
     }).catch((e) => console.error('i18n init failed', e));
+
+    // Apply optional ?page= deep-link once controls are wired.
+    tryApplyInitialPageRequest().catch((e) => console.warn('initial page request failed', e));
   }, { once: true });
 
   const stationInfoState = {
@@ -2255,6 +2276,9 @@ ${messagesDesc}
     if (heatmapState.dateStr !== dateStr) { heatmapState.dateStr = dateStr; changed = true; }
     if (!Object.is(heatmapState.zoom, zoomLevel)) { heatmapState.zoom = zoomLevel; changed = true; }
     if (changed) updateHeatmapButtonState(); else if (heatmapBtn) heatmapBtn.disabled = !isHeatmapDataReady() || isPlaneAlertMode();
+    if (!initialPageRequestHandled && initialPageRequest === 'heatmap') {
+      tryApplyInitialPageRequest().catch(()=>{});
+    }
   }
 
   function buildStationMapHtml() {
@@ -3135,6 +3159,35 @@ ${messagesDesc}
       stationInfoLastFocus.focus({ preventScroll: true });
     }
     stationInfoLastFocus = null;
+  }
+
+  async function tryApplyInitialPageRequest(){
+    if (initialPageRequestHandled || !initialPageRequest) return;
+    if (!document.body) return;
+
+    if (initialPageRequest === 'heatmap' && isPlaneAlertMode()) {
+      // In Plane-Alert mode, ignore heatmap page requests and stay on main view.
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'info') {
+      openStationInfoModal();
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'insights') {
+      openInsightsModal();
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'heatmap') {
+      if (!isHeatmapDataReady()) return;
+      openHeatmapModal();
+      initialPageRequestHandled = true;
+    }
   }
 
   function getGlobalValue(globals, key) {
