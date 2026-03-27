@@ -3036,13 +3036,18 @@ ${messagesDesc}
 
   function openInsightsModal() {
     if (!insightsModal) return;
-    insightsSelectedDateKey = null;
+    const todayKey = dateKeyFromDateUtc(utcToday());
+    insightsSelectedDateKey = todayKey;
     insightsWindowStart = null;
     insightsLastFocus = document.activeElement;
     insightsModal.classList.add('open');
     insightsModal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     insightsCloseBtn?.focus({ preventScroll: true });
+    // Opening Insights should always reset to today and pull a fresh snapshot,
+    // then hydrate full history in the background for charts and selectors.
+    loadInsights(modeGeneration, { dateKey: 'today', background: false, days: insightsFastDays(), forceRefresh: true });
+    loadInsights(modeGeneration, { dateKey: 'today', background: true, days: insightsFullDays(), forceRefresh: true });
   }
 
   function closeInsightsModal() {
@@ -4405,6 +4410,7 @@ ${messagesDesc}
     const baseDateKey = effectiveHistoryParam() || 'today';
     const isBaseRequest = dateKey === baseDateKey;
     const background = !!opts.background;
+    const forceRefresh = opts.forceRefresh === true;
     const fullDays = insightsFullDays();
     const fastDays = insightsFastDays();
     const requestedDays = Number.isFinite(Number(opts.days))
@@ -4443,7 +4449,7 @@ ${messagesDesc}
       if (insightsStackedEl) insightsStackedEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
     }
 
-    if (insightsCache.key === reqKey && insightsCache.data) {
+    if (!forceRefresh && insightsCache.key === reqKey && insightsCache.data) {
       insightsLog('cache-hit-active', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
       seedSelectedDateCacheAlias(dataMode, requestedDays, insightsCache.data);
       if (isBaseRequest) {
@@ -4462,7 +4468,7 @@ ${messagesDesc}
       return;
     }
 
-    const cached = getCachedInsights(reqKey);
+    const cached = forceRefresh ? null : getCachedInsights(reqKey);
     if (cached) {
       insightsLog('cache-hit-map', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
       seedSelectedDateCacheAlias(dataMode, requestedDays, cached);
