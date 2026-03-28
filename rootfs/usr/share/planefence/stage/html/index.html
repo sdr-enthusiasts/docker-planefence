@@ -4536,7 +4536,7 @@ ${messagesDesc}
         const s = Number(selectedCounts[k]) || 0;
         const b = Number(baselineMedian[k]) || 0;
         const d = b > 0 ? ((s - b) / b) * 100 : null;
-        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily median. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${b.toFixed(1)} median (${pctText(d)})</span></div>`;
+        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily median. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${numberFmt1.format(b)} median (${pctText(d)})</span></div>`;
       }).join('');
     }
 
