@@ -81,7 +81,7 @@
         "insights.enhancements.family.title": "Aircraft Family Trends",
         "insights.enhancements.flow.title": "Directional Flow",
         "insights.enhancements.help.confidenceBand": "Classifier confidence level for this selected day.",
-        "insights.enhancements.help.family": "Aircraft-type family count compared with recent daily average.",
+        "insights.enhancements.help.family": "Aircraft-type family count compared with recent daily median.",
         "insights.enhancements.help.flow": "Direction pairs with at least four flights on the selected day.",
         "insights.enhancements.help.newAircraft": "Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.",
         "insights.enhancements.help.outlierPeak": "UTC hour with highest selected-day traffic count.",

@@ -177,7 +177,7 @@ choose_json_for_date() {
 FILTER_MODE="planefence"
 REQUESTED_DATE=""
 REQUESTED_DAYS=""
-INSIGHTS_CACHE_SCHEMA_VERSION="5"
+INSIGHTS_CACHE_SCHEMA_VERSION="6"
 
 parse_params() {
   local method key val pair
@@ -721,7 +721,7 @@ payload="$(jq -s \
   | (if ($prev7_rows|length) > 0 then [range(0;24) as $h | ([$prev7_rows[] | ((.hourly // arr24_zero)[$h] // 0)] | percentile(.; 0.25) // 0)] else $selected_hourly end) as $baseline_hourly_p25
   | (if ($prev7_rows|length) > 0 then [range(0;24) as $h | ([$prev7_rows[] | ((.hourly // arr24_zero)[$h] // 0)] | percentile(.; 0.75) // 0)] else $selected_hourly end) as $baseline_hourly_p75
   | (eff_families($selected; $selected_is_today)) as $selected_families
-  | (if ($prev7_rows|length) > 0 then reduce family_keys[] as $k (families_zero; .[$k] = (($prev7_rows | map(eff_families(.; $selected_is_today)[$k] // 0) | add // 0) / ($prev7_rows|length))) else families_zero end) as $baseline_families_avg
+  | (if ($prev7_rows|length) > 0 then reduce family_keys[] as $k (families_zero; .[$k] = (($prev7_rows | map(eff_families(.; $selected_is_today)[$k] // 0) | median) // 0)) else families_zero end) as $baseline_families_median
   | (eff_confidence($selected; $selected_is_today)) as $selected_confidence
   | (($selected_confidence.high + $selected_confidence.medium + $selected_confidence.low) // 0) as $confidence_total
   | (if $confidence_total > 0 then round1((((($selected_confidence.high // 0) * 1.0) + (($selected_confidence.medium // 0) * 0.6) + (($selected_confidence.low // 0) * 0.25)) * 100) / $confidence_total) else null end) as $confidence_score
@@ -804,7 +804,7 @@ payload="$(jq -s \
         directional_flow: {top_routes: $route_flow},
         family_trends: {
           selected_counts: $selected_families,
-          baseline_daily_avg: (reduce family_keys[] as $k ({}; .[$k] = round1($baseline_families_avg[$k])) )
+          baseline_daily_median: (reduce family_keys[] as $k ({}; .[$k] = round1($baseline_families_median[$k])) )
         },
         confidence: {
           counts: $selected_confidence,

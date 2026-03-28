@@ -4523,7 +4523,7 @@ ${messagesDesc}
 
     if (insightsFamiliesEl) {
       const selectedCounts = families?.selected_counts || {};
-      const baselineAvg = families?.baseline_daily_avg || {};
+      const baselineMedian = families?.baseline_daily_median || families?.baseline_daily_avg || {};
       const labels = {
         jet: insightsText('family.jet', {}, 'Jet'),
         turboprop: insightsText('family.turboprop', {}, 'Turboprop'),
@@ -4534,9 +4534,9 @@ ${messagesDesc}
       };
       insightsFamiliesEl.innerHTML = Object.keys(labels).map((k)=> {
         const s = Number(selectedCounts[k]) || 0;
-        const b = Number(baselineAvg[k]) || 0;
+        const b = Number(baselineMedian[k]) || 0;
         const d = b > 0 ? ((s - b) / b) * 100 : null;
-        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily average. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${b.toFixed(1)} avg (${pctText(d)})</span></div>`;
+        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily median. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${b.toFixed(1)} median (${pctText(d)})</span></div>`;
       }).join('');
     }
 
