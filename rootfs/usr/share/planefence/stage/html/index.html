@@ -3705,9 +3705,9 @@ ${messagesDesc}
 
   function pickSeverity(deltaPct){
     const d = Math.abs(Number(deltaPct) || 0);
-    if (d >= 60) return 'exceptional';
-    if (d >= 30) return 'high';
-    if (d >= 12) return 'elevated';
+    if (d > 50) return 'exceptional';
+    if (d > 25) return 'high';
+    if (d >= 10) return 'elevated';
     return 'normal';
   }
 
