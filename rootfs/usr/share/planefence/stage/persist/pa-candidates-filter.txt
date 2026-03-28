@@ -24,7 +24,6 @@ CALLSIGN:AIRFORCE?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:AEQ?(-)[0-9][0-9]*:Spanish Air Force (Transport Wing)
 CALLSIGN:AFB?(-)[0-9][0-9]*:Portuguese Air Force
 CALLSIGN:AME?(-)[0-9][0-9]*:Spanish Air and Space Force
-CALLSIGN:AMX?(-)[0-9][0-9]*:Spanish Air Force (VIP Transport Unit)
 CALLSIGN:ARMY?(-)[0-9][0-9]*:United States Army
 CALLSIGN:ASTRO?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:ASY?(-)[0-9][0-9]*:Royal Australian Air Force
