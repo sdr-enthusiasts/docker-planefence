@@ -3927,11 +3927,19 @@ ${messagesDesc}
 
   function getBaseInsightsSeries(){
     const baseDateKey = effectiveHistoryParam() || 'today';
-    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
-    const baseData = (insightsCache.key === baseReqKey && insightsCache.data)
-      ? insightsCache.data
-      : getCachedInsights(baseReqKey);
-    if (baseData && Array.isArray(baseData.series) && baseData.series.length) return baseData.series;
+    const fullReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
+    const fastReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFastDays());
+
+    if (insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.length) {
+      if (insightsCache.key === fullReqKey || insightsCache.key === fastReqKey) return insightsCache.data.series;
+    }
+
+    const fullData = getCachedInsights(fullReqKey);
+    if (fullData && Array.isArray(fullData.series) && fullData.series.length) return fullData.series;
+
+    const fastData = getCachedInsights(fastReqKey);
+    if (fastData && Array.isArray(fastData.series) && fastData.series.length) return fastData.series;
+
     return null;
   }
 
