@@ -280,7 +280,13 @@ if [[ "$historical_cache_enabled" == true ]]; then
     cache_ts="$(stat -c %Y "$historical_cache_file" 2>/dev/null || printf '0')"
     if [[ "$cache_ts" =~ ^[0-9]+$ ]] && (( now_ts - cache_ts <= historical_cache_ttl_sec )); then
       log_print DEBUG "Insights render mode=warm-cache source=historical key=$cache_key age_sec=$((now_ts - cache_ts))"
-      printf '%s\n' "$(cat "$historical_cache_file")" > "$cache_file" 2>/dev/null || true
+      cache_action="create"
+      [[ -s "$cache_file" ]] && cache_action="update"
+      if printf '%s\n' "$(cat "$historical_cache_file")" > "$cache_file" 2>/dev/null; then
+        log_print INFO "Insights cache ${cache_action} source=request-from-historical key=$cache_key path=$cache_file"
+      else
+        log_print ERR "Insights cache write failed source=request-from-historical key=$cache_key path=$cache_file"
+      fi
       cat "$historical_cache_file"
       exit 0
     fi
@@ -864,8 +870,20 @@ payload="$(jq -c \
   '.time_context = {day_basis:$day_basis, container_tz_abbr:$tz_abbr, selected_tz_offset:$tz_offset, selected_tz_offset_min:$tz_offset_min}' \
   <<< "$payload" 2>/dev/null || printf '%s' "$payload")"
 
-printf '%s\n' "$payload" > "$cache_file" 2>/dev/null || true
+cache_action="create"
+[[ -s "$cache_file" ]] && cache_action="update"
+if printf '%s\n' "$payload" > "$cache_file" 2>/dev/null; then
+  log_print INFO "Insights cache ${cache_action} source=request key=$cache_key path=$cache_file"
+else
+  log_print ERR "Insights cache write failed source=request key=$cache_key path=$cache_file"
+fi
 if [[ "$historical_cache_enabled" == true ]]; then
-  printf '%s\n' "$payload" > "$historical_cache_file" 2>/dev/null || true
+  cache_action="create"
+  [[ -s "$historical_cache_file" ]] && cache_action="update"
+  if printf '%s\n' "$payload" > "$historical_cache_file" 2>/dev/null; then
+    log_print INFO "Insights cache ${cache_action} source=historical key=$cache_key path=$historical_cache_file"
+  else
+    log_print ERR "Insights cache write failed source=historical key=$cache_key path=$historical_cache_file"
+  fi
 fi
 printf '%s\n' "$payload"

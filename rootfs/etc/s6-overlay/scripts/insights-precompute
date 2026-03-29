@@ -4,6 +4,11 @@
 source /scripts/pf-common
 
 INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS="${INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS:-600}"
+INSIGHTS_CORE_SCRIPT="/usr/share/planefence/insights.sh"
+INSIGHTS_CACHE_SCHEMA_VERSION="$(awk -F'"' '/^INSIGHTS_CACHE_SCHEMA_VERSION=/{print $2; exit}' "$INSIGHTS_CORE_SCRIPT" 2>/dev/null || true)"
+if [[ -z "$INSIGHTS_CACHE_SCHEMA_VERSION" ]]; then
+  INSIGHTS_CACHE_SCHEMA_VERSION="6"
+fi
 
 if [[ ! "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" =~ ^[0-9]+$ ]] || (( INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS < 1 )); then
   log_print ERR "Invalid INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS='$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS' - using 600"
@@ -23,19 +28,107 @@ get_collapsewithin_sec_for_mode() {
   printf '%s' "$value"
 }
 
+history_days_for_mode() {
+  local mode="$1" section value
+  section="pf"
+  [[ "$mode" == "plane-alert" ]] && section="plane-alert"
+
+  value="$(GET_PARAM "$section" HISTTIME || true)"
+  value="${value//[[:space:]]/}"
+  [[ "$value" =~ ^[0-9]+$ ]] || value=14
+  (( value < 1 )) && value=14
+  (( value > 120 )) && value=120
+  printf '%s' "$value"
+}
+
+age_days_from_today_local() {
+  local date_yyMMdd="$1" req_epoch today_epoch
+  [[ "$date_yyMMdd" =~ ^[0-9]{6}$ ]] || { printf '%s' '-1'; return; }
+  req_epoch="$(date -d "20${date_yyMMdd:0:2}-${date_yyMMdd:2:2}-${date_yyMMdd:4:2} 00:00:00" +%s 2>/dev/null || printf '%s' '-1')"
+  today_epoch="$(date -d "$(date +%Y-%m-%d) 00:00:00" +%s 2>/dev/null || printf '%s' '-1')"
+  if [[ ! "$req_epoch" =~ ^-?[0-9]+$ || ! "$today_epoch" =~ ^-?[0-9]+$ || "$req_epoch" == "-1" || "$today_epoch" == "-1" ]]; then
+    printf '%s' '-1'
+    return
+  fi
+  printf '%s' "$(((today_epoch - req_epoch) / 86400))"
+}
+
+historical_cache_expected_for_date() {
+  local mode="$1" req_date="$2" now_sec collapsewithin_sec age_days
+  collapsewithin_sec="$(get_collapsewithin_sec_for_mode "$mode")"
+  now_sec="$((10#$(date +%H)*3600 + 10#$(date +%M)*60 + 10#$(date +%S)))"
+  age_days="$(age_days_from_today_local "$req_date")"
+  [[ "$age_days" =~ ^-?[0-9]+$ ]] || { printf '%s' 'false'; return; }
+  if (( age_days >= 2 )); then
+    printf '%s' 'true'
+    return
+  fi
+  if (( age_days == 1 && now_sec > collapsewithin_sec )); then
+    printf '%s' 'true'
+    return
+  fi
+  printf '%s' 'false'
+}
+
+cache_hash_for() {
+  local mode="$1" req_date="$2" history_days="$3" key
+  key="v${INSIGHTS_CACHE_SCHEMA_VERSION}:${mode}:${req_date}:${history_days}"
+  printf '%s' "$key" | sha256sum | awk '{print $1}'
+}
+
+collect_missing_historical_dates_for_mode() {
+  local mode="$1" days today req_date expected hash hist_file
+  days="$(history_days_for_mode "$mode")"
+  today="$(date +%y%m%d)"
+  mkdir -p /usr/share/planefence/persist/.internal/insights-cache 2>/dev/null || true
+
+  for (( offset=1; offset<days; offset+=1 )); do
+    req_date="$(date -d "-${offset} days" +%y%m%d 2>/dev/null || true)"
+    [[ -n "$req_date" ]] || continue
+    [[ "$req_date" == "$today" ]] && continue
+    expected="$(historical_cache_expected_for_date "$mode" "$req_date")"
+    [[ "$expected" == "true" ]] || continue
+    hash="$(cache_hash_for "$mode" "$req_date" "$days")"
+    hist_file="/usr/share/planefence/persist/.internal/insights-cache/${hash}.json"
+    if [[ ! -s "$hist_file" ]]; then
+      printf '%s\n' "$req_date"
+    fi
+  done
+}
+
+start_missing_historical_backfill() {
+  local mode="$1" missing
+  mapfile -t missing < <(collect_missing_historical_dates_for_mode "$mode")
+  if (( ${#missing[@]} == 0 )); then
+    log_print INFO "insights-precompute startup-check mode=$mode status=complete missing=0"
+    return
+  fi
+
+  log_print INFO "insights-precompute startup-check mode=$mode status=missing missing=${#missing[@]} order=reverse-chronological"
+  (
+    for req_date in "${missing[@]}"; do
+      bash "$INSIGHTS_CORE_SCRIPT" mode="$mode" date="$req_date" raw=1 >/dev/null 2>&1 \
+        || log_print ERR "insights-precompute backfill mode=$mode date=$req_date failed"
+    done
+    log_print INFO "insights-precompute backfill mode=$mode status=finished processed=${#missing[@]}"
+  ) &
+  local bgpid=$!
+  log_print INFO "insights-precompute backfill mode=$mode status=started pid=$bgpid"
+}
+
 precompute_for_mode() {
-  local mode="$1" today yesterday collapsewithin_sec utc_now_hms utc_now_sec
-  today="$(date -u +%y%m%d)"
-  yesterday="$(date -u -d '1 day ago' +%y%m%d)"
-  utc_now_hms="$(date -u +%H:%M:%S)"
-  utc_now_sec="$((10#${utc_now_hms:0:2}*3600 + 10#${utc_now_hms:3:2}*60 + 10#${utc_now_hms:6:2}))"
+  local mode="$1" today yesterday collapsewithin_sec now_hms now_sec
+  today="$(date +%y%m%d)"
+  yesterday="$(date -d '1 day ago' +%y%m%d 2>/dev/null || true)"
+  now_hms="$(date +%H:%M:%S)"
+  now_sec="$((10#${now_hms:0:2}*3600 + 10#${now_hms:3:2}*60 + 10#${now_hms:6:2}))"
   collapsewithin_sec="$(get_collapsewithin_sec_for_mode "$mode")"
 
-  bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$today" raw=1 >/dev/null 2>&1 \
+  bash "$INSIGHTS_CORE_SCRIPT" mode="$mode" date="$today" raw=1 >/dev/null 2>&1 \
     || log_print ERR "insights-precompute mode=$mode date=$today failed"
 
-  if (( utc_now_sec < collapsewithin_sec )); then
-    bash /usr/share/planefence/html/cgi/insights.sh mode="$mode" date="$yesterday" raw=1 >/dev/null 2>&1 \
+  if [[ -n "$yesterday" ]] && (( now_sec < collapsewithin_sec )); then
+    bash "$INSIGHTS_CORE_SCRIPT" mode="$mode" date="$yesterday" raw=1 >/dev/null 2>&1 \
       || log_print ERR "insights-precompute mode=$mode date=$yesterday failed"
   fi
 }
@@ -45,6 +138,9 @@ while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
 done
 
 "${s6wrap[@]}" echo "$0 started as an s6 service"
+
+start_missing_historical_backfill "planefence"
+start_missing_historical_backfill "plane-alert"
 
 while true; do
   precompute_for_mode "planefence"
