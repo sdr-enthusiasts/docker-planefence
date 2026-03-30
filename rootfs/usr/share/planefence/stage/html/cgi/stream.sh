@@ -2,4 +2,4 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-exec /usr/share/planefence/stream.sh "$@"
+exec /bin/bash /usr/share/planefence/stream.sh "$@"

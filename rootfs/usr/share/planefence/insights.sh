@@ -180,12 +180,25 @@ REQUESTED_DAYS=""
 INSIGHTS_CACHE_SCHEMA_VERSION="6"
 
 parse_params() {
-  local method key val pair
+  local method key val pair raw_qs
   method="${REQUEST_METHOD:-GET}"
 
+  urldecode() {
+    local s="${1//+/ }"
+    printf '%b' "${s//%/\\x}"
+  }
+
   declare -a qs=()
-  if [[ "$method" == "GET" && -n "${QUERY_STRING:-}" ]]; then
-    IFS='&' read -ra qs <<< "${QUERY_STRING}"
+  if [[ "$method" == "GET" ]]; then
+    raw_qs="${QUERY_STRING:-}"
+    if [[ -z "$raw_qs" && "${REQUEST_URI:-}" == *\?* ]]; then
+      raw_qs="${REQUEST_URI#*\?}"
+    fi
+    if [[ -n "$raw_qs" ]]; then
+      IFS='&' read -ra qs <<< "$raw_qs"
+    elif [[ $# -gt 0 ]]; then
+      qs=("$@")
+    fi
   elif [[ $# -gt 0 ]]; then
     qs=("$@")
   fi
@@ -194,8 +207,12 @@ parse_params() {
     key="${pair%%=*}"
     val="${pair#*=}"
     [[ "$pair" == "$key" ]] && val=""
+    key="$(urldecode "$key")"
+    val="$(urldecode "$val")"
     case "$key" in
       mode)
+        [[ "$val" == "pf" ]] && val="planefence"
+        [[ "$val" == "pa" ]] && val="plane-alert"
         [[ "$val" == "plane-alert" ]] && FILTER_MODE="plane-alert"
         [[ "$val" == "planefence" ]] && FILTER_MODE="planefence"
         ;;
