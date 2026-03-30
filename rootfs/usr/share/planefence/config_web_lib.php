@@ -6,6 +6,8 @@ function pf_cfg_paths(): array {
     return [
         'template' => '/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me',
         'config' => '/usr/share/planefence/persist/planefence.config',
+        'uiSchemaPersist' => '/usr/share/planefence/persist/config-ui.schema.json',
+        'uiSchemaStage' => '/usr/share/planefence/stage/persist/config-ui.schema.json',
         'backupDir' => '/usr/share/planefence/persist/.internal/config-backups',
         'requiredMarker' => '/run/planefence/configuration-required',
     ];
@@ -131,6 +133,14 @@ function pf_cfg_options_from_comment(string $comment): array {
     return [];
 }
 
+function pf_cfg_clean_description(string $name, string $desc): string {
+    $desc = trim($desc);
+    if ($desc === '' || $name === '') return $desc;
+    $pattern = '/^\s*' . preg_quote($name, '/') . '\s*:\s*/i';
+    $clean = preg_replace($pattern, '', $desc, 1);
+    return is_string($clean) ? trim($clean) : $desc;
+}
+
 function pf_cfg_section_id(string $title): string {
     $id = strtolower($title);
     $id = preg_replace('/[^a-z0-9]+/', '-', $id ?? '') ?? 'general';
@@ -166,7 +176,13 @@ function pf_cfg_parse_template(): array {
 
         if ($expectHeading && preg_match('/^#\s*([^#].*?)\s*$/', $line, $m)) {
             $candidate = trim($m[1]);
-            if ($candidate !== '' && !preg_match('/^-+$/', $candidate)) {
+            $looksLikeSectionTitle =
+                $candidate !== '' &&
+                !preg_match('/^-+$/', $candidate) &&
+                !str_contains($candidate, ':') &&
+                !str_contains($candidate, '.') &&
+                preg_match('/^[A-Za-z0-9&+\-\/ ]+$/', $candidate);
+            if ($looksLikeSectionTitle) {
                 $currentTitle = $candidate;
                 $currentId = pf_cfg_section_id($currentTitle);
                 $ensureSection($currentId, $currentTitle);
@@ -191,7 +207,7 @@ function pf_cfg_parse_template(): array {
             $name = $m[1];
             $default = pf_cfg_unquote(pf_cfg_strip_inline_comment($m[2]));
             $defaults[$name] = $default;
-            $desc = trim(implode(' ', $commentBuf));
+            $desc = pf_cfg_clean_description($name, trim(implode(' ', $commentBuf)));
             $example = '';
             foreach ($commentBuf as $cLine) {
                 if (stripos($cLine, 'example') !== false || stripos($cLine, 'e.g.') !== false) {
@@ -286,6 +302,233 @@ function pf_cfg_encode_value(string $value): string {
     return '"' . $escaped . '"';
 }
 
+function pf_cfg_notification_mechanism(string $fieldName): string {
+    $n = strtoupper($fieldName);
+    if (strpos($n, 'DISCORD') !== false) return 'discord';
+    if (strpos($n, 'MASTODON') !== false) return 'mastodon';
+    if (strpos($n, 'MQTT') !== false) return 'mqtt';
+    if (strpos($n, 'RSS') !== false) return 'rss';
+    if (strpos($n, 'BLUESKY') !== false) return 'bluesky';
+    if (strpos($n, 'TELEGRAM') !== false) return 'telegram';
+    return 'general';
+}
+
+function pf_cfg_field_map(array $sections): array {
+    $map = [];
+    foreach ($sections as $section) {
+        foreach (($section['fields'] ?? []) as $field) {
+            $name = (string)($field['name'] ?? '');
+            if ($name !== '') $map[$name] = $field;
+        }
+    }
+    return $map;
+}
+
+function pf_cfg_sections_by_title(array $sections): array {
+    $out = [];
+    foreach ($sections as $section) {
+        $title = (string)($section['title'] ?? '');
+        if ($title === '') continue;
+        $out[$title] = $section;
+        $norm = strtolower(trim(preg_replace('/\s+/', ' ', $title) ?? ''));
+        if ($norm !== '') $out[$norm] = $section;
+    }
+    return $out;
+}
+
+function pf_cfg_load_ui_schema(): array {
+    $paths = pf_cfg_paths();
+    $candidates = [$paths['uiSchemaPersist'], $paths['uiSchemaStage']];
+    foreach ($candidates as $file) {
+        if (!is_file($file)) continue;
+        $raw = @file_get_contents($file);
+        if (!is_string($raw) || trim($raw) === '') continue;
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) return $decoded;
+    }
+    return [];
+}
+
+function pf_cfg_apply_field_override(array $field, array $overrides): array {
+    $name = (string)($field['name'] ?? '');
+    if ($name === '' || !isset($overrides[$name]) || !is_array($overrides[$name])) return $field;
+    $o = $overrides[$name];
+    foreach (['label', 'description', 'example', 'type', 'delimiter', 'defaultValue'] as $k) {
+        if (array_key_exists($k, $o)) $field[$k] = $o[$k];
+    }
+    if (array_key_exists('multi', $o)) $field['multi'] = (bool)$o['multi'];
+    if (array_key_exists('useDefaultWhenEmpty', $o)) $field['useDefaultWhenEmpty'] = (bool)$o['useDefaultWhenEmpty'];
+    if (array_key_exists('options', $o) && is_array($o['options'])) $field['options'] = array_values($o['options']);
+    return $field;
+}
+
+function pf_cfg_select_fields_from_names(array $names, array $fieldMap, array $values, array $fieldOverrides): array {
+    $out = [];
+    foreach ($names as $name) {
+        $n = (string)$name;
+        if ($n === '' || !isset($fieldMap[$n])) continue;
+        $field = $fieldMap[$n];
+        $field = pf_cfg_apply_field_override($field, $fieldOverrides);
+        $defaultValue = (string)($field['defaultValue'] ?? '');
+        $hasIncoming = array_key_exists($n, $values);
+        $incomingValue = (string)($values[$n] ?? '');
+        $useDefaultWhenEmpty = (bool)($field['useDefaultWhenEmpty'] ?? false);
+        if (!$hasIncoming) {
+            $field['value'] = $defaultValue;
+        } else {
+            $field['value'] = ($incomingValue === '' && $useDefaultWhenEmpty) ? $defaultValue : $incomingValue;
+        }
+        $out[] = $field;
+    }
+    return $out;
+}
+
+function pf_cfg_names_for_match(string $match, array $sourceFields): array {
+    $match = strtolower(trim($match));
+    if ($match === '' || $match === 'all') {
+        return array_map(static fn($f) => (string)($f['name'] ?? ''), $sourceFields);
+    }
+    return array_values(array_filter(
+        array_map(static function($f) use ($match) {
+            $name = (string)($f['name'] ?? '');
+            if ($name === '') return '';
+            return pf_cfg_notification_mechanism($name) === $match ? $name : '';
+        }, $sourceFields),
+        static fn($x) => $x !== ''
+    ));
+}
+
+function pf_cfg_build_default_ui(array $sections, array $values, array $schema): array {
+    $fieldOverrides = is_array($schema['fieldOverrides'] ?? null) ? $schema['fieldOverrides'] : [];
+    $tabs = [];
+    foreach ($sections as $idx => $section) {
+        $title = (string)($section['title'] ?? ('Section ' . ($idx + 1)));
+        $tab = [
+            'id' => 'tab-' . $idx,
+            'title' => $title,
+            'description' => (string)($section['description'] ?? ''),
+            'fields' => [],
+            'subtabs' => [],
+        ];
+        $fields = $section['fields'] ?? [];
+        if (stripos($title, 'notification') !== false) {
+            $mechanisms = ['general', 'discord', 'mastodon', 'mqtt', 'rss', 'bluesky', 'telegram'];
+            foreach ($mechanisms as $m) {
+                $names = pf_cfg_names_for_match($m, $fields);
+                if (count($names) === 0) continue;
+                $subtabTitle = ucfirst($m);
+                if ($m === 'bluesky') {
+                    $subtabTitle = 'BlueSky';
+                } elseif ($m === 'mqtt' || $m === 'rss') {
+                    $subtabTitle = strtoupper($m);
+                }
+                $tab['subtabs'][] = [
+                    'id' => 'notif-' . $m,
+                    'title' => $subtabTitle,
+                    'description' => '',
+                    'fields' => pf_cfg_select_fields_from_names($names, pf_cfg_field_map($sections), $values, $fieldOverrides),
+                ];
+            }
+        } else {
+            $names = array_map(static fn($f) => (string)($f['name'] ?? ''), $fields);
+            $tab['fields'] = pf_cfg_select_fields_from_names($names, pf_cfg_field_map($sections), $values, $fieldOverrides);
+        }
+        $tabs[] = $tab;
+    }
+
+    $intro = is_array($schema['intro'] ?? null) ? $schema['intro'] : [
+        'title' => 'Welcome to the Planefence Configuration Wizard',
+        'paragraphs' => [
+            'Use the tabs to configure planefence.config for this instance.',
+            'Save writes the config file and creates a dated backup. Cancel reloads values from disk.',
+        ],
+    ];
+
+    return ['intro' => $intro, 'tabs' => $tabs];
+}
+
+function pf_cfg_build_ui_from_schema(array $sections, array $values, array $schema): array {
+    $tabsSchema = is_array($schema['tabs'] ?? null) ? $schema['tabs'] : [];
+    if (count($tabsSchema) === 0) {
+        return pf_cfg_build_default_ui($sections, $values, $schema);
+    }
+
+    $fieldMap = pf_cfg_field_map($sections);
+    $sectionsByTitle = pf_cfg_sections_by_title($sections);
+    $fieldOverrides = is_array($schema['fieldOverrides'] ?? null) ? $schema['fieldOverrides'] : [];
+    $tabs = [];
+
+    foreach ($tabsSchema as $idx => $tabS) {
+        if (!is_array($tabS)) continue;
+        $sourceSection = (string)($tabS['sourceSection'] ?? '');
+        $sourceFields = [];
+        if ($sourceSection !== '') {
+            $normSource = strtolower(trim(preg_replace('/\s+/', ' ', $sourceSection) ?? ''));
+            if (isset($sectionsByTitle[$sourceSection])) {
+                $sourceFields = $sectionsByTitle[$sourceSection]['fields'] ?? [];
+            } elseif ($normSource !== '' && isset($sectionsByTitle[$normSource])) {
+                $sourceFields = $sectionsByTitle[$normSource]['fields'] ?? [];
+            }
+        }
+
+        $baseNames = [];
+        if (is_array($tabS['fields'] ?? null)) {
+            $baseNames = array_values(array_map(static fn($x) => (string)$x, $tabS['fields']));
+        } elseif (count($sourceFields) > 0) {
+            $baseNames = array_values(array_map(static fn($f) => (string)($f['name'] ?? ''), $sourceFields));
+        }
+
+        $tab = [
+            'id' => (string)($tabS['id'] ?? ('tab-' . $idx)),
+            'title' => (string)($tabS['title'] ?? ('Tab ' . ($idx + 1))),
+            'description' => (string)($tabS['description'] ?? ''),
+            'fields' => pf_cfg_select_fields_from_names($baseNames, $fieldMap, $values, $fieldOverrides),
+            'subtabs' => [],
+        ];
+
+        if (is_array($tabS['subtabs'] ?? null)) {
+            $tab['fields'] = [];
+            foreach ($tabS['subtabs'] as $sidx => $subS) {
+                if (!is_array($subS)) continue;
+                $subNames = [];
+                if (is_array($subS['fields'] ?? null)) {
+                    $subNames = array_values(array_map(static fn($x) => (string)$x, $subS['fields']));
+                } elseif (isset($subS['match'])) {
+                    $subNames = pf_cfg_names_for_match((string)$subS['match'], $sourceFields);
+                } else {
+                    $subNames = $baseNames;
+                }
+                $subFields = pf_cfg_select_fields_from_names($subNames, $fieldMap, $values, $fieldOverrides);
+                if (count($subFields) === 0) continue;
+                $tab['subtabs'][] = [
+                    'id' => (string)($subS['id'] ?? ($tab['id'] . '-sub-' . $sidx)),
+                    'title' => (string)($subS['title'] ?? ('Subtab ' . ($sidx + 1))),
+                    'description' => (string)($subS['description'] ?? ''),
+                    'fields' => $subFields,
+                ];
+            }
+        }
+
+        $hasFields = count($tab['fields']) > 0;
+        $hasSubtabs = count($tab['subtabs']) > 0;
+        if (!$hasFields && !$hasSubtabs) {
+            continue;
+        }
+
+        $tabs[] = $tab;
+    }
+
+    $intro = is_array($schema['intro'] ?? null) ? $schema['intro'] : [
+        'title' => 'Welcome to the Planefence Configuration Wizard',
+        'paragraphs' => [
+            'Use the tabs to configure planefence.config for this instance.',
+            'Save writes the config file and creates a dated backup. Cancel reloads values from disk.',
+        ],
+    ];
+
+    return ['intro' => $intro, 'tabs' => $tabs];
+}
+
 function pf_cfg_save(array $payload): array {
     $paths = pf_cfg_paths();
     $template = pf_cfg_parse_template();
@@ -374,6 +617,9 @@ function pf_cfg_load_payload(): array {
         }
     }
 
+    $schema = pf_cfg_load_ui_schema();
+    $ui = pf_cfg_build_ui_from_schema($template['sections'], $vals, $schema);
+
     $status = pf_cfg_status_payload();
 
     return [
@@ -382,6 +628,7 @@ function pf_cfg_load_payload(): array {
         'setupRequired' => $status['setupRequired'],
         'configUrl' => $status['configUrl'],
         'configPort' => $status['configPort'],
+        'ui' => $ui,
         'sections' => $template['sections'],
     ];
 }

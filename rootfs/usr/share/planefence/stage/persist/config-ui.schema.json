@@ -1,0 +1,289 @@
+{
+  "intro": {
+    "title": "Welcome to the Planefence Configuration Wizard",
+    "paragraphs": [
+      "This page helps you set the parameters for Planefence. It stores them in planefence.config.",
+      "You can use this Wizard, or alternatively edit planefence.config directly.",
+      "",
+      "Use the top tabs to move between sections.",
+      "Press Save to write the parameters to planefence.config, or Cancel to discard changes."
+    ]
+  },
+  "tabs": [
+    {
+      "id": "required",
+      "title": "Required",
+      "description": "Required station and data-source settings.",
+      "sourceSection": "Required Station & Data Source"
+    },
+    {
+      "id": "general",
+      "title": "General",
+      "description": "General runtime and processing behavior.",
+      "sourceSection": "General Parameters",
+      "fields": [
+        "GENERATE_CSV",
+        "PF_INTERVAL",
+        "PF_DISTUNIT",
+        "PF_ALTUNIT",
+        "PF_SPEEDUNIT",
+        "PF_FUDGELOC",
+        "PF_TRACKSERVICE",
+        "PF_ELEVATION",
+        "OPENSKYDB_DOWNLOAD"
+      ]
+    },
+    {
+      "id": "web",
+      "title": "Web UI",
+      "description": "Main web page and map behavior.",
+      "sourceSection": "Web Page Related Parameters"
+    },
+    {
+      "id": "planefence",
+      "title": "Planefence",
+      "description": "Planefence-specific behavior.",
+      "sourceSection": "Planefence Specific Parameters"
+    },
+    {
+      "id": "plane-alert",
+      "title": "Plane-Alert",
+      "description": "Plane-Alert-specific behavior.",
+      "sourceSection": "Plane-Alert Specific Parameters"
+    },
+    {
+      "id": "notifications",
+      "title": "Notifications",
+      "description": "Notification-related parameters by mechanism.",
+      "sourceSection": "Notification Related Parameters",
+      "subtabs": [
+        {
+          "id": "notif-general",
+          "title": "General",
+          "match": "general"
+        },
+        {
+          "id": "notif-discord",
+          "title": "Discord",
+          "match": "discord"
+        },
+        {
+          "id": "notif-mastodon",
+          "title": "Mastodon",
+          "match": "mastodon"
+        },
+        {
+          "id": "notif-mqtt",
+          "title": "MQTT",
+          "match": "mqtt"
+        },
+        {
+          "id": "notif-rss",
+          "title": "RSS",
+          "match": "rss"
+        },
+        {
+          "id": "notif-bluesky",
+          "title": "BlueSky",
+          "match": "bluesky"
+        },
+        {
+          "id": "notif-telegram",
+          "title": "Telegram",
+          "match": "telegram"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": {
+    "PF_HTTP_PORT": {
+      "label": "PF_HTTP_PORT",
+      "description": "Main Planefence web server port inside the container.",
+      "type": "number"
+    },
+    "PF_CONFIG_HTTP_PORT": {
+      "label": "PF_CONFIG_HTTP_PORT",
+      "description": "Dedicated configuration interface port inside the container.",
+      "type": "number"
+    },
+    "OPENSKYDB_DOWNLOAD": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "useDefaultWhenEmpty": true
+    },
+    "PF_SOCK30003HOST": {
+      "type": "text"
+    },
+    "PF_FUDGELOC": {
+      "type": "text"
+    },
+    "PF_TRACKSERVICE": {
+      "type": "text"
+    },
+    "PF_OPENAIP_LAYER": {
+      "description": "Show OpenAIP layer on heatmap when ON.",
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "PF_OPENAIPKEY": {
+      "description": "Valid OpenAIP API key from https://www.openaip.net",
+      "type": "text"
+    },
+    "PF_DELETEAFTER": {
+      "useDefaultWhenEmpty": true,
+      "type": "text"
+    },
+    "PLANEFENCE": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "PF_IGNOREDUPES": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "PLANEALERT": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "PA_SHOW_STALE_PAGE": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "useDefaultWhenEmpty": true
+    },
+    "PA_COLLECT_CANDIDATES": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "useDefaultWhenEmpty": true,
+      "defaultValue": "ON",
+      "description": "Enable automatic collection of potential Plane-Alert candidates from socket30003 data."
+    },
+    "PA_COLLECT_CANDIDATES_FILTER_FILE": {
+      "type": "text",
+      "description": "Optional filename in your config directory to use instead of pa-candidates-filter.txt. Leave empty to use pa-candidates-filter.txt."
+    },
+    "PA_COLLECT_CANDIDATES_LOG": {
+      "type": "text",
+      "description": "Optional filename in your config directory for logging which filter matched each collected candidate. Leave empty to disable logging."
+    },
+    "PF_NOTIFEVERY": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "PF_SCREENSHOTURL": {
+      "type": "text",
+      "useDefaultWhenEmpty": true,
+      "description": "Base URL of the screenshot service. Service must support GET /snap/<flight> returning PNG."
+    },
+    "PF_SCREENSHOT_TIMEOUT": {
+      "type": "text",
+      "description": "Maximum wait time in seconds for screenshot generation."
+    },
+    "DISCORD_MEDIA": {
+      "type": "select",
+      "options": [
+        "",
+        "screenshot",
+        "photo",
+        "photo+screenshot",
+        "screenshot+photo"
+      ]
+    },
+    "PA_DISCORD_COLOR": {
+      "type": "text"
+    },
+    "MASTODON_ACCESS_TOKEN": {
+      "type": "text"
+    },
+    "TELEGRAM_BOT_TOKEN": {
+      "type": "text",
+      "description": "Bot token in the format 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ."
+    },
+    "BLUESKY_APP_PASSWORD": {
+      "type": "text"
+    },
+    "PF_BLUESKY_ENABLED": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "defaultValue": "OFF",
+      "useDefaultWhenEmpty": true,
+      "description": "Enable BlueSky notifications for Planefence."
+    },
+    "PA_BLUESKY_ENABLED": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "defaultValue": "OFF",
+      "useDefaultWhenEmpty": true,
+      "description": "Enable BlueSky notifications for Plane-Alert."
+    },
+    "PF_TELEGRAM_CHAT_ID": {
+      "description": "Target Telegram chat for Planefence notifications. Use numeric ID for private chats or @channelname for public channels.",
+      "type": "text"
+    },
+    "PA_TELEGRAM_CHAT_ID": {
+      "description": "Target Telegram chat for Plane-Alert notifications. Use numeric ID for private chats or @channelname for public channels.",
+      "type": "text"
+    },
+    "PF_TELEGRAM_ENABLED": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "description": "Enable Telegram notifications for Planefence."
+    },
+    "PA_TELEGRAM_ENABLED": {
+      "type": "select",
+      "options": [
+        "ON",
+        "OFF"
+      ],
+      "description": "Enable Telegram notifications for Plane-Alert."
+    },
+    "PF_TELEGRAM_CHAT_TYPE": {
+      "type": "select",
+      "options": [
+        "normal",
+        "dm"
+      ],
+      "description": "Planefence Telegram delivery mode. Use dm for direct messages (no retained channel link), or normal for channel-style posts."
+    },
+    "PA_TELEGRAM_CHAT_TYPE": {
+      "type": "select",
+      "options": [
+        "normal",
+        "dm"
+      ],
+      "description": "Plane-Alert Telegram delivery mode. Use dm for direct messages (no retained channel link), or normal for channel-style posts."
+    }
+  }
+}

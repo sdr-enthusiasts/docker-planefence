@@ -27,20 +27,75 @@
     .panel { background: rgba(17,24,39,.88); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
     h1 { margin: 0 0 6px; font-size: 1.5rem; }
     .sub { color: var(--muted); margin-bottom: 12px; }
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin: 16px 0 0;
+      padding: 8px 8px 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      background: #0b1220;
+    }
     .tab {
       border: 1px solid var(--border);
-      background: #0b1220;
+      border-bottom: none;
+      background: #1e293b;
       color: var(--text);
-      border-radius: 999px;
-      padding: 8px 12px;
+      border-radius: 10px 10px 0 0;
+      padding: 9px 14px;
       cursor: pointer;
+      white-space: nowrap;
+      transform: translateY(1px);
     }
-    .tab.active { background: var(--accent); color: #06243a; border-color: transparent; font-weight: 700; }
+    .tab.active {
+      background: rgba(17,24,39,.95);
+      color: #dbeafe;
+      font-weight: 700;
+      border-color: #64748b;
+    }
+    .tab-page {
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      background: rgba(17,24,39,.95);
+      padding: 16px;
+      margin-bottom: 6px;
+    }
+    .page-title { margin: 0 0 10px; font-size: 1.1rem; }
+    .subtabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1220;
+    }
+    .subtab {
+      border: 1px solid #475569;
+      background: #1f2937;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: .86rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .subtab.active {
+      border-color: #93c5fd;
+      background: #1e3a5f;
+      color: #dbeafe;
+    }
     .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .field { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .label { font-weight: 700; margin-bottom: 6px; }
     .desc { color: var(--muted); font-size: .92rem; line-height: 1.3rem; }
+    .desc p { margin: 0 0 8px; }
+    .desc p:last-child { margin-bottom: 0; }
     .meta { margin-top: 8px; color: #cbd5e1; font-size: .85rem; }
     input[type="text"], textarea, select {
       width: 100%; margin-top: 8px; border: 1px solid #475569; border-radius: 8px;
@@ -59,6 +114,10 @@
     .msg.ok { color: var(--ok); }
     .msg.err { color: #fca5a5; }
     .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: .78rem; background: #0b1220; border: 1px solid var(--border); color: var(--muted); }
+    .intro { color: #cbd5e1; line-height: 1.45rem; }
+    .intro h3 { margin: 6px 0; }
+    .intro ol { margin: 8px 0 0 18px; padding: 0; }
+    .intro li { margin: 4px 0; }
     a { color: var(--accent); }
   </style>
 </head>
@@ -67,12 +126,15 @@
     <div class="panel">
       <h1>Planefence Configuration</h1>
       <div class="sub" id="instanceInfo">Loading...</div>
-      <div class="sub">Edit values and click Save. A dated backup is created on every save.</div>
+      <div class="sub">Use the tabs to configure each section. Save writes planefence.config and creates a dated backup.</div>
       <div class="tabs" id="tabs"></div>
-      <div id="fields" class="grid"></div>
-      <div class="actions">
-        <button class="btn primary" id="saveBtn">Save</button>
-        <button class="btn" id="cancelBtn">Cancel</button>
+      <div class="tab-page">
+        <h2 class="page-title" id="pageTitle"></h2>
+        <div id="fields" class="grid"></div>
+        <div class="actions" id="actionsRow">
+          <button class="btn primary" id="saveBtn">Save</button>
+          <button class="btn" id="cancelBtn">Cancel</button>
+        </div>
       </div>
       <div id="message" class="msg"></div>
     </div>
@@ -80,18 +142,22 @@
 
 <script>
 let payload = null;
-let snapshot = null;
-let activeSection = 0;
+let uiModel = null;
+let activeTab = 'intro';
+let activeSubtab = {};
+let draftValues = {};
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-async function loadConfig(){
-  const res = await fetch('/cgi/config_api.php?action=load', { cache: 'no-store' });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || 'Failed to load config');
-  payload = data;
-  snapshot = JSON.parse(JSON.stringify(data));
-  render();
+function formatDescriptionHtml(raw){
+  const text = String(raw || '').trim();
+  if (!text) return '<p>No description available.</p>';
+  const normalized = text
+    .replace(/\s+-\s+/g, '\n- ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\.\s+(?=[A-Z][a-z])/g, '.\n');
+  const chunks = normalized.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  return chunks.map(c => `<p>${esc(c)}</p>`).join('');
 }
 
 function valueToList(v, delimiter){
@@ -101,73 +167,127 @@ function valueToList(v, delimiter){
 
 function getFieldInputId(name){ return `fld_${name}`; }
 
+function normalizeUiModel(data){
+  if (data && data.ui && Array.isArray(data.ui.tabs)) return data.ui;
+  // Fallback for older payloads
+  const tabs = (data.sections || []).map((s, idx) => ({
+    id: `section-${idx}`,
+    title: s.title,
+    description: '',
+    fields: s.fields || [],
+    subtabs: []
+  }));
+  return {
+    intro: {
+      title: 'Welcome to the Planefence Configuration Wizard',
+      paragraphs: [
+        'Use the tabs to configure planefence.config for this instance.',
+        'Save writes the config and creates a dated backup. Cancel reloads values from disk.'
+      ]
+    },
+    tabs
+  };
+}
+
+function initDraftValues(){
+  draftValues = {};
+  const walkFields = (fields) => {
+    (fields || []).forEach(f => { draftValues[f.name] = String(f.value ?? ''); });
+  };
+  (uiModel.tabs || []).forEach(t => {
+    walkFields(t.fields || []);
+    (t.subtabs || []).forEach(st => walkFields(st.fields || []));
+  });
+}
+
+async function loadConfig(){
+  const res = await fetch('/cgi/config_api.php?action=load', { cache: 'no-store' });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Failed to load config');
+  payload = data;
+  uiModel = normalizeUiModel(data);
+  initDraftValues();
+  activeTab = 'intro';
+  activeSubtab = {};
+  render();
+}
+
+function getCurrentTabObj(){
+  if (!uiModel || !Array.isArray(uiModel.tabs)) return null;
+  return uiModel.tabs.find(t => t.id === activeTab) || null;
+}
+
+function getCurrentFields(){
+  const tab = getCurrentTabObj();
+  if (!tab) return [];
+  if (Array.isArray(tab.subtabs) && tab.subtabs.length > 0) {
+    const subId = activeSubtab[tab.id] || tab.subtabs[0].id;
+    const sub = tab.subtabs.find(s => s.id === subId) || tab.subtabs[0];
+    return sub.fields || [];
+  }
+  return tab.fields || [];
+}
+
+function captureCurrentTabValues(){
+  const fields = getCurrentFields();
+  fields.forEach(f => {
+    if (f.multi) {
+      const holder = document.getElementById(getFieldInputId(f.name));
+      if (!holder) return;
+      const vals = [...holder.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+      draftValues[f.name] = vals.join(f.delimiter || ',');
+    } else {
+      const el = document.getElementById(getFieldInputId(f.name));
+      if (!el) return;
+      draftValues[f.name] = String(el.value ?? '');
+    }
+  });
+}
+
+function switchTab(tabId){
+  captureCurrentTabValues();
+  activeTab = tabId;
+  renderTabs();
+  renderPage();
+}
+
 function renderTabs(){
   const tabs = document.getElementById('tabs');
   tabs.innerHTML = '';
-  payload.sections.forEach((s, idx) => {
+
+  const intro = document.createElement('button');
+  intro.className = 'tab' + (activeTab === 'intro' ? ' active' : '');
+  intro.textContent = 'Welcome';
+  intro.onclick = () => switchTab('intro');
+  tabs.appendChild(intro);
+
+  (uiModel.tabs || []).forEach(t => {
     const b = document.createElement('button');
-    b.className = 'tab' + (idx === activeSection ? ' active' : '');
-    b.textContent = s.title;
-    b.onclick = () => { activeSection = idx; renderFields(); renderTabs(); };
+    b.className = 'tab' + (activeTab === t.id ? ' active' : '');
+    b.textContent = t.title || t.id;
+    b.onclick = () => switchTab(t.id);
     tabs.appendChild(b);
   });
 }
 
-function renderFields(){
-  const box = document.getElementById('fields');
-  const section = payload.sections[activeSection];
-  box.innerHTML = '';
-  section.fields.forEach(f => {
-    const wrap = document.createElement('div');
-    wrap.className = 'field';
-    const description = f.description || '';
-    const example = f.example || '';
-    wrap.innerHTML = `
-      <div class="label">${esc(f.label)} ${f.multi ? '<span class="pill">multi-value</span>' : ''}</div>
-      <div class="desc">${esc(description || 'No description available.')}</div>
-      <div class="meta">Default: <strong>${esc(f.defaultValue ?? '')}</strong>${example ? ` · Example: ${esc(example)}` : ''}</div>
-    `;
-
-    if (f.multi) {
-      const holder = document.createElement('div');
-      holder.id = getFieldInputId(f.name);
-      const parts = valueToList(f.value, f.delimiter || ',');
-      parts.forEach(v => addMultiInput(holder, v));
-      const add = document.createElement('button');
-      add.type = 'button';
-      add.className = 'btn';
-      add.textContent = '+';
-      add.onclick = () => addMultiInput(holder, '');
-      wrap.appendChild(holder);
-      wrap.appendChild(add);
-    } else if (Array.isArray(f.options) && f.options.length) {
-      const sel = document.createElement('select');
-      sel.id = getFieldInputId(f.name);
-      const opts = new Set(f.options.map(o => String(o)));
-      const cur = String(f.value ?? '');
-      if (!opts.has(cur)) opts.add(cur);
-      [...opts].forEach(v => {
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = v === '' ? '(empty)' : v;
-        if (v === cur) o.selected = true;
-        sel.appendChild(o);
-      });
-      wrap.appendChild(sel);
-    } else if (f.type === 'textarea') {
-      const ta = document.createElement('textarea');
-      ta.id = getFieldInputId(f.name);
-      ta.value = f.value ?? '';
-      wrap.appendChild(ta);
-    } else {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.id = getFieldInputId(f.name);
-      input.value = f.value ?? '';
-      wrap.appendChild(input);
-    }
-    box.appendChild(wrap);
+function renderSubtabs(tab){
+  const wrap = document.createElement('div');
+  wrap.className = 'subtabs';
+  const list = tab.subtabs || [];
+  if (!activeSubtab[tab.id] && list.length) activeSubtab[tab.id] = list[0].id;
+  list.forEach(st => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'subtab' + (activeSubtab[tab.id] === st.id ? ' active' : '');
+    b.textContent = st.title || st.id;
+    b.onclick = () => {
+      captureCurrentTabValues();
+      activeSubtab[tab.id] = st.id;
+      renderPage();
+    };
+    wrap.appendChild(b);
   });
+  return wrap;
 }
 
 function addMultiInput(holder, value){
@@ -186,26 +306,110 @@ function addMultiInput(holder, value){
   holder.appendChild(row);
 }
 
+function renderFieldList(fields, host){
+  host.innerHTML = '';
+  if (!fields || fields.length === 0) {
+    host.innerHTML = '<div class="field"><div class="desc"><p>No parameters in this tab.</p></div></div>';
+    return;
+  }
+
+  fields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const description = f.description || '';
+    const example = f.example || '';
+    wrap.innerHTML = `
+      <div class="label">${esc(f.label || f.name)} ${f.multi ? '<span class="pill">multi-value</span>' : ''}</div>
+      <div class="desc">${formatDescriptionHtml(description)}</div>
+      <div class="meta">Default: <strong>${esc(f.defaultValue ?? '')}</strong>${example ? ` · Example: ${esc(example)}` : ''}</div>
+    `;
+
+    const fType = String(f.type || 'text').toLowerCase();
+    if (f.multi) {
+      const holder = document.createElement('div');
+      holder.id = getFieldInputId(f.name);
+      const parts = valueToList(draftValues[f.name] ?? f.value, f.delimiter || ',');
+      parts.forEach(v => addMultiInput(holder, v));
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn';
+      add.textContent = '+';
+      add.onclick = () => addMultiInput(holder, '');
+      wrap.appendChild(holder);
+      wrap.appendChild(add);
+    } else if (Array.isArray(f.options) && f.options.length) {
+      const sel = document.createElement('select');
+      sel.id = getFieldInputId(f.name);
+      const opts = new Set(f.options.map(o => String(o)));
+      const cur = String((draftValues[f.name] ?? f.value) ?? '');
+      if (!opts.has(cur)) opts.add(cur);
+      [...opts].forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v === '' ? '(empty)' : v;
+        if (v === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+      wrap.appendChild(sel);
+    } else if (fType === 'textarea') {
+      const ta = document.createElement('textarea');
+      ta.id = getFieldInputId(f.name);
+      ta.value = (draftValues[f.name] ?? f.value) ?? '';
+      wrap.appendChild(ta);
+    } else {
+      const input = document.createElement('input');
+      input.type = (fType === 'number' || fType === 'password') ? fType : 'text';
+      input.id = getFieldInputId(f.name);
+      input.value = (draftValues[f.name] ?? f.value) ?? '';
+      wrap.appendChild(input);
+    }
+    host.appendChild(wrap);
+  });
+}
+
+function renderPage(){
+  const titleEl = document.getElementById('pageTitle');
+  const box = document.getElementById('fields');
+  const actions = document.getElementById('actionsRow');
+
+  if (activeTab === 'intro') {
+    actions.style.display = 'none';
+    const introTitle = String(uiModel?.intro?.title || 'Welcome to the Planefence Configuration Wizard');
+    const paragraphs = Array.isArray(uiModel?.intro?.paragraphs) ? uiModel.intro.paragraphs : [];
+    titleEl.textContent = introTitle;
+    box.innerHTML = `<div class="intro field">${paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}</div>`;
+    return;
+  }
+
+  actions.style.display = 'flex';
+  const tab = getCurrentTabObj();
+  if (!tab) {
+    titleEl.textContent = 'Configuration';
+    box.innerHTML = '';
+    return;
+  }
+
+  titleEl.textContent = tab.title || 'Configuration';
+  box.innerHTML = '';
+  if (Array.isArray(tab.subtabs) && tab.subtabs.length > 0) {
+    box.appendChild(renderSubtabs(tab));
+  }
+  const fieldHost = document.createElement('div');
+  fieldHost.className = 'grid';
+  box.appendChild(fieldHost);
+  renderFieldList(getCurrentFields(), fieldHost);
+}
+
 function render(){
   document.getElementById('instanceInfo').innerHTML =
-    `Instance: <strong>${esc(payload.instanceName || 'Planefence')}</strong> · Config URL: <a href="${esc(payload.configUrl)}">${esc(payload.configUrl)}</a>`;
+    `Instance: <strong>${esc(payload.instanceName || 'Planefence')}</strong>`;
   renderTabs();
-  renderFields();
+  renderPage();
 }
 
 function collectValues(){
-  const out = {};
-  payload.sections.forEach(s => s.fields.forEach(f => {
-    if (f.multi) {
-      const holder = document.getElementById(getFieldInputId(f.name));
-      const vals = [...holder.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
-      out[f.name] = vals.join(f.delimiter || ',');
-    } else {
-      const el = document.getElementById(getFieldInputId(f.name));
-      out[f.name] = el ? String(el.value ?? '') : '';
-    }
-  }));
-  return out;
+  captureCurrentTabValues();
+  return Object.assign({}, draftValues);
 }
 
 async function saveConfig(){
