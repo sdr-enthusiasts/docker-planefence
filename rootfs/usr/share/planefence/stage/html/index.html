@@ -1346,6 +1346,10 @@ ${messagesDesc}
     let modeAvailabilityUpdateInProgress = false;
     let fatalConfigErrorShown = false;
     let planeAlertRedirectInProgress = false;
+    let setupRequirementChecked = false;
+    let setupRequirementInProgress = false;
+    let setupRequired = false;
+    let setupConfigUrl = '';
 
     function parseBooleanLike(raw){
       if (raw === true || raw === 1) return true;
@@ -1421,6 +1425,70 @@ ${messagesDesc}
         }
       }
       try { document.title = t('fatalConfig.title', {}, 'Planefence Configuration Error'); } catch (e) { /* ignore */ }
+    }
+
+    function showSetupRequiredPage(configUrl){
+      if (fatalConfigErrorShown) return;
+      fatalConfigErrorShown = true;
+      try { stopStreamReader(); } catch (e) { /* ignore */ }
+      try { stopPollingLoop(); } catch (e) { /* ignore */ }
+
+      const body = document.body;
+      if (!body) return;
+      body.classList.remove('modal-open');
+
+      const hideSelectors = ['header', 'main', '#privacyBanner', '#stationInfoModal', '#heatmapModal', '#photoModal'];
+      hideSelectors.forEach((sel) => {
+        try {
+          const el = document.querySelector(sel);
+          if (el) el.style.display = 'none';
+        } catch (e) { /* ignore */ }
+      });
+
+      let panel = document.getElementById('pfConfigErrorPage');
+      if (!panel) {
+        panel = document.createElement('main');
+        panel.id = 'pfConfigErrorPage';
+        panel.style.maxWidth = '54rem';
+        panel.style.margin = '2rem auto';
+        panel.style.padding = '0 1rem';
+        panel.innerHTML = `
+          <h1>Planefence Setup Required</h1>
+          <p>This Planefence instance has not been fully configured yet.</p>
+          <p>Please open the configuration page and complete setup:</p>
+          <p><a href="${escapeHtml(configUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(configUrl || 'Configuration URL unavailable')}</a></p>
+        `;
+        const footer = document.querySelector('body > footer#pageFooter');
+        if (footer && footer.parentNode === body) {
+          body.insertBefore(panel, footer);
+        } else {
+          body.appendChild(panel);
+        }
+      }
+      try { document.title = 'Planefence Setup Required'; } catch (e) { /* ignore */ }
+    }
+
+    function checkSetupRequirement(){
+      if (setupRequirementChecked || setupRequirementInProgress) return;
+      setupRequirementInProgress = true;
+      fetch('/cgi/config_status.php', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((payload) => {
+          setupRequirementChecked = true;
+          setupRequired = !!(payload && payload.setupRequired);
+          setupConfigUrl = payload && payload.configUrl ? payload.configUrl : '';
+          setupRequirementInProgress = false;
+          if (setupRequired) {
+            showSetupRequiredPage(setupConfigUrl);
+            return;
+          }
+          restartDataPipelines();
+        })
+        .catch(() => {
+          setupRequirementChecked = true;
+          setupRequirementInProgress = false;
+          restartDataPipelines();
+        });
     }
 
     function enforceModeAvailability(){
@@ -6835,6 +6903,14 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
   }
 
   function restartDataPipelines(){
+    if (!setupRequirementChecked) {
+      checkSetupRequirement();
+      return;
+    }
+    if (setupRequired) {
+      showSetupRequiredPage(setupConfigUrl);
+      return;
+    }
     if (!planefenceFeatureEnabled && !planeAlertFeatureEnabled) {
       showFatalConfigurationErrorPage();
       return;

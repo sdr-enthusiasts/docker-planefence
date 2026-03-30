@@ -54,7 +54,10 @@
     }
 
     system("/scripts/manage_ignore.sh " . escapeshellarg($mode) . " " . escapeshellarg($action) . " " . escapeshellarg($target) . " " . escapeshellarg($uuid), $return_value );
-    ($return_value == 0) or { print_r($_GET); die("<br>#php error returned an error: $return_value"); }
+    if ($return_value != 0) {
+      print_r($_GET);
+      die("<br>#php error returned an error: $return_value");
+    }
 
     if (isset($_GET['callback'])) {
       $callback_url = $_GET['callback'];

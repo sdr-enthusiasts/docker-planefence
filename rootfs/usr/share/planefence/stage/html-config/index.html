@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Planefence Configuration</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220, var(--bg));
+      color: var(--text);
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .panel { background: rgba(17,24,39,.88); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    .sub { color: var(--muted); margin-bottom: 12px; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .tab {
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .tab.active { background: var(--accent); color: #06243a; border-color: transparent; font-weight: 700; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .field { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .label { font-weight: 700; margin-bottom: 6px; }
+    .desc { color: var(--muted); font-size: .92rem; line-height: 1.3rem; }
+    .meta { margin-top: 8px; color: #cbd5e1; font-size: .85rem; }
+    input[type="text"], textarea, select {
+      width: 100%; margin-top: 8px; border: 1px solid #475569; border-radius: 8px;
+      background: #0b1220; color: var(--text); padding: 8px;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .multi-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn {
+      border: 1px solid var(--border); background: #0b1220; color: var(--text);
+      border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    }
+    .btn.primary { background: var(--accent); color: #04263d; border: none; font-weight: 700; }
+    .btn.good { background: var(--ok); color: #04240f; border: none; font-weight: 700; }
+    .actions { display: flex; gap: 8px; margin-top: 16px; }
+    .msg { margin-top: 10px; font-size: .9rem; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: #fca5a5; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: .78rem; background: #0b1220; border: 1px solid var(--border); color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <h1>Planefence Configuration</h1>
+      <div class="sub" id="instanceInfo">Loading...</div>
+      <div class="sub">Edit values and click Save. A dated backup is created on every save.</div>
+      <div class="tabs" id="tabs"></div>
+      <div id="fields" class="grid"></div>
+      <div class="actions">
+        <button class="btn primary" id="saveBtn">Save</button>
+        <button class="btn" id="cancelBtn">Cancel</button>
+      </div>
+      <div id="message" class="msg"></div>
+    </div>
+  </div>
+
+<script>
+let payload = null;
+let snapshot = null;
+let activeSection = 0;
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+async function loadConfig(){
+  const res = await fetch('/cgi/config_api.php?action=load', { cache: 'no-store' });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Failed to load config');
+  payload = data;
+  snapshot = JSON.parse(JSON.stringify(data));
+  render();
+}
+
+function valueToList(v, delimiter){
+  if (!String(v || '').trim()) return [''];
+  return String(v).split(delimiter || ',').map(x => x.trim()).filter(Boolean).concat(['']);
+}
+
+function getFieldInputId(name){ return `fld_${name}`; }
+
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  payload.sections.forEach((s, idx) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (idx === activeSection ? ' active' : '');
+    b.textContent = s.title;
+    b.onclick = () => { activeSection = idx; renderFields(); renderTabs(); };
+    tabs.appendChild(b);
+  });
+}
+
+function renderFields(){
+  const box = document.getElementById('fields');
+  const section = payload.sections[activeSection];
+  box.innerHTML = '';
+  section.fields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const description = f.description || '';
+    const example = f.example || '';
+    wrap.innerHTML = `
+      <div class="label">${esc(f.label)} ${f.multi ? '<span class="pill">multi-value</span>' : ''}</div>
+      <div class="desc">${esc(description || 'No description available.')}</div>
+      <div class="meta">Default: <strong>${esc(f.defaultValue ?? '')}</strong>${example ? ` · Example: ${esc(example)}` : ''}</div>
+    `;
+
+    if (f.multi) {
+      const holder = document.createElement('div');
+      holder.id = getFieldInputId(f.name);
+      const parts = valueToList(f.value, f.delimiter || ',');
+      parts.forEach(v => addMultiInput(holder, v));
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn';
+      add.textContent = '+';
+      add.onclick = () => addMultiInput(holder, '');
+      wrap.appendChild(holder);
+      wrap.appendChild(add);
+    } else if (Array.isArray(f.options) && f.options.length) {
+      const sel = document.createElement('select');
+      sel.id = getFieldInputId(f.name);
+      const opts = new Set(f.options.map(o => String(o)));
+      const cur = String(f.value ?? '');
+      if (!opts.has(cur)) opts.add(cur);
+      [...opts].forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v === '' ? '(empty)' : v;
+        if (v === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+      wrap.appendChild(sel);
+    } else if (f.type === 'textarea') {
+      const ta = document.createElement('textarea');
+      ta.id = getFieldInputId(f.name);
+      ta.value = f.value ?? '';
+      wrap.appendChild(ta);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = getFieldInputId(f.name);
+      input.value = f.value ?? '';
+      wrap.appendChild(input);
+    }
+    box.appendChild(wrap);
+  });
+}
+
+function addMultiInput(holder, value){
+  const row = document.createElement('div');
+  row.className = 'multi-row';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = value || '';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn';
+  del.textContent = '−';
+  del.onclick = () => row.remove();
+  row.appendChild(inp);
+  row.appendChild(del);
+  holder.appendChild(row);
+}
+
+function render(){
+  document.getElementById('instanceInfo').innerHTML =
+    `Instance: <strong>${esc(payload.instanceName || 'Planefence')}</strong> · Config URL: <a href="${esc(payload.configUrl)}">${esc(payload.configUrl)}</a>`;
+  renderTabs();
+  renderFields();
+}
+
+function collectValues(){
+  const out = {};
+  payload.sections.forEach(s => s.fields.forEach(f => {
+    if (f.multi) {
+      const holder = document.getElementById(getFieldInputId(f.name));
+      const vals = [...holder.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+      out[f.name] = vals.join(f.delimiter || ',');
+    } else {
+      const el = document.getElementById(getFieldInputId(f.name));
+      out[f.name] = el ? String(el.value ?? '') : '';
+    }
+  }));
+  return out;
+}
+
+async function saveConfig(){
+  const msg = document.getElementById('message');
+  msg.className = 'msg';
+  msg.textContent = 'Saving...';
+  const values = collectValues();
+  const res = await fetch('/cgi/config_api.php?action=save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    msg.className = 'msg err';
+    msg.textContent = data.error || 'Save failed';
+    return;
+  }
+  msg.className = 'msg ok';
+  msg.textContent = `Saved. Backup created: ${data.backupFile || 'OK'}`;
+  await loadConfig();
+}
+
+async function cancelChanges(){
+  await loadConfig();
+  const msg = document.getElementById('message');
+  msg.className = 'msg';
+  msg.textContent = 'Changes canceled.';
+}
+
+document.getElementById('saveBtn').onclick = () => saveConfig().catch(e => {
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+document.getElementById('cancelBtn').onclick = () => cancelChanges().catch(e => {
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+
+loadConfig().catch(e => {
+  document.getElementById('instanceInfo').textContent = 'Failed to load configuration';
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+</script>
+</body>
+</html>

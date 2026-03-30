@@ -42,6 +42,13 @@ function configure_both() {
 	configure_planealert "$1" "$2"
 }
 
+prep_early_exit() {
+	if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+		return 0
+	fi
+	exit 0
+}
+
 [[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running Planefence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
@@ -49,11 +56,13 @@ function configure_both() {
 mkdir -p -m 0777 /usr/share/planefence/persist/.internal
 mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
 mkdir -p -m 0777 /usr/share/planefence/html/assets/images
+mkdir -p -m 0777 /usr/share/planefence/html-config
 mkdir -p -m 0777 /usr/share/planefence/html/noise
 chmod -f a=rwx /usr/share/planefence/persist
 chmod -fR u=rwx,go=rx \
 	/usr/share/planefence/persist/.internal \
-	/usr/share/planefence/html
+	/usr/share/planefence/html \
+	/usr/share/planefence/html-config
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
 	set -o allexport
 	# shellcheck disable=SC1091
@@ -73,6 +82,7 @@ ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/i
 # overwritten by the host at start of runtime
 rm -f /usr/share/planefence/html/index.html 2>/dev/null || true
 cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
+	cp -R --remove-destination /usr/share/planefence/stage/html-config/. /usr/share/planefence/html-config/
 	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
@@ -92,25 +102,26 @@ export LOOPTIME=${PF_INTERVAL:-120}
 mkdir -p /run/planefence
 # -----------------------------------------------------------------------------------
 # Check if planefence.config exists
+rm -f /run/planefence/configuration-required
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured planefence.config."
-	"${s6wrap[@]}" echo "Rename the sample file in your config directory to planefence.config"
-	"${s6wrap[@]}" echo "and edit it to set the values for your station "
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! planefence.config is not configured yet."
+	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 8081)."
+	"${s6wrap[@]}" echo "Open your host IP/hostname on that port to complete setup."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	exec sleep infinity
+	touch /run/planefence/configuration-required
+	prep_early_exit
 fi
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
-if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
+if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "$FEEDER_LONG" ]] || [[ "$FEEDER_LONG" == "-70.12345" ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
-	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo "Edit planefence.config to set this and other parameters for your station "
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
+	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
+	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 8081)."
+	"${s6wrap[@]}" echo "Once you save valid coordinates, Planefence will continue automatically."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	exec sleep infinity
+	touch /run/planefence/configuration-required
+	prep_early_exit
 fi
 
 #

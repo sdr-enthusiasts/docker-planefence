@@ -492,6 +492,8 @@ GET_PARAM() {
     *) return 99 ;;
   esac
 
+  [[ -f "$config_file" ]] || return 1
+
   raw=$(awk -v key="$source_parameter" '
     $0 ~ "^[[:space:]]*(export[[:space:]]+)?" key "[[:space:]]*=" {
       line=$0

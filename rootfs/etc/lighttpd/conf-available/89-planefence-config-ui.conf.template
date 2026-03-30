@@ -1,0 +1,15 @@
+# Dedicated Planefence configuration UI listener
+# Port placeholder is replaced at startup by the lighttpd s6 script.
+
+$SERVER["socket"] == ":__PF_CONFIG_HTTP_PORT__" {
+  alias.url = ( "/" => "/usr/share/planefence/html-config/" )
+  index-file.names = ( "index.html" )
+
+  # Keep cgi shell compatibility for wrappers and shell based helpers
+  cgi.assign = ( ".sh" => "/bin/bash" )
+
+  setenv.add-response-header += (
+    "X-Content-Type-Options" => "nosniff",
+    "X-Frame-Options" => "SAMEORIGIN"
+  )
+}

@@ -21,6 +21,16 @@
 source /scripts/pf-common
 source /usr/share/planefence/prep-planefence.sh
 
+if [[ -f /run/planefence/configuration-required ]]; then
+    log_print WARN "Planefence setup is incomplete. Waiting for configuration web UI changes..."
+    while [[ -f /run/planefence/configuration-required ]]; do
+        sleep 30
+        /usr/share/planefence/prep-planefence.sh || true
+    done
+    source /usr/share/planefence/prep-planefence.sh
+    log_print INFO "Configuration detected. Continuing Planefence startup."
+fi
+
 VERSION="$(GET_PARAM pf VERSION)"
 
 LOOPTIME="$(GET_PARAM base PF_INTERVAL)"
