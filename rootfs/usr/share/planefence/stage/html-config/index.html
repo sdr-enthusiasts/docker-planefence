@@ -110,6 +110,7 @@
     .btn.primary { background: var(--accent); color: #04263d; border: none; font-weight: 700; }
     .btn.good { background: var(--ok); color: #04240f; border: none; font-weight: 700; }
     .actions { display: flex; gap: 8px; margin-top: 16px; }
+    .top-actions { margin: 0 0 12px; }
     .msg { margin-top: 10px; font-size: .9rem; }
     .msg.ok { color: var(--ok); }
     .msg.err { color: #fca5a5; }
@@ -118,6 +119,27 @@
     .intro h3 { margin: 6px 0; }
     .intro ol { margin: 8px 0 0 18px; padding: 0; }
     .intro li { margin: 4px 0; }
+    .toast-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,0.55);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 10000;
+      padding-top: 24px;
+    }
+    .toast-backdrop.show { display: flex; }
+    .toast {
+      width: min(680px, calc(100vw - 24px));
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    }
+    .toast-title { font-weight: 700; margin-bottom: 8px; }
+    .toast-actions { display: flex; gap: 8px; margin-top: 10px; }
     a { color: var(--accent); }
   </style>
 </head>
@@ -127,16 +149,27 @@
       <h1>Planefence Configuration</h1>
       <div class="sub" id="instanceInfo">Loading...</div>
       <div class="sub">Use the tabs to configure each section. Save writes planefence.config and creates a dated backup.</div>
+      <div class="actions top-actions" id="actionsRow">
+        <button class="btn primary" id="saveBtn">Save</button>
+        <button class="btn" id="cancelBtn">Cancel</button>
+      </div>
       <div class="tabs" id="tabs"></div>
       <div class="tab-page">
         <h2 class="page-title" id="pageTitle"></h2>
         <div id="fields" class="grid"></div>
-        <div class="actions" id="actionsRow">
-          <button class="btn primary" id="saveBtn">Save</button>
-          <button class="btn" id="cancelBtn">Cancel</button>
-        </div>
       </div>
       <div id="message" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="toast-backdrop" id="cancelConfirmToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="cancelToastTitle" tabindex="-1">
+      <div class="toast-title" id="cancelToastTitle">Unsaved changes</div>
+      <div>Parameter values have changed. Are you sure you want to cancel?</div>
+      <div class="toast-actions">
+        <button class="btn" id="confirmCancelYes" type="button">Yes - Cancel</button>
+        <button class="btn primary" id="confirmCancelNo" type="button">No - Continue Editing</button>
+      </div>
     </div>
   </div>
 
@@ -146,6 +179,8 @@ let uiModel = null;
 let activeTab = 'intro';
 let activeSubtab = {};
 let draftValues = {};
+let baselineValues = {};
+let cancelConfirmResolver = null;
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
@@ -198,7 +233,50 @@ function initDraftValues(){
     walkFields(t.fields || []);
     (t.subtabs || []).forEach(st => walkFields(st.fields || []));
   });
+  baselineValues = Object.assign({}, draftValues);
 }
+
+function valuesDiffer(a, b){
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const k of keys) {
+    if (String((a || {})[k] ?? '') !== String((b || {})[k] ?? '')) return true;
+  }
+  return false;
+}
+
+function hasUnsavedChanges(){
+  captureCurrentTabValues();
+  return valuesDiffer(draftValues, baselineValues);
+}
+
+function resolveCancelConfirm(decision){
+  const popup = document.getElementById('cancelConfirmToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = cancelConfirmResolver;
+  cancelConfirmResolver = null;
+  if (r) r(Boolean(decision));
+}
+
+function showCancelConfirmToast(){
+  const popup = document.getElementById('cancelConfirmToast');
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    cancelConfirmResolver = resolve;
+  });
+}
+
+document.addEventListener('keydown', (ev) => {
+  const popup = document.getElementById('cancelConfirmToast');
+  if (!popup || !popup.classList.contains('show')) return;
+  if (ev.key === 'Enter' || ev.key === 'Escape') {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+}, true);
 
 async function loadConfig(){
   const res = await fetch('/cgi/config_api.php?action=load', { cache: 'no-store' });
@@ -370,10 +448,8 @@ function renderFieldList(fields, host){
 function renderPage(){
   const titleEl = document.getElementById('pageTitle');
   const box = document.getElementById('fields');
-  const actions = document.getElementById('actionsRow');
 
   if (activeTab === 'intro') {
-    actions.style.display = 'none';
     const introTitle = String(uiModel?.intro?.title || 'Welcome to the Planefence Configuration Wizard');
     const paragraphs = Array.isArray(uiModel?.intro?.paragraphs) ? uiModel.intro.paragraphs : [];
     titleEl.textContent = introTitle;
@@ -381,7 +457,6 @@ function renderPage(){
     return;
   }
 
-  actions.style.display = 'flex';
   const tab = getCurrentTabObj();
   if (!tab) {
     titleEl.textContent = 'Configuration';
@@ -434,11 +509,24 @@ async function saveConfig(){
 }
 
 async function cancelChanges(){
+  const changed = hasUnsavedChanges();
+  if (changed) {
+    const yesCancel = await showCancelConfirmToast();
+    if (!yesCancel) {
+      const msg = document.getElementById('message');
+      msg.className = 'msg';
+      msg.textContent = 'Continue editing.';
+      return;
+    }
+  }
   await loadConfig();
   const msg = document.getElementById('message');
   msg.className = 'msg';
   msg.textContent = 'Changes canceled.';
 }
+
+document.getElementById('confirmCancelYes').onclick = () => resolveCancelConfirm(true);
+document.getElementById('confirmCancelNo').onclick = () => resolveCancelConfirm(false);
 
 document.getElementById('saveBtn').onclick = () => saveConfig().catch(e => {
   const msg = document.getElementById('message');

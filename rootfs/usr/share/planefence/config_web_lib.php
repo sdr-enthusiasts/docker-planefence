@@ -8,7 +8,7 @@ function pf_cfg_paths(): array {
         'config' => '/usr/share/planefence/persist/planefence.config',
         'uiSchemaPersist' => '/usr/share/planefence/persist/.internal/config-ui.schema.json',
         'uiSchemaStage' => '/usr/share/planefence/stage/persist/.internal/config-ui.schema.json',
-        'backupDir' => '/usr/share/planefence/persist/.internal/config-backups',
+        'backupDir' => '/usr/share/planefence/persist/config-backups',
         'requiredMarker' => '/run/planefence/configuration-required',
     ];
 }
