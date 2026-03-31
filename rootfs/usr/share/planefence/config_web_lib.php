@@ -195,6 +195,151 @@ function pf_cfg_log_warn(string $message): void {
   @exec($cmd);
 }
 
+function pf_cfg_backup_name_to_epoch(string $fileName): ?int {
+  if (!preg_match('/^planefence\.config\.(\d{8})-(\d{6})\.bak$/', $fileName, $m)) return null;
+  $dt = DateTime::createFromFormat('YmdHis', $m[1] . $m[2]);
+  if (!$dt) return null;
+  return $dt->getTimestamp();
+}
+
+function pf_cfg_backup_display_time(string $fileName, int $fallbackEpoch): string {
+  $fromName = pf_cfg_backup_name_to_epoch($fileName);
+  $epoch = $fromName ?? $fallbackEpoch;
+  return date('Y-m-d H:i:s', $epoch);
+}
+
+function pf_cfg_backup_candidates(array $paths): array {
+  $dir = (string)($paths['backupDir'] ?? '');
+  if ($dir === '' || !is_dir($dir)) return [];
+  $glob = glob($dir . '/planefence.config.*.bak');
+  return is_array($glob) ? $glob : [];
+}
+
+function pf_cfg_backup_safe_path(array $paths, string $backupName): ?string {
+  if (!preg_match('/^planefence\.config\.\d{8}-\d{6}\.bak$/', $backupName)) return null;
+  $dir = realpath((string)($paths['backupDir'] ?? ''));
+  if ($dir === false || $dir === '') return null;
+  $path = $dir . '/' . $backupName;
+  $real = realpath($path);
+  if ($real === false) return null;
+  if (!str_starts_with($real, $dir . '/')) return null;
+  if (!is_file($real) || !is_readable($real)) return null;
+  return $real;
+}
+
+function pf_cfg_list_backups(int $limit = 200): array {
+  $paths = pf_cfg_paths();
+  $items = [];
+  foreach (pf_cfg_backup_candidates($paths) as $path) {
+    $name = basename($path);
+    if (!preg_match('/^planefence\.config\.\d{8}-\d{6}\.bak$/', $name)) continue;
+    $mtime = @filemtime($path);
+    $mtime = is_int($mtime) ? $mtime : time();
+    $items[] = [
+      'name' => $name,
+      'modifiedAtEpoch' => $mtime,
+      'modifiedAt' => date('c', $mtime),
+      'displayTime' => pf_cfg_backup_display_time($name, $mtime),
+      'size' => (int)(@filesize($path) ?: 0),
+    ];
+  }
+
+  usort($items, static function(array $a, array $b): int {
+    return ($b['modifiedAtEpoch'] ?? 0) <=> ($a['modifiedAtEpoch'] ?? 0);
+  });
+
+  if ($limit > 0 && count($items) > $limit) {
+    $items = array_slice($items, 0, $limit);
+  }
+
+  return [
+    'ok' => true,
+    'backups' => $items,
+  ];
+}
+
+function pf_cfg_backup_preview(string $backupName): array {
+  $paths = pf_cfg_paths();
+  $safePath = pf_cfg_backup_safe_path($paths, $backupName);
+  if ($safePath === null) return ['ok' => false, 'error' => 'Backup file not found'];
+
+  $currentValues = pf_cfg_parse_assignments($paths['config']);
+  $backupValues = pf_cfg_parse_assignments($safePath);
+  $template = pf_cfg_parse_template();
+
+  $orderedKeys = [];
+  foreach ($template['sections'] as $section) {
+    foreach (($section['fields'] ?? []) as $field) {
+      $n = (string)($field['name'] ?? '');
+      if ($n !== '') $orderedKeys[] = $n;
+    }
+  }
+
+  $allKeys = array_values(array_unique(array_merge($orderedKeys, array_keys($currentValues), array_keys($backupValues))));
+  $changed = [];
+  foreach ($allKeys as $key) {
+    $current = trim((string)($currentValues[$key] ?? ''));
+    $backup = trim((string)($backupValues[$key] ?? ''));
+    if ($current === $backup) continue;
+    $changed[] = [
+      'key' => $key,
+      'currentValue' => $current,
+      'backupValue' => $backup,
+    ];
+  }
+
+  $rawLines = pf_cfg_read_raw($safePath);
+
+  return [
+    'ok' => true,
+    'backup' => [
+      'name' => basename($safePath),
+      'displayTime' => pf_cfg_backup_display_time(basename($safePath), (int)(@filemtime($safePath) ?: time())),
+      'modifiedAt' => date('c', (int)(@filemtime($safePath) ?: time())),
+      'size' => (int)(@filesize($safePath) ?: 0),
+    ],
+    'changed' => $changed,
+    'changedKeys' => array_values(array_map(static fn($row) => (string)$row['key'], $changed)),
+    'backupRawLines' => $rawLines,
+  ];
+}
+
+function pf_cfg_restore_backup(string $backupName): array {
+  $paths = pf_cfg_paths();
+  $safePath = pf_cfg_backup_safe_path($paths, $backupName);
+  if ($safePath === null) return ['ok' => false, 'error' => 'Backup file not found'];
+
+  if (!is_file($paths['config'])) {
+    return ['ok' => false, 'error' => 'Current planefence.config not found'];
+  }
+
+  if (!is_dir($paths['backupDir'])) @mkdir($paths['backupDir'], 0777, true);
+  $preRestoreBackup = $paths['backupDir'] . '/planefence.config.' . date('Ymd-His') . '.bak';
+  if (!@copy($paths['config'], $preRestoreBackup)) {
+    return ['ok' => false, 'error' => 'Unable to create pre-restore backup'];
+  }
+
+  $tmp = $paths['config'] . '.restore.tmp';
+  $raw = @file_get_contents($safePath);
+  if (!is_string($raw)) {
+    return ['ok' => false, 'error' => 'Unable to read selected backup'];
+  }
+  if (@file_put_contents($tmp, $raw) === false) {
+    return ['ok' => false, 'error' => 'Unable to write temporary restore file'];
+  }
+  if (!@rename($tmp, $paths['config'])) {
+    return ['ok' => false, 'error' => 'Unable to replace planefence.config'];
+  }
+  @chmod($paths['config'], 0666);
+  @unlink($paths['requiredMarker']);
+
+  return [
+    'ok' => true,
+    'restoredBackup' => basename($safePath),
+    'createdBackup' => $preRestoreBackup,
+  ];
+}
+
 function pf_cfg_options_from_comment(string $comment): array {
   if (preg_match('/(?:Allowed|Choose)\s*:\s*([^\.\n]+)/i', $comment, $m)) {
     $raw = trim($m[1]);

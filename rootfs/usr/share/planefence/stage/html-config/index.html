@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
   <title>Planefence Configuration</title>
   <style>
     :root {
@@ -114,6 +116,7 @@
     .msg { margin-top: 10px; font-size: .9rem; }
     .msg.ok { color: var(--ok); }
     .msg.err { color: #fca5a5; }
+    .msg.warn { color: #fbbf24; }
     .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: .78rem; background: #0b1220; border: 1px solid var(--border); color: var(--muted); }
     .intro { color: #cbd5e1; line-height: 1.45rem; }
     .intro h3 { margin: 6px 0; }
@@ -140,6 +143,44 @@
     }
     .toast-title { font-weight: 700; margin-bottom: 8px; }
     .toast-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .restore-list { display: grid; gap: 10px; }
+    .restore-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .restore-meta { color: var(--muted); font-size: .86rem; }
+    .restore-preview { display: grid; gap: 12px; }
+    .restore-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .restore-diff {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: auto;
+      max-height: 320px;
+      background: #0b1220;
+    }
+    .restore-diff table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .restore-diff th, .restore-diff td { border-bottom: 1px solid #334155; padding: 8px; vertical-align: top; }
+    .restore-diff th { position: sticky; top: 0; background: #111827; text-align: left; }
+    .restore-diff tr.changed { background: rgba(245, 158, 11, 0.12); }
+    .backup-raw {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #020617;
+      padding: 10px;
+      margin: 0;
+      overflow: auto;
+      max-height: 380px;
+      font-size: .84rem;
+      line-height: 1.35rem;
+    }
+    .raw-line-changed { background: rgba(56, 189, 248, 0.2); display: block; }
     a { color: var(--accent); }
   </style>
 </head>
@@ -184,6 +225,17 @@
     </div>
   </div>
 
+  <div class="toast-backdrop" id="unsavedForRestoreToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="unsavedRestoreTitle" tabindex="-1">
+      <div class="toast-title" id="unsavedRestoreTitle">Unsaved changes</div>
+      <div>You have unsaved changes. Choose whether to Save changes (without container restart) or Cancel changes before opening this backup.</div>
+      <div class="toast-actions">
+        <button class="btn good" id="unsavedRestoreSave" type="button">Save changes</button>
+        <button class="btn" id="unsavedRestoreCancel" type="button">Cancel changes</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 let payload = null;
 let uiModel = null;
@@ -193,6 +245,16 @@ let draftValues = {};
 let baselineValues = {};
 let cancelConfirmResolver = null;
 let portWarnResolver = null;
+let unsavedForRestoreResolver = null;
+let restoreModel = {
+  backups: [],
+  selectedName: '',
+  preview: null,
+  loadingList: false,
+  loadingPreview: false,
+  restoring: false,
+};
+const RESTORE_TAB_ID = 'restore-old-config';
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
@@ -298,6 +360,26 @@ function resolvePortWarn(decision){
   if (r) r(Boolean(decision));
 }
 
+function resolveUnsavedForRestore(decision){
+  const popup = document.getElementById('unsavedForRestoreToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = unsavedForRestoreResolver;
+  unsavedForRestoreResolver = null;
+  if (r) r(decision);
+}
+
+function showUnsavedForRestoreToast(){
+  const popup = document.getElementById('unsavedForRestoreToast');
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    unsavedForRestoreResolver = resolve;
+  });
+}
+
 function showPortWarnToast(changedParams){
   const popup = document.getElementById('portWarnToast');
   const body = document.getElementById('portWarnBody');
@@ -319,7 +401,11 @@ function showPortWarnToast(changedParams){
 document.addEventListener('keydown', (ev) => {
   const popup = document.getElementById('cancelConfirmToast');
   const portPopup = document.getElementById('portWarnToast');
-  const hasModalOpen = (popup && popup.classList.contains('show')) || (portPopup && portPopup.classList.contains('show'));
+  const unsavedRestorePopup = document.getElementById('unsavedForRestoreToast');
+  const hasModalOpen =
+    (popup && popup.classList.contains('show')) ||
+    (portPopup && portPopup.classList.contains('show')) ||
+    (unsavedRestorePopup && unsavedRestorePopup.classList.contains('show'));
   if (!hasModalOpen) return;
   if (ev.key === 'Enter' || ev.key === 'Escape') {
     ev.preventDefault();
@@ -374,6 +460,16 @@ function captureCurrentTabValues(){
 function switchTab(tabId){
   captureCurrentTabValues();
   activeTab = tabId;
+  if (tabId === RESTORE_TAB_ID) {
+    renderTabs();
+    renderPage();
+    ensureBackupList().catch(e => {
+      const msg = document.getElementById('message');
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    });
+    return;
+  }
   renderTabs();
   renderPage();
 }
@@ -395,6 +491,212 @@ function renderTabs(){
     b.onclick = () => switchTab(t.id);
     tabs.appendChild(b);
   });
+
+  const restore = document.createElement('button');
+  restore.className = 'tab' + (activeTab === RESTORE_TAB_ID ? ' active' : '');
+  restore.textContent = 'Restore old config';
+  restore.onclick = () => switchTab(RESTORE_TAB_ID);
+  tabs.appendChild(restore);
+}
+
+function formatBytes(bytes){
+  const b = Number(bytes || 0);
+  if (!Number.isFinite(b) || b <= 0) return '0 B';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function restoreRawHtml(lines, changedKeys){
+  const keys = new Set((changedKeys || []).map(String));
+  const out = [];
+  (lines || []).forEach(line => {
+    const txt = String(line ?? '');
+    const m = txt.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+    const isChanged = !!(m && keys.has(m[1]));
+    if (isChanged) {
+      out.push(`<span class="raw-line-changed">${esc(txt)}</span>`);
+    } else {
+      out.push(esc(txt));
+    }
+  });
+  return out.join('\n');
+}
+
+function renderRestoreList(box){
+  const wrap = document.createElement('div');
+  wrap.className = 'restore-list';
+  if (restoreModel.loadingList) {
+    wrap.innerHTML = '<div class="field"><div class="desc"><p>Loading backups...</p></div></div>';
+    box.appendChild(wrap);
+    return;
+  }
+  if (!Array.isArray(restoreModel.backups) || restoreModel.backups.length === 0) {
+    wrap.innerHTML = '<div class="field"><div class="desc"><p>No backups available.</p></div></div>';
+    box.appendChild(wrap);
+    return;
+  }
+
+  restoreModel.backups.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'restore-item';
+    row.innerHTML = `
+      <div>
+        <div><strong>${esc(b.displayTime || b.name)}</strong></div>
+        <div class="restore-meta">${esc(b.name)} · ${esc(formatBytes(b.size))}</div>
+      </div>
+    `;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn';
+    btn.textContent = 'View backup';
+    btn.onclick = () => openBackupPreview(b.name).catch(e => {
+      const msg = document.getElementById('message');
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+  box.appendChild(wrap);
+}
+
+function renderRestorePreview(box){
+  const p = restoreModel.preview;
+  if (!p) {
+    renderRestoreList(box);
+    return;
+  }
+
+  const changed = Array.isArray(p.changed) ? p.changed : [];
+  const preview = document.createElement('div');
+  preview.className = 'restore-preview';
+
+  const header = document.createElement('div');
+  header.className = 'restore-head';
+  header.innerHTML = `
+    <div>
+      <div><strong>${esc(p.backup?.displayTime || p.backup?.name || '')}</strong></div>
+      <div class="restore-meta">${esc(p.backup?.name || '')} · ${esc(formatBytes(p.backup?.size || 0))}</div>
+    </div>
+  `;
+  const actions = document.createElement('div');
+  const restoreBtn = document.createElement('button');
+  restoreBtn.type = 'button';
+  restoreBtn.className = 'btn good';
+  restoreBtn.textContent = restoreModel.restoring ? 'Restoring...' : 'Restore this version';
+  restoreBtn.disabled = restoreModel.restoring;
+  restoreBtn.onclick = () => restoreSelectedBackup().catch(e => {
+    const msg = document.getElementById('message');
+    msg.className = 'msg err';
+    msg.textContent = e.message;
+  });
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => {
+    restoreModel.selectedName = '';
+    restoreModel.preview = null;
+    renderPage();
+  };
+  actions.appendChild(restoreBtn);
+  actions.appendChild(cancelBtn);
+  header.appendChild(actions);
+  preview.appendChild(header);
+
+  const diff = document.createElement('div');
+  diff.className = 'restore-diff';
+  if (changed.length === 0) {
+    diff.innerHTML = '<table><thead><tr><th>Difference</th></tr></thead><tbody><tr><td>No value changes compared to current planefence.config.</td></tr></tbody></table>';
+  } else {
+    diff.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Current value</th><th>Backup value</th></tr>
+        </thead>
+        <tbody>
+          ${changed.map(row => `<tr class="changed"><td>${esc(row.key)}</td><td>${esc(row.currentValue)}</td><td>${esc(row.backupValue)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+  preview.appendChild(diff);
+
+  const raw = document.createElement('pre');
+  raw.className = 'backup-raw';
+  raw.innerHTML = restoreRawHtml(p.backupRawLines || [], p.changedKeys || []);
+  preview.appendChild(raw);
+
+  box.appendChild(preview);
+}
+
+async function ensureBackupList(){
+  if (restoreModel.loadingList) return;
+  restoreModel.loadingList = true;
+  renderPage();
+  try {
+    const res = await fetch('/cgi/config_api.php?action=backups', { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Unable to load backups');
+    restoreModel.backups = Array.isArray(data.backups) ? data.backups : [];
+  } finally {
+    restoreModel.loadingList = false;
+    renderPage();
+  }
+}
+
+async function resolveUnsavedBeforeBackupView(){
+  if (!hasUnsavedChanges()) return true;
+  const choice = await showUnsavedForRestoreToast();
+  if (choice === 'save') {
+    const saveOk = await saveConfig({ forceNoRestart: true, silentMessage: true });
+    return saveOk;
+  }
+  if (choice === 'cancel') {
+    await loadConfig();
+    return true;
+  }
+  return false;
+}
+
+async function openBackupPreview(name){
+  const proceed = await resolveUnsavedBeforeBackupView();
+  if (!proceed) return;
+  restoreModel.loadingPreview = true;
+  restoreModel.selectedName = name;
+  restoreModel.preview = null;
+  renderPage();
+  try {
+    const res = await fetch(`/cgi/config_api.php?action=preview_backup&name=${encodeURIComponent(name)}`, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Unable to preview backup');
+    restoreModel.preview = data;
+  } finally {
+    restoreModel.loadingPreview = false;
+    renderPage();
+  }
+}
+
+async function restoreSelectedBackup(){
+  const name = String(restoreModel.selectedName || restoreModel.preview?.backup?.name || '').trim();
+  if (!name) return;
+  restoreModel.restoring = true;
+  renderPage();
+  try {
+    const res = await fetch('/cgi/config_api.php?action=restore_backup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Restore failed');
+    window.alert('Configuration restore was successful. The page will now reload.');
+    window.location.reload();
+  } finally {
+    restoreModel.restoring = false;
+    renderPage();
+  }
 }
 
 function renderSubtabs(tab){
@@ -515,6 +817,21 @@ function renderPage(){
     return;
   }
 
+  if (activeTab === RESTORE_TAB_ID) {
+    titleEl.textContent = 'Restore old config';
+    box.innerHTML = '';
+    if (restoreModel.loadingPreview) {
+      box.innerHTML = '<div class="field"><div class="desc"><p>Loading backup preview...</p></div></div>';
+      return;
+    }
+    if (restoreModel.preview) {
+      renderRestorePreview(box);
+      return;
+    }
+    renderRestoreList(box);
+    return;
+  }
+
   const tab = getCurrentTabObj();
   if (!tab) {
     titleEl.textContent = 'Configuration';
@@ -583,9 +900,11 @@ function getChangedKeys(values){
   return changed;
 }
 
-async function saveConfig(){
+async function saveConfig(opts = {}){
   const msg = document.getElementById('message');
-  msg.className = 'msg';
+  const forceNoRestart = Boolean(opts.forceNoRestart);
+  const silentMessage = Boolean(opts.silentMessage);
+  if (!silentMessage) msg.className = 'msg';
   const values = collectValues();
 
   const changedPorts = ['PF_HTTP_PORT', 'PF_CONFIG_HTTP_PORT'].filter(k => {
@@ -596,23 +915,25 @@ async function saveConfig(){
   if (changedPorts.length > 0) {
     const proceed = await showPortWarnToast(changedPorts);
     if (!proceed) {
-      msg.className = 'msg';
-      msg.textContent = 'Save canceled. Continue editing.';
-      return;
+      if (!silentMessage) {
+        msg.className = 'msg';
+        msg.textContent = 'Save canceled. Continue editing.';
+      }
+      return false;
     }
   }
 
   const changedKeys = getChangedKeys(values);
   const restartTriggerKeys = getRestartTriggerKeys();
   const restartRequired = changedKeys.some(k => restartTriggerKeys.has(k));
-  let allowRestart = true;
-  if (restartRequired) {
+  let allowRestart = !forceNoRestart;
+  if (restartRequired && !forceNoRestart) {
     allowRestart = window.confirm(
       'Container Reboot Required\n\nPress OK to restart the container , or Cancel to continue without restarting.'
     );
   }
 
-  msg.textContent = 'Saving...';
+  if (!silentMessage) msg.textContent = 'Saving...';
   const res = await fetch('/cgi/config_api.php?action=save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -622,24 +943,30 @@ async function saveConfig(){
   if (!data.ok) {
     msg.className = 'msg err';
     msg.textContent = data.error || 'Save failed';
-    return;
+    return false;
   }
-  msg.className = 'msg ok';
-  let okText = `Saved. Backup created: ${data.backupFile || 'OK'}`;
-  if (data.servicesRestarted) okText += ' Service restart triggered.';
-  if (data.restartSkipped) okText += ' Restart skipped by user.';
-  if (data.restartWarning) okText += ` ${data.restartWarning}`;
-  msg.textContent = okText;
+  if (!silentMessage) {
+    msg.className = 'msg ok';
+    let okText = `Saved. Backup created: ${data.backupFile || 'OK'}`;
+    if (data.servicesRestarted) okText += ' Service restart triggered.';
+    if (data.restartSkipped) okText += ' Restart skipped by user.';
+    if (data.restartWarning) okText += ` ${data.restartWarning}`;
+    msg.textContent = okText;
+  }
 
   if (restartRequired && allowRestart && data.servicesRestarted) {
     window.alert('Container restarting\n\nPage will reload in 15 seconds');
     setTimeout(() => {
       window.location.reload();
     }, 15000);
-    return;
+    return true;
   }
 
   await loadConfig();
+  if (activeTab === RESTORE_TAB_ID) {
+    await ensureBackupList();
+  }
+  return true;
 }
 
 async function cancelChanges(){
@@ -663,6 +990,8 @@ document.getElementById('confirmCancelYes').onclick = () => resolveCancelConfirm
 document.getElementById('confirmCancelNo').onclick = () => resolveCancelConfirm(false);
 document.getElementById('portWarnYes').onclick = () => resolvePortWarn(true);
 document.getElementById('portWarnNo').onclick = () => resolvePortWarn(false);
+document.getElementById('unsavedRestoreSave').onclick = () => resolveUnsavedForRestore('save');
+document.getElementById('unsavedRestoreCancel').onclick = () => resolveUnsavedForRestore('cancel');
 
 document.getElementById('saveBtn').onclick = () => saveConfig().catch(e => {
   const msg = document.getElementById('message');
