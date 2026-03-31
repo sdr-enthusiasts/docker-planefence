@@ -2,7 +2,7 @@
 #shellcheck shell=bash disable=SC1091,SC2154,SC2015
 
 # redirect stderr to stdout so it's picked up in the docker logs
-source /scripts/common
+source /scripts/pf-common
 shopt -s nullglob
 
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
@@ -74,7 +74,7 @@ while true; do
 		"${s6wrap[@]}" echo "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
 		"${s6wrap[@]}" echo "If this error keeps on repeating, please make sure that"
 		"${s6wrap[@]}" echo "readsb/dump1090[-fa]/ultrafeeder is running and producing SBS data on port $PF_SOCK30003PORT!"
-		sleep $LOOPTIME & wait
+		sleep $LOOPTIME
 	else
 		# clean up logs
 		for f in /run/socket30003/*.txt; do
@@ -100,7 +100,7 @@ while true; do
 		rm -f /run/socket30003.up
 		if (( exitcode != 124 && exitcode != 0)); then
 			"${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with error code $exitcode. Restarting in $LOOPTIME"
-			sleep $LOOPTIME & wait 
+			sleep $LOOPTIME
 		fi
 
 	fi

@@ -152,5 +152,5 @@ start_missing_historical_backfill "plane-alert"
 while true; do
   precompute_for_mode "planefence"
   precompute_for_mode "plane-alert"
-  sleep "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS" & wait
+  sleep "$INSIGHTS_PRECOMPUTE_INTERVAL_SECONDS"
 done
