@@ -20,10 +20,10 @@ log_print INFO "get-silhouettes.sh started"
 
 # Get the link to the silhouettes file, or add the default if empty.
 # it it's set to OFF, then don't do any
-SILLINK="$(sed -n 's|^\s*PA_SILHOUETTES_LINK=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
-# SILLINK="${SILLINK:-https://github.com/rikgale/VRSOperatorFlags/raw/main/Silhouettes.zip}"
+
+SILLINK="$(GET_PARAM base PA_SILHOUETTES_LINK)"
 SILLINK="${SILLINK:-https://github.com/rikgale/VRSOperatorFlags/raw/main/TransparentDVSilhouettes.zip}"
-OPFLINK="$(sed -n 's|^\s*PA_OPERATORFLAGS_LINK=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
+OPFLINK="$(GET_PARAM base PA_OPERATORFLAGS_LINK)"
 OPFLINK="${OPFLINK:-https://github.com/rikgale/VRSOperatorFlags/raw/main/OperatorFlags.zip}"
 
 if chk_disabled "${SILLINK}"; then inhibit_update=true; else inhibit_update=false; fi

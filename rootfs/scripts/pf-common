@@ -507,7 +507,7 @@ GET_PARAM() {
     END { if (!found) exit 2 }
   ' "$config_file")
   if [[ $? -eq 2 ]]; then
-    return 1
+    return 0
   fi
 
   # Strip inline comments like bash assignments:
