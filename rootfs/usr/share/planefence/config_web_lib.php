@@ -170,38 +170,39 @@ function pf_cfg_should_restart_services(array $changedKeys, array $template): bo
 
 function pf_cfg_restart_all_services(): array {
   $script = <<<'SH'
-set -u
-source /scripts/pf-common
-
-# s6-rc -da change; sleep 5; ; sleep 1; s6-rc -u change $(s6-rc-db list services)
-
-if command -v s6-rc >/dev/null 2>&1; then
-  log_print INFO "Terminating all s6 services"
-  s6-rc -da change || true
-
-  # Clean up potentially orphaned web processes before bringing services back up.
-  kill $(ps -ef | awk '$3 == 1 && $2 != 1 && $8 !~ /^\/?(.*\/)?s6-supervise/ { print $2 }') >/dev/null 2>&1 || true
-
-  s6-rc -u change $(s6-rc-db list services)
-  rc=$?
-  if (( rc == 0 )); then
-  log_print INFO "S6 services restarted successfully"
-  else
-  log_print WARNING "S6 services restart returned rc=${rc}; not all services may have restarted successfully"
-  fi
-  exit $rc
-fi
-
-if command -v s6-svc >/dev/null 2>&1; then
-  log_print WARNING "config-save restart hook s6-rc not found; using s6-svc fallback"
-  s6-svc -r /run/service/* || true
-  kill $(ps -ef | awk '$3 == 1 && $2 != 1 && $8 !~ /^\/?(.*\/)?s6-supervise/ { print $2 }') >/dev/null 2>&1 || true
-  log_print INFO "config-save restart hook s6-svc fallback completed"
-  exit $?
-fi
-
-log_print FATAL "config-save restart hook: no s6 service control command available"
-exit 127
+  kill 1
+# set -u
+# source /scripts/pf-common
+#
+# # s6-rc -da change; sleep 5; ; sleep 1; s6-rc -u change $(s6-rc-db list services)
+#
+# if command -v s6-rc >/dev/null 2>&1; then
+#   log_print INFO "Terminating all s6 services"
+#   s6-rc -da change || true
+#
+#   # Clean up potentially orphaned web processes before bringing services back up.
+#   kill $(ps -ef | awk '$3 == 1 && $2 != 1 && $8 !~ /^\/?(.*\/)?s6-supervise/ { print $2 }') >/dev/null 2>&1 || true
+#
+#   s6-rc -u change $(s6-rc-db list services)
+#   rc=$?
+#   if (( rc == 0 )); then
+#   log_print INFO "S6 services restarted successfully"
+#   else
+#   log_print WARNING "S6 services restart returned rc=${rc}; not all services may have restarted successfully"
+#   fi
+#   exit $rc
+# fi
+#
+# if command -v s6-svc >/dev/null 2>&1; then
+#   log_print WARNING "config-save restart hook s6-rc not found; using s6-svc fallback"
+#   s6-svc -r /run/service/* || true
+#   kill $(ps -ef | awk '$3 == 1 && $2 != 1 && $8 !~ /^\/?(.*\/)?s6-supervise/ { print $2 }') >/dev/null 2>&1 || true
+#   log_print INFO "config-save restart hook s6-svc fallback completed"
+#   exit $?
+# fi
+#
+# log_print FATAL "config-save restart hook: no s6 service control command available"
+# exit 127
 SH;
 
   $bg = '(' . $script . ') &';
