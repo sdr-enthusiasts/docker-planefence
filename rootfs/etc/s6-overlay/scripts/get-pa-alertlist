@@ -31,4 +31,4 @@ do
 	sleep $LOOPTIME
 	/usr/share/planefence/get-pa-alertlist.sh
 	/usr/share/planefence/get-silhouettes.sh
- 	done
+done

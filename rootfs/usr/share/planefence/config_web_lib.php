@@ -172,12 +172,14 @@ function pf_cfg_restart_all_services(): array {
     $script = <<<'SH'
 set -u
 
+SCRIPT_NAME="$(basename "$0")"
+SCRIPT_NAME="${SCRIPT_NAME%.*}"
 LOG_FD="/proc/1/fd/2"
 if [[ ! -w "$LOG_FD" ]]; then LOG_FD="/dev/stderr"; fi
 pf_log() {
     local level="$1"
     shift || true
-    printf '[%s] %s\n' "$level" "$*" > "$LOG_FD"
+    s6wrap --quiet --timestamps --prepend="$SCRIPT_NAME" --args printf '[%s] %s\n' "$level" "$*" > "$LOG_FD"
 }
 
 pf_log INFO "config-save restart hook started"
