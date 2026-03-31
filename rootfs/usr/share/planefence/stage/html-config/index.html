@@ -553,6 +553,36 @@ function collectValues(){
   return Object.assign({}, draftValues);
 }
 
+function getRestartTriggerKeys(){
+  const keys = new Set();
+  const sections = Array.isArray(payload?.sections) ? payload.sections : [];
+  sections.forEach(section => {
+    const title = String(section?.title || '').trim().toLowerCase();
+    if (!title) return;
+    const isRequired = title.includes('required');
+    const isGeneral = title.includes('general');
+    if (!isRequired && !isGeneral) return;
+    (section.fields || []).forEach(field => {
+      const name = String(field?.name || '');
+      if (name) keys.add(name);
+    });
+  });
+  keys.add('PF_HTTP_PORT');
+  keys.add('PF_CONFIG_HTTP_PORT');
+  return keys;
+}
+
+function getChangedKeys(values){
+  const changed = [];
+  const keys = new Set([...Object.keys(baselineValues || {}), ...Object.keys(values || {})]);
+  keys.forEach(k => {
+    const before = String((baselineValues || {})[k] ?? '');
+    const after = String((values || {})[k] ?? '');
+    if (before !== after) changed.push(k);
+  });
+  return changed;
+}
+
 async function saveConfig(){
   const msg = document.getElementById('message');
   msg.className = 'msg';
@@ -572,11 +602,21 @@ async function saveConfig(){
     }
   }
 
+  const changedKeys = getChangedKeys(values);
+  const restartTriggerKeys = getRestartTriggerKeys();
+  const restartRequired = changedKeys.some(k => restartTriggerKeys.has(k));
+  let allowRestart = true;
+  if (restartRequired) {
+    allowRestart = window.confirm(
+      'Container Reboot Required\n\nPress OK to restart the container , or Cancel to continue without restarting.'
+    );
+  }
+
   msg.textContent = 'Saving...';
   const res = await fetch('/cgi/config_api.php?action=save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
+    body: JSON.stringify({ values, allowRestart })
   });
   const data = await res.json();
   if (!data.ok) {
@@ -587,8 +627,18 @@ async function saveConfig(){
   msg.className = 'msg ok';
   let okText = `Saved. Backup created: ${data.backupFile || 'OK'}`;
   if (data.servicesRestarted) okText += ' Service restart triggered.';
+  if (data.restartSkipped) okText += ' Restart skipped by user.';
   if (data.restartWarning) okText += ` ${data.restartWarning}`;
   msg.textContent = okText;
+
+  if (restartRequired && allowRestart && data.servicesRestarted) {
+    window.alert('Container restarting\n\nPage will reload in 15 seconds');
+    setTimeout(() => {
+      window.location.reload();
+    }, 15000);
+    return;
+  }
+
   await loadConfig();
 }
 
