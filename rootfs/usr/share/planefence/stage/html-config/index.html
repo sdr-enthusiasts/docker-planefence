@@ -173,6 +173,17 @@
     </div>
   </div>
 
+  <div class="toast-backdrop" id="portWarnToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="portWarnTitle" tabindex="-1">
+      <div class="toast-title" id="portWarnTitle">WARNING - LOSS OF WEB PAGE ACCESS</div>
+      <div id="portWarnBody"></div>
+      <div class="toast-actions">
+        <button class="btn" id="portWarnYes" type="button">YES</button>
+        <button class="btn primary" id="portWarnNo" type="button">NO</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 let payload = null;
 let uiModel = null;
@@ -181,8 +192,17 @@ let activeSubtab = {};
 let draftValues = {};
 let baselineValues = {};
 let cancelConfirmResolver = null;
+let portWarnResolver = null;
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function linkifyEscapedText(text){
+  const escaped = String(text || '');
+  const re = /(https?:\/\/[^\s<]+)/g;
+  return escaped.replace(re, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+}
 
 function formatDescriptionHtml(raw){
   const text = String(raw || '').trim();
@@ -192,7 +212,7 @@ function formatDescriptionHtml(raw){
     .replace(/\s{2,}/g, ' ')
     .replace(/\.\s+(?=[A-Z][a-z])/g, '.\n');
   const chunks = normalized.split(/\n+/).map(s => s.trim()).filter(Boolean);
-  return chunks.map(c => `<p>${esc(c)}</p>`).join('');
+  return chunks.map(c => `<p>${linkifyEscapedText(esc(c))}</p>`).join('');
 }
 
 function valueToList(v, delimiter){
@@ -269,9 +289,38 @@ function showCancelConfirmToast(){
   });
 }
 
+function resolvePortWarn(decision){
+  const popup = document.getElementById('portWarnToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = portWarnResolver;
+  portWarnResolver = null;
+  if (r) r(Boolean(decision));
+}
+
+function showPortWarnToast(changedParams){
+  const popup = document.getElementById('portWarnToast');
+  const body = document.getElementById('portWarnBody');
+  const list = (changedParams || []).map(esc).join(', ');
+  body.innerHTML = `
+    <p>You are changing the xxx parameter(s). This change will take effect immediately upon saving. Since these are mapped to an external port in your Docker command or in docker-compose.yml, you WILL LOSE ACCESS TO THIS WEB PAGE until you update the port mapping in your Docker command or in docker-compose.yml.</p>
+    <p><strong>${list}</strong></p>
+    <p>Do you want to proceed?</p>
+  `;
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    portWarnResolver = resolve;
+  });
+}
+
 document.addEventListener('keydown', (ev) => {
   const popup = document.getElementById('cancelConfirmToast');
-  if (!popup || !popup.classList.contains('show')) return;
+  const portPopup = document.getElementById('portWarnToast');
+  const hasModalOpen = (popup && popup.classList.contains('show')) || (portPopup && portPopup.classList.contains('show'));
+  if (!hasModalOpen) return;
   if (ev.key === 'Enter' || ev.key === 'Escape') {
     ev.preventDefault();
     ev.stopPropagation();
@@ -396,10 +445,19 @@ function renderFieldList(fields, host){
     wrap.className = 'field';
     const description = f.description || '';
     const example = f.example || '';
+    const defaultValueText = String(f.defaultValue ?? '').trim();
+    const metaParts = [];
+    if (defaultValueText !== '') {
+      metaParts.push(`Default: <strong>${esc(defaultValueText)}</strong>`);
+    }
+    if (example) {
+      metaParts.push(`Example: ${esc(example)}`);
+    }
+    const metaHtml = metaParts.length ? `<div class="meta">${metaParts.join(' · ')}</div>` : '';
     wrap.innerHTML = `
       <div class="label">${esc(f.label || f.name)} ${f.multi ? '<span class="pill">multi-value</span>' : ''}</div>
       <div class="desc">${formatDescriptionHtml(description)}</div>
-      <div class="meta">Default: <strong>${esc(f.defaultValue ?? '')}</strong>${example ? ` · Example: ${esc(example)}` : ''}</div>
+      ${metaHtml}
     `;
 
     const fType = String(f.type || 'text').toLowerCase();
@@ -476,8 +534,16 @@ function renderPage(){
 }
 
 function render(){
-  document.getElementById('instanceInfo').innerHTML =
-    `Instance: <strong>${esc(payload.instanceName || 'Planefence')}</strong>`;
+  const instanceEl = document.getElementById('instanceInfo');
+  const rawInstance = String(payload.instanceName ?? '').trim();
+  const normalized = rawInstance.replace(/^"|"$/g, '').trim();
+  if (!normalized || normalized.toUpperCase() === 'MY') {
+    instanceEl.style.display = 'none';
+    instanceEl.textContent = '';
+  } else {
+    instanceEl.style.display = '';
+    instanceEl.innerHTML = `Instance: <strong>${esc(normalized)}</strong>`;
+  }
   renderTabs();
   renderPage();
 }
@@ -490,8 +556,23 @@ function collectValues(){
 async function saveConfig(){
   const msg = document.getElementById('message');
   msg.className = 'msg';
-  msg.textContent = 'Saving...';
   const values = collectValues();
+
+  const changedPorts = ['PF_HTTP_PORT', 'PF_CONFIG_HTTP_PORT'].filter(k => {
+    const before = String((baselineValues || {})[k] ?? '');
+    const after = String((values || {})[k] ?? '');
+    return before !== after;
+  });
+  if (changedPorts.length > 0) {
+    const proceed = await showPortWarnToast(changedPorts);
+    if (!proceed) {
+      msg.className = 'msg';
+      msg.textContent = 'Save canceled. Continue editing.';
+      return;
+    }
+  }
+
+  msg.textContent = 'Saving...';
   const res = await fetch('/cgi/config_api.php?action=save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -504,7 +585,10 @@ async function saveConfig(){
     return;
   }
   msg.className = 'msg ok';
-  msg.textContent = `Saved. Backup created: ${data.backupFile || 'OK'}`;
+  let okText = `Saved. Backup created: ${data.backupFile || 'OK'}`;
+  if (data.servicesRestarted) okText += ' Service restart triggered.';
+  if (data.restartWarning) okText += ` ${data.restartWarning}`;
+  msg.textContent = okText;
   await loadConfig();
 }
 
@@ -527,6 +611,8 @@ async function cancelChanges(){
 
 document.getElementById('confirmCancelYes').onclick = () => resolveCancelConfirm(true);
 document.getElementById('confirmCancelNo').onclick = () => resolveCancelConfirm(false);
+document.getElementById('portWarnYes').onclick = () => resolvePortWarn(true);
+document.getElementById('portWarnNo').onclick = () => resolvePortWarn(false);
 
 document.getElementById('saveBtn').onclick = () => saveConfig().catch(e => {
   const msg = document.getElementById('message');

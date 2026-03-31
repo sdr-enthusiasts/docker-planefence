@@ -112,8 +112,8 @@ PF_MAPURL=
 PF_MAPZOOM=7
 # ---------------------------------------------------------------------
 # PF_SHOWIMAGES: include aircraft photos from planespotters.net in UI/notifications.
-# Default ON. Set to OFF to disable.
-PF_SHOWIMAGES=ON
+# Default YES. Set to NO to disable.
+PF_SHOWIMAGES=YES
 # ---------------------------------------------------------------------
 # Show OpenAIP layer on heatmap when ON.
 # Requires a valid OpenAIP API key in PF_OPENAIPKEY.
@@ -143,10 +143,6 @@ PF_DELETEAFTER=90
 # PF_NOISECAPT: base URL of your NoiseCapt container (optional).
 # See https://github.com/kx1t/docker-noisecapt.
 PF_NOISECAPT=
-# ---------------------------------------------------------------------
-# PF_CHECKREMOTEDB: use remote helper DB (kx1t) to resolve airline names from flight numbers.
-# See project docs for privacy details. Any non-empty value enables; empty disables.
-PF_CHECKREMOTEDB=
 # ---------------------------------------------------------------------
 # PF_IGNOREDUPES: if set to yes/on/true/1/enabled, show only the first ICAO+flight combo per day.
 PF_IGNOREDUPES=ON
@@ -197,7 +193,11 @@ PA_HISTTIME=30
 # ---------------------------------------------------------------------
 # PA_SILHOUETTES_LINK: URL to fetch silhouette icon pack updates.
 # Empty/omitted → default URL; set to OFF to disable updates.
-PA_SILHOUETTES_LINK=
+PA_SILHOUETTES_LINK="https://github.com/rikgale/VRSOperatorFlags/raw/main/TransparentDVSilhouettes.zip"
+# ---------------------------------------------------------------------
+# PA_OPERATORFLAGS_LINK: URL to fetch operator flags.
+# Empty/omitted → default URL; set to OFF to disable updates.
+PA_OPERATORFLAGS_LINK="https://github.com/rikgale/VRSOperatorFlags/raw/main/OperatorFlags.zip"
 # ---------------------------------------------------------------------
 # PA_TRACKSERVICE: map service used to render tracking links for Plane-Alert.
 # Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live.
@@ -217,8 +217,8 @@ PA_SHOW_STALE_PAGE=OFF
 # ---------------------------------------------------------------------
 # PA_COLLECT_CANDIDATES: enable automatic collection of potential Plane-Alert candidates
 # from socket30003 data.
-#   ON/true/enabled/1/yes  -> enabled
-#   OFF/false/disabled/0/no/empty -> disabled
+#   YES/true/enabled/1/on  -> enabled
+#   NO/false/disabled/0/off/empty -> disabled
 #
 # When enabled, pattern definitions (ICAO and/or Callsign) are read from
 # pa-candidates-filter.txt and candidate output is written to plane-alert-candidates.txt
@@ -232,10 +232,10 @@ PA_SHOW_STALE_PAGE=OFF
 # then comment them out (by placing a # at the start of the line) instead of simply erasing them.
 # Aircraft that are commented out will not be added back in during subsequent observations and filter matches.
 #
-PA_COLLECT_CANDIDATES=ON
+PA_COLLECT_CANDIDATES=YES
 # Optional filename in your config directory to read candidate filters from,
 # instead of pa-candidates-filter.txt. Provide only a file name, not a full path.
-PA_COLLECT_CANDIDATES_FILTER_FILE=
+PA_COLLECT_CANDIDATES_FILTER_FILE=pa-candidates-filter.txt
 # Optional filename in your config directory for logging which filter match
 # caused a specific plane to be added. Leave empty to disable this logging.
 PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log
@@ -260,8 +260,8 @@ PF_NOTIFEVERY=OFF
 # If PF_NOTIF_BEHAVIOR is "pre", then this wait time is measured from the first observation of the plane in the fence.
 # If PF_NOTIF_BEHAVIOR is "post", then this wait time is measured from the last observation of the plane in the fence.
 # The default for PF_NOTIF_BEHAVIOR (if omitted) is "post".
-PF_NOTIF_MINTIME=
-PF_NOTIF_BEHAVIOR=
+PF_NOTIF_MINTIME=0
+PF_NOTIF_BEHAVIOR=post
 # ---------------------------------------------------------------------
 # PF_ATTRIB / PA_ATTRIB: attribution string appended to notifications.
 PF_ATTRIB="#adsb #planefence by kx1t https://sdr-e.com/docker-planefence"
@@ -305,81 +305,100 @@ PF_DISCORD_COLOR=0xf2e718
 # ---------------------------------------------------------------------
 # PF_MASTODON / PA_MASTODON: enable Mastodon notifications for PF / PA.
 # MASTODON_SERVER: server hostname (omit http[s]://). MASTODON_ACCESS_TOKEN: your app token.
-# Visibility: public, unlisted, or private. PA_MASTODON_MAXIMGS: max images per post.
+# Visibility: public, unlisted, or private.
 PF_MASTODON=OFF
 PA_MASTODON=OFF
-MASTODON_SERVER=airwaves.social
+MASTODON_SERVER=
 MASTODON_ACCESS_TOKEN=
 PF_MASTODON_VISIBILITY=unlisted
 PA_MASTODON_VISIBILITY=unlisted
-PA_MASTODON_MAXIMGS=1
 MASTODON_RETENTION_TIME=7
 
 # MQTT Delivery
 # ---------------------------------------------------------------------
 # If defined, PF/PA will publish observations to an MQTT broker over TCP (mqtt:// or mqtts://).
 #
-# CLIENT_ID: optional client identifier (no whitespace). Default: container hostname.
-# URL: mandatory broker host/IP or URL. If omitted, MQTT is disabled.
-# PORT: optional TCP port (default 1883).
-# TLS: set to enable TLS; unset for plaintext.
-# CAFILE: optional path to CA certificate file for self-signed broker certificates (Default: none).
-#         Note - files left in the config folder should use this path: /usr/share/planefence/persist/filename.cert
-# TLS_INSECURE: set to "true" to disable certificate verification (Default: false).
-# TOPIC: optional topic (default "<container-hostname>/planefence" or "<container-hostname>/plane-alert").
-# DATETIME_FORMAT: optional Linux date format (default "%s").
-# QOS: optional QoS level (default 0).
-# USERNAME/PASSWORD: optional basic auth credentials.
-#
-# URL format: mqtt[s]://[user:pass]@host[:port]/[topic] (topic optional). If both URL and individual params are set,
-# individual params take precedence. PF/PA_MQTT_FIELDS: empty → send all; else comma/space-separated fields to include.
+# PF_MQTT_URL: broker host/IP or URL for Planefence. Empty disables Planefence MQTT.
+# format: mqtt[s]://[user:pass]@host[:port]/[topic] (topic optional).
+# If both URL and individual params are set, individual params take precedence.
 PF_MQTT_URL=""
+# PF_MQTT_PORT: optional Planefence MQTT TCP port (default 1883).
 PF_MQTT_PORT=""
+# PF_MQTT_TLS: set to enable TLS for Planefence MQTT; unset for plaintext.
 PF_MQTT_TLS=""
+# PF_MQTT_CAFILE: optional CA certificate path for Planefence MQTT TLS.
+#                Certificates are provided by the user and saved in the mapped planefence config folder
 PF_MQTT_CAFILE=""
+# PF_MQTT_TLS_INSECURE: set to "true" to disable Planefence MQTT certificate verification.
 PF_MQTT_TLS_INSECURE=""
+# PF_MQTT_CLIENT_ID: optional Planefence MQTT client identifier (no whitespace).
 PF_MQTT_CLIENT_ID=""
+# PF_MQTT_TOPIC: optional Planefence MQTT topic (default "<container-hostname>/planefence").
 PF_MQTT_TOPIC=""
-PF_MQTT_DATETIME_FORMAT=""
-PF_MQTT_QOS=""
+# PF_MQTT_DATETIME_FORMAT: optional Linux date format for Planefence MQTT timestamps (default "%s").
+PF_MQTT_DATETIME_FORMAT="%s"
+# PF_MQTT_QOS: optional Planefence MQTT QoS level (default 0).
+PF_MQTT_QOS="0"
+# PF_MQTT_FIELDS: empty sends all fields; otherwise comma/space-separated fields to include.
 PF_MQTT_FIELDS=""
+# PF_MQTT_USERNAME: optional Planefence MQTT username.
 PF_MQTT_USERNAME=""
+# PF_MQTT_PASSWORD: optional Planefence MQTT password.
 PF_MQTT_PASSWORD=""
 
+# PA_MQTT_URL: broker host/IP or URL for Plane-Alert. Empty disables Plane-Alert MQTT.
 PA_MQTT_URL=""
+# PA_MQTT_PORT: optional Plane-Alert MQTT TCP port (default 1883).
 PA_MQTT_PORT=""
+# PA_MQTT_TLS: set to enable TLS for Plane-Alert MQTT; unset for plaintext.
 PA_MQTT_TLS=""
+# PA_MQTT_CAFILE: optional CA certificate path for Plane-Alert MQTT TLS.
+#                Certificates are provided by the user and saved in the mapped planefence config folder
 PA_MQTT_CAFILE=""
+# PA_MQTT_TLS_INSECURE: set to "true" to disable Plane-Alert MQTT certificate verification.
 PA_MQTT_TLS_INSECURE=""
+# PA_MQTT_CLIENT_ID: optional Plane-Alert MQTT client identifier (no whitespace).
 PA_MQTT_CLIENT_ID=""
+# PA_MQTT_TOPIC: optional Plane-Alert MQTT topic (default "<container-hostname>/plane-alert").
 PA_MQTT_TOPIC=""
-PA_MQTT_DATETIME_FORMAT=""
-PA_MQTT_QOS=""
+# PA_MQTT_DATETIME_FORMAT: optional Linux date format for Plane-Alert MQTT timestamps (default "%s").
+PA_MQTT_DATETIME_FORMAT="%s"
+# PA_MQTT_QOS: optional Plane-Alert MQTT QoS level (default 0).
+PA_MQTT_QOS="0"
+# PA_MQTT_FIELDS: empty sends all fields; otherwise comma/space-separated fields to include.
 PA_MQTT_FIELDS=""
+# PA_MQTT_USERNAME: optional Plane-Alert MQTT username.
 PA_MQTT_USERNAME=""
+# PA_MQTT_PASSWORD: optional Plane-Alert MQTT password.
 PA_MQTT_PASSWORD=""
 
 # RSS
 # ---------------------------------------------------------------------
-# RSS feeds require a site base URL for correct validation and links.
-# Leave empty to disable RSS.
+# PF_RSS_SITELINK: RSS feeds require a site base URL for correct validation and links.
+# Empty disables RSS.
 PF_RSS_SITELINK=""
+# PF_RSS_FAVICONLINK: Optional link to a Favicon for your PF RSS feed
 PF_RSS_FAVICONLINK=""
+# PA_RSS_SITELINK: RSS feeds require a site base URL for correct validation and links.
+# Empty disables RSS.
 PA_RSS_SITELINK=""
+# PA_RSS_FAVICONLINK: Optional link to a Favicon for your PA RSS feed
 PA_RSS_FAVICONLINK=""
 
 # BlueSky
 # ---------------------------------------------------------------------
 # Optional BlueSky notifications.
-# Enable by creating an App Password at https://bsky.app/settings/app-passwords and set BLUESKY_APP_PASSWORD
-# (format aaaa-bbbb-cccc-dddd). Set BLUESKY_HANDLE to your handle (value after '@', e.g., abcd.bsky.social).
-# Set PF_BLUESKY_ENABLED / PA_BLUESKY_ENABLED to ON to start notifications.
-# BLUESKY_API can target a different federated server (default https://bsky.social/xrpc). Leave unset if unsure.
-BLUESKY_APP_PASSWORD=""
-BLUESKY_HANDLE=""
+# PF_BLUESKY_ENABLED: set to ON to start PF BSky notifications.
 PF_BLUESKY_ENABLED=OFF
+# PA_BLUESKY_ENABLED: set to ON to start PA BSky notifications.
 PA_BLUESKY_ENABLED=OFF
-# BLUESKY_API=""    # do not change unless you are sure that you know what you are doing!
+# BLUESKY_HANDLE: your BSky handle (value after '@', e.g., abcd.bsky.social).
+BLUESKY_HANDLE=""
+# BLUESKY_APP_PASSWORD: create an App Password at https://bsky.app/settings/app-passwords and enter it here
+# (format aaaa-bbbb-cccc-dddd). 
+BLUESKY_APP_PASSWORD=""
+# BLUESKY_API: use a different federated serve. Do not change unless you know what you are doing.
+BLUESKY_API="https://bsky.social/xrpc"    # do not change unless you are sure that you know what you are doing!
 #
 
 # TELEGRAM

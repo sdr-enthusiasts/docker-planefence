@@ -135,6 +135,14 @@
       "description": "Valid OpenAIP API key from https://www.openaip.net",
       "type": "text"
     },
+    "PF_SHOWIMAGES": {
+      "type": "select",
+      "options": [
+        "YES",
+        "NO"
+      ],
+      "description": "Include aircraft photos from planespotters.net in UI and notifications."
+    },
     "PF_DELETEAFTER": {
       "useDefaultWhenEmpty": true,
       "type": "text"
@@ -171,11 +179,11 @@
     "PA_COLLECT_CANDIDATES": {
       "type": "select",
       "options": [
-        "ON",
-        "OFF"
+        "YES",
+        "NO"
       ],
       "useDefaultWhenEmpty": true,
-      "defaultValue": "ON",
+      "defaultValue": "YES",
       "description": "Enable automatic collection of potential Plane-Alert candidates from socket30003 data."
     },
     "PA_COLLECT_CANDIDATES_FILTER_FILE": {
@@ -192,6 +200,17 @@
         "ON",
         "OFF"
       ]
+    },
+    "PF_NOTIF_MINTIME": {
+      "type": "text"
+    },
+    "PF_NOTIF_BEHAVIOR": {
+      "type": "select",
+      "options": [
+        "pre",
+        "post"
+      ],
+      "description": "Notification timing behavior: pre measures from first observation; post measures from last observation."
     },
     "PF_SCREENSHOTURL": {
       "type": "text",
@@ -210,7 +229,8 @@
         "photo",
         "photo+screenshot",
         "screenshot+photo"
-      ]
+      ],
+      "description": "Type of media to attach to Discord messages: empty = no media, screenshot = tar1090 screenshot, photo = aircraft photo, photo+screenshot = photo main and screenshot thumbnail, screenshot+photo = screenshot main and photo thumbnail."
     },
     "PA_DISCORD_COLOR": {
       "type": "text"
@@ -284,6 +304,102 @@
         "dm"
       ],
       "description": "Plane-Alert Telegram delivery mode. Use dm for direct messages (no retained channel link), or normal for channel-style posts."
+    },
+    "PF_MQTT_URL": {
+      "type": "text",
+      "description": "MQTT broker URL for Planefence. Supports mqtt:// or mqtts:// and optional user:pass, port, and topic in the URL."
+    },
+    "PF_MQTT_PORT": {
+      "type": "text",
+      "description": "Optional Planefence MQTT TCP port (default 1883)."
+    },
+    "PF_MQTT_TLS": {
+      "type": "text",
+      "description": "Set to enable TLS for Planefence MQTT publishing; leave empty for plaintext."
+    },
+    "PF_MQTT_CAFILE": {
+      "type": "text",
+      "description": "Optional CA certificate file path for Planefence MQTT TLS (for self-signed brokers)."
+    },
+    "PF_MQTT_TLS_INSECURE": {
+      "type": "text",
+      "description": "Set to true to disable certificate verification for Planefence MQTT TLS."
+    },
+    "PF_MQTT_CLIENT_ID": {
+      "type": "text",
+      "description": "Optional Planefence MQTT client identifier."
+    },
+    "PF_MQTT_TOPIC": {
+      "type": "text",
+      "description": "Optional Planefence MQTT topic override."
+    },
+    "PF_MQTT_DATETIME_FORMAT": {
+      "type": "text",
+      "description": "Optional Linux date format string for Planefence MQTT timestamps (default %s)."
+    },
+    "PF_MQTT_QOS": {
+      "type": "text",
+      "description": "Optional Planefence MQTT QoS level (default 0)."
+    },
+    "PF_MQTT_FIELDS": {
+      "type": "text",
+      "description": "Optional comma/space-separated list of Planefence fields to publish; empty publishes all fields."
+    },
+    "PF_MQTT_USERNAME": {
+      "type": "text",
+      "description": "Optional Planefence MQTT username."
+    },
+    "PF_MQTT_PASSWORD": {
+      "type": "text",
+      "description": "Optional Planefence MQTT password."
+    },
+    "PA_MQTT_URL": {
+      "type": "text",
+      "description": "MQTT broker URL for Plane-Alert. Supports mqtt:// or mqtts:// and optional user:pass, port, and topic in the URL."
+    },
+    "PA_MQTT_PORT": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT TCP port (default 1883)."
+    },
+    "PA_MQTT_TLS": {
+      "type": "text",
+      "description": "Set to enable TLS for Plane-Alert MQTT publishing; leave empty for plaintext."
+    },
+    "PA_MQTT_CAFILE": {
+      "type": "text",
+      "description": "Optional CA certificate file path for Plane-Alert MQTT TLS (for self-signed brokers)."
+    },
+    "PA_MQTT_TLS_INSECURE": {
+      "type": "text",
+      "description": "Set to true to disable certificate verification for Plane-Alert MQTT TLS."
+    },
+    "PA_MQTT_CLIENT_ID": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT client identifier."
+    },
+    "PA_MQTT_TOPIC": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT topic override."
+    },
+    "PA_MQTT_DATETIME_FORMAT": {
+      "type": "text",
+      "description": "Optional Linux date format string for Plane-Alert MQTT timestamps (default %s)."
+    },
+    "PA_MQTT_QOS": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT QoS level (default 0)."
+    },
+    "PA_MQTT_FIELDS": {
+      "type": "text",
+      "description": "Optional comma/space-separated list of Plane-Alert fields to publish; empty publishes all fields."
+    },
+    "PA_MQTT_USERNAME": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT username."
+    },
+    "PA_MQTT_PASSWORD": {
+      "type": "text",
+      "description": "Optional Plane-Alert MQTT password."
     }
   }
 }

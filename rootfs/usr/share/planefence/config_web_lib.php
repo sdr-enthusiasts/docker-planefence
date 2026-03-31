@@ -97,7 +97,7 @@ function pf_cfg_fixed_options(): array {
         'PA_COLLECT_CANDIDATES' => ['ON', 'OFF'],
         'PA_SHOW_STALE_PAGE' => ['', 'true', 'false'],
         'PF_NOTIFEVERY' => ['true', 'false'],
-        'PF_NOTIF_BEHAVIOR' => ['', 'pre', 'post'],
+        'PF_NOTIF_BEHAVIOR' => ['pre', 'post'],
         'PA_DISCORD' => ['OFF', 'ON'],
         'PF_DISCORD' => ['OFF', 'ON'],
         'PF_MASTODON' => ['OFF', 'ON'],
@@ -111,6 +111,12 @@ function pf_cfg_fixed_options(): array {
     ];
 }
 
+function pf_cfg_encode_single_quoted(string $value): string {
+    $value = str_replace(["\r", "\n"], '', $value);
+    $escaped = str_replace("'", "'\\''", $value);
+    return "'" . $escaped . "'";
+}
+
 function pf_cfg_multi_fields(): array {
     return [
         'PF_PA_SQUAWKS' => ',',
@@ -120,6 +126,108 @@ function pf_cfg_multi_fields(): array {
         'PF_DISCORD_WEBHOOKS' => ',',
         'PF_MQTT_FIELDS' => ',',
         'PA_MQTT_FIELDS' => ',',
+    ];
+}
+
+function pf_cfg_changed_keys(array $before, array $after, array $orderedKeys): array {
+    $changed = [];
+    foreach ($orderedKeys as $k) {
+        $old = trim((string)($before[$k] ?? ''));
+        $new = trim((string)($after[$k] ?? ''));
+        if ($old !== $new) $changed[] = $k;
+    }
+    return $changed;
+}
+
+function pf_cfg_restart_trigger_keys(array $template): array {
+    $keys = [];
+    foreach (($template['sections'] ?? []) as $section) {
+        $title = strtolower(trim((string)($section['title'] ?? '')));
+        if ($title === '') continue;
+        $isRequired = str_contains($title, 'required');
+        $isGeneral = str_contains($title, 'general');
+        if (!$isRequired && !$isGeneral) continue;
+        foreach (($section['fields'] ?? []) as $field) {
+            $name = (string)($field['name'] ?? '');
+            if ($name !== '') $keys[$name] = true;
+        }
+    }
+
+    $keys['PF_HTTP_PORT'] = true;
+    $keys['PF_CONFIG_HTTP_PORT'] = true;
+
+    return array_keys($keys);
+}
+
+function pf_cfg_should_restart_services(array $changedKeys, array $template): bool {
+    if (count($changedKeys) === 0) return false;
+    $triggers = array_fill_keys(pf_cfg_restart_trigger_keys($template), true);
+    foreach ($changedKeys as $k) {
+        if (isset($triggers[$k])) return true;
+    }
+    return false;
+}
+
+function pf_cfg_restart_all_services(): array {
+    $script = <<<'SH'
+set -u
+
+LOG_FD="/proc/1/fd/2"
+if [[ ! -w "$LOG_FD" ]]; then LOG_FD="/dev/stderr"; fi
+pf_log() {
+    local level="$1"
+    shift || true
+    printf '[%s] %s\n' "$level" "$*" > "$LOG_FD"
+}
+
+pf_log INFO "config-save restart hook started"
+sleep 1
+
+if command -v s6-rc >/dev/null 2>&1; then
+    pf_log INFO "config-save restart hook using s6-rc on bundle 'user'"
+  s6-rc -d change user || true
+    pf_log INFO "config-save restart hook requested bundle down"
+
+  # Clean up potentially orphaned web processes before bringing services back up.
+    pf_log INFO "config-save restart hook cleaning potential orphan lighttpd/php-cgi"
+  pkill -TERM -x lighttpd >/dev/null 2>&1 || true
+  pkill -TERM -x php-cgi >/dev/null 2>&1 || true
+  sleep 1
+  pkill -KILL -x lighttpd >/dev/null 2>&1 || true
+  pkill -KILL -x php-cgi >/dev/null 2>&1 || true
+
+  s6-rc -u change user
+    rc=$?
+    if (( rc == 0 )); then
+        pf_log INFO "config-save restart hook requested bundle up successfully"
+    else
+        pf_log WARNING "config-save restart hook bundle up returned rc=${rc}"
+    fi
+    exit $rc
+fi
+
+if command -v s6-svc >/dev/null 2>&1; then
+    pf_log WARNING "config-save restart hook s6-rc not found; using s6-svc fallback"
+    s6-svc -r /run/service/* || true
+    pkill -TERM -x lighttpd >/dev/null 2>&1 || true
+    pkill -TERM -x php-cgi >/dev/null 2>&1 || true
+    pf_log INFO "config-save restart hook s6-svc fallback completed"
+  exit $?
+fi
+
+pf_log FATAL "config-save restart hook: no s6 service control command available"
+exit 127
+SH;
+
+        $bg = '(' . $script . ') &';
+    $cmd = '/bin/sh -c ' . escapeshellarg($bg) . ' 2>&1';
+    $output = [];
+    $rc = 0;
+    @exec($cmd, $output, $rc);
+    return [
+        'ok' => ($rc === 0),
+        'exitCode' => $rc,
+        'output' => trim(implode("\n", $output)),
     ];
 }
 
@@ -544,6 +652,8 @@ function pf_cfg_save(array $payload): array {
         return ['ok' => false, 'error' => 'Unable to create planefence.config'];
     }
 
+    $currentValues = pf_cfg_parse_assignments($paths['config']);
+
     $orderedKeys = [];
     foreach ($template['sections'] as $section) {
         foreach ($section['fields'] as $field) $orderedKeys[] = $field['name'];
@@ -565,6 +675,8 @@ function pf_cfg_save(array $payload): array {
     if (($normalized['FEEDER_LAT'] ?? '') === '') $normalized['FEEDER_LAT'] = (string)($defaults['FEEDER_LAT'] ?? '90.12345');
     if (($normalized['FEEDER_LONG'] ?? '') === '') $normalized['FEEDER_LONG'] = (string)($defaults['FEEDER_LONG'] ?? '-70.12345');
 
+    $changedKeys = pf_cfg_changed_keys($currentValues, $normalized, $orderedKeys);
+
     $backupPath = $paths['backupDir'] . '/planefence.config.' . date('Ymd-His') . '.bak';
     @copy($paths['config'], $backupPath);
 
@@ -576,7 +688,11 @@ function pf_cfg_save(array $payload): array {
         if (preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/', $line, $m)) {
             $k = $m[1];
             if (array_key_exists($k, $normalized)) {
-                $out[] = $k . '=' . pf_cfg_encode_value((string)$normalized[$k]);
+                if ($k === 'PF_ALERTHEADER') {
+                    $out[] = $k . '=' . pf_cfg_encode_single_quoted((string)$normalized[$k]);
+                } else {
+                    $out[] = $k . '=' . pf_cfg_encode_value((string)$normalized[$k]);
+                }
                 $seen[$k] = true;
                 continue;
             }
@@ -586,7 +702,11 @@ function pf_cfg_save(array $payload): array {
 
     foreach ($orderedKeys as $k) {
         if (!isset($seen[$k])) {
-            $out[] = $k . '=' . pf_cfg_encode_value((string)($normalized[$k] ?? ''));
+            if ($k === 'PF_ALERTHEADER') {
+                $out[] = $k . '=' . pf_cfg_encode_single_quoted((string)($normalized[$k] ?? ''));
+            } else {
+                $out[] = $k . '=' . pf_cfg_encode_value((string)($normalized[$k] ?? ''));
+            }
         }
     }
 
@@ -598,7 +718,23 @@ function pf_cfg_save(array $payload): array {
 
     @unlink($paths['requiredMarker']);
 
-    return ['ok' => true, 'backupFile' => $backupPath];
+    $restartRequired = pf_cfg_should_restart_services($changedKeys, $template);
+    $restartWarning = '';
+    if ($restartRequired) {
+        $restartResult = pf_cfg_restart_all_services();
+        if (!($restartResult['ok'] ?? false)) {
+            $restartWarning = 'Configuration saved, but automatic service restart failed';
+            $details = trim((string)($restartResult['output'] ?? ''));
+            if ($details !== '') $restartWarning .= ': ' . $details;
+        }
+    }
+
+    return [
+        'ok' => true,
+        'backupFile' => $backupPath,
+        'servicesRestarted' => $restartRequired,
+        'restartWarning' => $restartWarning,
+    ];
 }
 
 function pf_cfg_load_payload(): array {

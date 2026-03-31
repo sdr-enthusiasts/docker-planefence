@@ -137,6 +137,13 @@ while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do
   sleep 5
 done
 
+# Wait until pf-process_sbs.sh has run at least once
+while [[ ! -f /run/pf-process_sbs.pid ]]; do
+  sleep 1
+done
+pid="$(< /run/pf-process_sbs.pid)"
+while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
+
 "${s6wrap[@]}" echo "$0 started as an s6 service"
 
 start_missing_historical_backfill "planefence"
