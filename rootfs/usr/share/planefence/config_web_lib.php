@@ -6,8 +6,8 @@ function pf_cfg_paths(): array {
     return [
         'template' => '/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me',
         'config' => '/usr/share/planefence/persist/planefence.config',
-        'uiSchemaPersist' => '/usr/share/planefence/persist/config-ui.schema.json',
-        'uiSchemaStage' => '/usr/share/planefence/stage/persist/config-ui.schema.json',
+        'uiSchemaPersist' => '/usr/share/planefence/persist/.internal/config-ui.schema.json',
+        'uiSchemaStage' => '/usr/share/planefence/stage/persist/.internal/config-ui.schema.json',
         'backupDir' => '/usr/share/planefence/persist/.internal/config-backups',
         'requiredMarker' => '/run/planefence/configuration-required',
     ];
@@ -279,8 +279,8 @@ function pf_cfg_status_payload(): array {
     }
     $vals = pf_cfg_parse_assignments($paths['config']);
     $setupRequired = pf_cfg_is_setup_required($vals, $template['defaults']);
-    $cfgPort = trim((string)($vals['PF_CONFIG_HTTP_PORT'] ?? '8081'));
-    if (!preg_match('/^[0-9]{2,5}$/', $cfgPort)) $cfgPort = '8081';
+    $cfgPort = trim((string)($vals['PF_CONFIG_HTTP_PORT'] ?? '9999'));
+    if (!preg_match('/^[0-9]{2,5}$/', $cfgPort)) $cfgPort = '9999';
     $url = pf_cfg_host_base() . ':' . $cfgPort . '/';
 
     return [

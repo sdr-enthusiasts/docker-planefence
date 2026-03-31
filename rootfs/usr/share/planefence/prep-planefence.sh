@@ -106,7 +106,7 @@ rm -f /run/planefence/configuration-required
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! planefence.config is not configured yet."
-	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 8081)."
+	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
 	"${s6wrap[@]}" echo "Open your host IP/hostname on that port to complete setup."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	touch /run/planefence/configuration-required
@@ -117,7 +117,7 @@ fi
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "$FEEDER_LONG" ]] || [[ "$FEEDER_LONG" == "-70.12345" ]]; then
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
-	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 8081)."
+	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
 	"${s6wrap[@]}" echo "Once you save valid coordinates, Planefence will continue automatically."
 	"${s6wrap[@]}" echo "----------------------------------------------------------"
 	touch /run/planefence/configuration-required
