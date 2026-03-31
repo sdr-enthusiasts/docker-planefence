@@ -85,4 +85,4 @@ log_print INFO "Checking Lighttpd configuration"
 # Now run ligghttpd for real
 #
 log_print INFO "Bringing Lighttpd Up"
-"${s6wrap[@]}" exec $APPPATH -f $CONFIGPATH -D
+exec "${s6wrap[@]}" $APPPATH -f $CONFIGPATH -D
