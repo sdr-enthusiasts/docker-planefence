@@ -72,6 +72,7 @@ fi
 
 # Consolidated logs CGI mapping: enable only when PF_WEBLOGS is not off/disabled.
 PF_WEBLOGS_RAW="$(GET_PARAM base PF_WEBLOGS || true)"
+[[ -z "$PF_WEBLOGS_RAW" ]] && PF_WEBLOGS_RAW="config"
 PF_WEBLOGS_LC="${PF_WEBLOGS_RAW,,}"
 if chk_disabled "$PF_WEBLOGS_RAW" || [[ "$PF_WEBLOGS_LC" == "off" || "$PF_WEBLOGS_LC" == "disabled" || "$PF_WEBLOGS_LC" == "0" || "$PF_WEBLOGS_LC" == "no" ]]; then
     rm -f /etc/lighttpd/conf-enabled/90-planefence-logs.conf
