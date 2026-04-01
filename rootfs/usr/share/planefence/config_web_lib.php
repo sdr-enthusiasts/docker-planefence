@@ -134,6 +134,38 @@ function pf_cfg_parse_assignments(string $file): array {
   return $out;
 }
 
+function pf_cfg_apply_prime_fallback_aliases(array $vals): array {
+  $pairs = [
+    'FEEDER_LON' => ['FEEDER_LONG'],
+    'PF_NOTIF_MINTIME' => ['PF_TWEET_MINTIME'],
+    'PF_NOTIFEVERY' => ['PF_TWEETEVERY'],
+    'PF_ATTRIB' => ['PF_TWATTRIB'],
+    'PA_ATTRIB' => ['PA_TWATTRIB', 'ATTRIB'],
+    'PLANEALERT' => ['PF_PLANEALERT'],
+    'PLANEFENCE' => ['PF_PLANEFENCE'],
+    'PF_TELEGRAM_BOT_TOKEN' => ['TELEGRAM_BOT_TOKEN'],
+    'PA_TELEGRAM_BOT_TOKEN' => ['TELEGRAM_BOT_TOKEN'],
+    'PF_TELEGRAM_CHAT_ID' => ['TELEGRAM_CHAT_ID'],
+    'PA_TELEGRAM_CHAT_ID' => ['TELEGRAM_CHAT_ID'],
+    'PF_TELEGRAM_CHAT_TYPE' => ['TELEGRAM_CHAT_TYPE'],
+    'PA_TELEGRAM_CHAT_TYPE' => ['TELEGRAM_CHAT_TYPE'],
+  ];
+
+  foreach ($pairs as $prime => $fallbacks) {
+    $primeValue = trim((string)($vals[$prime] ?? ''));
+    if ($primeValue !== '') continue;
+    foreach ($fallbacks as $fallback) {
+      $fallbackValue = trim((string)($vals[$fallback] ?? ''));
+      if ($fallbackValue !== '') {
+        $vals[$prime] = $fallbackValue;
+        break;
+      }
+    }
+  }
+
+  return $vals;
+}
+
 function pf_cfg_fixed_options(): array {
   return [
     'GENERATE_CSV' => ['OFF', 'ON'],
@@ -987,7 +1019,7 @@ function pf_cfg_load_payload(): array {
     @chmod($paths['config'], 0666);
   }
 
-  $vals = pf_cfg_parse_assignments($paths['config']);
+  $vals = pf_cfg_apply_prime_fallback_aliases(pf_cfg_parse_assignments($paths['config']));
   foreach ($template['sections'] as &$section) {
     foreach ($section['fields'] as &$field) {
       $name = $field['name'];

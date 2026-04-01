@@ -193,6 +193,7 @@
       <h1>Planefence Configuration</h1>
       <div class="sub" id="instanceInfo">Loading...</div>
       <div class="sub">Use the tabs to configure each section. Save writes planefence.config and creates a dated backup.</div>
+      <div class="sub" id="weblogsHint" style="display:none;">Click <a href="planefence-logs">here</a> to access the Planefence container logs.</div>
       <div class="actions top-actions" id="actionsRow">
         <button class="btn primary" id="saveBtn">Save</button>
         <button class="btn" id="cancelBtn">Cancel</button>
@@ -855,8 +856,13 @@ function renderPage(){
 
 function render(){
   const instanceEl = document.getElementById('instanceInfo');
+  const weblogsHintEl = document.getElementById('weblogsHint');
   const rawInstance = String(payload.instanceName ?? '').trim();
   const normalized = rawInstance.replace(/^"|"$/g, '').trim();
+  const rawWeblogs = String((draftValues?.PF_WEBLOGS ?? payload?.values?.PF_WEBLOGS ?? '') ?? '').trim();
+  const normalizedWeblogs = rawWeblogs.replace(/^"|"$/g, '').trim().toLowerCase();
+  const showWeblogsHint = (normalizedWeblogs === '' || normalizedWeblogs === 'config');
+
   if (!normalized || normalized.toUpperCase() === 'MY') {
     instanceEl.style.display = 'none';
     instanceEl.textContent = '';
@@ -864,6 +870,11 @@ function render(){
     instanceEl.style.display = '';
     instanceEl.innerHTML = `Instance: <strong>${esc(normalized)}</strong>`;
   }
+
+  if (weblogsHintEl) {
+    weblogsHintEl.style.display = showWeblogsHint ? '' : 'none';
+  }
+
   renderTabs();
   renderPage();
 }
