@@ -70,16 +70,9 @@ else
     ln -sf /etc/lighttpd/conf-available/88-plane-alert-old.conf /etc/lighttpd/conf-enabled/88-plane-alert.conf
 fi
 
-# Consolidated logs CGI mapping: enable only when PF_WEBLOGS is not off/disabled.
-PF_WEBLOGS_RAW="$(GET_PARAM base PF_WEBLOGS || true)"
-[[ -z "$PF_WEBLOGS_RAW" ]] && PF_WEBLOGS_RAW="config"
-PF_WEBLOGS_LC="${PF_WEBLOGS_RAW,,}"
-if chk_disabled "$PF_WEBLOGS_RAW" || [[ "$PF_WEBLOGS_LC" == "off" || "$PF_WEBLOGS_LC" == "disabled" || "$PF_WEBLOGS_LC" == "0" || "$PF_WEBLOGS_LC" == "no" ]]; then
-    rm -f /etc/lighttpd/conf-enabled/87-planefence-logs.conf /etc/lighttpd/conf-enabled/90-planefence-logs.conf
-else
-    ln -sf /etc/lighttpd/conf-available/87-planefence-logs.conf.template /etc/lighttpd/conf-enabled/87-planefence-logs.conf
-    rm -f /etc/lighttpd/conf-enabled/90-planefence-logs.conf
-fi
+# Logs CGI is served through stage CGI wrappers that exec /usr/share/planefence/logs.sh.
+# Ensure no obsolete alias-based logs config is enabled.
+rm -f /etc/lighttpd/conf-enabled/87-planefence-logs.conf /etc/lighttpd/conf-enabled/90-planefence-logs.conf
 #
 # -----------------------------------------------------------------------------------
 # Enable PHP / FastCGI:
