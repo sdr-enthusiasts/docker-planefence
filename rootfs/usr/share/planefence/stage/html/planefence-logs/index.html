@@ -126,12 +126,27 @@
     .dataTables_wrapper .dataTables_scrollBody thead th,
     .dataTables_wrapper .dt-scroll-body thead,
     .dataTables_wrapper .dt-scroll-body thead tr,
-    .dataTables_wrapper .dt-scroll-body thead th {
+    .dataTables_wrapper .dt-scroll-body thead th,
+    .dt-container .dataTables_scrollBody thead,
+    .dt-container .dataTables_scrollBody thead tr,
+    .dt-container .dataTables_scrollBody thead th,
+    .dt-container .dt-scroll-body thead,
+    .dt-container .dt-scroll-body thead tr,
+    .dt-container .dt-scroll-body thead th {
       visibility: hidden !important;
       height: 0 !important;
       min-height: 0 !important;
       max-height: 0 !important;
       line-height: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border: 0 !important;
+    }
+    .dt-container .dt-scroll-body .dt-scroll-sizing,
+    .dataTables_wrapper .dt-scroll-body .dt-scroll-sizing {
+      height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
       padding-top: 0 !important;
       padding-bottom: 0 !important;
       border: 0 !important;
