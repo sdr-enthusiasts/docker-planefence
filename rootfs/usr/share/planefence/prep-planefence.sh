@@ -4,11 +4,7 @@
 # Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/planefence4docker/
-#
-# Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
-# as command separator, but use something else instead, for example '|'
-#
+# https://github.com/sdr-enthusiasts/docker-planefence/
 # -----------------------------------------------------------------------------------
 #
 source /scripts/pf-common
@@ -49,7 +45,7 @@ prep_early_exit() {
 	exit 0
 }
 
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running Planefence configuration - either the container is restarted or a config change was detected." || true
+[[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Running Planefence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # then export all of those variables as well
@@ -64,6 +60,7 @@ chmod -fR u=rwx,go=rx \
 	/usr/share/planefence/html \
 	/usr/share/planefence/html-config
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
+	chmod -f a+rw /usr/share/planefence/persist/planefence.config
 	set -o allexport
 	# shellcheck disable=SC1091
 	source /usr/share/planefence/persist/planefence.config
@@ -104,22 +101,22 @@ mkdir -p /run/planefence
 # Check if planefence.config exists
 rm -f /run/planefence/configuration-required
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! planefence.config is not configured yet."
-	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
-	"${s6wrap[@]}" echo "Open your host IP/hostname on that port to complete setup."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! SETUP REQUIRED !!!! planefence.config is not configured yet."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "Open your host IP/hostname on that port to complete setup."
+	log_print ERR "----------------------------------------------------------"
 	touch /run/planefence/configuration-required
 	prep_early_exit
 fi
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
 if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "$FEEDER_LONG" ]] || [[ "$FEEDER_LONG" == "-70.12345" ]]; then
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
-	"${s6wrap[@]}" echo "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
-	"${s6wrap[@]}" echo "Once you save valid coordinates, Planefence will continue automatically."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "Once you save valid coordinates, Planefence will continue automatically."
+	log_print ERR "----------------------------------------------------------"
 	touch /run/planefence/configuration-required
 	prep_early_exit
 fi
@@ -129,12 +126,12 @@ fi
 #
 if chk_disabled "$PF_LOG"; then
 	export LOGFILE=/dev/null
-	sed -i 's/\(^\s*VERBOSE=\).*/\1'""'/' /usr/share/planefence/planefence.conf
+	configure_planefence "VERBOSE" ""
 else
 	[[ -z "$PF_LOG" ]] && export LOGFILE="/tmp/planefence.log" || export LOGFILE="$PF_LOG"
 fi
 # echo pflog=$PF_LOG and logfile=$LOGFILE
-sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.conf
+configure_planefence "LOGFILE" "$LOGFILE"
 #
 # -----------------------------------------------------------------------------------
 #
@@ -142,14 +139,15 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 if [[ -n "$FEEDER_LAT" ]]; then
 	configure_planefence "LAT" "$FEEDER_LAT"
 else
-	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
+	log_print ERR "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
 	stop_service
 fi
 
+FEEDER_LONG="${FEEDER_LON:-$FEEDER_LONG}"
 if [[ -n "$FEEDER_LONG" ]]; then
 	configure_planefence "LON" "$FEEDER_LONG"
 else
-	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
+	log_print ERR "Error - \$FEEDER_LONG not defined"
 	stop_service
 fi
 
@@ -190,13 +188,11 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 	unset a
 else
 	sleep 10s
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for Planefence !!!!"
-	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
-	"${s6wrap[@]}" echo "sudo nano -l ~/planefence/planefence.config"
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for Planefence !!!!"
+	log_print ERR "Planefence will not run unless you edit it configuration."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "----------------------------------------------------------"
 	stop_service
 fi
 #

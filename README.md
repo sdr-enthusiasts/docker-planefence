@@ -179,7 +179,7 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 - If you made a bunch of changes for the first time, you should restart the container.
 - In the future, most updates to `planefence.config` will be picked up automatically.
-- Changes to `FEEDER_LAT`, `FEEDER_LONG`, `PF_SOCK30003HOST`, `PF_SOCK30003PORT`, or any of the units related parameters will require a container restart before they become effective.
+- Changes to `FEEDER_LAT`, ``, `PF_SOCK30003HOST`, `PF_SOCK30003PORT`, or any of the units related parameters will require a container restart before they become effective.
 - You can restart the Planefence container by doing: `docker restart planefence`
 
 ### Restarting and Updating

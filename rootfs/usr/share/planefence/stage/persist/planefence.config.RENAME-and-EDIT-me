@@ -14,7 +14,7 @@
 FEEDER_LAT=90.12345
 # ---------------------------------------------------------------------
 # Station longitude in decimal degrees. East is positive; West is negative.
-FEEDER_LONG=-70.12345
+FEEDER_LON=-70.12345
 # ---------------------------------------------------------------------
 # PF_SOCK30003HOST is the hostname or IP address of the SBS-30003 data source
 # (for example, ultrafeeder, dump1090[-fa], readsb, or tar1090).

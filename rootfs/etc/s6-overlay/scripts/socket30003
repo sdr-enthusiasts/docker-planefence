@@ -56,7 +56,7 @@ MAXLOGTIME="1 hour"
 #
 # set params in socket30003.conf
 sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
-sed -i 's/\(^\s*longitude=\).*/\1'"$FEEDER_LONG"'/' /usr/share/socket30003/socket30003.cfg
+sed -i 's/\(^\s*longitude=\).*/\1'"${FEEDER_LON:-$FEEDER_LONG}"'/' /usr/share/socket30003/socket30003.cfg
 sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
 
 sed -i 's/\(^\s*distanceunit=\).*/\1'"${PF_DISTUNIT:-nauticalmile}"'/' /usr/share/socket30003/socket30003.cfg

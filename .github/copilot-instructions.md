@@ -59,7 +59,7 @@
 ## Shared operator terms
 - `quick-deploy`: inject changed code directly into running `planefence-dev` and test there.
 - When performing `quick-deploy`, always report exactly which files were updated in the live environment/container.
-- `run the pipeline`: save all changes, commit and push to branch `pf-restruct`, run `buildnow.sh` to rebuild/push image, SSH to `prod@prod` (or `prod@zt-prod` fallback), pull image, recreate `planefence-dev`, then run smoke tests (minimum: container up and healthy).
+- `run the pipeline`: save all changes, commit all changed files (including those that were created or modified manually, outside the current chat session) and push to branch `pf-restruct`, run `buildnow.sh` to rebuild/push image, SSH to `prod@prod` (or `prod@zt-prod` fallback), pull image, recreate `planefence-dev`, then run smoke tests (minimum: container up and healthy).
 
 ## Allowed command examples (for deterministic execution)
 - `quick-deploy` example sequence (on target host):
