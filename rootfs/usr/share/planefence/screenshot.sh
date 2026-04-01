@@ -331,13 +331,13 @@ log_print DEBUG "Hello. Starting screenshot run"
 if ! CHK_NOTIFICATIONS_ENABLED; then
   source /usr/share/planefence/plane-alert.conf
   if ! CHK_NOTIFICATIONS_ENABLED; then
-    log_print ERR "No notifications enabled, exiting"
+    log_print DEBUG "No notifications enabled, exiting"
     exit 0
   fi
 fi
 
 if ! CHK_SCREENSHOT_ENABLED; then
-  log_print ERR "Screenshots disabled or screenshot container cannot be reached, exiting"
+  log_print DEBUG "Screenshots disabled or screenshot container cannot be reached, exiting"
   exit 0
 fi
 
