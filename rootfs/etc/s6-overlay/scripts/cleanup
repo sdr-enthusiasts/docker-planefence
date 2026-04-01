@@ -72,7 +72,7 @@ get_insights_cache_ttl_minutes()
 INSIGHTS_CACHE_TTL_MINUTES="$(get_insights_cache_ttl_minutes)"
 #
 # MAXLOGLINES contains the max number of lines that we will keep in /tmp/planefence.log
-MAXLOGLINES=500
+MAXLOGLINES=1000
 #
 # this function cleans out stuff. Make additions to it as needed.
 CLEANUP ()
@@ -82,6 +82,15 @@ CLEANUP ()
     [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Cleaning up web files older than $OLDERTHAN days" || true
     [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Cleaning up logs and tmp files older than 1 day" || true
     [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Reducing planefence and noise2capt logs to $MAXLOGLINES lines (if needed)" || true
+
+    for f in /tmp/planefence.log /tmp/noise2capt.log; do
+      [[ -f "$f" ]] || continue
+      line_count="$(wc -l < "$f" 2>/dev/null || echo 0)"
+      [[ "$line_count" =~ ^[0-9]+$ ]] || line_count=0
+      if (( line_count > MAXLOGLINES )); then
+        tail -n "$MAXLOGLINES" "$f" > "${f}.tmp" 2>/dev/null && mv -f "${f}.tmp" "$f"
+      fi
+    done
 
     touch -d "yesterday 00:00:00" /tmp/timestamp
     touch -d "yesterday 23:59:59" /tmp/timestamp.routecache

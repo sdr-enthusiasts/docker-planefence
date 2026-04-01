@@ -85,9 +85,18 @@
       background: #020617;
       padding: 6px;
     }
-    table.dataTable { color: var(--text) !important; width: 100% !important; }
+    table.dataTable { color: #f8fafc !important; width: 100% !important; }
     table.dataTable thead th { color: #dbeafe !important; background: #111827 !important; border-bottom-color: #334155 !important; }
-    table.dataTable tbody td { background: transparent !important; border-bottom: 1px solid #1f2937 !important; }
+    table.dataTable tbody td,
+    table.dataTable tbody th { color: #f8fafc !important; border-bottom: 1px solid #1f2937 !important; background-color: #070d18 !important; }
+    table.dataTable.stripe > tbody > tr:nth-child(odd) > *,
+    table.dataTable.display > tbody > tr:nth-child(odd) > *,
+    table.dataTable > tbody > tr.odd > * { background-color: #04080f !important; }
+    table.dataTable.stripe > tbody > tr:nth-child(even) > *,
+    table.dataTable.display > tbody > tr:nth-child(even) > *,
+    table.dataTable > tbody > tr.even > * { background-color: #070d18 !important; }
+    table.dataTable > tbody > tr:hover > *,
+    table.dataTable.display > tbody > tr:hover > * { background-color: #0b1322 !important; }
     .level-badge { font-weight: 700; }
     .level-info { color: var(--ok); }
     .level-warning, .level-warn { color: var(--warn); }
