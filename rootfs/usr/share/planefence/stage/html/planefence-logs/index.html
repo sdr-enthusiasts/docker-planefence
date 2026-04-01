@@ -78,12 +78,7 @@
     }
     .status-row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); margin-bottom: 8px; font-size: .86rem; }
     .table-wrap {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: auto;
-      max-height: 68vh;
-      background: #020617;
-      padding: 6px;
+      margin-top: 2px;
     }
     .dt-toolbar {
       display: flex;
@@ -117,6 +112,21 @@
     .dataTables_wrapper .dataTables_paginate .paginate_button {
       color: var(--text) !important;
     }
+    .dataTables_wrapper .dataTables_scroll {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #020617;
+      overflow: hidden;
+    }
+    .dataTables_wrapper .dataTables_scrollHead {
+      border-bottom: 1px solid #1f2937;
+    }
+    .dataTables_wrapper .dataTables_scrollBody {
+      height: calc(100vh - 360px) !important;
+      max-height: calc(100vh - 360px) !important;
+      overflow-y: auto !important;
+      overflow-x: auto !important;
+    }
     table.dataTable { color: #f8fafc !important; width: 100% !important; }
     table.dataTable thead th { color: #dbeafe !important; background: #111827 !important; border-bottom-color: #334155 !important; }
     table.dataTable tbody td,
@@ -135,7 +145,10 @@
     .level-error, .level-err, .level-fatal { color: var(--err); }
     @media (max-width: 900px) {
       .filters { grid-template-columns: 1fr; }
-      .table-wrap { max-height: 62vh; }
+      .dataTables_wrapper .dataTables_scrollBody {
+        height: calc(100vh - 420px) !important;
+        max-height: calc(100vh - 420px) !important;
+      }
     }
   </style>
 </head>
@@ -259,7 +272,12 @@
     }
 
     function atBottom(el){
+      if (!el) return true;
       return (el.scrollHeight - el.scrollTop - el.clientHeight) < 16;
+    }
+
+    function getScrollElement(){
+      return document.querySelector('#logsTable_wrapper .dataTables_scrollBody') || document.getElementById('logsScroll');
     }
 
     function updateScrollIndicator(){
@@ -269,7 +287,8 @@
     function scrollToLatest(){
       if (!state.table) return;
       state.table.page('last').draw('page');
-      const el = document.getElementById('logsScroll');
+      const el = getScrollElement();
+      if (!el) return;
       el.scrollTop = el.scrollHeight;
     }
 
@@ -375,6 +394,8 @@
         pageLength: 100,
         deferRender: true,
         autoWidth: false,
+        scrollY: 'calc(100vh - 360px)',
+        scrollCollapse: true,
         columnDefs: [
           { targets: 2, searchable: true, orderable: true },
           { targets: 3, searchable: true, orderable: false }
@@ -404,7 +425,7 @@
       });
       document.getElementById('downloadCsv').addEventListener('click', downloadFilteredCsv);
 
-      const scroller = document.getElementById('logsScroll');
+      const scroller = getScrollElement();
       scroller.addEventListener('scroll', () => {
         state.autoScroll = atBottom(scroller);
         updateScrollIndicator();
