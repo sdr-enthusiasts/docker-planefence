@@ -8,9 +8,13 @@
     - [Planefence Configuration](#planefence-configuration)
       - [Initial docker configuration](#initial-docker-configuration)
       - [Planefence Settings Configuration](#planefence-settings-configuration)
+        - [Web Configuration](#web-configuration)
+        - [Manual Configuration](#manual-configuration)
       - [Staying up to date with new Planefence features](#staying-up-to-date-with-new-planefence-features)
       - [Plane-Alert Exclusions](#plane-alert-exclusions)
       - [Applying your setup](#applying-your-setup)
+        - [Applying Web Configuration C=changes](#applying-web-configuration-cchanges)
+        - [Applying changes after manual edits](#applying-changes-after-manual-edits)
     - [Restarting and Updating](#restarting-and-updating)
       - [Restart the container](#restart-the-container)
       - [Update to the latest Planefence image](#update-to-the-latest-planefence-image)
@@ -72,7 +76,7 @@ There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, 
     ```
 
 3. Important — if you are using adsb.im, you MUST put Planefence in its own directory, like `/opt/planefence`. You should never add it to an existing stack.
-4. Then add the template `docker-compose.yml` file from here:
+4. Then add the template [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file from here:
 
     ```bash
     curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
@@ -90,42 +94,60 @@ In the `docker-compose.yml` file, you should configure the following:
 - Monitor the container (`docker logs -f planefence`). At first start-up, it should be complaining about not being configured. That is expected behavior.
 - Once you see the warnings about `planefence.config` not being available, press CTRL-C to get the command prompt.
 
+The remainder of this document will assume that you used the port and volume mappings as they are described in [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml). If you change those, you should replace some of the port and directory values with your changed values.
+
 #### Planefence Settings Configuration
 
+##### Web Configuration
+
+If you have mapped the `:9999` container port as described in the [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file, you can browse to <http://localhost:9999> to configure Planefence.
+
+You can change data in all the tabs (make sure to at least configure the options in the `Required` and `General` tabs!), and once done, press Save to store the data. At this time, a container restart may be required and the Web page will automatically take care of this.
+
+The configuration file will be stored in `./planefence/config/planefence.config`; you can also manually edit this file as described in the next section.
+
+Previous configurations will be stored in `./planefence/config/config-backups`, you can use the `Restore old config` tab to restore them, or manually copy them back in place. Note -- when restoring old configurations, a container restart may be needed. This is NOT done automatically when you restore a configuration.
+
+##### Manual Configuration
+
+Although we recommend using the web interface to configure your Planefence options,  can also manually configure them by creating and editing a configuration file
+
 - After you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work!
-- MANDATORY: After first start, a file named `planefence.config.RENAME-and-EDIT-me` appears in `planefence-config`. Edit it, then rename it to `planefence.config`.
+- MANDATORY: After first start, a file named `planefence.config.RENAME-and-EDIT-me` appears in `./planefence/config`. Copy it to `planefence.config`, and then edit that file.
 
-```bash
-cd /opt/planefence
-# Edit the template
-# Note - when you are done, save and exit with CTRL-x (and follow the prompts)
-nano planefence-config/planefence.config.RENAME-and-EDIT-me
-
-# Rename it to planefence.config
-mv planefence-config/planefence.config.RENAME-and-EDIT-me planefence-config/planefence.config
-```
+    ```bash
+    cd /opt/planefence
+    cd ./planefence/config
+    # Copy to planefence.config
+    cp planefence.config.RENAME-and-EDIT-me planefence.config
+    # Edit the template
+    # Note - when you are done, save and exit with CTRL-x (and follow the prompts)
+    nano planefence.config
+    ```
 
 - IMPORTANT: Review all parameters in `planefence.config`; their function is explained in that file. Edit to your liking and save/exit using `Ctrl-X`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT!
 - Restart the container to apply your settings:
 
-```bash
-docker compose up -d planefence --force-recreate
-```
+    ```bash
+    docker compose up -d planefence --force-recreate
+    ```
 
-- OPTIONAL: `nano planefence-config/planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
-- OPTIONAL: `nano planefence-config/airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
+- OPTIONAL: `nano planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
+- OPTIONAL: `nano airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
 - OPTIONAL: If you have multiple containers running on different web port, and you would like to consolidate them all under a single host name, then you should consider installing a "reverse web proxy". This can be done quickly and easily — see the [reverse proxy instructions](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/README-nginx-rev-proxy.md).
 - OPTIONAL: If you have a soundcard and microphone, adding NoiseCapt is as easy as hooking up the hardware and running another container. You can add this to your existing `docker-compose.yml` file, or run it on a different machine on the same subnet. See the [NoiseCapt instructions](https://github.com/kx1t/docker-noisecapt).
-- OPTIONAL: Add images of tar1090 to your notifications in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
-- OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `planefence-config/planefence.config`
+- OPTIONAL: Add screenshots of tar1090 to your notifications in Planefence and Plane-Alert. In order to enable this, simply add the `screenshot` section to your `Docker-compose.yml` file as per the example in this repo's [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file. Note - to simplify configuration, Planefence assumes that the hostname of the screenshotting image is called `screenshot` and that it's reachable under that name from the Planefence container stack.
+- OPTIONAL: Show [OpenAIP](https://www.openaip.net/map) overlay on Planefence web page heatmap. Enable this by setting the option `PF_OPENAIP_LAYER=ON` in `planefence.config`
 
 #### Staying up to date with new Planefence features
 
-Generally, any new features will be described in the default/example [`planefence.config`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/rootfs/usr/share/planefence/stage/planefence.config) file. A raw version of this file can be downloaded here: <https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/refs/heads/main/rootfs/usr/share/planefence/stage/planefence.config>. Note - you cannot use this file as-is; you MUST configure the parameters as appropriate for your station.
+Generally, any new features will be described in the default/example [`planefence.config.RENAME-and-EDIT-me`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me) file. A raw version of this file can be downloaded here: <hhttps://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/refs/heads/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me>. Note - you cannot use this file as-is; you MUST configure the parameters as appropriate for your station.
+
+New features will also appear in the Web Configuration Page as they become available.
 
 #### Plane-Alert Exclusions
 
-In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in `planefence-config/planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
+In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in the Configuration Webpage, and in `planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
 
 ```yml
 PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd\ Mayweather,UC-12W
@@ -148,8 +170,17 @@ Also note that after adding exclusions, any pre-existing entries for those exclu
 
 #### Applying your setup
 
-- If you made a bunch of changes for the first time, you should restart the container. In the future, most updates to `planefence-config/planefence.config` will be picked up automatically
-- You can restart the Planefence container by doing: `pushd /opt/adsb && docker compose up -d planefence --force-recreate && popd`
+##### Applying Web Configuration C=changes
+
+- Generally, if you make changes in the Web Config Page, the container will be restarted automatically if that's warranted.
+- If you restored a back up copy via the Web Config Page, you may have to manually restart the container as described below.
+
+##### Applying changes after manual edits
+
+- If you made a bunch of changes for the first time, you should restart the container.
+- In the future, most updates to `planefence.config` will be picked up automatically.
+- Changes to `FEEDER_LAT`, `FEEDER_LONG`, `PF_SOCK30003HOST`, `PF_SOCK30003PORT`, or any of the units related parameters will require a container restart before they become effective.
+- You can restart the Planefence container by doing: `docker restart planefence`
 
 ### Restarting and Updating
 
@@ -158,9 +189,7 @@ Need the latest image or want to refresh your container?
 #### Restart the container
 
 ```bash
-pushd /opt/planefence
-docker compose up -d planefence --force-recreate
-popd
+docker restart planefence
 ```
 
 #### Update to the latest Planefence image
@@ -168,7 +197,7 @@ popd
 ```bash
 pushd /opt/planefence
 docker compose pull planefence
-docker compose up -d planefence
+docker compose up -d planefence --force-recreate
 popd
 ```
 
