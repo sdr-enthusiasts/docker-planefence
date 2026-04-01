@@ -76,7 +76,59 @@ function pf_cfg_parse_assignments(string $file): array {
     if (preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/', $line, $m)) {
       $key = $m[1];
       $val = pf_cfg_unquote(pf_cfg_strip_inline_comment($m[2]));
+
+      // Migration logic for PRIME/FALLBACK pairs (prefer PRIME if set, fallback otherwise)
+      // FEEDER_LON (prime) / FEEDER_LONG (fallback)
+      if ($key === 'FEEDER_LONG' && isset($out['FEEDER_LON'])) continue;
+
+      // PF_NOTIF_MINTIME (prime) / PF_TWEET_MINTIME (fallback)
+      if ($key === 'PF_TWEET_MINTIME' && isset($out['PF_NOTIF_MINTIME'])) continue;
+
+      // PF_NOTIFEVERY (prime) / PF_TWEETEVERY (fallback)
+      if ($key === 'PF_TWEETEVERY' && isset($out['PF_NOTIFEVERY'])) continue;
+
+      // PF_ATTRIB (prime) / PF_TWATTRIB (fallback)
+      if ($key === 'PF_TWATTRIB' && isset($out['PF_ATTRIB'])) continue;
+
+      // PA_ATTRIB (prime) / PA_TWATTRIB (fallback)
+      if ($key === 'PA_TWATTRIB' && isset($out['PA_ATTRIB'])) continue;
+
+      // PLANEALERT (prime) / PF_PLANEALERT (fallback)
+      if ($key === 'PF_PLANEALERT' && isset($out['PLANEALERT'])) continue;
+
+      // PLANEFENCE (prime) / PF_PLANEFENCE (fallback)
+      if ($key === 'PF_PLANEFENCE' && isset($out['PLANEFENCE'])) continue;
+
+      // PF_TELEGRAM_BOT_TOKEN (prime) / TELEGRAM_BOT_TOKEN (fallback)
+      if ($key === 'TELEGRAM_BOT_TOKEN' && isset($out['PF_TELEGRAM_BOT_TOKEN'])) continue;
+
+      // PA_TELEGRAM_BOT_TOKEN (prime) / TELEGRAM_BOT_TOKEN (fallback)
+      if ($key === 'TELEGRAM_BOT_TOKEN' && isset($out['PA_TELEGRAM_BOT_TOKEN'])) continue;
+
+      // PF_TELEGRAM_CHAT_ID (prime) / TELEGRAM_CHAT_ID (fallback)
+      if ($key === 'TELEGRAM_CHAT_ID' && isset($out['PF_TELEGRAM_CHAT_ID'])) continue;
+
+      // PA_TELEGRAM_CHAT_ID (prime) / TELEGRAM_CHAT_ID (fallback)
+      if ($key === 'TELEGRAM_CHAT_ID' && isset($out['PA_TELEGRAM_CHAT_ID'])) continue;
+
+      // PF_TELEGRAM_CHAT_TYPE (prime) / TELEGRAM_CHAT_TYPE (fallback)
+      if ($key === 'TELEGRAM_CHAT_TYPE' && isset($out['PF_TELEGRAM_CHAT_TYPE'])) continue;
+
+      // PA_TELEGRAM_CHAT_TYPE (prime) / TELEGRAM_CHAT_TYPE (fallback)
+      if ($key === 'TELEGRAM_CHAT_TYPE' && isset($out['PA_TELEGRAM_CHAT_TYPE'])) continue;
+
+      // PA_ATTRIB (prime) / PA_TWATTRIB (fallback) / ATTRIB (fallback2)
+      if ($key === 'ATTRIB' && (isset($out['PA_ATTRIB']) || isset($out['PA_TWATTRIB']))) continue;
+
       $out[$key] = $val;
+    }
+  }
+  // Handle PA_ATTRIB triple fallback: PA_ATTRIB > PA_TWATTRIB > ATTRIB
+  if (!isset($out['PA_ATTRIB'])) {
+    if (isset($out['PA_TWATTRIB'])) {
+      $out['PA_ATTRIB'] = $out['PA_TWATTRIB'];
+    } elseif (isset($out['ATTRIB'])) {
+      $out['PA_ATTRIB'] = $out['ATTRIB'];
     }
   }
   return $out;
@@ -196,7 +248,7 @@ function pf_cfg_log_warn(string $message): void {
 }
 
 function pf_cfg_backup_name_to_epoch(string $fileName): ?int {
-  if (!preg_match('/^planefence\.config\.(\d{8})-(\d{6})\.bak$/', $fileName, $m)) return null;
+  if (!preg_match('/^planefence\.config\.(\d{8})-(\d{6})(?:[-_][A-Za-z0-9]+)?\.bak$/', $fileName, $m)) return null;
   $dt = DateTime::createFromFormat('YmdHis', $m[1] . $m[2]);
   if (!$dt) return null;
   return $dt->getTimestamp();
@@ -216,7 +268,10 @@ function pf_cfg_backup_candidates(array $paths): array {
 }
 
 function pf_cfg_backup_safe_path(array $paths, string $backupName): ?string {
-  if (!preg_match('/^planefence\.config\.\d{8}-\d{6}\.bak$/', $backupName)) return null;
+  $backupName = basename(trim($backupName));
+  if ($backupName === '' || str_contains($backupName, '/')) return null;
+  if (!str_starts_with($backupName, 'planefence.config.')) return null;
+  if (!str_ends_with($backupName, '.bak')) return null;
   $dir = realpath((string)($paths['backupDir'] ?? ''));
   if ($dir === false || $dir === '') return null;
   $path = $dir . '/' . $backupName;
@@ -232,7 +287,8 @@ function pf_cfg_list_backups(int $limit = 200): array {
   $items = [];
   foreach (pf_cfg_backup_candidates($paths) as $path) {
     $name = basename($path);
-    if (!preg_match('/^planefence\.config\.\d{8}-\d{6}\.bak$/', $name)) continue;
+    if (!str_starts_with($name, 'planefence.config.')) continue;
+    if (!str_ends_with($name, '.bak')) continue;
     $mtime = @filemtime($path);
     $mtime = is_int($mtime) ? $mtime : time();
     $items[] = [
@@ -314,7 +370,19 @@ function pf_cfg_restore_backup(string $backupName): array {
   }
 
   if (!is_dir($paths['backupDir'])) @mkdir($paths['backupDir'], 0777, true);
-  $preRestoreBackup = $paths['backupDir'] . '/planefence.config.' . date('Ymd-His') . '.bak';
+  $stamp = date('Ymd-His');
+  $preRestoreBackup = '';
+  for ($i = 0; $i < 100; $i++) {
+    $suffix = ($i === 0) ? '' : ('-r' . $i);
+    $candidate = $paths['backupDir'] . '/planefence.config.' . $stamp . $suffix . '.bak';
+    if (!file_exists($candidate)) {
+      $preRestoreBackup = $candidate;
+      break;
+    }
+  }
+  if ($preRestoreBackup === '') {
+    return ['ok' => false, 'error' => 'Unable to allocate restore backup filename'];
+  }
   if (!@copy($paths['config'], $preRestoreBackup)) {
     return ['ok' => false, 'error' => 'Unable to create pre-restore backup'];
   }
@@ -472,10 +540,11 @@ function pf_cfg_parse_template(): array {
 
 function pf_cfg_is_setup_required(array $vals, array $defaults): bool {
   $lat = trim((string)($vals['FEEDER_LAT'] ?? ''));
-  $lon = trim((string)($vals['FEEDER_LONG'] ?? ''));
+  // Prefer FEEDER_LON, fallback to FEEDER_LONG
+  $lon = isset($vals['FEEDER_LON']) ? trim((string)$vals['FEEDER_LON']) : trim((string)($vals['FEEDER_LONG'] ?? ''));
   if ($lat === '' || $lon === '') return true;
   $defLat = trim((string)($defaults['FEEDER_LAT'] ?? '90.12345'));
-  $defLon = trim((string)($defaults['FEEDER_LONG'] ?? '-70.12345'));
+  $defLon = isset($defaults['FEEDER_LON']) ? trim((string)$defaults['FEEDER_LON']) : trim((string)($defaults['FEEDER_LONG'] ?? '-70.12345'));
   return $lat === $defLat || $lon === $defLon;
 }
 
@@ -783,18 +852,44 @@ function pf_cfg_save(array $payload): array {
   }
 
   if (($normalized['FEEDER_LAT'] ?? '') === '') $normalized['FEEDER_LAT'] = (string)($defaults['FEEDER_LAT'] ?? '90.12345');
-  if (($normalized['FEEDER_LONG'] ?? '') === '') $normalized['FEEDER_LONG'] = (string)($defaults['FEEDER_LONG'] ?? '-70.12345');
+  // Prefer FEEDER_LON, fallback to FEEDER_LONG
+  if (($normalized['FEEDER_LON'] ?? '') === '' && ($normalized['FEEDER_LONG'] ?? '') === '') {
+    if (isset($defaults['FEEDER_LON'])) {
+      $normalized['FEEDER_LON'] = (string)$defaults['FEEDER_LON'];
+    } else {
+      $normalized['FEEDER_LONG'] = (string)($defaults['FEEDER_LONG'] ?? '-70.12345');
+    }
+  }
+  // If both exist, prefer FEEDER_LON and remove FEEDER_LONG
+  if (isset($normalized['FEEDER_LON']) && isset($normalized['FEEDER_LONG'])) {
+    unset($normalized['FEEDER_LONG']);
+  }
 
   $changedKeys = pf_cfg_changed_keys($currentValues, $normalized, $orderedKeys);
 
   $backupPath = $paths['backupDir'] . '/planefence.config.' . date('Ymd-His') . '.bak';
   @copy($paths['config'], $backupPath);
 
+
   $lines = pf_cfg_read_raw($paths['config']);
   $seen = [];
   $out = [];
 
-  foreach ($lines as $line) {
+  // Prepare Last Updated line
+  $now = new DateTime();
+  $tz = $now->format('T');
+  $lastUpdated = '# This file was last updated using the Configuration Webpage on: ' . $now->format('Y-M-d H:i:s') . ' ' . $tz;
+  $foundLastUpdated = false;
+
+  foreach ($lines as $idx => $line) {
+    if ($idx === 0 && preg_match('/^# This file was last updated using the Configuration Webpage on:/', $line)) {
+      $out[] = $lastUpdated;
+      $foundLastUpdated = true;
+      continue;
+    }
+    if ($idx === 0 && !$foundLastUpdated) {
+      $out[] = $lastUpdated;
+    }
     if (preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/', $line, $m)) {
       $k = $m[1];
       if (array_key_exists($k, $normalized)) {
@@ -810,8 +905,39 @@ function pf_cfg_save(array $payload): array {
     $out[] = $line;
   }
 
+  // If the file was empty, still add the Last Updated line
+  if (count($lines) === 0) {
+    $out[] = $lastUpdated;
+  }
+
+  // Build a map of parameter -> comments from the template
+  $templateLines = pf_cfg_read_raw($paths['template']);
+  $paramComments = [];
+  $currentComments = [];
+  foreach ($templateLines as $line) {
+    if (preg_match('/^#(.*)$/', $line, $m)) {
+      $currentComments[] = rtrim($line);
+      continue;
+    }
+    if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/', $line, $m)) {
+      $param = $m[1];
+      if (!empty($currentComments)) {
+        $paramComments[$param] = $currentComments;
+        $currentComments = [];
+      }
+    } else {
+      $currentComments = [];
+    }
+  }
+
   foreach ($orderedKeys as $k) {
     if (!isset($seen[$k])) {
+      // Add comments from template if available
+      if (isset($paramComments[$k])) {
+        foreach ($paramComments[$k] as $cLine) {
+          $out[] = $cLine;
+        }
+      }
       if ($k === 'PF_ALERTHEADER') {
         $out[] = $k . '=' . pf_cfg_encode_single_quoted((string)($normalized[$k] ?? ''));
       } else {
