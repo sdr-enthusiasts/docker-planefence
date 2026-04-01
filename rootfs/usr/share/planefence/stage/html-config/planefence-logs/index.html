@@ -85,6 +85,38 @@
       background: #020617;
       padding: 6px;
     }
+    .dt-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: .86rem;
+      flex-wrap: wrap;
+    }
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+      float: none !important;
+      margin: 0;
+    }
+    .dataTables_wrapper .dataTables_length label,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+      color: var(--muted) !important;
+    }
+    .dataTables_wrapper .dataTables_length select {
+      width: auto !important;
+      min-width: 78px;
+      display: inline-block;
+      margin: 0 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+      color: var(--text) !important;
+    }
     table.dataTable { color: #f8fafc !important; width: 100% !important; }
     table.dataTable thead th { color: #dbeafe !important; background: #111827 !important; border-bottom-color: #334155 !important; }
     table.dataTable tbody td,
@@ -338,6 +370,7 @@
 
     function init(){
       state.table = $('#logsTable').DataTable({
+        dom: "<'dt-toolbar'li p>t",
         order: [[0, 'asc']],
         pageLength: 100,
         deferRender: true,
