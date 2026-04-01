@@ -65,7 +65,7 @@ toot_length="$(sed 's/http[^ ]*/xxxxxxxxxxxxxxxxxxxxxxxx/g' <<<"${TEXT//$'\n'/ }
 if (( toot_length >= 500 )); then
    new_length="$(( ${#TEXT} - toot_length + 496 ))"
    TEXT="${TEXT:0:$new_length}..."
-   "${s6wrap[@]}" echo "[WARNING] Mastodon Notification Truncated: it was $(( toot_length - 499)) characters too long"
+   log_print WARNING "Mastodon Notification Truncated: it was $(( toot_length - 499)) characters too long"
 fi
 
 # send pictures to Mastodon

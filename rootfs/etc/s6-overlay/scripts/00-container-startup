@@ -18,7 +18,7 @@ fi
 PA_HISTTIME_MIGRATION_CUTOFF_EPOCH=1742929200
 PA_HISTTIME_MIGRATION_TARGET_FILE="/usr/share/planefence/persist/planefence.config"
 
-"${s6wrap[@]}" echo "Initial Planefence check..."
+log_print INFO "Initial Planefence check..."
 
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
     /usr/share/planefence/prep-planefence.sh
@@ -120,4 +120,4 @@ if [[ -x /usr/share/planefence/html/cgi/insights.sh ]]; then
     ) &
 fi
 
-"${s6wrap[@]}" echo "Initial Planefence check complete."
+log_print INFO "Initial Planefence check complete."

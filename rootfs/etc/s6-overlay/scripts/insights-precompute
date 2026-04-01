@@ -144,7 +144,7 @@ done
 pid="$(< /run/pf-process_sbs.pid)"
 while kill -0 "$pid" &>/dev/null; do sleep 0.2; done
 
-"${s6wrap[@]}" echo "$0 started as an s6 service"
+log_print INFO "$0 started as an s6 service"
 
 start_missing_historical_backfill "planefence"
 start_missing_historical_backfill "plane-alert"

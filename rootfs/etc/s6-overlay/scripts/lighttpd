@@ -7,7 +7,7 @@ CONFIGPATH="/etc/lighttpd/lighttpd.conf"
 OWNER=root
 GROUP=root
 
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "Lighttpd started as an s6 service"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Lighttpd started as an s6 service"; fi
 
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions

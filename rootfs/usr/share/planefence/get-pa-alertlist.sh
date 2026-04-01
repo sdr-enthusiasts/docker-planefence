@@ -12,7 +12,7 @@ source /scripts/pf-common
 # -----------------------------------------------------------------------------------
 #
 # Make sure the /run directory exists
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "$0 started"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "$0 started"; fi
 #Get the list of alert files into ALERTLIST, or put the original file in it
 ALERTLIST="$(sed -n 's|^\s*PF_ALERTLIST=\(.*\)|\1|p' /usr/share/planefence/persist/planefence.config)"
 if [[ -n "$ALERTLIST" ]]; then IFS="," read -ra ALERTFILES <<< "$ALERTLIST" || ALERTFILES=("plane-alert-db.txt"); fi
@@ -28,10 +28,10 @@ do
 		# it's a URL and we need to CURL it
 		if curl --compressed -L -s --fail -o /tmp/alertlist-$i.txt "$ALERT"
 		then
-			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
+			if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
 			((i++)) || true
 		else
-			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
+			log_print ERR "ALERTLIST $ALERT retrieval failed"
 			inhibit_update="true"
 		fi
 	else
@@ -39,10 +39,10 @@ do
 		if [[ -f "/usr/share/planefence/persist/$ALERT" ]]
 		then
 			cp -f "/usr/share/planefence/persist/$ALERT" /tmp/alertlist-$i.txt
-			if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
+			if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "ALERTLIST $ALERT ($i) retrieval succeeded"; fi
 			((i++)) || true
 		else
-			"${s6wrap[@]}" echo "ALERTLIST $ALERT retrieval failed"
+			log_print ERR "ALERTLIST $ALERT retrieval failed"
 		fi
 	fi
 done
@@ -83,4 +83,4 @@ else
 fi
 
 rm -f /tmp/alertlist*.txt
-if [[ "$LOGLEVEL" != "ERROR" ]]; then "${s6wrap[@]}" echo "$0 finished"; fi
+if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "$0 finished"; fi
