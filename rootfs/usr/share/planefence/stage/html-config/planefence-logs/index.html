@@ -133,6 +133,7 @@
           </div>
           <div>
             <button class="btn" id="clearFilters" type="button">Clear filters</button>
+            <button class="btn" id="downloadCsv" type="button">Download CSV</button>
           </div>
         </div>
 
@@ -222,6 +223,7 @@
       state.levelFilter = document.getElementById('levelFilter').value;
       const txt = document.getElementById('textFilter').value;
       state.table.search(txt).draw(false);
+      if (state.autoScroll) scrollToLatest();
     }
 
     function atBottom(el){
@@ -232,10 +234,46 @@
       document.getElementById('scrollStatus').textContent = `Auto-scroll: ${state.autoScroll ? 'on' : 'off'}`;
     }
 
-    function maybeAutoScroll(){
-      if (!state.autoScroll) return;
+    function scrollToLatest(){
+      if (!state.table) return;
+      state.table.page('last').draw('page');
       const el = document.getElementById('logsScroll');
       el.scrollTop = el.scrollHeight;
+    }
+
+    function maybeAutoScroll(){
+      if (!state.autoScroll) return;
+      scrollToLatest();
+    }
+
+    function csvEscape(value){
+      const s = String(value ?? '');
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    function toPlainText(html){
+      return String(html || '').replace(/<[^>]*>/g, '').trim();
+    }
+
+    function downloadFilteredCsv(){
+      const rows = state.table.rows({ search: 'applied' }).data().toArray();
+      const lines = ['Date time,Application,Log Level,Information'];
+      for (const r of rows) {
+        lines.push([
+          csvEscape(toPlainText(r[0])),
+          csvEscape(toPlainText(r[1])),
+          csvEscape(toPlainText(r[2])),
+          csvEscape(toPlainText(r[3]))
+        ].join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+      a.download = `planefence-logs-${stamp}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
 
     async function pollLogs(){
@@ -329,12 +367,15 @@
         state.appFilter = '';
         state.levelFilter = '';
         state.table.search('').draw(false);
+        if (state.autoScroll) scrollToLatest();
       });
+      document.getElementById('downloadCsv').addEventListener('click', downloadFilteredCsv);
 
       const scroller = document.getElementById('logsScroll');
       scroller.addEventListener('scroll', () => {
         state.autoScroll = atBottom(scroller);
         updateScrollIndicator();
+        if (state.autoScroll) scrollToLatest();
       });
 
       updateScrollIndicator();
