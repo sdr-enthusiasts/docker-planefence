@@ -201,6 +201,33 @@ docker compose up -d planefence --force-recreate
 popd
 ```
 
+## Viewing Logs
+
+Planefence logs are always written to the container logs. In addition, you can optionally expose a log web page with the `PF_WEBLOGS` parameter in `planefence.config`.
+
+### Container logs
+
+Use Docker logs directly:
+
+```bash
+docker logs -f planefence
+```
+
+### Web logs (`PF_WEBLOGS`)
+
+`PF_WEBLOGS` controls where the logs page is exposed:
+
+| Parameter | Values | Description |
+| --- | --- | --- |
+| `PF_WEBLOGS` | `config` (default), `main`, `off`, `disabled`, `0`, `no` | `config`: expose logs on the configuration web server. `main`: expose logs on the main Planefence web server. `off`/`disabled`/`0`/`no` (case-insensitive): do not expose a logs web page. |
+
+After changing `PF_WEBLOGS`, restart/recreate the container so lighttpd can apply the listener mapping.
+
+Examples:
+
+- If `PF_WEBLOGS=config` and `PF_CONFIG_HTTP_PORT=9999`: `http://myhost:9999/planefence-logs/`
+- If `PF_WEBLOGS=main` and `PF_HTTP_PORT=80`: `http://myhost/planefence-logs/`
+
 ## What does it look like when it's running?
 
 - Planefence deployment example: <https://planefence.com/planefence-dev>

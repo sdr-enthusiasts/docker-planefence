@@ -58,6 +58,14 @@ PF_ALTUNIT=feet
 #  in the software requires it this way)
 PF_SPEEDUNIT=knotph
 # ---------------------------------------------------------------------
+# PF_WEBLOGS: determines if log messages are made available via a web page in addition to the container logs.
+# Allowed values:
+#   config   - make logs available on the config web server as http://config:port/planefence-logs
+#   main     - make logs available on the main web server as http://myplanefence/planefence-logs
+#   off/disabled/0/no (case-insensitive) - do not make a logs web page available.
+# Default: config
+PF_WEBLOGS=config
+# ---------------------------------------------------------------------
 # PF_FUDGELOC: round displayed station coordinates to protect privacy.
 # 0 → whole degrees; 1 → 0.1°; 2 → 0.01° (~0.5 mi at 42°N);
 # 3 → 0.001° (~300 ft at 42°N). Any other non-empty value acts like 3.

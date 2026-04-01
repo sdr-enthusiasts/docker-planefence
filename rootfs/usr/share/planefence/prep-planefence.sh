@@ -84,6 +84,20 @@ cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefe
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
+# PF_WEBLOGS controls where the logs page is exposed:
+#   config (default): only on config listener
+#   main:             only on main listener
+#   off/disabled/0/no: hidden on both listeners
+PF_WEBLOGS_MODE_RAW="${PF_WEBLOGS:-config}"
+PF_WEBLOGS_MODE_LC="${PF_WEBLOGS_MODE_RAW,,}"
+if chk_disabled "$PF_WEBLOGS_MODE_RAW" || [[ "$PF_WEBLOGS_MODE_LC" == "off" || "$PF_WEBLOGS_MODE_LC" == "disabled" || "$PF_WEBLOGS_MODE_LC" == "0" || "$PF_WEBLOGS_MODE_LC" == "no" ]]; then
+	rm -rf /usr/share/planefence/html/planefence-logs /usr/share/planefence/html-config/planefence-logs
+elif [[ "$PF_WEBLOGS_MODE_LC" == "main" ]]; then
+	rm -rf /usr/share/planefence/html-config/planefence-logs
+else
+	rm -rf /usr/share/planefence/html/planefence-logs
+fi
+
 #--------------------------------------------------------------------------------
 #
 # Now initialize Plane Alert. Note that this isn't in its own s6 runtime because it's

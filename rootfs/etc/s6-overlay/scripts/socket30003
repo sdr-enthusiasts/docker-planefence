@@ -71,9 +71,9 @@ sed -i 's|\(^\s*PEER_PORT=\).*|\1'"$PF_SOCK30003PORT"'|' /usr/share/socket30003/
 [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "socket30003 starting its initial run now" || true
 while true; do
 	if ! timeout --preserve-status 3 netcat -z "$PF_SOCK30003HOST" "$PF_SOCK30003PORT" >/dev/null 2>&1; then
-		"${s6wrap[@]}" echo "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
-		"${s6wrap[@]}" echo "If this error keeps on repeating, please make sure that"
-		"${s6wrap[@]}" echo "readsb/dump1090[-fa]/ultrafeeder is running and producing SBS data on port $PF_SOCK30003PORT!"
+		log_print WARN "We cannot reach \"$PF_SOCK30003HOST\" on port $PF_SOCK30003PORT."
+		log_print WARN "If this error keeps on repeating, please make sure that"
+		log_print WARN "readsb/dump1090[-fa]/ultrafeeder is running and producing SBS data on port $PF_SOCK30003PORT!"
 		sleep $LOOPTIME
 	else
 		# clean up logs
@@ -93,13 +93,13 @@ while true; do
 			mv -f "$tmpfile" "$f"
 		done
 
-		"${s6wrap[@]}" echo "socket30003 starting up."
+		log_print INFO "socket30003 starting up."
 		touch /run/socket30003.up
 		timeout "$RESTARTTIME" /usr/share/socket30003/socket30003.pl &>/dev/null || true
 		exitcode="$?"
 		rm -f /run/socket30003.up
 		if (( exitcode != 124 && exitcode != 0)); then
-			"${s6wrap[@]}" echo "/usr/share/socket30003/socket30003.pl exited with error code $exitcode. Restarting in $LOOPTIME"
+			log_print ERR "/usr/share/socket30003/socket30003.pl exited with error code $exitcode. Restarting in $LOOPTIME"
 			sleep $LOOPTIME
 		fi
 
