@@ -307,7 +307,9 @@
     }
 
     function getScrollElement(){
-      return document.querySelector('#logsTable_wrapper .dataTables_scrollBody') || document.getElementById('logsScroll');
+      return document.querySelector('#logsTable_wrapper .dt-scroll-body')
+        || document.querySelector('#logsTable_wrapper .dataTables_scrollBody')
+        || document.getElementById('logsScroll');
     }
 
     function updateScrollIndicator(){
@@ -317,9 +319,15 @@
     function scrollToLatest(){
       if (!state.table) return;
       state.table.page('last').draw('page');
-      const el = getScrollElement();
-      if (!el) return;
-      el.scrollTop = el.scrollHeight;
+      const forceBottom = (tries = 3) => {
+        const el = getScrollElement();
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+        if (tries > 0 && (el.scrollHeight - el.clientHeight - el.scrollTop) > 4) {
+          requestAnimationFrame(() => forceBottom(tries - 1));
+        }
+      };
+      requestAnimationFrame(() => forceBottom(3));
     }
 
     function maybeAutoScroll(){
@@ -402,7 +410,7 @@
 
           state.table.draw(false);
           refreshFilterOptions();
-          maybeAutoScroll();
+          scrollToLatest();
         }
 
         if (Number.isFinite(total) && total >= 0) {
