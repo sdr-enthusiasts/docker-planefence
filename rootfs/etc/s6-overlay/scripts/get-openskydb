@@ -12,13 +12,13 @@
 # ATTENTION -- DO NOT MAKE THIS SCRIPT INTO A S6 DEPENDENCY FOR RUNNING PLANEFENCE
 # IT SHOULD RUN AS A ONESHOT SERVICE IN PARALLEL WITH OTHER SERVICES
 
-source "/scripts/common"
+source "/scripts/pf-common"
 
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 source "/usr/share/planefence/persist/planefence.config"
 
 if chk_disabled "${OPENSKYDB_DOWNLOAD:-enabled}"; then
-  "${s6wrap[@]}" echo "OpenSky Database download disabled. Skipping."
+  log_print INFO "OpenSky Database download disabled. Skipping."
   stop_service
 fi
 
@@ -42,7 +42,7 @@ else
 fi
 
 if ! latestfile="$(curl -sfL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
-  "${s6wrap[@]}" echo "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Aborting update attempt."
+  log_print ERR "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Aborting update attempt."
   if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
     ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
   fi
@@ -51,22 +51,22 @@ fi
 latestfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$latestfile")"
 
 if (( ${savedfile_date//-/} < ${latestfile_date//-/} )); then
-  "${s6wrap[@]}" echo "Newer OpenSky database ($latestfile_date) available. Downloading it now"
+  log_print INFO "Newer OpenSky database ($latestfile_date) available. Downloading it now"
   if curl -sfL --compressed "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
     find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -delete
     find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -delete
     find /usr/share/planefence/html/ -type f -name "aircraft-database-complete-*.csv" -delete
     mv -f "/tmp/$latestfile" /usr/share/planefence/persist/.internal/
     ln -sf "/usr/share/planefence/persist/.internal/$latestfile" "/run/OpenSkyDB.csv"
-    "${s6wrap[@]}" echo "Downloaded newest OpenSkyDB - $latestfile"
+    log_print INFO "Downloaded newest OpenSkyDB - $latestfile"
   else
-    "${s6wrap[@]}" echo "Download of newest OpenSkyDB FAILED - $latestfile"
+    log_print ERR "Download of newest OpenSkyDB FAILED - $latestfile"
     if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
       ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
     fi
   fi
 else
-  "${s6wrap[@]}" echo "Current OpenSkyDB file ($savedfile) is up to date."
+  log_print INFO "Current OpenSkyDB file ($savedfile) is up to date."
   if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
     ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
   fi

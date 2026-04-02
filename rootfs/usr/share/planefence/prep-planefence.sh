@@ -4,11 +4,7 @@
 # Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
 # distribution of this package, and are also available here:
-# https://github.com/sdr-enthusiasts/planefence4docker/
-#
-# Programmers note: when using sed for URLs or file names, make sure NOT to use '/'
-# as command separator, but use something else instead, for example '|'
-#
+# https://github.com/sdr-enthusiasts/docker-planefence/
 # -----------------------------------------------------------------------------------
 #
 source /scripts/pf-common
@@ -42,19 +38,29 @@ function configure_both() {
 	configure_planealert "$1" "$2"
 }
 
-[[ "$LOGLEVEL" != "ERROR" ]] && "${s6wrap[@]}" echo "Running Planefence configuration - either the container is restarted or a config change was detected." || true
+prep_early_exit() {
+	if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+		return 0
+	fi
+	exit 0
+}
+
+[[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Running Planefence configuration - either the container is restarted or a config change was detected." || true
 # Sometimes, variables are passed in through .env in the Docker-compose directory
 # However, if there is a planefence.config file in the ..../persist directory
 # then export all of those variables as well
 mkdir -p -m 0777 /usr/share/planefence/persist/.internal
 mkdir -p -m 0777 /usr/share/planefence/persist/planepix/cache
 mkdir -p -m 0777 /usr/share/planefence/html/assets/images
+mkdir -p -m 0777 /usr/share/planefence/html-config
 mkdir -p -m 0777 /usr/share/planefence/html/noise
 chmod -f a=rwx /usr/share/planefence/persist
 chmod -fR u=rwx,go=rx \
 	/usr/share/planefence/persist/.internal \
-	/usr/share/planefence/html
+	/usr/share/planefence/html \
+	/usr/share/planefence/html-config
 if [[ -f /usr/share/planefence/persist/planefence.config ]]; then
+	chmod -f a+rw /usr/share/planefence/persist/planefence.config
 	set -o allexport
 	# shellcheck disable=SC1091
 	source /usr/share/planefence/persist/planefence.config
@@ -73,9 +79,24 @@ ln -sf /usr/share/planefence/persist/planepix/cache /usr/share/planefence/html/i
 # overwritten by the host at start of runtime
 rm -f /usr/share/planefence/html/index.html 2>/dev/null || true
 cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
+	cp -R --remove-destination /usr/share/planefence/stage/html-config/. /usr/share/planefence/html-config/
 	# always update to latest version
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
+
+# PF_WEBLOGS controls where the logs page is exposed:
+#   config (default): only on config listener
+#   main:             only on main listener
+#   off/disabled/0/no: hidden on both listeners
+PF_WEBLOGS_MODE_RAW="${PF_WEBLOGS:-config}"
+PF_WEBLOGS_MODE_LC="${PF_WEBLOGS_MODE_RAW,,}"
+if chk_disabled "$PF_WEBLOGS_MODE_RAW" || [[ "$PF_WEBLOGS_MODE_LC" == "off" || "$PF_WEBLOGS_MODE_LC" == "disabled" || "$PF_WEBLOGS_MODE_LC" == "0" || "$PF_WEBLOGS_MODE_LC" == "no" ]]; then
+	rm -rf /usr/share/planefence/html/planefence-logs /usr/share/planefence/html-config/planefence-logs
+elif [[ "$PF_WEBLOGS_MODE_LC" == "main" ]]; then
+	rm -rf /usr/share/planefence/html-config/planefence-logs
+else
+	rm -rf /usr/share/planefence/html/planefence-logs
+fi
 
 #--------------------------------------------------------------------------------
 #
@@ -92,25 +113,26 @@ export LOOPTIME=${PF_INTERVAL:-120}
 mkdir -p /run/planefence
 # -----------------------------------------------------------------------------------
 # Check if planefence.config exists
+rm -f /run/planefence/configuration-required
 if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured planefence.config."
-	"${s6wrap[@]}" echo "Rename the sample file in your config directory to planefence.config"
-	"${s6wrap[@]}" echo "and edit it to set the values for your station "
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	exec sleep infinity
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! SETUP REQUIRED !!!! planefence.config is not configured yet."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "Open your host IP/hostname on that port to complete setup."
+	log_print ERR "----------------------------------------------------------"
+	touch /run/planefence/configuration-required
+	prep_early_exit
 fi
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
-if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]]; then
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured FEEDER_LON and/or FEEDER_LAT for Planefence !!!!"
-	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo "Edit planefence.config to set this and other parameters for your station "
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	exec sleep infinity
+if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "$FEEDER_LONG" ]] || [[ "$FEEDER_LONG" == "-70.12345" ]]; then
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "Once you save valid coordinates, Planefence will continue automatically."
+	log_print ERR "----------------------------------------------------------"
+	touch /run/planefence/configuration-required
+	prep_early_exit
 fi
 
 #
@@ -118,12 +140,12 @@ fi
 #
 if chk_disabled "$PF_LOG"; then
 	export LOGFILE=/dev/null
-	sed -i 's/\(^\s*VERBOSE=\).*/\1'""'/' /usr/share/planefence/planefence.conf
+	configure_planefence "VERBOSE" ""
 else
 	[[ -z "$PF_LOG" ]] && export LOGFILE="/tmp/planefence.log" || export LOGFILE="$PF_LOG"
 fi
 # echo pflog=$PF_LOG and logfile=$LOGFILE
-sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.conf
+configure_planefence "LOGFILE" "$LOGFILE"
 #
 # -----------------------------------------------------------------------------------
 #
@@ -131,14 +153,15 @@ sed -i 's|\(^\s*LOGFILE=\).*|\1'"$LOGFILE"'|' /usr/share/planefence/planefence.c
 if [[ -n "$FEEDER_LAT" ]]; then
 	configure_planefence "LAT" "$FEEDER_LAT"
 else
-	"${s6wrap[@]}" echo "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
+	log_print ERR "Error - \$FEEDER_LAT ($FEEDER_LAT) not defined"
 	stop_service
 fi
 
+FEEDER_LONG="${FEEDER_LON:-$FEEDER_LONG}"
 if [[ -n "$FEEDER_LONG" ]]; then
 	configure_planefence "LON" "$FEEDER_LONG"
 else
-	"${s6wrap[@]}" echo "Error - \$FEEDER_LONG not defined"
+	log_print ERR "Error - \$FEEDER_LONG not defined"
 	stop_service
 fi
 
@@ -179,13 +202,11 @@ if [[ -n "$PF_SOCK30003HOST" ]]; then
 	unset a
 else
 	sleep 10s
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
-	"${s6wrap[@]}" echo "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for Planefence !!!!"
-	"${s6wrap[@]}" echo "Planefence will not run unless you edit it configuration."
-	"${s6wrap[@]}" echo "You can do this by pressing CTRL-c now and typing:"
-	"${s6wrap[@]}" echo "sudo nano -l ~/planefence/planefence.config"
-	"${s6wrap[@]}" echo "Once done, restart the container and this message should disappear."
-	"${s6wrap[@]}" echo "----------------------------------------------------------"
+	log_print ERR "----------------------------------------------------------"
+	log_print ERR "!!! STOP !!!! You haven't configured PF_SOCK30003HOST for Planefence !!!!"
+	log_print ERR "Planefence will not run unless you edit it configuration."
+	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
+	log_print ERR "----------------------------------------------------------"
 	stop_service
 fi
 #
@@ -278,7 +299,6 @@ if [[ -n "$MASTODON_SERVER" ]] && [[ -n "$MASTODON_ACCESS_TOKEN" ]]; then
 		configure_planealert "MASTODON_ACCESS_TOKEN" "$MASTODON_ACCESS_TOKEN"
 		configure_planealert "MASTODON_SERVER" "$MASTODON_SERVER"
 		configure_planealert "MASTODON_VISIBILITY" "${PA_MASTODON_VISIBILITY:-unlisted}"
-		configure_planealert "MASTODON_MAXIMGS" "${PA_MASTODON_MAXIMGS:-1}"
 		configure_planealert "MASTODON_RETENTION_TIME" "${MASTODON_RETENTION_TIME:-7}"
 	else
 		configure_planealert "MASTODON_ACCESS_TOKEN" ""

@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC2015,SC1091,SC2154
 
-source /scripts/common
+source /scripts/pf-common
 # -----------------------------------------------------------------------------------
 # Copyright 2020-2026 Ramon F. Kolb - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -14,14 +14,14 @@ source /scripts/common
 
 while [[ ! -f /usr/share/planefence/persist/planefence.config ]]; do sleep 5; done
 
-"${s6wrap[@]}" echo "Checking Mastodon server and access token"
+log_print INFO "Checking Mastodon server and access token"
 
 source /usr/share/planefence/persist/planefence.config
 rm -f /run/pf_mastodon_on /run/pa_mastodon_on
 
 if [[ -z "$MASTODON_ACCESS_TOKEN" ]] || [[ -z "$MASTODON_SERVER" ]]
 then
-    "${s6wrap[@]}" echo "Mastodon not configured"
+    log_print INFO "Mastodon not configured"
     exit 0
 else
     MASTODON_SERVER="${MASTODON_SERVER,,}"
@@ -32,18 +32,18 @@ else
     acct="$(curl -m 5 -sSL -H "Authorization: Bearer $MASTODON_ACCESS_TOKEN" "https://${MASTODON_SERVER}/api/v1/accounts/verify_credentials")"
     if  ! grep -iq "The access token is invalid\|<body class='error'>"  <<< "$result" >/dev/null 2>&1
     then
-        "${s6wrap[@]}" echo "Mastodon configured correctly for @$MASTODON_SERVER@$(jq -r '.acct' <<< "$acct")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
+        log_print INFO "Mastodon configured correctly for @$MASTODON_SERVER@$(jq -r '.acct' <<< "$acct")'s application $(jq '.name' <<< "$result") / website $(jq '.website' <<< "$result")"
         if chk_enabled "${PF_MASTODON}"; then
-            "${s6wrap[@]}" echo "Mastodon enabled for Planefence"
+            log_print INFO "Mastodon enabled for Planefence"
         else
-            "${s6wrap[@]}" echo "Mastodon disabled for Planefence"
+            log_print INFO "Mastodon disabled for Planefence"
         fi
         if chk_enabled "${PA_MASTODON}"; then
-            "${s6wrap[@]}" echo "Mastodon enabled for Plane-Alert"
+            log_print INFO "Mastodon enabled for Plane-Alert"
         else
-            "${s6wrap[@]}" echo "Mastodon disabled for Plane-Alert"
+            log_print INFO "Mastodon disabled for Plane-Alert"
         fi
     else
-        "${s6wrap[@]}" echo "Mastodon configured incorrectly. Check your setup"
+        log_print INFO "Mastodon configured incorrectly. Check your setup"
     fi
 fi

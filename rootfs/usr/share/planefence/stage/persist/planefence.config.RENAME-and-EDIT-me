@@ -14,15 +14,14 @@
 FEEDER_LAT=90.12345
 # ---------------------------------------------------------------------
 # Station longitude in decimal degrees. East is positive; West is negative.
-FEEDER_LONG=-70.12345
+FEEDER_LON=-70.12345
 # ---------------------------------------------------------------------
-# PF_SOCK30003HOST is the hostname of the SBS-30003 data source
-# (ultrafeeder, dump1090[-fa], readsb, or tar1090).
-# If it runs in another container/host, use its resolvable hostname and
-# adjust docker-compose per README. Using tar1090 as source includes MLAT.
+# PF_SOCK30003HOST is the hostname or IP address of the SBS-30003 data source
+# (for example, ultrafeeder, dump1090[-fa], readsb, or tar1090).
+# If it runs in another container/host, use its resolvable hostname.
 PF_SOCK30003HOST=ultrafeeder
 # ---------------------------------------------------------------------
-# PF_SOCK30003PORT is the TCP port for SBS data. Default 30003.
+# PF_SOCK30003PORT is the TCP port for SBS data.
 PF_SOCK30003PORT=30003
 # ---------------------------------------------------------------------
 # PF_MAXDIST is the fence radius from your station center
@@ -34,19 +33,16 @@ PF_MAXDIST=2.0
 PF_MAXALT=5000
 
 ###############################################################################
-# Optional Parameters
-###############################################################################
-
-###############################################################################
 # General Parameters
 ###############################################################################
 # GENERATE_CSV: generate daily CSV exports for Planefence and Plane-Alert.
-# OFF (default) disables generation; ON enables it.
+# OFF (default) disables generation; ON enables it. Leave this OFF unless you
+# need it: generating CSV files is very CPU intensive!
 GENERATE_CSV=OFF
 # ---------------------------------------------------------------------
 # PF_INTERVAL: poll interval in seconds for new planes.
 # Recommended minimum is 30 seconds to avoid excessive load.
-PF_INTERVAL=45
+PF_INTERVAL=30
 # ---------------------------------------------------------------------
 # PF_DISTUNIT: unit for distances/radius.
 # Allowed: kilometer, nauticalmile, mile, meter.
@@ -62,6 +58,14 @@ PF_ALTUNIT=feet
 #  in the software requires it this way)
 PF_SPEEDUNIT=knotph
 # ---------------------------------------------------------------------
+# PF_WEBLOGS: determines if log messages are made available via a web page in addition to the container logs.
+# Allowed values:
+#   config   - make logs available on the config web server as http://config:port/planefence-logs
+#   main     - make logs available on the main web server as http://myplanefence/planefence-logs
+#   off/disabled/0/no (case-insensitive) - do not make a logs web page available.
+# Default: config
+PF_WEBLOGS=config
+# ---------------------------------------------------------------------
 # PF_FUDGELOC: round displayed station coordinates to protect privacy.
 # 0 → whole degrees; 1 → 0.1°; 2 → 0.01° (~0.5 mi at 42°N);
 # 3 → 0.001° (~300 ft at 42°N). Any other non-empty value acts like 3.
@@ -69,11 +73,11 @@ PF_FUDGELOC=3
 # ---------------------------------------------------------------------
 # PF_CHECKROUTE: enrich PF table with route info via adsb.im API.
 # Default is ON if not explicitly disabled.
-PF_CHECKROUTE=true
+PF_CHECKROUTE=ON
 # ---------------------------------------------------------------------
 # PF_TRACKSERVICE: map service used to render tracking links for Planefence.
 # This must be a tar1090-style service as we create a deep link to a specific aircraft/location/time combo
-# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live, adsb.lol.
+# Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live, adsb.lol
 PF_TRACKSERVICE=globe.adsbexchange.com
 # ---------------------------------------------------------------------
 # PF_ELEVATION: station elevation above mean sea level (MSL),
@@ -83,8 +87,8 @@ PF_ELEVATION=0
 # OPENSKYDB_DOWNLOAD: control downloading of the OpenSky aircraft database.
 # At startup, PF checks for and downloads updates (~100MB) and stores them persistently.
 # Used as fallback to identify aircraft owner when other sources fail.
-# Set to "disabled" to prevent downloads (use previously stored copy if present).
-OPENSKYDB_DOWNLOAD=
+# Set to "OFF" to prevent downloads (use previously stored copy if present).
+OPENSKYDB_DOWNLOAD=ON
 
 ###############################################################################
 # Web Page Related Parameters
@@ -95,27 +99,34 @@ OPENSKYDB_DOWNLOAD=
 # you know what you are doing.
 PF_HTTP_PORT=80
 # ---------------------------------------------------------------------
+# PF_CONFIG_HTTP_PORT: dedicated port for the Planefence configuration web UI.
+# This page is intentionally served on a separate port from the main Planefence page.
+# Default is 9999.
+PF_CONFIG_HTTP_PORT=9999
+# ---------------------------------------------------------------------
 # PF_NAME: short station label shown in the page title.
 PF_NAME="MY"
 # ---------------------------------------------------------------------
 # PF_TABLESIZE: default rows per page before pagination.
-# Choose: 10, 25, 50, 100, all. Default 50.
+# Choose: 10, 25, 50, 100, all.
+# Default is 50.
 PF_TABLESIZE=50
 # ---------------------------------------------------------------------
-# PF_MAPURL: URL linking to your station’s map (full or relative).
-PF_MAPURL="http://external-host-name/tar1090"
+# PF_MAPURL: URL linking to your station’s map (full or relative), for example http://external-host-name/tar1090.
+PF_MAPURL=
 # ---------------------------------------------------------------------
 # PF_MAPZOOM: default OpenStreetMap zoom for the heatmap.
 # Try zoom levels at https://www.openstreetmap.org/#map=12
 PF_MAPZOOM=7
 # ---------------------------------------------------------------------
 # PF_SHOWIMAGES: include aircraft photos from planespotters.net in UI/notifications.
-# Default true. Set to 0/off/false/no to disable.
-PF_SHOWIMAGES=true
+# Default YES. Set to NO to disable.
+PF_SHOWIMAGES=YES
 # ---------------------------------------------------------------------
-# PF_OPENAIP_LAYER: show OpenAIP layer on heatmap when ON.
-# PF_OPENAIPKEY must be set with a valid OpenAIP API key (https://www.openaip.net).
+# Show OpenAIP layer on heatmap when ON.
+# Requires a valid OpenAIP API key in PF_OPENAIPKEY.
 PF_OPENAIP_LAYER=OFF
+# Valid OpenAIP API key from https://www.openaip.net
 PF_OPENAIPKEY=
 
 ###############################################################################
@@ -125,28 +136,25 @@ PF_OPENAIPKEY=
 
 # ---------------------------------------------------------------------
 # PLANEFENCE: enable Planefence feature and corresponding web page
-# Note that PF_PLANEFENCE and PF_PLANEALERT cannot both be disabled!
-# Default value if omitted: enabled
-# Note - PF_PLANEFENCE is also supported for backward compatibility
-PLANEFENCE=enabled
+# Note that PLANEFENCE and PLANEALERT cannot both be OFF.
+# Allowed values: ON or OFF.
+PLANEFENCE=ON
 # ---------------------------------------------------------------------
 # PF_MOTD: message-of-the-day shown at the top of the PF page.
 # Supports simple HTML. Escape special characters for sed (e.g., \|, \&, ").
 PF_MOTD="<b>Welcome to my Planefence Instance!</b>"
 # ---------------------------------------------------------------------
 # PF_DELETEAFTER: days to keep logs and JSON/CSV files.
-# Empty → default 14; 0 → keep forever (risk of disk fill-up).
-PF_DELETEAFTER=
+# default 90; 0 → keep forever (risk of disk fill-up).
+PF_DELETEAFTER=90
 # ---------------------------------------------------------------------
 # PF_NOISECAPT: base URL of your NoiseCapt container (optional).
 # See https://github.com/kx1t/docker-noisecapt.
 PF_NOISECAPT=
 # ---------------------------------------------------------------------
-# PF_CHECKREMOTEDB: use remote helper DB (kx1t) to resolve airline names from flight numbers.
-# See project docs for privacy details. Any non-empty value enables; empty disables.
-PF_CHECKREMOTEDB=
-# ---------------------------------------------------------------------
 # PF_IGNOREDUPES: if set to yes/on/true/1/enabled, show only the first ICAO+flight combo per day.
+PF_IGNOREDUPES=ON
+# ---------------------------------------------------------------------
 # PF_COLLAPSEWITHIN: minimum seconds between observations to
 # treat them as separate entries; closer observations are collapsed.
 # Note - to completely ignore specific aircraft in Planefence, you can create a file named
@@ -155,7 +163,6 @@ PF_CHECKREMOTEDB=
 #        compatible with the Linux grep command.
 #        Since aircraft often only transmit their callsign once every X messages, adding callsigns to
 #        this list may not be as effective as adding ICAO patterns.
-PF_IGNOREDUPES=
 PF_COLLAPSEWITHIN=300
 
 ###############################################################################
@@ -163,8 +170,8 @@ PF_COLLAPSEWITHIN=300
 ###############################################################################
 
 # PLANEALERT: enable Plane-Alert feature and sub-page.
-# Note - PF_PLANEALERT is also supported for backward compatibility
-PLANEALERT=enabled
+# Allowed values: ON or OFF.
+PLANEALERT=ON
 # ---------------------------------------------------------------------
 # PA_TABLESIZE: default rows per page before pagination.
 PA_TABLESIZE=50
@@ -190,11 +197,15 @@ PF_ALERTLIST=https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/ma
 PF_ALERTHEADER='$ICAO,$Ident,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link'
 # ---------------------------------------------------------------------
 # PA_HISTTIME: number of days Plane-Alert items remain visible on the website.
-PA_HISTTIME=14
+PA_HISTTIME=30
 # ---------------------------------------------------------------------
 # PA_SILHOUETTES_LINK: URL to fetch silhouette icon pack updates.
 # Empty/omitted → default URL; set to OFF to disable updates.
-PA_SILHOUETTES_LINK=
+PA_SILHOUETTES_LINK="https://github.com/rikgale/VRSOperatorFlags/raw/main/TransparentDVSilhouettes.zip"
+# ---------------------------------------------------------------------
+# PA_OPERATORFLAGS_LINK: URL to fetch operator flags.
+# Empty/omitted → default URL; set to OFF to disable updates.
+PA_OPERATORFLAGS_LINK="https://github.com/rikgale/VRSOperatorFlags/raw/main/OperatorFlags.zip"
 # ---------------------------------------------------------------------
 # PA_TRACKSERVICE: map service used to render tracking links for Plane-Alert.
 # Examples: globe.adsbexchange.com, my.adsb.radar/tar1090, globe.airplanes.live.
@@ -207,26 +218,19 @@ PA_EXCLUSIONS=
 # ---------------------------------------------------------------------
 # PA_SHOW_STALE_PAGE: If set to true/on/enabled/1, http://xxx/plane-alert will show the old, stale plane-alert page.
 # If disabled or empty, http://xxx/plane-alert will redirect automatically to the new plane-alert page.
-# Default is empty (off), which means that the link will automatically redirect to the new page.
+# Default is OFF, which means that the link will automatically redirect to the new page.
 # Note - changes to this parameter only take effect upon container restart. If you still see the previous behavior
 #        after restarting the container, make sure to clear your browser cache as sometimes it remembers previous redirects.
-PA_SHOW_STALE_PAGE=
+PA_SHOW_STALE_PAGE=OFF
 # ---------------------------------------------------------------------
 # PA_COLLECT_CANDIDATES: enable automatic collection of potential Plane-Alert candidates
 # from socket30003 data.
-#   ON/true/enabled/1/yes  -> enabled
-#   OFF/false/disabled/0/no/empty -> disabled
+#   YES/true/enabled/1/on  -> enabled
+#   NO/false/disabled/0/off/empty -> disabled
 #
-# When enabled:
-# - Pattern definitions (ICAO and/or Callsign) are read from pa-candidates-filter.txt in your config directory
-# - Candidate output is written to plane-alert-candidates.txt in your config directory
-# - If you set PA_COLLECT_CANDIDATES_FILTER_FILE to a file name, it will read from that file 
-#   in your config directory instead of pa-candidates-filter.txt. (Note - provide only the file name, not a full path).
-#   Since the original pa-candidates-filter.txt file is regularly updated/overwritten when new builds are released, this
-#   enables you to maintain your own file that won't be affected by system updates.
-# - If you configure a filename in PA_COLLECT_CANDIDATES_LOG, it will log which filter match caused a specific plane to be
-#   added to plane-alert-candidates.txt. This is useful to finetune your filter settings if undesired planes get through.
-#   Leave this parameter empty to no longer log to this file.
+# When enabled, pattern definitions (ICAO and/or Callsign) are read from
+# pa-candidates-filter.txt and candidate output is written to plane-alert-candidates.txt
+# in your config directory.
 #
 # To auto-include generated candidates in your watchlist, append
 # plane-alert-candidates.txt to the end of your comma-separated alert list in the
@@ -236,8 +240,12 @@ PA_SHOW_STALE_PAGE=
 # then comment them out (by placing a # at the start of the line) instead of simply erasing them.
 # Aircraft that are commented out will not be added back in during subsequent observations and filter matches.
 #
-PA_COLLECT_CANDIDATES=ON
-PA_COLLECT_CANDIDATES_FILTER_FILE=
+PA_COLLECT_CANDIDATES=YES
+# Optional filename in your config directory to read candidate filters from,
+# instead of pa-candidates-filter.txt. Provide only a file name, not a full path.
+PA_COLLECT_CANDIDATES_FILTER_FILE=pa-candidates-filter.txt
+# Optional filename in your config directory for logging which filter match
+# caused a specific plane to be added. Leave empty to disable this logging.
 PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log
 
 ###############################################################################
@@ -250,7 +258,8 @@ NOTIF_DATEFORMAT="%F %T %Z"
 # ---------------------------------------------------------------------
 # PF_NOTIFEVERY: when true, send a notification for every qualifying occurrence.
 # Use cautiously, especially with PF_IGNOREDUPES unset (may produce many notifications).
-PF_NOTIFEVERY=false
+# Allowed values: ON or OFF. Default is OFF.
+PF_NOTIFEVERY=OFF
 # ---------------------------------------------------------------------
 # PF_NOTIF_MINTIME is the minimum wait time (in seconds) before a Planefence notification is sent, 
 # depending on the PF_NOTIF_BEHAVIOR setting. Default value is 0 (secs) - this means "immediately" when
@@ -259,17 +268,17 @@ PF_NOTIFEVERY=false
 # If PF_NOTIF_BEHAVIOR is "pre", then this wait time is measured from the first observation of the plane in the fence.
 # If PF_NOTIF_BEHAVIOR is "post", then this wait time is measured from the last observation of the plane in the fence.
 # The default for PF_NOTIF_BEHAVIOR (if omitted) is "post".
-PF_NOTIF_MINTIME=
-PF_NOTIF_BEHAVIOR=
+PF_NOTIF_MINTIME=0
+PF_NOTIF_BEHAVIOR=post
 # ---------------------------------------------------------------------
 # PF_ATTRIB / PA_ATTRIB: attribution string appended to notifications.
 PF_ATTRIB="#adsb #planefence by kx1t https://sdr-e.com/docker-planefence"
 PA_ATTRIB="#adsb #planefence #planealert by kx1t https://sdr-e.com/docker-planefence"
 # ---------------------------------------------------------------------
-# PF_SCREENSHOTURL: base URL of the screenshot service (default http://screenshot:5042).
+# Base URL of the screenshot service (default http://screenshot:5042).
 # Service must support GET /snap/<flight> returning PNG.
-# PF_SCREENSHOT_TIMEOUT: maximum wait (seconds) for screenshot generation.
-PF_SCREENSHOTURL=
+PF_SCREENSHOTURL=http://screenshot:5042
+# Maximum wait time in seconds for screenshot generation.
 PF_SCREENSHOT_TIMEOUT=45
 
 # Discord Notifications
@@ -304,102 +313,123 @@ PF_DISCORD_COLOR=0xf2e718
 # ---------------------------------------------------------------------
 # PF_MASTODON / PA_MASTODON: enable Mastodon notifications for PF / PA.
 # MASTODON_SERVER: server hostname (omit http[s]://). MASTODON_ACCESS_TOKEN: your app token.
-# Visibility: public, unlisted, or private. PA_MASTODON_MAXIMGS: max images per post.
+# Visibility: public, unlisted, or private.
 PF_MASTODON=OFF
 PA_MASTODON=OFF
-MASTODON_SERVER=airwaves.social
+MASTODON_SERVER=
 MASTODON_ACCESS_TOKEN=
 PF_MASTODON_VISIBILITY=unlisted
 PA_MASTODON_VISIBILITY=unlisted
-PA_MASTODON_MAXIMGS=1
 MASTODON_RETENTION_TIME=7
 
 # MQTT Delivery
 # ---------------------------------------------------------------------
 # If defined, PF/PA will publish observations to an MQTT broker over TCP (mqtt:// or mqtts://).
 #
-# CLIENT_ID: optional client identifier (no whitespace). Default: container hostname.
-# URL: mandatory broker host/IP or URL. If omitted, MQTT is disabled.
-# PORT: optional TCP port (default 1883).
-# TLS: set to enable TLS; unset for plaintext.
-# CAFILE: optional path to CA certificate file for self-signed broker certificates (Default: none).
-#         Note - files left in the config folder should use this path: /usr/share/planefence/persist/filename.cert
-# TLS_INSECURE: set to "true" to disable certificate verification (Default: false).
-# TOPIC: optional topic (default "<container-hostname>/planefence" or "<container-hostname>/plane-alert").
-# DATETIME_FORMAT: optional Linux date format (default "%s").
-# QOS: optional QoS level (default 0).
-# USERNAME/PASSWORD: optional basic auth credentials.
-#
-# URL format: mqtt[s]://[user:pass]@host[:port]/[topic] (topic optional). If both URL and individual params are set,
-# individual params take precedence. PF/PA_MQTT_FIELDS: empty → send all; else comma/space-separated fields to include.
+# PF_MQTT_URL: broker host/IP or URL for Planefence. Empty disables Planefence MQTT.
+# format: mqtt[s]://[user:pass]@host[:port]/[topic] (topic optional).
+# If both URL and individual params are set, individual params take precedence.
 PF_MQTT_URL=""
+# PF_MQTT_PORT: optional Planefence MQTT TCP port (default 1883).
 PF_MQTT_PORT=""
+# PF_MQTT_TLS: set to enable TLS for Planefence MQTT; unset for plaintext.
 PF_MQTT_TLS=""
+# PF_MQTT_CAFILE: optional CA certificate path for Planefence MQTT TLS.
+#                Certificates are provided by the user and saved in the mapped planefence config folder
 PF_MQTT_CAFILE=""
+# PF_MQTT_TLS_INSECURE: set to "true" to disable Planefence MQTT certificate verification.
 PF_MQTT_TLS_INSECURE=""
+# PF_MQTT_CLIENT_ID: optional Planefence MQTT client identifier (no whitespace).
 PF_MQTT_CLIENT_ID=""
+# PF_MQTT_TOPIC: optional Planefence MQTT topic (default "<container-hostname>/planefence").
 PF_MQTT_TOPIC=""
-PF_MQTT_DATETIME_FORMAT=""
-PF_MQTT_QOS=""
+# PF_MQTT_DATETIME_FORMAT: optional Linux date format for Planefence MQTT timestamps (default "%s").
+PF_MQTT_DATETIME_FORMAT="%s"
+# PF_MQTT_QOS: optional Planefence MQTT QoS level (default 0).
+PF_MQTT_QOS="0"
+# PF_MQTT_FIELDS: empty sends all fields; otherwise comma/space-separated fields to include.
 PF_MQTT_FIELDS=""
+# PF_MQTT_USERNAME: optional Planefence MQTT username.
 PF_MQTT_USERNAME=""
+# PF_MQTT_PASSWORD: optional Planefence MQTT password.
 PF_MQTT_PASSWORD=""
 
+# PA_MQTT_URL: broker host/IP or URL for Plane-Alert. Empty disables Plane-Alert MQTT.
 PA_MQTT_URL=""
+# PA_MQTT_PORT: optional Plane-Alert MQTT TCP port (default 1883).
 PA_MQTT_PORT=""
+# PA_MQTT_TLS: set to enable TLS for Plane-Alert MQTT; unset for plaintext.
 PA_MQTT_TLS=""
+# PA_MQTT_CAFILE: optional CA certificate path for Plane-Alert MQTT TLS.
+#                Certificates are provided by the user and saved in the mapped planefence config folder
 PA_MQTT_CAFILE=""
+# PA_MQTT_TLS_INSECURE: set to "true" to disable Plane-Alert MQTT certificate verification.
 PA_MQTT_TLS_INSECURE=""
+# PA_MQTT_CLIENT_ID: optional Plane-Alert MQTT client identifier (no whitespace).
 PA_MQTT_CLIENT_ID=""
+# PA_MQTT_TOPIC: optional Plane-Alert MQTT topic (default "<container-hostname>/plane-alert").
 PA_MQTT_TOPIC=""
-PA_MQTT_DATETIME_FORMAT=""
-PA_MQTT_QOS=""
+# PA_MQTT_DATETIME_FORMAT: optional Linux date format for Plane-Alert MQTT timestamps (default "%s").
+PA_MQTT_DATETIME_FORMAT="%s"
+# PA_MQTT_QOS: optional Plane-Alert MQTT QoS level (default 0).
+PA_MQTT_QOS="0"
+# PA_MQTT_FIELDS: empty sends all fields; otherwise comma/space-separated fields to include.
 PA_MQTT_FIELDS=""
+# PA_MQTT_USERNAME: optional Plane-Alert MQTT username.
 PA_MQTT_USERNAME=""
+# PA_MQTT_PASSWORD: optional Plane-Alert MQTT password.
 PA_MQTT_PASSWORD=""
 
 # RSS
 # ---------------------------------------------------------------------
-# RSS feeds require a site base URL for correct validation and links.
-# Leave empty to disable RSS.
+# PF_RSS_SITELINK: RSS feeds require a site base URL for correct validation and links.
+# Empty disables RSS.
 PF_RSS_SITELINK=""
+# PF_RSS_FAVICONLINK: Optional link to a Favicon for your PF RSS feed
 PF_RSS_FAVICONLINK=""
+# PA_RSS_SITELINK: RSS feeds require a site base URL for correct validation and links.
+# Empty disables RSS.
 PA_RSS_SITELINK=""
+# PA_RSS_FAVICONLINK: Optional link to a Favicon for your PA RSS feed
 PA_RSS_FAVICONLINK=""
 
 # BlueSky
 # ---------------------------------------------------------------------
 # Optional BlueSky notifications.
-# Enable by creating an App Password at https://bsky.app/settings/app-passwords and set BLUESKY_APP_PASSWORD
-# (format aaaa-bbbb-cccc-dddd). Set BLUESKY_HANDLE to your handle (value after '@', e.g., abcd.bsky.social).
-# PF_BLUESKY_ENABLED / PA_BLUESKY_ENABLED must be set to on/enabled/1/yes to start notifications.
-# BLUESKY_API can target a different federated server (default https://bsky.social/xrpc). Leave unset if unsure.
-BLUESKY_APP_PASSWORD=""
+# PF_BLUESKY_ENABLED: set to ON to start PF BSky notifications.
+PF_BLUESKY_ENABLED=OFF
+# PA_BLUESKY_ENABLED: set to ON to start PA BSky notifications.
+PA_BLUESKY_ENABLED=OFF
+# BLUESKY_HANDLE: your BSky handle (value after '@', e.g., abcd.bsky.social).
 BLUESKY_HANDLE=""
-PF_BLUESKY_ENABLED=""
-PA_BLUESKY_ENABLED=""
-# BLUESKY_API=""    # do not change unless you are sure that you know what you are doing!
+# BLUESKY_APP_PASSWORD: create an App Password at https://bsky.app/settings/app-passwords and enter it here
+# (format aaaa-bbbb-cccc-dddd). 
+BLUESKY_APP_PASSWORD=""
+# BLUESKY_API: use a different federated serve. Do not change unless you know what you are doing.
+BLUESKY_API="https://bsky.social/xrpc"    # do not change unless you are sure that you know what you are doing!
 #
 
 # TELEGRAM
 # ---------------------------------------------------------------------
 # Optional Telegram notifications.
 # See README-telegram.md for creating a Bot and channel.
-# [PA_|PF_]TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
-# PF_TELEGRAM_CHAT_ID / PA_TELEGRAM_CHAT_ID: numeric (private) or public name (e.g., @yourchannel).
-# PF_TELEGRAM_CHAT_TYPE / PA_TELEGRAM_CHAT_TYPE: when set to dm/private/user: send DM; no link retained.
-#                                                Leave this param empty or set to "normal" unless needed
+# TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
 # IMPORTANT: add your Bot as a channel Administrator (requires you being an Admin).
-# PF_TELEGRAM_ENABLED / PA_TELEGRAM_ENABLED must be on/enabled/1/yes/true to activate notifications.
 #
 # If you set the parameter without the PA_ or PF_ prefix, it will apply to both PA and PF. 
 # However, if you also set the PA_TELEGRAM_... or PF_TELEGRAM_..., that value will have preference
 TELEGRAM_BOT_TOKEN=""
+# Target Telegram chat for Planefence notifications: numeric ID (private) or public name (e.g., @yourchannel).
 PF_TELEGRAM_CHAT_ID=""
+# Target Telegram chat for Plane-Alert notifications: numeric ID (private) or public name (e.g., @yourchannel).
 PA_TELEGRAM_CHAT_ID=""
-PF_TELEGRAM_ENABLED=false
-PA_TELEGRAM_ENABLED=false
+# Set to ON to activate Planefence Telegram notifications.
+PF_TELEGRAM_ENABLED=OFF
+# Set to ON to activate Plane-Alert Telegram notifications.
+PA_TELEGRAM_ENABLED=OFF
+# Use dm/private/user for direct messages (no link retained); use normal for standard behavior.
 PF_TELEGRAM_CHAT_TYPE=normal
+# Use dm/private/user for direct messages (no link retained); use normal for standard behavior.
 PA_TELEGRAM_CHAT_TYPE=normal
 #
 # ---------------------------------------------------------------------

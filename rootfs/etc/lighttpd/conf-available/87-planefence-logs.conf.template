@@ -1,0 +1,16 @@
+# PF_WEBLOGS endpoint mapping to consolidated backend implementation.
+# Load this before 88-planefence-cgi.conf so this specific alias is matched
+# before the catch-all "/" alias.
+
+alias.url += (
+  "/cgi/logs.sh" => "/usr/share/planefence/logs.sh"
+)
+
+$HTTP["url"] =~ "^/cgi/logs\.sh$" {
+  cgi.assign = ( ".sh" => "/bin/bash" )
+  server.stream-response-body = 2
+  setenv.add-response-header += (
+    "Cache-Control" => "no-store",
+    "X-Content-Type-Options" => "nosniff"
+  )
+}

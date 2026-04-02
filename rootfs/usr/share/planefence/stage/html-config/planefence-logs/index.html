@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+  <title>Planefence Logs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --border: #334155;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220, var(--bg));
+      color: var(--text);
+    }
+    .container { max-width: 1320px; margin: 0 auto; padding: 20px; }
+    .panel { background: rgba(17,24,39,.92); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    h1 { margin: 0 0 6px; font-size: 1.45rem; }
+    .sub { color: var(--muted); margin-bottom: 10px; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin: 16px 0 0;
+      padding: 8px 8px 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      background: #0b1220;
+    }
+    .tab {
+      border: 1px solid var(--border);
+      border-bottom: none;
+      background: rgba(17,24,39,.95);
+      color: #dbeafe;
+      font-weight: 700;
+      border-radius: 10px 10px 0 0;
+      padding: 9px 14px;
+      transform: translateY(1px);
+    }
+    .tab-page {
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      background: rgba(17,24,39,.95);
+      padding: 12px;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: 220px 220px 1fr auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+    .filters label { font-size: .82rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    select, input[type="text"] {
+      width: 100%; border: 1px solid #475569; border-radius: 8px;
+      background: #0b1220; color: var(--text); padding: 8px;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .status-row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); margin-bottom: 8px; font-size: .86rem; }
+    .table-wrap {
+      margin-top: 2px;
+    }
+    .dt-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: .86rem;
+      flex-wrap: wrap;
+    }
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+      float: none !important;
+      margin: 0;
+    }
+    .dataTables_wrapper .dataTables_length label,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+      color: var(--muted) !important;
+    }
+    .dataTables_wrapper .dataTables_length select {
+      width: auto !important;
+      min-width: 78px;
+      display: inline-block;
+      margin: 0 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+      color: var(--text) !important;
+    }
+    .dataTables_wrapper .dataTables_scroll {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #020617;
+      overflow: hidden;
+    }
+    .dataTables_wrapper .dataTables_scrollHead {
+      border-bottom: 1px solid #1f2937;
+    }
+    .dataTables_wrapper .dataTables_scrollBody thead,
+    .dataTables_wrapper .dataTables_scrollBody thead tr,
+    .dataTables_wrapper .dataTables_scrollBody thead th,
+    .dataTables_wrapper .dt-scroll-body thead,
+    .dataTables_wrapper .dt-scroll-body thead tr,
+    .dataTables_wrapper .dt-scroll-body thead th,
+    .dt-container .dataTables_scrollBody thead,
+    .dt-container .dataTables_scrollBody thead tr,
+    .dt-container .dataTables_scrollBody thead th,
+    .dt-container .dt-scroll-body thead,
+    .dt-container .dt-scroll-body thead tr,
+    .dt-container .dt-scroll-body thead th {
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      line-height: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border: 0 !important;
+    }
+    .dt-container .dt-scroll-body .dt-scroll-sizing,
+    .dataTables_wrapper .dt-scroll-body .dt-scroll-sizing {
+      height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border: 0 !important;
+    }
+    .dataTables_wrapper .dataTables_scrollBody {
+      height: calc(100vh - 360px) !important;
+      max-height: calc(100vh - 360px) !important;
+      overflow-y: auto !important;
+      overflow-x: auto !important;
+    }
+    table.dataTable { color: #f8fafc !important; width: 100% !important; }
+    table.dataTable thead th { color: #dbeafe !important; background: #111827 !important; border-bottom-color: #334155 !important; }
+    table.dataTable tbody td,
+    table.dataTable tbody th { color: #f8fafc !important; border-bottom: 1px solid #1f2937 !important; background-color: #070d18 !important; }
+    table.dataTable.stripe > tbody > tr:nth-child(odd) > *,
+    table.dataTable.display > tbody > tr:nth-child(odd) > *,
+    table.dataTable > tbody > tr.odd > * { background-color: #04080f !important; }
+    table.dataTable.stripe > tbody > tr:nth-child(even) > *,
+    table.dataTable.display > tbody > tr:nth-child(even) > *,
+    table.dataTable > tbody > tr.even > * { background-color: #070d18 !important; }
+    table.dataTable > tbody > tr:hover > *,
+    table.dataTable.display > tbody > tr:hover > * { background-color: #0b1322 !important; }
+    .level-badge { font-weight: 700; }
+    .level-info { color: var(--ok); }
+    .level-warning, .level-warn { color: var(--warn); }
+    .level-error, .level-err, .level-fatal { color: var(--err); }
+    @media (max-width: 900px) {
+      .filters { grid-template-columns: 1fr; }
+      .dataTables_wrapper .dataTables_scrollBody {
+        height: calc(100vh - 420px) !important;
+        max-height: calc(100vh - 420px) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <h1>Planefence Logs</h1>
+      <div class="sub">Live container logs</div>
+
+      <div class="tabs">
+        <div class="tab">Container logs</div>
+      </div>
+
+      <div class="tab-page">
+        <div class="filters">
+          <div>
+            <label for="appFilter">Application</label>
+            <select id="appFilter"><option value="">All applications</option></select>
+          </div>
+          <div>
+            <label for="levelFilter">Level</label>
+            <select id="levelFilter"><option value="">All levels</option></select>
+          </div>
+          <div>
+            <label for="textFilter">Text search</label>
+            <input id="textFilter" type="text" placeholder="Search in log text" />
+          </div>
+          <div>
+            <button class="btn" id="clearFilters" type="button">Clear filters</button>
+            <button class="btn" id="downloadCsv" type="button">Download CSV</button>
+          </div>
+        </div>
+
+        <div class="status-row">
+          <div id="pollStatus">Connecting...</div>
+          <div id="scrollStatus">Auto-scroll: on</div>
+        </div>
+
+        <div class="table-wrap" id="logsScroll">
+          <table id="logsTable" class="display stripe" style="width:100%">
+            <thead>
+              <tr>
+                <th>Date time</th>
+                <th>Application</th>
+                <th>Log Level</th>
+                <th>Information</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net/js/dataTables.min.js"></script>
+  <script>
+    const state = {
+      table: null,
+      lastLine: 0,
+      autoScroll: true,
+      pollTimer: null,
+      appSet: new Set(),
+      levelSet: new Set(),
+      maxRows: 5000,
+      customFilterActive: false,
+      appFilter: '',
+      levelFilter: ''
+    };
+
+    function escHtml(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function parseLogLine(line){
+      const m = String(line || '').match(/^\[([^\]]+)\]\[([^\]]+)\]\s+\[([^\]]+)\]\s+(.*)$/);
+      if (!m) return null;
+      return {
+        dt: m[1],
+        app: m[2],
+        level: m[3],
+        info: m[4]
+      };
+    }
+
+    function levelHtml(level){
+      const lv = String(level || '').toLowerCase();
+      let cls = 'level-info';
+      if (lv === 'warn' || lv === 'warning') cls = 'level-warning';
+      if (lv === 'err' || lv === 'error' || lv === 'fatal') cls = 'level-fatal';
+      return `<span class="level-badge ${cls}">${escHtml(level)}</span>`;
+    }
+
+    function refreshFilterOptions(){
+      const app = document.getElementById('appFilter');
+      const level = document.getElementById('levelFilter');
+      const curApp = app.value;
+      const curLevel = level.value;
+
+      app.innerHTML = '<option value="">All applications</option>';
+      Array.from(state.appSet).sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v; app.appendChild(o);
+      });
+
+      level.innerHTML = '<option value="">All levels</option>';
+      Array.from(state.levelSet).sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v; level.appendChild(o);
+      });
+
+      app.value = curApp;
+      level.value = curLevel;
+    }
+
+    function applyFilters(){
+      state.appFilter = document.getElementById('appFilter').value;
+      state.levelFilter = document.getElementById('levelFilter').value;
+      const txt = document.getElementById('textFilter').value;
+      state.table.search(txt).draw(false);
+      if (state.autoScroll) scrollToLatest();
+    }
+
+    function atBottom(el){
+      if (!el) return true;
+      return (el.scrollHeight - el.scrollTop - el.clientHeight) < 16;
+    }
+
+    function getScrollElement(){
+      return document.querySelector('#logsTable_wrapper .dt-scroll-body')
+        || document.querySelector('#logsTable_wrapper .dataTables_scrollBody')
+        || document.getElementById('logsScroll');
+    }
+
+    function updateScrollIndicator(){
+      document.getElementById('scrollStatus').textContent = `Auto-scroll: ${state.autoScroll ? 'on' : 'off'}`;
+    }
+
+    function scrollToLatest(){
+      if (!state.table) return;
+      state.table.page('last').draw('page');
+      const forceBottom = (tries = 3) => {
+        const el = getScrollElement();
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+        if (tries > 0 && (el.scrollHeight - el.clientHeight - el.scrollTop) > 4) {
+          requestAnimationFrame(() => forceBottom(tries - 1));
+        }
+      };
+      requestAnimationFrame(() => forceBottom(3));
+    }
+
+    function maybeAutoScroll(){
+      if (!state.autoScroll) return;
+      scrollToLatest();
+    }
+
+    function csvEscape(value){
+      const s = String(value ?? '');
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    function toPlainText(html){
+      return String(html || '').replace(/<[^>]*>/g, '').trim();
+    }
+
+    function downloadFilteredCsv(){
+      const rows = state.table.rows({ search: 'applied' }).data().toArray();
+      const lines = ['Date time,Application,Log Level,Information'];
+      for (const r of rows) {
+        lines.push([
+          csvEscape(toPlainText(r[0])),
+          csvEscape(toPlainText(r[1])),
+          csvEscape(toPlainText(r[2])),
+          csvEscape(toPlainText(r[3]))
+        ].join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+      a.download = `planefence-logs-${stamp}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    async function pollLogs(){
+      const status = document.getElementById('pollStatus');
+      try {
+        const resp = await fetch(`/cgi/logs.sh?since=${state.lastLine}`, { cache: 'no-store' });
+        const text = await resp.text();
+        const totalRaw = resp.headers.get('X-Log-Total-Lines');
+        const total = Number(totalRaw || '0');
+
+        if (Number.isFinite(total) && total < state.lastLine) {
+          state.table.clear().draw(false);
+          state.lastLine = 0;
+          state.appSet.clear();
+          state.levelSet.clear();
+          refreshFilterOptions();
+        }
+
+        const lines = text.split('\n').map(x => x.trimEnd()).filter(Boolean);
+        const rows = [];
+        for (const line of lines) {
+          const p = parseLogLine(line);
+          if (!p) continue;
+          rows.push([p.dt, p.app, p.level, p.info]);
+          state.appSet.add(p.app);
+          state.levelSet.add(p.level);
+        }
+
+        if (rows.length) {
+          const dataRows = rows.map(r => [
+            escHtml(r[0]),
+            escHtml(r[1]),
+            levelHtml(r[2]),
+            escHtml(r[3])
+          ]);
+          state.table.rows.add(dataRows);
+
+          const count = state.table.rows().count();
+          if (count > state.maxRows) {
+            const toDelete = count - state.maxRows;
+            for (let i = 0; i < toDelete; i++) {
+              state.table.row(0).remove();
+            }
+          }
+
+          state.table.draw(false);
+          refreshFilterOptions();
+          scrollToLatest();
+        }
+
+        if (Number.isFinite(total) && total >= 0) {
+          state.lastLine = total;
+        }
+
+        status.textContent = `Connected. Last update: ${new Date().toLocaleTimeString()}`;
+      } catch (e) {
+        status.textContent = `Connection error: ${String(e)}`;
+      } finally {
+        state.pollTimer = setTimeout(pollLogs, 5000);
+      }
+    }
+
+    function init(){
+      state.table = $('#logsTable').DataTable({
+        dom: "<'dt-toolbar'li p>t",
+        order: [[0, 'asc']],
+        pageLength: 100,
+        deferRender: true,
+        autoWidth: false,
+        scrollY: 'calc(100vh - 360px)',
+        scrollCollapse: true,
+        columnDefs: [
+          { targets: 2, searchable: true, orderable: true },
+          { targets: 3, searchable: true, orderable: false }
+        ]
+      });
+
+      $.fn.dataTable.ext.search.push(function(_settings, data){
+        const app = state.appFilter;
+        const level = state.levelFilter;
+        const appOk = !app || data[1] === app;
+        const levelText = String(data[2] || '').replace(/<[^>]*>/g, '');
+        const levelOk = !level || levelText === level;
+        return appOk && levelOk;
+      });
+
+      document.getElementById('appFilter').addEventListener('change', () => { applyFilters(); state.table.draw(false); });
+      document.getElementById('levelFilter').addEventListener('change', () => { applyFilters(); state.table.draw(false); });
+      document.getElementById('textFilter').addEventListener('input', applyFilters);
+      document.getElementById('clearFilters').addEventListener('click', () => {
+        document.getElementById('appFilter').value = '';
+        document.getElementById('levelFilter').value = '';
+        document.getElementById('textFilter').value = '';
+        state.appFilter = '';
+        state.levelFilter = '';
+        state.table.search('').draw(false);
+        if (state.autoScroll) scrollToLatest();
+      });
+      document.getElementById('downloadCsv').addEventListener('click', downloadFilteredCsv);
+
+      const scroller = getScrollElement();
+      scroller.addEventListener('scroll', () => {
+        state.autoScroll = atBottom(scroller);
+        updateScrollIndicator();
+        if (state.autoScroll) scrollToLatest();
+      });
+
+      updateScrollIndicator();
+      pollLogs();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

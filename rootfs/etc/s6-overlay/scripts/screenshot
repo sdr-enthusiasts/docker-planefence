@@ -55,7 +55,6 @@ do
   endtime=$(date +%s)
   # [[ "$LOGLEVEL" != "ERROR" ]] && log_print INFO "Screenshot ran for $((endtime - starttime)) secs and will be running again at $(date -d @$(( starttime + LOOPTIME )) )." || true
   if (( starttime + LOOPTIME > endtime )); then
-      sleep $(( (starttime + LOOPTIME) - endtime )) &
+      sleep $(( (starttime + LOOPTIME) - endtime ))
   fi
-  wait
 done

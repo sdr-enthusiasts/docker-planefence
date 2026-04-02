@@ -1,4 +1,5 @@
 #!/command/with-contenv bash
+#shellcheck shell=bash
 
 # Exit abnormally for any error
 set -o pipefail

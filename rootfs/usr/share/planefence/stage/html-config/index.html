@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+  <title>Planefence Configuration</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220, var(--bg));
+      color: var(--text);
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .panel { background: rgba(17,24,39,.88); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    .sub { color: var(--muted); margin-bottom: 12px; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 16px 0 0;
+      padding: 8px 8px 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      background: #0b1220;
+      height: auto;
+      max-height: 56px;
+    }
+    .tab {
+      border: 1px solid var(--border);
+      border-bottom: none;
+      background: #1e293b;
+      color: var(--text);
+      border-radius: 10px 10px 0 0;
+      padding: 9px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transform: translateY(1px);
+    }
+    .tab.active {
+      background: rgba(17,24,39,.95);
+      color: #dbeafe;
+      font-weight: 700;
+      border-color: #64748b;
+    }
+    .tab-page {
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      background: rgba(17,24,39,.95);
+      padding: 16px;
+      margin-bottom: 6px;
+    }
+    .page-title { margin: 0 0 10px; font-size: 1.1rem; }
+    .subtabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1220;
+    }
+    .subtab {
+      border: 1px solid #475569;
+      background: #1f2937;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: .86rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .subtab.active {
+      border-color: #93c5fd;
+      background: #1e3a5f;
+      color: #dbeafe;
+    }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .field { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .label { font-weight: 700; margin-bottom: 6px; }
+    .desc { color: var(--muted); font-size: .92rem; line-height: 1.3rem; }
+    .desc p { margin: 0 0 8px; }
+    .desc p:last-child { margin-bottom: 0; }
+    .meta { margin-top: 8px; color: #cbd5e1; font-size: .85rem; }
+    input[type="text"], textarea, select {
+      width: 100%; margin-top: 8px; border: 1px solid #475569; border-radius: 8px;
+      background: #0b1220; color: var(--text); padding: 8px;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .multi-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn {
+      border: 1px solid var(--border); background: #0b1220; color: var(--text);
+      border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    }
+    .btn.primary { background: var(--accent); color: #04263d; border: none; font-weight: 700; }
+    .btn.good { background: var(--ok); color: #04240f; border: none; font-weight: 700; }
+    .actions { display: flex; gap: 8px; margin-top: 16px; }
+    .top-actions { margin: 0 0 12px; }
+    .msg { margin-top: 10px; font-size: .9rem; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: #fca5a5; }
+    .msg.warn { color: #fbbf24; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: .78rem; background: #0b1220; border: 1px solid var(--border); color: var(--muted); }
+    .intro { color: #cbd5e1; line-height: 1.45rem; }
+    .intro h3 { margin: 6px 0; }
+    .intro ol { margin: 8px 0 0 18px; padding: 0; }
+    .intro li { margin: 4px 0; }
+    .toast-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,0.55);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 10000;
+      padding-top: 24px;
+    }
+    .toast-backdrop.show { display: flex; }
+    .toast {
+      width: min(680px, calc(100vw - 24px));
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    }
+    .toast-title { font-weight: 700; margin-bottom: 8px; }
+    .toast-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .restore-list { display: grid; gap: 10px; }
+    .restore-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .restore-meta { color: var(--muted); font-size: .86rem; }
+    .restore-preview { display: grid; gap: 12px; }
+    .restore-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .restore-diff {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: auto;
+      max-height: 320px;
+      background: #0b1220;
+    }
+    .restore-diff table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .restore-diff th, .restore-diff td { border-bottom: 1px solid #334155; padding: 8px; vertical-align: top; }
+    .restore-diff th { position: sticky; top: 0; background: #111827; text-align: left; }
+    .restore-diff tr.changed { background: rgba(245, 158, 11, 0.12); }
+    .backup-raw {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #020617;
+      padding: 10px;
+      margin: 0;
+      overflow: auto;
+      max-height: 380px;
+      font-size: .84rem;
+      line-height: 1.35rem;
+    }
+    .raw-line-changed { background: rgba(56, 189, 248, 0.2); display: block; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <h1>Planefence Configuration</h1>
+      <div class="sub" id="instanceInfo">Loading...</div>
+      <div class="sub">Use the tabs to configure each section. Save writes planefence.config and creates a dated backup.</div>
+      <div class="sub" id="weblogsHint" style="display:none;">Click <a href="planefence-logs">here</a> to access the Planefence container logs.</div>
+      <div class="actions top-actions" id="actionsRow">
+        <button class="btn primary" id="saveBtn">Save</button>
+        <button class="btn" id="cancelBtn">Cancel</button>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="tab-page">
+        <h2 class="page-title" id="pageTitle"></h2>
+        <div id="fields" class="grid"></div>
+      </div>
+      <div id="message" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="toast-backdrop" id="cancelConfirmToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="cancelToastTitle" tabindex="-1">
+      <div class="toast-title" id="cancelToastTitle">Unsaved changes</div>
+      <div>Parameter values have changed. Are you sure you want to cancel?</div>
+      <div class="toast-actions">
+        <button class="btn" id="confirmCancelYes" type="button">Yes - Cancel</button>
+        <button class="btn primary" id="confirmCancelNo" type="button">No - Continue Editing</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-backdrop" id="portWarnToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="portWarnTitle" tabindex="-1">
+      <div class="toast-title" id="portWarnTitle">WARNING - LOSS OF WEB PAGE ACCESS</div>
+      <div id="portWarnBody"></div>
+      <div class="toast-actions">
+        <button class="btn" id="portWarnYes" type="button">YES</button>
+        <button class="btn primary" id="portWarnNo" type="button">NO</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-backdrop" id="unsavedForRestoreToast" aria-hidden="true">
+    <div class="toast" role="dialog" aria-modal="true" aria-labelledby="unsavedRestoreTitle" tabindex="-1">
+      <div class="toast-title" id="unsavedRestoreTitle">Unsaved changes</div>
+      <div>You have unsaved changes. Choose whether to Save changes (without container restart) or Cancel changes before opening this backup.</div>
+      <div class="toast-actions">
+        <button class="btn good" id="unsavedRestoreSave" type="button">Save changes</button>
+        <button class="btn" id="unsavedRestoreCancel" type="button">Cancel changes</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+let payload = null;
+let uiModel = null;
+let activeTab = 'intro';
+let activeSubtab = {};
+let draftValues = {};
+let baselineValues = {};
+let cancelConfirmResolver = null;
+let portWarnResolver = null;
+let unsavedForRestoreResolver = null;
+let restoreModel = {
+  backups: [],
+  selectedName: '',
+  preview: null,
+  loadingList: false,
+  loadingPreview: false,
+  restoring: false,
+};
+const RESTORE_TAB_ID = 'restore-old-config';
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function linkifyEscapedText(text){
+  const escaped = String(text || '');
+  const re = /(https?:\/\/[^\s<]+)/g;
+  return escaped.replace(re, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+}
+
+function formatDescriptionHtml(raw){
+  const text = String(raw || '').trim();
+  if (!text) return '<p>No description available.</p>';
+  const normalized = text
+    .replace(/\s+-\s+/g, '\n- ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\.\s+(?=[A-Z][a-z])/g, '.\n');
+  const chunks = normalized.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  return chunks.map(c => `<p>${linkifyEscapedText(esc(c))}</p>`).join('');
+}
+
+function valueToList(v, delimiter){
+  if (!String(v || '').trim()) return [''];
+  return String(v).split(delimiter || ',').map(x => x.trim()).filter(Boolean).concat(['']);
+}
+
+function getFieldInputId(name){ return `fld_${name}`; }
+
+function normalizeUiModel(data){
+  if (data && data.ui && Array.isArray(data.ui.tabs)) return data.ui;
+  // Fallback for older payloads
+  const tabs = (data.sections || []).map((s, idx) => ({
+    id: `section-${idx}`,
+    title: s.title,
+    description: '',
+    fields: s.fields || [],
+    subtabs: []
+  }));
+  return {
+    intro: {
+      title: 'Welcome to the Planefence Configuration Wizard',
+      paragraphs: [
+        'Use the tabs to configure planefence.config for this instance.',
+        'Save writes the config and creates a dated backup. Cancel reloads values from disk.'
+      ]
+    },
+    tabs
+  };
+}
+
+function initDraftValues(){
+  draftValues = {};
+  const walkFields = (fields) => {
+    (fields || []).forEach(f => { draftValues[f.name] = String(f.value ?? ''); });
+  };
+  (uiModel.tabs || []).forEach(t => {
+    walkFields(t.fields || []);
+    (t.subtabs || []).forEach(st => walkFields(st.fields || []));
+  });
+  baselineValues = Object.assign({}, draftValues);
+}
+
+function valuesDiffer(a, b){
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const k of keys) {
+    if (String((a || {})[k] ?? '') !== String((b || {})[k] ?? '')) return true;
+  }
+  return false;
+}
+
+function hasUnsavedChanges(){
+  captureCurrentTabValues();
+  return valuesDiffer(draftValues, baselineValues);
+}
+
+function resolveCancelConfirm(decision){
+  const popup = document.getElementById('cancelConfirmToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = cancelConfirmResolver;
+  cancelConfirmResolver = null;
+  if (r) r(Boolean(decision));
+}
+
+function showCancelConfirmToast(){
+  const popup = document.getElementById('cancelConfirmToast');
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    cancelConfirmResolver = resolve;
+  });
+}
+
+function resolvePortWarn(decision){
+  const popup = document.getElementById('portWarnToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = portWarnResolver;
+  portWarnResolver = null;
+  if (r) r(Boolean(decision));
+}
+
+function resolveUnsavedForRestore(decision){
+  const popup = document.getElementById('unsavedForRestoreToast');
+  popup.classList.remove('show');
+  popup.setAttribute('aria-hidden', 'true');
+  const r = unsavedForRestoreResolver;
+  unsavedForRestoreResolver = null;
+  if (r) r(decision);
+}
+
+function showUnsavedForRestoreToast(){
+  const popup = document.getElementById('unsavedForRestoreToast');
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    unsavedForRestoreResolver = resolve;
+  });
+}
+
+function showPortWarnToast(changedParams){
+  const popup = document.getElementById('portWarnToast');
+  const body = document.getElementById('portWarnBody');
+  const list = (changedParams || []).map(esc).join(', ');
+  body.innerHTML = `
+    <p>You are changing the xxx parameter(s). This change will take effect immediately upon saving. Since these are mapped to an external port in your Docker command or in docker-compose.yml, you WILL LOSE ACCESS TO THIS WEB PAGE until you update the port mapping in your Docker command or in docker-compose.yml.</p>
+    <p><strong>${list}</strong></p>
+    <p>Do you want to proceed?</p>
+  `;
+  popup.classList.add('show');
+  popup.setAttribute('aria-hidden', 'false');
+  const dialog = popup.querySelector('[role="dialog"]');
+  if (dialog) dialog.focus();
+  return new Promise(resolve => {
+    portWarnResolver = resolve;
+  });
+}
+
+document.addEventListener('keydown', (ev) => {
+  const popup = document.getElementById('cancelConfirmToast');
+  const portPopup = document.getElementById('portWarnToast');
+  const unsavedRestorePopup = document.getElementById('unsavedForRestoreToast');
+  const hasModalOpen =
+    (popup && popup.classList.contains('show')) ||
+    (portPopup && portPopup.classList.contains('show')) ||
+    (unsavedRestorePopup && unsavedRestorePopup.classList.contains('show'));
+  if (!hasModalOpen) return;
+  if (ev.key === 'Enter' || ev.key === 'Escape') {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+}, true);
+
+async function loadConfig(){
+  const res = await fetch('/cgi/config_api.php?action=load', { cache: 'no-store' });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Failed to load config');
+  payload = data;
+  uiModel = normalizeUiModel(data);
+  initDraftValues();
+  activeTab = 'intro';
+  activeSubtab = {};
+  render();
+}
+
+function getCurrentTabObj(){
+  if (!uiModel || !Array.isArray(uiModel.tabs)) return null;
+  return uiModel.tabs.find(t => t.id === activeTab) || null;
+}
+
+function getCurrentFields(){
+  const tab = getCurrentTabObj();
+  if (!tab) return [];
+  if (Array.isArray(tab.subtabs) && tab.subtabs.length > 0) {
+    const subId = activeSubtab[tab.id] || tab.subtabs[0].id;
+    const sub = tab.subtabs.find(s => s.id === subId) || tab.subtabs[0];
+    return sub.fields || [];
+  }
+  return tab.fields || [];
+}
+
+function captureCurrentTabValues(){
+  const fields = getCurrentFields();
+  fields.forEach(f => {
+    if (f.multi) {
+      const holder = document.getElementById(getFieldInputId(f.name));
+      if (!holder) return;
+      const vals = [...holder.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+      draftValues[f.name] = vals.join(f.delimiter || ',');
+    } else {
+      const el = document.getElementById(getFieldInputId(f.name));
+      if (!el) return;
+      draftValues[f.name] = String(el.value ?? '');
+    }
+  });
+}
+
+function switchTab(tabId){
+  captureCurrentTabValues();
+  activeTab = tabId;
+  if (tabId === RESTORE_TAB_ID) {
+    renderTabs();
+    renderPage();
+    ensureBackupList().catch(e => {
+      const msg = document.getElementById('message');
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    });
+    return;
+  }
+  renderTabs();
+  renderPage();
+}
+
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+
+  const intro = document.createElement('button');
+  intro.className = 'tab' + (activeTab === 'intro' ? ' active' : '');
+  intro.textContent = 'Welcome';
+  intro.onclick = () => switchTab('intro');
+  tabs.appendChild(intro);
+
+  (uiModel.tabs || []).forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (activeTab === t.id ? ' active' : '');
+    b.textContent = t.title || t.id;
+    b.onclick = () => switchTab(t.id);
+    tabs.appendChild(b);
+  });
+
+  const restore = document.createElement('button');
+  restore.className = 'tab' + (activeTab === RESTORE_TAB_ID ? ' active' : '');
+  restore.textContent = 'Restore old config';
+  restore.onclick = () => switchTab(RESTORE_TAB_ID);
+  tabs.appendChild(restore);
+}
+
+function formatBytes(bytes){
+  const b = Number(bytes || 0);
+  if (!Number.isFinite(b) || b <= 0) return '0 B';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function restoreRawHtml(lines, changedKeys){
+  const keys = new Set((changedKeys || []).map(String));
+  const out = [];
+  (lines || []).forEach(line => {
+    const txt = String(line ?? '');
+    const m = txt.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+    const isChanged = !!(m && keys.has(m[1]));
+    if (isChanged) {
+      out.push(`<span class="raw-line-changed">${esc(txt)}</span>`);
+    } else {
+      out.push(esc(txt));
+    }
+  });
+  return out.join('\n');
+}
+
+function renderRestoreList(box){
+  const wrap = document.createElement('div');
+  wrap.className = 'restore-list';
+  if (restoreModel.loadingList) {
+    wrap.innerHTML = '<div class="field"><div class="desc"><p>Loading backups...</p></div></div>';
+    box.appendChild(wrap);
+    return;
+  }
+  if (!Array.isArray(restoreModel.backups) || restoreModel.backups.length === 0) {
+    wrap.innerHTML = '<div class="field"><div class="desc"><p>No backups available.</p></div></div>';
+    box.appendChild(wrap);
+    return;
+  }
+
+  restoreModel.backups.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'restore-item';
+    row.innerHTML = `
+      <div>
+        <div><strong>${esc(b.displayTime || b.name)}</strong></div>
+        <div class="restore-meta">${esc(b.name)} · ${esc(formatBytes(b.size))}</div>
+      </div>
+    `;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn';
+    btn.textContent = 'View backup';
+    btn.onclick = () => openBackupPreview(b.name).catch(e => {
+      const msg = document.getElementById('message');
+      msg.className = 'msg err';
+      msg.textContent = e.message;
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+  box.appendChild(wrap);
+}
+
+function renderRestorePreview(box){
+  const p = restoreModel.preview;
+  if (!p) {
+    renderRestoreList(box);
+    return;
+  }
+
+  const changed = Array.isArray(p.changed) ? p.changed : [];
+  const preview = document.createElement('div');
+  preview.className = 'restore-preview';
+
+  const header = document.createElement('div');
+  header.className = 'restore-head';
+  header.innerHTML = `
+    <div>
+      <div><strong>${esc(p.backup?.displayTime || p.backup?.name || '')}</strong></div>
+      <div class="restore-meta">${esc(p.backup?.name || '')} · ${esc(formatBytes(p.backup?.size || 0))}</div>
+    </div>
+  `;
+  const actions = document.createElement('div');
+  const restoreBtn = document.createElement('button');
+  restoreBtn.type = 'button';
+  restoreBtn.className = 'btn good';
+  restoreBtn.textContent = restoreModel.restoring ? 'Restoring...' : 'Restore this version';
+  restoreBtn.disabled = restoreModel.restoring;
+  restoreBtn.onclick = () => restoreSelectedBackup().catch(e => {
+    const msg = document.getElementById('message');
+    msg.className = 'msg err';
+    msg.textContent = e.message;
+  });
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => {
+    restoreModel.selectedName = '';
+    restoreModel.preview = null;
+    renderPage();
+  };
+  actions.appendChild(restoreBtn);
+  actions.appendChild(cancelBtn);
+  header.appendChild(actions);
+  preview.appendChild(header);
+
+  const diff = document.createElement('div');
+  diff.className = 'restore-diff';
+  if (changed.length === 0) {
+    diff.innerHTML = '<table><thead><tr><th>Difference</th></tr></thead><tbody><tr><td>No value changes compared to current planefence.config.</td></tr></tbody></table>';
+  } else {
+    diff.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Current value</th><th>Backup value</th></tr>
+        </thead>
+        <tbody>
+          ${changed.map(row => `<tr class="changed"><td>${esc(row.key)}</td><td>${esc(row.currentValue)}</td><td>${esc(row.backupValue)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+  preview.appendChild(diff);
+
+  const raw = document.createElement('pre');
+  raw.className = 'backup-raw';
+  raw.innerHTML = restoreRawHtml(p.backupRawLines || [], p.changedKeys || []);
+  preview.appendChild(raw);
+
+  box.appendChild(preview);
+}
+
+async function ensureBackupList(){
+  if (restoreModel.loadingList) return;
+  restoreModel.loadingList = true;
+  renderPage();
+  try {
+    const res = await fetch('/cgi/config_api.php?action=backups', { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Unable to load backups');
+    restoreModel.backups = Array.isArray(data.backups) ? data.backups : [];
+  } finally {
+    restoreModel.loadingList = false;
+    renderPage();
+  }
+}
+
+async function resolveUnsavedBeforeBackupView(){
+  if (!hasUnsavedChanges()) return true;
+  const choice = await showUnsavedForRestoreToast();
+  if (choice === 'save') {
+    const saveOk = await saveConfig({ forceNoRestart: true, silentMessage: true });
+    return saveOk;
+  }
+  if (choice === 'cancel') {
+    await loadConfig();
+    return true;
+  }
+  return false;
+}
+
+async function openBackupPreview(name){
+  const proceed = await resolveUnsavedBeforeBackupView();
+  if (!proceed) return;
+  restoreModel.loadingPreview = true;
+  restoreModel.selectedName = name;
+  restoreModel.preview = null;
+  renderPage();
+  try {
+    const res = await fetch(`/cgi/config_api.php?action=preview_backup&name=${encodeURIComponent(name)}`, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Unable to preview backup');
+    restoreModel.preview = data;
+  } finally {
+    restoreModel.loadingPreview = false;
+    renderPage();
+  }
+}
+
+async function restoreSelectedBackup(){
+  const name = String(restoreModel.selectedName || restoreModel.preview?.backup?.name || '').trim();
+  if (!name) return;
+  restoreModel.restoring = true;
+  renderPage();
+  try {
+    const res = await fetch('/cgi/config_api.php?action=restore_backup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Restore failed');
+    window.alert('Configuration restore was successful. The page will now reload.');
+    window.location.reload();
+  } finally {
+    restoreModel.restoring = false;
+    renderPage();
+  }
+}
+
+function renderSubtabs(tab){
+  const wrap = document.createElement('div');
+  wrap.className = 'subtabs';
+  const list = tab.subtabs || [];
+  if (!activeSubtab[tab.id] && list.length) activeSubtab[tab.id] = list[0].id;
+  list.forEach(st => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'subtab' + (activeSubtab[tab.id] === st.id ? ' active' : '');
+    b.textContent = st.title || st.id;
+    b.onclick = () => {
+      captureCurrentTabValues();
+      activeSubtab[tab.id] = st.id;
+      renderPage();
+    };
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+function addMultiInput(holder, value){
+  const row = document.createElement('div');
+  row.className = 'multi-row';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = value || '';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn';
+  del.textContent = '−';
+  del.onclick = () => row.remove();
+  row.appendChild(inp);
+  row.appendChild(del);
+  holder.appendChild(row);
+}
+
+function renderFieldList(fields, host){
+  host.innerHTML = '';
+  if (!fields || fields.length === 0) {
+    host.innerHTML = '<div class="field"><div class="desc"><p>No parameters in this tab.</p></div></div>';
+    return;
+  }
+
+  fields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const description = f.description || '';
+    const example = f.example || '';
+    const defaultValueText = String(f.defaultValue ?? '').trim();
+    const metaParts = [];
+    if (defaultValueText !== '') {
+      metaParts.push(`Default: <strong>${esc(defaultValueText)}</strong>`);
+    }
+    if (example) {
+      metaParts.push(`Example: ${esc(example)}`);
+    }
+    const metaHtml = metaParts.length ? `<div class="meta">${metaParts.join(' · ')}</div>` : '';
+    wrap.innerHTML = `
+      <div class="label">${esc(f.label || f.name)} ${f.multi ? '<span class="pill">multi-value</span>' : ''}</div>
+      <div class="desc">${formatDescriptionHtml(description)}</div>
+      ${metaHtml}
+    `;
+
+    const fType = String(f.type || 'text').toLowerCase();
+    if (f.multi) {
+      const holder = document.createElement('div');
+      holder.id = getFieldInputId(f.name);
+      const parts = valueToList(draftValues[f.name] ?? f.value, f.delimiter || ',');
+      parts.forEach(v => addMultiInput(holder, v));
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn';
+      add.textContent = '+';
+      add.onclick = () => addMultiInput(holder, '');
+      wrap.appendChild(holder);
+      wrap.appendChild(add);
+    } else if (Array.isArray(f.options) && f.options.length) {
+      const sel = document.createElement('select');
+      sel.id = getFieldInputId(f.name);
+      const opts = new Set(f.options.map(o => String(o)));
+      const cur = String((draftValues[f.name] ?? f.value) ?? '');
+      if (!opts.has(cur)) opts.add(cur);
+      [...opts].forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v === '' ? '(empty)' : v;
+        if (v === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+      wrap.appendChild(sel);
+    } else if (fType === 'textarea') {
+      const ta = document.createElement('textarea');
+      ta.id = getFieldInputId(f.name);
+      ta.value = (draftValues[f.name] ?? f.value) ?? '';
+      wrap.appendChild(ta);
+    } else {
+      const input = document.createElement('input');
+      input.type = (fType === 'number' || fType === 'password') ? fType : 'text';
+      input.id = getFieldInputId(f.name);
+      input.value = (draftValues[f.name] ?? f.value) ?? '';
+      wrap.appendChild(input);
+    }
+    host.appendChild(wrap);
+  });
+}
+
+function renderPage(){
+  const titleEl = document.getElementById('pageTitle');
+  const box = document.getElementById('fields');
+
+  if (activeTab === 'intro') {
+    const introTitle = String(uiModel?.intro?.title || 'Welcome to the Planefence Configuration Wizard');
+    const paragraphs = Array.isArray(uiModel?.intro?.paragraphs) ? uiModel.intro.paragraphs : [];
+    titleEl.textContent = introTitle;
+    box.innerHTML = `<div class="intro field">${paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}</div>`;
+    return;
+  }
+
+  if (activeTab === RESTORE_TAB_ID) {
+    titleEl.textContent = 'Restore old config';
+    box.innerHTML = '';
+    if (restoreModel.loadingPreview) {
+      box.innerHTML = '<div class="field"><div class="desc"><p>Loading backup preview...</p></div></div>';
+      return;
+    }
+    if (restoreModel.preview) {
+      renderRestorePreview(box);
+      return;
+    }
+    renderRestoreList(box);
+    return;
+  }
+
+  const tab = getCurrentTabObj();
+  if (!tab) {
+    titleEl.textContent = 'Configuration';
+    box.innerHTML = '';
+    return;
+  }
+
+  titleEl.textContent = tab.title || 'Configuration';
+  box.innerHTML = '';
+  if (Array.isArray(tab.subtabs) && tab.subtabs.length > 0) {
+    box.appendChild(renderSubtabs(tab));
+  }
+  const fieldHost = document.createElement('div');
+  fieldHost.className = 'grid';
+  box.appendChild(fieldHost);
+  renderFieldList(getCurrentFields(), fieldHost);
+}
+
+function render(){
+  const instanceEl = document.getElementById('instanceInfo');
+  const weblogsHintEl = document.getElementById('weblogsHint');
+  const rawInstance = String(payload.instanceName ?? '').trim();
+  const normalized = rawInstance.replace(/^"|"$/g, '').trim();
+  const rawWeblogs = String((draftValues?.PF_WEBLOGS ?? payload?.values?.PF_WEBLOGS ?? '') ?? '').trim();
+  const normalizedWeblogs = rawWeblogs.replace(/^"|"$/g, '').trim().toLowerCase();
+  const showWeblogsHint = (normalizedWeblogs === '' || normalizedWeblogs === 'config');
+
+  if (!normalized || normalized.toUpperCase() === 'MY') {
+    instanceEl.style.display = 'none';
+    instanceEl.textContent = '';
+  } else {
+    instanceEl.style.display = '';
+    instanceEl.innerHTML = `Instance: <strong>${esc(normalized)}</strong>`;
+  }
+
+  if (weblogsHintEl) {
+    weblogsHintEl.style.display = showWeblogsHint ? '' : 'none';
+  }
+
+  renderTabs();
+  renderPage();
+}
+
+function collectValues(){
+  captureCurrentTabValues();
+  return Object.assign({}, draftValues);
+}
+
+function getRestartTriggerKeys(){
+  const keys = new Set();
+  const sections = Array.isArray(payload?.sections) ? payload.sections : [];
+  sections.forEach(section => {
+    const title = String(section?.title || '').trim().toLowerCase();
+    if (!title) return;
+    const isRequired = title.includes('required');
+    const isGeneral = title.includes('general');
+    if (!isRequired && !isGeneral) return;
+    (section.fields || []).forEach(field => {
+      const name = String(field?.name || '');
+      if (name) keys.add(name);
+    });
+  });
+  keys.add('PF_HTTP_PORT');
+  keys.add('PF_CONFIG_HTTP_PORT');
+  return keys;
+}
+
+function getChangedKeys(values){
+  const changed = [];
+  const keys = new Set([...Object.keys(baselineValues || {}), ...Object.keys(values || {})]);
+  keys.forEach(k => {
+    const before = String((baselineValues || {})[k] ?? '');
+    const after = String((values || {})[k] ?? '');
+    if (before !== after) changed.push(k);
+  });
+  return changed;
+}
+
+async function saveConfig(opts = {}){
+  const msg = document.getElementById('message');
+  const forceNoRestart = Boolean(opts.forceNoRestart);
+  const silentMessage = Boolean(opts.silentMessage);
+  if (!silentMessage) msg.className = 'msg';
+  const values = collectValues();
+
+  const changedPorts = ['PF_HTTP_PORT', 'PF_CONFIG_HTTP_PORT'].filter(k => {
+    const before = String((baselineValues || {})[k] ?? '');
+    const after = String((values || {})[k] ?? '');
+    return before !== after;
+  });
+  if (changedPorts.length > 0) {
+    const proceed = await showPortWarnToast(changedPorts);
+    if (!proceed) {
+      if (!silentMessage) {
+        msg.className = 'msg';
+        msg.textContent = 'Save canceled. Continue editing.';
+      }
+      return false;
+    }
+  }
+
+  const changedKeys = getChangedKeys(values);
+  const restartTriggerKeys = getRestartTriggerKeys();
+  const restartRequired = changedKeys.some(k => restartTriggerKeys.has(k));
+  let allowRestart = !forceNoRestart;
+  if (restartRequired && !forceNoRestart) {
+    allowRestart = window.confirm(
+      'Container Reboot Required\n\nPress OK to restart the container , or Cancel to continue without restarting.'
+    );
+  }
+
+  if (!silentMessage) msg.textContent = 'Saving...';
+  const res = await fetch('/cgi/config_api.php?action=save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values, allowRestart })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    msg.className = 'msg err';
+    msg.textContent = data.error || 'Save failed';
+    return false;
+  }
+  if (!silentMessage) {
+    msg.className = 'msg ok';
+    let okText = `Saved. Backup created: ${data.backupFile || 'OK'}`;
+    if (data.servicesRestarted) okText += ' Service restart triggered.';
+    if (data.restartSkipped) okText += ' Restart skipped by user.';
+    if (data.restartWarning) okText += ` ${data.restartWarning}`;
+    msg.textContent = okText;
+  }
+
+  if (restartRequired && allowRestart && data.servicesRestarted) {
+    window.alert('Container restarting\n\nPage will reload in 15 seconds');
+    setTimeout(() => {
+      window.location.reload();
+    }, 15000);
+    return true;
+  }
+
+  await loadConfig();
+  if (activeTab === RESTORE_TAB_ID) {
+    await ensureBackupList();
+  }
+  return true;
+}
+
+async function cancelChanges(){
+  const changed = hasUnsavedChanges();
+  if (changed) {
+    const yesCancel = await showCancelConfirmToast();
+    if (!yesCancel) {
+      const msg = document.getElementById('message');
+      msg.className = 'msg';
+      msg.textContent = 'Continue editing.';
+      return;
+    }
+  }
+  await loadConfig();
+  const msg = document.getElementById('message');
+  msg.className = 'msg';
+  msg.textContent = 'Changes canceled.';
+}
+
+document.getElementById('confirmCancelYes').onclick = () => resolveCancelConfirm(true);
+document.getElementById('confirmCancelNo').onclick = () => resolveCancelConfirm(false);
+document.getElementById('portWarnYes').onclick = () => resolvePortWarn(true);
+document.getElementById('portWarnNo').onclick = () => resolvePortWarn(false);
+document.getElementById('unsavedRestoreSave').onclick = () => resolveUnsavedForRestore('save');
+document.getElementById('unsavedRestoreCancel').onclick = () => resolveUnsavedForRestore('cancel');
+
+document.getElementById('saveBtn').onclick = () => saveConfig().catch(e => {
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+document.getElementById('cancelBtn').onclick = () => cancelChanges().catch(e => {
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+
+loadConfig().catch(e => {
+  document.getElementById('instanceInfo').textContent = 'Failed to load configuration';
+  const msg = document.getElementById('message');
+  msg.className = 'msg err';
+  msg.textContent = e.message;
+});
+</script>
+</body>
+</html>

@@ -17,7 +17,7 @@
     tr.row-incomplete .muted { color: inherit; opacity: .9; }
 
     /* Small “still updating” */
-    .still-updating { font-size: 0.85em; }s
+    .still-updating { font-size: 0.85em; }
 
     /* Override DataTables zebra to adapt to theme */
     table.dataTable.stripe tbody tr.odd,
@@ -108,6 +108,11 @@
     .station-info-card footer { margin-top: 1.5rem; border-top: 1px solid var(--soft); padding-top: 1rem; font-size: .9rem; }
     html.dark .station-info-card footer { border-color: rgba(255,255,255,0.1); }
     .station-info-card p { margin: .35rem 0; }
+    .insights-modal { position: fixed; inset: 0; background: rgba(0, 3, 12, 0.72); display: none; align-items: flex-start; justify-content: center; z-index: 1090; padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1rem 1.25rem; }
+    .insights-modal.open { display: flex; }
+    .insights-card { position: relative; background: var(--bg); color: var(--fg); border-radius: 1rem; width: min(1100px, 96vw); max-width: calc(100vw - 2rem); max-height: 92vh; overflow-y: auto; padding: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.08); }
+    html.dark .insights-card { border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.65); }
+    .insights-close { background: none; border: none; color: inherit; font-size: 1.5rem; position: absolute; top: max(.45rem, env(safe-area-inset-top, 0px) * 0.5); right: .6rem; cursor: pointer; padding: .25rem; line-height: 1; }
     .pa-candidates-link { font-weight: 600; text-decoration: underline; text-underline-offset: .15em; }
     .pa-candidates-overlay { position: absolute; inset: 0; background: rgba(0, 3, 12, 0.72); display: none; align-items: center; justify-content: center; border-radius: 1rem; z-index: 12; padding: 1rem; }
     .pa-candidates-overlay.open { display: flex; }
@@ -204,7 +209,6 @@
   img.thumb.thumb-photo { cursor: zoom-in; }
   /* Silhouette thumbnails: keep width same as thumb, preserve aspect ratio */
   img.thumb.thumb-sil { width: 56px; height: auto; max-height: 56px; object-fit: contain; }
-    .angle-img { height: 1em; vertical-align: -0.2em; margin-left: .25rem; }
   /* Position cell: give a little gap between coords and angle line */
   td.position-cell {
     display: flex;
@@ -418,6 +422,118 @@
   .pf-controls .pf-right .dataTables_paginate { margin: 0; }
   .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
   .header-actions button, .header-actions .btn { width: auto; min-width: 0; }
+  .insights-panel { margin: 0; background: var(--soft); border: 1px solid var(--muted); border-radius: .75rem; padding: .68rem .8rem; }
+  .insights-head { display: flex; align-items: baseline; justify-content: space-between; gap: .65rem; flex-wrap: wrap; margin-bottom: .45rem; }
+  .insights-title { margin: 0; font-size: 1rem; font-weight: 700; }
+  .insights-subtitle { color: var(--muted); font-size: .88rem; }
+  .insights-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; align-items: start; margin-top: .5rem; }
+  .insights-column { display: grid; gap: .5rem; align-content: start; }
+  .insights-block-wide { margin-top: .5rem; }
+  .insights-block-title { margin: 0 0 .35rem; font-size: .92rem; }
+  .insights-block { background: var(--bg); border: 1px solid var(--soft); border-radius: .65rem; padding: .6rem .65rem; }
+  html.dark .insights-block { border-color: rgba(255,255,255,0.08); }
+  .insights-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .4rem; margin-bottom: .45rem; }
+  .insight-kpi { background: var(--bg); border: 1px solid var(--soft); border-radius: .55rem; padding: .45rem .55rem; }
+  html.dark .insight-kpi { border-color: rgba(255,255,255,0.08); }
+  .insight-kpi .label { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  .insight-kpi .value { font-size: 1.05rem; font-weight: 700; }
+  .insights-trend-wrap { overflow-x: auto; }
+  .insights-trend-svg { min-width: 620px; width: 100%; height: 240px; display: block; }
+  .insights-trend-hit { cursor: pointer; }
+  .insights-chart-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .45rem; margin-bottom: .25rem; }
+  .insights-graph-shell { position: relative; }
+  .insights-chart-nav { position: absolute; inset: 0; pointer-events: none; }
+  .insights-chart-nav button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    min-height: 30px;
+    padding: .2rem .55rem;
+    font-size: .9rem;
+    pointer-events: auto;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border: 1px solid var(--soft);
+  }
+  .insights-chart-nav button:first-child { left: .35rem; }
+  .insights-chart-nav button:last-child { right: .35rem; }
+  .insights-hydration-status { margin-right: auto; font-size: .8rem; color: var(--muted); }
+  .insights-chart-range { font-size: .82rem; color: var(--muted); }
+  .insights-stacked-wrap { overflow-x: auto; margin-top: .3rem; }
+  .insights-stacked-svg { min-width: 620px; width: 100%; height: 160px; display: block; }
+  .insights-stacked-bar-hit { cursor: pointer; }
+  .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
+  .insights-stacked-legend-item { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
+  .insights-stacked-legend-swatch { width: .8rem; height: .8rem; border-radius: 2px; display: inline-block; }
+  .insights-stacked-bar-hit { cursor: pointer; }
+  .insights-stacked-legend { display: flex; flex-wrap: wrap; gap: .5rem .8rem; margin-top: .35rem; }
+  .insights-stacked-legend-item { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
+  .insights-stacked-legend-swatch { width: .8rem; height: .8rem; border-radius: 2px; display: inline-block; }
+  .insights-bullets { margin: 0; padding-left: 1rem; }
+  .insights-bullets li { margin: .3rem 0; }
+  .insights-mix { display: grid; gap: .35rem; }
+  .mix-row { display: grid; grid-template-columns: 96px 1fr 52px; gap: .45rem; align-items: center; }
+  .mix-section-title { margin: .35rem 0 .2rem; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .mix-label { font-size: .82rem; color: var(--muted); }
+  .mix-track { width: 100%; height: .62rem; background: var(--soft); border-radius: 999px; overflow: hidden; }
+  .mix-fill { height: 100%; border-radius: 999px; }
+  .mix-val { font-size: .82rem; text-align: right; }
+  .insights-subtypes { margin-top: .6rem; padding-top: .45rem; border-top: 1px solid var(--soft); }
+  html.dark .insights-subtypes { border-color: rgba(255,255,255,0.08); }
+  .insights-mini { font-size: .84rem; }
+  .insights-mini .mini-row { display: flex; align-items: center; justify-content: space-between; gap: .45rem; padding: .15rem 0; border-bottom: 1px dashed var(--soft); }
+  .insights-mini .mini-row:last-child { border-bottom: 0; }
+  .insights-mini .mini-key { color: var(--muted); }
+  .insights-mini .mini-val { text-align: right; }
+  .insights-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .insights-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .15rem .45rem; border-radius: 999px; border: 1px solid var(--soft); font-size: .76rem; }
+  .insights-badge.sev-high, .insights-badge.sev-exceptional { border-color: #b00020; color: #b00020; }
+  .insights-badge.sev-elevated { border-color: #ad6b00; color: #ad6b00; }
+  .insights-badge.sev-normal { border-color: #0a7d2d; color: #0a7d2d; }
+  .insights-hourly-wrap { overflow-x: auto; position: relative; }
+  .insights-hourly-svg { min-width: 620px; width: 100%; height: 220px; display: block; }
+  .insights-hourly-hit { cursor: pointer; }
+  .insights-hourly-tooltip {
+    position: absolute;
+    z-index: 6;
+    min-width: 180px;
+    max-width: 260px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--soft);
+    border-radius: .5rem;
+    box-shadow: 0 10px 26px rgba(0,0,0,.26);
+    padding: .42rem .55rem;
+    font-size: .8rem;
+    line-height: 1.35;
+  }
+  .insights-hourly-tooltip.open { opacity: 1; }
+  .insights-hourly-tooltip .tip-title { font-weight: 700; margin-bottom: .25rem; }
+  .insights-hourly-tooltip .tip-row { display: flex; justify-content: space-between; gap: .4rem; }
+  html.dark .insights-hourly-tooltip { border-color: rgba(255,255,255,0.12); box-shadow: 0 12px 28px rgba(0,0,0,.55); }
+  .insights-hourly-legend { display: flex; flex-wrap: wrap; gap: .45rem .9rem; margin-top: .3rem; font-size: .8rem; color: var(--muted); }
+  .insights-hourly-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+  .insights-hourly-legend-line { width: 1.2rem; height: 0; border-top: 3px solid transparent; display: inline-block; }
+  .insights-table-wrap { overflow: auto; margin-top: .65rem; }
+  .insights-table-title { margin: .55rem 0 .25rem; font-size: .92rem; }
+  .insights-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .insights-table tbody tr { cursor: pointer; }
+  .insights-table th, .insights-table td { padding: .35rem .45rem; border-bottom: 1px solid var(--soft); text-align: right; }
+  .insights-table th:first-child, .insights-table td:first-child { text-align: left; }
+  .insights-table tbody tr.is-selected td { background: color-mix(in srgb, var(--accent) 14%, var(--bg)); box-shadow: inset 0 0 0 1px var(--accent); }
+  .insights-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+  html.dark .insights-table th, html.dark .insights-table td { border-color: rgba(255,255,255,0.08); }
+  .insights-muted { color: var(--muted); font-size: .88rem; }
+  .severity-normal { color: #0a7d2d; }
+  .severity-elevated { color: #ad6b00; }
+  .severity-high { color: #b84800; }
+  .severity-exceptional { color: #b00020; font-weight: 700; }
+  .severity-elevated-low { color: #2b74b7; }
+  .severity-high-low { color: #185f9f; font-weight: 600; }
+  .severity-exceptional-low { color: #0d4f84; font-weight: 700; }
   .table-shell { overflow: auto; margin-top: .35rem; }
   .table-shell { scrollbar-width: none; -ms-overflow-style: none; }
   .table-shell::-webkit-scrollbar { width: 0; height: 0; }
@@ -487,6 +603,10 @@
     .pf-controls .pf-right { gap: .75rem; }
     .pf-controls .pf-right .dataTables_filter { width: 100%; }
     .pf-controls .pf-right .dataTables_filter input { width: 100%; }
+    .insights-columns { grid-template-columns: 1fr; }
+    .insights-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .insights-trend-svg { min-width: 540px; }
+    .insights-stacked-svg { min-width: 540px; }
     table#t { font-size: clamp(.88rem, 2.5vw, 1rem); }
     table#t thead th, table#t tbody td { white-space: normal; }
     table#t tbody td { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--soft); }
@@ -496,11 +616,13 @@
 
   @media (max-width: 640px) {
     .station-info-modal,
+    .insights-modal,
     .heatmap-modal,
     .photo-modal {
       padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
     }
     .station-info-card,
+    .insights-card,
     .heatmap-card,
     .photo-card {
       width: min(100%, calc(100vw - 1.5rem));
@@ -564,6 +686,7 @@
             </div>
             <button id="heatmapBtn" title="Show station heatmap" style="display:none;">Heatmap</button>
             <button id="stationInfoBtn" title="Show station information">Station Info</button>
+            <button id="insightsBtn" title="Show traffic insights">Insights</button>
             <button id="reload" title="Update data">Update</button>
             <button id="newUpdates" title="Show new updates" style="display:none; margin-left:.5rem;">New updates available</button>
           </div>
@@ -621,6 +744,103 @@
         <img id="photoModalImg" src="" alt="" loading="lazy">
       </div>
       <div id="photoModalCaption" class="photo-caption"></div>
+    </div>
+  </div>
+
+  <div id="insightsModal" class="insights-modal" role="dialog" aria-modal="true" aria-labelledby="insightsTitle" aria-hidden="true">
+    <div class="insights-card">
+      <button type="button" id="insightsClose" class="insights-close" aria-label="Close traffic insights">&times;</button>
+      <section id="insightsPanel" class="insights-panel" aria-live="polite">
+        <div class="insights-head">
+          <h2 id="insightsTitle" class="insights-title">Traffic Insights</h2>
+          <div id="insightsSubtitle" class="insights-subtitle">Loading analytics...</div>
+        </div>
+        <div id="insightsKpis" class="insights-kpis"></div>
+        <div class="insights-block insights-block-wide">
+          <h3 id="insightsStackedTitle" class="insights-block-title">Block Chart</h3>
+          <div class="insights-chart-toolbar">
+            <div id="insightsStackedHydrationStatus" class="insights-hydration-status" hidden></div>
+            <div id="insightsStackedRange" class="insights-chart-range"></div>
+          </div>
+          <div class="insights-graph-shell">
+            <div class="insights-chart-nav">
+              <button type="button" id="insightsStackedPrev" aria-label="Show previous 14 days">&#x2039;</button>
+              <button type="button" id="insightsStackedNext" aria-label="Show next 14 days">&#x203A;</button>
+            </div>
+            <div id="insightsStacked" class="insights-stacked-wrap"></div>
+          </div>
+          <div id="insightsBulletsWrap" class="insights-muted" style="margin-top:.55rem;"></div>
+        </div>
+        <div class="insights-block insights-block-wide">
+          <h3 id="insightsHourlyTitle" class="insights-block-title">Cumulative Hourly Aircraft Counts</h3>
+          <div id="insightsHourly" class="insights-hourly-wrap"></div>
+        </div>
+        <div class="insights-columns">
+          <div class="insights-column">
+            <div class="insights-block">
+              <h3 id="insightsCategoryTitle" class="insights-block-title">Category Mix</h3>
+              <div id="insightsMix" class="insights-mix"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsSubtypeTitle" class="insights-block-title">Military Mission Mix</h3>
+              <div id="insightsSubtypes" class="insights-mix"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsEnhancementsTitle" class="insights-block-title">Advanced Insights</h3>
+              <div id="insightsConfidence" class="insights-mini"></div>
+              <div id="insightsWeekday" class="insights-mini" style="margin-top:.45rem;"></div>
+              <div id="insightsNovel" class="insights-mini" style="margin-top:.45rem;"></div>
+              <div id="insightsAlerts" class="insights-mini" style="margin-top:.45rem;"></div>
+            </div>
+          </div>
+          <div class="insights-column">
+            <div class="insights-block">
+              <h3 id="insightsFlowTitle" class="insights-block-title">Directional Flow</h3>
+              <div id="insightsFlow" class="insights-mini"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsFamilyTitle" class="insights-block-title">Aircraft Family Trends</h3>
+              <div id="insightsFamilies" class="insights-mini"></div>
+            </div>
+            <div class="insights-block">
+              <h3 id="insightsOutlierTitle" class="insights-block-title">Outlier Spotlight</h3>
+              <div id="insightsOutliers" class="insights-mini"></div>
+            </div>
+          </div>
+        </div>
+        <h3 id="insightsTableTitle" class="insights-table-title">Date / Total / Types</h3>
+        <div class="insights-table-wrap">
+          <table class="insights-table" aria-label="Daily traffic summary">
+            <thead>
+              <tr>
+                <th id="insightsHeadDate">Date</th>
+                <th id="insightsHeadTotal">Total</th>
+                <th id="insightsHeadMilitary">Military</th>
+                <th id="insightsHeadGovernment">Government</th>
+                <th id="insightsHeadAirline">Airline</th>
+                <th id="insightsHeadPrivateJets">Private Jets</th>
+                <th id="insightsHeadGeneralAviation">General Aviation</th>
+                <th id="insightsHeadOther">Other</th>
+              </tr>
+            </thead>
+            <tbody id="insightsTableBody"></tbody>
+          </table>
+        </div>
+        <div id="insightsNovelOverlay" class="pa-candidates-overlay" role="dialog" aria-modal="true" aria-label="Aircraft never seen before" aria-hidden="true">
+          <div class="pa-candidates-card">
+            <button type="button" id="insightsNovelClose" class="pa-candidates-close" aria-label="Close list">&times;</button>
+            <p id="insightsNovelStatus" class="pa-candidates-status"></p>
+            <div class="pa-candidates-table-wrap">
+              <table class="pa-candidates-table" aria-label="Aircraft never seen before">
+                <thead>
+                  <tr id="insightsNovelHeadRow"></tr>
+                </thead>
+                <tbody id="insightsNovelBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -907,11 +1127,123 @@
   let prog, lastUpdateEl, nextUpdateEl, theadRow, reloadBtn, newUpdatesBtn, heatmapBtn;
   let stationHeadlineEl, stationHeadlineLink, stationMotdEl;
   let stationInfoBtn, stationInfoModal, stationInfoContentEl, stationInfoCloseBtn;
+  let insightsBtn, insightsModal, insightsCloseBtn;
   let paCandidatesOverlay, paCandidatesCloseBtn, paCandidatesBodyEl, paCandidatesStatusEl, paCandidatesHeadRowEl;
+  let insightsNovelOverlay, insightsNovelCloseBtn, insightsNovelBodyEl, insightsNovelStatusEl, insightsNovelHeadRowEl;
   let heatmapModal, heatmapFrame, heatmapCloseBtn, heatmapLoadingEl;
   let photoModal, photoModalImg, photoModalCloseBtn, photoModalCaption;
   let appVersionEl, footerYearEl;
   let historyButtonEl, historyMenuEl, historyControlEl;
+  let insightsPanelEl, insightsTitleEl, insightsSubtitleEl, insightsKpisEl, insightsTrendEl, insightsStackedEl, insightsBulletsWrapEl, insightsMixEl, insightsSubtypesEl, insightsTableBodyEl;
+  let insightsConfidenceEl, insightsWeekdayEl, insightsAlertsEl, insightsNovelEl, insightsHourlyEl, insightsFlowEl, insightsFamiliesEl, insightsOutliersEl;
+  let insightsStackedPrevBtn, insightsStackedNextBtn, insightsStackedRangeEl, insightsStackedHydrationStatusEl;
+  let insightsNovelRows = [];
+  const insightsCache = { key: '', data: null };
+  const insightsCacheByReqKey = new Map();
+  const insightsFetchPromises = new Map();
+  const insightsResolvedSelectedByDate = new Map();
+  let insightsLastFocus = null;
+  let insightsSelectedDateKey = null;
+  let insightsWindowStart = null;
+  let insightsRefreshTimer = null;
+  let insightsBaseLoadedDays = 0;
+  let insightsPendingWindowShiftPages = 0;
+  const INSIGHTS_CACHE_LIMIT = 60;
+  const INSIGHTS_WINDOW_DAYS = 14;
+  const INSIGHTS_DEBUG_LOG = !!(cfg && cfg.insightsDebug === true);
+  let insightsPerfSeq = 0;
+  const insightsPerfByDate = new Map();
+
+  function insightsNowMs(){
+    try {
+      if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') return performance.now();
+    } catch (e) { /* ignore */ }
+    return Date.now();
+  }
+
+  function insightsLog(eventName, data){
+    if (!INSIGHTS_DEBUG_LOG || typeof console === 'undefined' || !console.log) return;
+    const payload = data && typeof data === 'object' ? data : {};
+    console.log(`[insights:${eventName}]`, payload);
+  }
+
+  function beginInsightsPerf(dateKey, reason, extra){
+    const key = String(dateKey || 'unknown');
+    const token = {
+      id: ++insightsPerfSeq,
+      dateKey: key,
+      reason: String(reason || 'unknown'),
+      t0: insightsNowMs(),
+      renderMs: null,
+      cumulativeMs: null
+    };
+    insightsPerfByDate.set(key, token);
+    insightsLog('select', { id: token.id, date: key, reason: token.reason, ...(extra || {}) });
+    return token;
+  }
+
+  function currentInsightsPerf(dateKey){
+    return insightsPerfByDate.get(String(dateKey || '')) || null;
+  }
+
+  function payloadEnhancementDateMatches(payload, dateKey){
+    const want = String(dateKey || '');
+    if (!want) return false;
+    const got = String(payload?.selected?.date || payload?.selected_date || '');
+    return got === want;
+  }
+
+  function parseCutoffHms(value){
+    const s = String(value || '');
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(s)) return null;
+    const parts = s.split(':').map((n)=> Number(n));
+    const hh = parts[0];
+    const mm = parts[1];
+    const ss = parts[2] || 0;
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || !Number.isFinite(ss)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return null;
+    return (hh * 3600) + (mm * 60) + ss;
+  }
+
+  function insightsEnhancementQualityScore(payload, dateKey){
+    const p = payload || {};
+    let score = 0;
+    if (payloadEnhancementDateMatches(p, dateKey)) score += 8;
+    const cumulative = p?.enhancements?.hourly_profile?.cumulative_selected;
+    if (Array.isArray(cumulative) && cumulative.length >= 24) score += 5;
+    else if (Array.isArray(cumulative) && cumulative.length > 0) score += 2;
+    const tzOffsetMin = Number(p?.time_context?.selected_tz_offset_min);
+    if (Number.isFinite(tzOffsetMin)) score += 2;
+    const isPartial = p?.baselines?.selected_is_today_partial === true;
+    if (isPartial) score += 3;
+    const cutoffSec = parseCutoffHms(p?.baselines?.selected_cutoff_hms_tz || p?.baselines?.selected_cutoff_hms_utc);
+    if (cutoffSec != null) score += 3;
+    if (p?._deferEnhancementsDate) score -= 20;
+    return score;
+  }
+
+  function shouldPreferResolvedEnhancements(incomingPayload, resolvedPayload, selectedDate){
+    if (!incomingPayload || !resolvedPayload || !selectedDate) return false;
+    const resolvedDate = String(resolvedPayload?.selected_date || resolvedPayload?.selected?.date || '');
+    if (resolvedDate !== String(selectedDate)) return false;
+    const incomingScore = insightsEnhancementQualityScore(incomingPayload, selectedDate);
+    const resolvedScore = insightsEnhancementQualityScore(resolvedPayload, selectedDate);
+    return resolvedScore > incomingScore;
+  }
+
+  function markInsightsRenderComplete(dateKey, details){
+    const token = currentInsightsPerf(dateKey);
+    if (!token || token.renderMs != null) return;
+    token.renderMs = Math.round((insightsNowMs() - token.t0) * 10) / 10;
+    insightsLog('render-complete', { id: token.id, date: token.dateKey, ms: token.renderMs, ...(details || {}) });
+  }
+
+  function markInsightsCumulativeComplete(dateKey, details){
+    const token = currentInsightsPerf(dateKey);
+    if (!token || token.cumulativeMs != null) return;
+    token.cumulativeMs = Math.round((insightsNowMs() - token.t0) * 10) / 10;
+    insightsLog('cumulative-complete', { id: token.id, date: token.dateKey, ms: token.cumulativeMs, ...(details || {}) });
+  }
 
   function stationInfoTemplate(){
     const stationLink = `<a href="{{stationUrl}}" target="_blank" rel="noreferrer noopener">{{stationName}}</a>`;
@@ -1014,6 +1346,10 @@ ${messagesDesc}
     let modeAvailabilityUpdateInProgress = false;
     let fatalConfigErrorShown = false;
     let planeAlertRedirectInProgress = false;
+    let setupRequirementChecked = false;
+    let setupRequirementInProgress = false;
+    let setupRequired = false;
+    let setupConfigUrl = '';
 
     function parseBooleanLike(raw){
       if (raw === true || raw === 1) return true;
@@ -1089,6 +1425,70 @@ ${messagesDesc}
         }
       }
       try { document.title = t('fatalConfig.title', {}, 'Planefence Configuration Error'); } catch (e) { /* ignore */ }
+    }
+
+    function showSetupRequiredPage(configUrl){
+      if (fatalConfigErrorShown) return;
+      fatalConfigErrorShown = true;
+      try { stopStreamReader(); } catch (e) { /* ignore */ }
+      try { stopPollingLoop(); } catch (e) { /* ignore */ }
+
+      const body = document.body;
+      if (!body) return;
+      body.classList.remove('modal-open');
+
+      const hideSelectors = ['header', 'main', '#privacyBanner', '#stationInfoModal', '#heatmapModal', '#photoModal'];
+      hideSelectors.forEach((sel) => {
+        try {
+          const el = document.querySelector(sel);
+          if (el) el.style.display = 'none';
+        } catch (e) { /* ignore */ }
+      });
+
+      let panel = document.getElementById('pfConfigErrorPage');
+      if (!panel) {
+        panel = document.createElement('main');
+        panel.id = 'pfConfigErrorPage';
+        panel.style.maxWidth = '54rem';
+        panel.style.margin = '2rem auto';
+        panel.style.padding = '0 1rem';
+        panel.innerHTML = `
+          <h1>Planefence Setup Required</h1>
+          <p>This Planefence instance has not been fully configured yet.</p>
+          <p>Please open the configuration page and complete setup:</p>
+          <p><a href="${escapeHtml(configUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(configUrl || 'Configuration URL unavailable')}</a></p>
+        `;
+        const footer = document.querySelector('body > footer#pageFooter');
+        if (footer && footer.parentNode === body) {
+          body.insertBefore(panel, footer);
+        } else {
+          body.appendChild(panel);
+        }
+      }
+      try { document.title = 'Planefence Setup Required'; } catch (e) { /* ignore */ }
+    }
+
+    function checkSetupRequirement(){
+      if (setupRequirementChecked || setupRequirementInProgress) return;
+      setupRequirementInProgress = true;
+      fetch('/cgi/config_status.php', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((payload) => {
+          setupRequirementChecked = true;
+          setupRequired = !!(payload && payload.setupRequired);
+          setupConfigUrl = payload && payload.configUrl ? payload.configUrl : '';
+          setupRequirementInProgress = false;
+          if (setupRequired) {
+            showSetupRequiredPage(setupConfigUrl);
+            return;
+          }
+          restartDataPipelines();
+        })
+        .catch(() => {
+          setupRequirementChecked = true;
+          setupRequirementInProgress = false;
+          restartDataPipelines();
+        });
     }
 
     function enforceModeAvailability(){
@@ -1233,6 +1633,22 @@ ${messagesDesc}
       }
     }
 
+    function pageFromQuery(){
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const raw = params.get('page');
+        if (!raw) return null;
+        const normalized = raw.trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === 'info') return 'info';
+        if (normalized === 'heatmap') return 'heatmap';
+        if (normalized === 'insights') return 'insights';
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     function isPlanefenceRequestedInQuery(){
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -1253,6 +1669,8 @@ ${messagesDesc}
       safeSetItem(DATA_MODE_KEY, presetMode);
     }
     let dataMode = presetMode || currentDataMode();
+    const initialPageRequest = pageFromQuery();
+    let initialPageRequestHandled = !initialPageRequest;
     function isPlaneAlertMode(){
       return dataMode === DATA_MODES.PLANE_ALERT;
     }
@@ -1269,6 +1687,7 @@ ${messagesDesc}
       if (heading) heading.textContent = isPlaneAlertMode()
         ? t('header.planeAlertTitle', {}, 'Plane-Alert')
         : t('header.planefenceTitle', {}, 'Planefence');
+      updateInsightsTriggerButton();
       const body = document.body;
       if (body) {
         body.classList.toggle('mode-plane-alert', isPlaneAlertMode());
@@ -1277,6 +1696,7 @@ ${messagesDesc}
       applyDataModeAvailabilityUI();
       updateHistorySupport();
       updateHeatmapButtonState();
+      updateInsightsStaticText();
     }
     applyDataModeUI();
     let modeGeneration = 0;
@@ -1294,6 +1714,93 @@ ${messagesDesc}
         const qs = params.toString();
         return qs ? `${base}?${qs}` : base;
       }
+    function insightsFullDays(){
+      return 120;
+    }
+    function insightsFastDays(){
+      return Math.min(14, insightsFullDays());
+    }
+    function buildInsightsUrl(mode, dateKey, daysOverride){
+      const base = './cgi/insights.sh';
+      const params = new URLSearchParams();
+      params.set('mode', mode === DATA_MODES.PLANE_ALERT ? 'plane-alert' : 'planefence');
+      params.set('date', dateKey || 'today');
+      const days = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+      params.set('days', String(days));
+      params.set('ts', String(Date.now()));
+      return `${base}?${params.toString()}`;
+    }
+    function insightsRequestKey(mode, dateKey, daysOverride){
+      const days = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+      return `${mode || dataMode}:${dateKey || 'today'}:${days}`;
+    }
+    function getCachedInsights(reqKey){
+      return insightsCacheByReqKey.get(reqKey) || null;
+    }
+    function rememberInsightsCache(reqKey, data){
+      if (!reqKey || !data) return;
+      if (insightsCacheByReqKey.has(reqKey)) insightsCacheByReqKey.delete(reqKey);
+      insightsCacheByReqKey.set(reqKey, data);
+      while (insightsCacheByReqKey.size > INSIGHTS_CACHE_LIMIT) {
+        const oldest = insightsCacheByReqKey.keys().next();
+        if (oldest && !oldest.done) insightsCacheByReqKey.delete(oldest.value);
+        else break;
+      }
+    }
+    function seedSelectedDateCacheAlias(mode, requestedDays, payload){
+      const selectedDate = String(payload?.selected?.date || payload?.selected_date || '');
+      if (!/^\d{6}$/.test(selectedDate)) return;
+      const aliasKey = insightsRequestKey(mode, selectedDate, requestedDays);
+      rememberInsightsCache(aliasKey, payload);
+      insightsLog('seed-selected-alias', { selectedDate, requestedDays, aliasKey });
+    }
+    function scheduleInsightsRefresh(generation, dateKey, daysOverride){
+      if (insightsRefreshTimer) {
+        clearTimeout(insightsRefreshTimer);
+        insightsRefreshTimer = null;
+      }
+      insightsRefreshTimer = setTimeout(() => {
+        insightsRefreshTimer = null;
+        if (generation !== modeGeneration) return;
+        const refreshDays = Number.isFinite(Number(daysOverride)) ? Number(daysOverride) : insightsFullDays();
+        insightsLog('schedule-refresh', { date: dateKey, days: refreshDays, generation });
+        loadInsights(generation, { dateKey, background: true, days: refreshDays });
+      }, 80);
+    }
+    function prefetchInsightsDate(generation, dateKey){
+      if (!/^\d{6}$/.test(String(dateKey || ''))) return;
+      const prefetchDays = isDateInRecentWindow(dateKey, insightsFastDays()) ? insightsFastDays() : insightsFullDays();
+      const reqKey = insightsRequestKey(dataMode, dateKey, prefetchDays);
+      if (insightsCache.key === reqKey || getCachedInsights(reqKey) || insightsFetchPromises.has(reqKey)) return;
+      const modeForRun = dataMode;
+      const prefetchPromise = (async () => {
+        const resp = await fetch(buildInsightsUrl(modeForRun, dateKey, prefetchDays), { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`Insights endpoint failed (${resp.status})`);
+        const payload = await resp.json();
+        if (payload && payload.error) throw new Error(String(payload.error));
+        return payload;
+      })();
+      insightsFetchPromises.set(reqKey, prefetchPromise);
+      prefetchPromise
+        .then((data) => {
+          insightsFetchPromises.delete(reqKey);
+          if (generation !== modeGeneration) return;
+          rememberInsightsCache(reqKey, data);
+        })
+        .catch((e) => {
+          insightsFetchPromises.delete(reqKey);
+          console.warn('insights prefetch failed', dateKey, e);
+        });
+    }
+    function prefetchAdjacentInsightsDates(generation, centerDateKey){
+      const centerDate = parseDateKeyUtc(centerDateKey);
+      if (!centerDate) return;
+      for (const delta of [-1, 1]) {
+        const d = new Date(centerDate);
+        d.setUTCDate(centerDate.getUTCDate() + delta);
+        prefetchInsightsDate(generation, dateKeyFromDateUtc(d));
+      }
+    }
     function currentStreamUrl(){
       return buildStreamUrl(dataMode);
     }
@@ -1380,11 +1887,19 @@ ${messagesDesc}
     stationInfoModal = document.getElementById('stationInfoModal');
     stationInfoContentEl = document.getElementById('stationInfoContent');
     stationInfoCloseBtn = document.getElementById('stationInfoClose');
+    insightsBtn = document.getElementById('insightsBtn');
+    insightsModal = document.getElementById('insightsModal');
+    insightsCloseBtn = document.getElementById('insightsClose');
     paCandidatesOverlay = document.getElementById('paCandidatesOverlay');
     paCandidatesCloseBtn = document.getElementById('paCandidatesClose');
     paCandidatesBodyEl = document.getElementById('paCandidatesBody');
     paCandidatesStatusEl = document.getElementById('paCandidatesStatus');
     paCandidatesHeadRowEl = document.getElementById('paCandidatesHeadRow');
+    insightsNovelOverlay = document.getElementById('insightsNovelOverlay');
+    insightsNovelCloseBtn = document.getElementById('insightsNovelClose');
+    insightsNovelBodyEl = document.getElementById('insightsNovelBody');
+    insightsNovelStatusEl = document.getElementById('insightsNovelStatus');
+    insightsNovelHeadRowEl = document.getElementById('insightsNovelHeadRow');
     heatmapModal = document.getElementById('heatmapModal');
     heatmapFrame = document.getElementById('heatmapFrame');
     heatmapCloseBtn = document.getElementById('heatmapClose');
@@ -1398,11 +1913,27 @@ ${messagesDesc}
     historyButtonEl = document.getElementById('historyButton');
     historyMenuEl = document.getElementById('historyMenu');
     historyControlEl = document.getElementById('historyControl');
+    insightsPanelEl = document.getElementById('insightsPanel');
+    insightsTitleEl = document.getElementById('insightsTitle');
+    insightsSubtitleEl = document.getElementById('insightsSubtitle');
+    insightsKpisEl = document.getElementById('insightsKpis');
+    insightsTrendEl = document.getElementById('insightsTrend');
+    insightsStackedEl = document.getElementById('insightsStacked');
+    insightsBulletsWrapEl = document.getElementById('insightsBulletsWrap');
+    insightsMixEl = document.getElementById('insightsMix');
+    insightsSubtypesEl = document.getElementById('insightsSubtypes');
+    insightsTableBodyEl = document.getElementById('insightsTableBody');
+    insightsNovelEl = document.getElementById('insightsNovel');
     if (footerYearEl) footerYearEl.textContent = String(new Date().getFullYear());
 
     // Wire up interactive controls immediately so they respond even while data loads.
     stationInfoBtn?.addEventListener('click', openStationInfoModal);
     stationInfoCloseBtn?.addEventListener('click', closeStationInfoModal);
+    insightsBtn?.addEventListener('click', openInsightsModal);
+    insightsCloseBtn?.addEventListener('click', closeInsightsModal);
+    insightsModal?.addEventListener('click', (ev) => {
+      if (ev.target === insightsModal) closeInsightsModal();
+    });
     stationInfoModal?.addEventListener('click', (ev) => {
       if (ev.target === stationInfoModal) closeStationInfoModal();
     });
@@ -1410,11 +1941,21 @@ ${messagesDesc}
     paCandidatesOverlay?.addEventListener('click', (ev) => {
       if (ev.target === paCandidatesOverlay) closePaCandidatesOverlay();
     });
+    insightsNovelCloseBtn?.addEventListener('click', closeInsightsNovelOverlay);
+    insightsNovelOverlay?.addEventListener('click', (ev) => {
+      if (ev.target === insightsNovelOverlay) closeInsightsNovelOverlay();
+    });
     stationInfoContentEl?.addEventListener('click', (ev) => {
       const trigger = ev.target && ev.target.closest ? ev.target.closest('[data-action="open-pa-candidates"]') : null;
       if (!trigger) return;
       ev.preventDefault();
       openPaCandidatesOverlay();
+    });
+    insightsPanelEl?.addEventListener('click', (ev) => {
+      const trigger = ev.target && ev.target.closest ? ev.target.closest('[data-action="open-insights-novel-list"]') : null;
+      if (!trigger) return;
+      ev.preventDefault();
+      openInsightsNovelOverlay();
     });
     heatmapBtn?.addEventListener('click', openHeatmapModal);
     heatmapCloseBtn?.addEventListener('click', closeHeatmapModal);
@@ -1479,6 +2020,9 @@ ${messagesDesc}
         ? t('status.loadingPlaneAlert', {}, 'Loading Plane-Alert...')
         : t('status.loading', {}, 'Loading...');
     }).catch((e) => console.error('i18n init failed', e));
+
+    // Apply optional ?page= deep-link once controls are wired.
+    tryApplyInitialPageRequest().catch((e) => console.warn('initial page request failed', e));
   }, { once: true });
 
   const stationInfoState = {
@@ -1650,6 +2194,7 @@ ${messagesDesc}
     }
     if (heatmapBtn) { heatmapBtn.textContent = t('actions.heatmap', {}, 'Heatmap'); heatmapBtn.title = t('actions.heatmap.title', {}, 'Show station heatmap'); }
     if (stationInfoBtn) { stationInfoBtn.textContent = t('actions.stationInfo', {}, 'Station Info'); stationInfoBtn.title = t('actions.stationInfo.title', {}, 'Show station information'); }
+    updateInsightsTriggerButton();
     if (reloadBtn) { reloadBtn.textContent = t('actions.reload', {}, 'Update'); reloadBtn.title = t('actions.reload.title', {}, 'Update data'); }
     if (newUpdatesBtn) { newUpdatesBtn.textContent = t('actions.newUpdates', {}, 'New updates available'); newUpdatesBtn.title = t('actions.newUpdates.title', {}, 'Show new updates'); }
     if (nextUpdateEl) nextUpdateEl.textContent = t('status.nextUpdate', { value: t('status.placeholder', {}, '--') }, 'Next update: --');
@@ -1663,14 +2208,31 @@ ${messagesDesc}
     if (heatmapCloseBtn) heatmapCloseBtn.setAttribute('aria-label', t('heatmap.modal.close', {}, 'Close heatmap'));
     if (photoModal) photoModal.setAttribute('aria-label', t('photo.modal.label', {}, 'Aircraft photo'));
     if (photoModalCloseBtn) photoModalCloseBtn.setAttribute('aria-label', t('photo.modal.close', {}, 'Close photo'));
+    if (insightsModal) insightsModal.setAttribute('aria-label', t('insights.modal.label', {}, 'Traffic insights'));
+    if (insightsCloseBtn) insightsCloseBtn.setAttribute('aria-label', t('insights.modal.close', {}, 'Close traffic insights'));
+    if (insightsNovelOverlay) insightsNovelOverlay.setAttribute('aria-label', t('insights.enhancements.newAircraft.modalLabel', {}, 'Aircraft never seen before'));
+    if (insightsNovelCloseBtn) insightsNovelCloseBtn.setAttribute('aria-label', t('insights.enhancements.newAircraft.close', {}, 'Close list'));
     if (stationInfoCloseBtn) stationInfoCloseBtn.setAttribute('aria-label', t('stationInfo.close', {}, 'Close station information'));
     if (paCandidatesOverlay) paCandidatesOverlay.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.modalLabel', {}, 'Plane-Alert candidates'));
     if (paCandidatesCloseBtn) paCandidatesCloseBtn.setAttribute('aria-label', t('stationInfo.planeAlert.candidates.close', {}, 'Close list'));
     renderPaCandidatesHeader();
+    renderInsightsNovelHeader();
+    updateInsightsStaticText();
     const languageSelector = document.getElementById('languageSelector');
     if (languageSelector) languageSelector.setAttribute('aria-label', t('language.selector.aria', {}, 'Language selector'));
     renderLanguageSelector();
     updatePrivacyBannerTexts();
+  }
+
+  function updateInsightsTriggerButton(){
+    if (!insightsBtn) return;
+    const isPa = isPlaneAlertMode();
+    insightsBtn.textContent = isPa
+      ? t('insights.button.pa', {}, 'Insights PA')
+      : t('insights.button.pf', {}, 'Insights PF');
+    insightsBtn.title = isPa
+      ? t('insights.button.pa.title', {}, 'Show Plane-Alert traffic insights')
+      : t('insights.button.pf.title', {}, 'Show Planefence traffic insights');
   }
 
   function setupPrivacyBanner(){
@@ -1782,6 +2344,9 @@ ${messagesDesc}
     if (heatmapState.dateStr !== dateStr) { heatmapState.dateStr = dateStr; changed = true; }
     if (!Object.is(heatmapState.zoom, zoomLevel)) { heatmapState.zoom = zoomLevel; changed = true; }
     if (changed) updateHeatmapButtonState(); else if (heatmapBtn) heatmapBtn.disabled = !isHeatmapDataReady() || isPlaneAlertMode();
+    if (!initialPageRequestHandled && initialPageRequest === 'heatmap') {
+      tryApplyInitialPageRequest().catch(()=>{});
+    }
   }
 
   function buildStationMapHtml() {
@@ -1933,7 +2498,9 @@ ${messagesDesc}
     if (!heatmapModal) return;
     heatmapModal.classList.remove('open');
     heatmapModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!stationInfoModal?.classList.contains('open') && !insightsModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (heatmapFrame) {
       heatmapFrame.srcdoc = '';
     }
@@ -1966,7 +2533,9 @@ ${messagesDesc}
     if (!photoModal) return;
     photoModal.classList.remove('open');
     photoModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!stationInfoModal?.classList.contains('open') && !insightsModal?.classList.contains('open') && !heatmapModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (photoModalImg) photoModalImg.src = '';
     if (photoModalLastFocus && typeof photoModalLastFocus.focus === 'function') {
       photoModalLastFocus.focus({ preventScroll: true });
@@ -2079,6 +2648,70 @@ ${messagesDesc}
     paCandidatesOverlay.setAttribute('aria-hidden', 'true');
     if (paCandidatesBodyEl) paCandidatesBodyEl.innerHTML = '';
     if (paCandidatesStatusEl) paCandidatesStatusEl.textContent = '';
+  }
+
+  function normalizeInsightsNovelRow(row) {
+    const obj = row && typeof row === 'object' ? row : {};
+    return {
+      icao: String(obj.icao || obj.ICAO || '').trim().toUpperCase(),
+      callsign: String(obj.callsign || '').trim(),
+      tail: String(obj.tail || obj.registration || '').trim(),
+      operator: String(obj.operator || obj.owner || '').trim(),
+      type: String(obj.type || obj.model || '').trim(),
+      category: String(obj.category || '').trim()
+    };
+  }
+
+  function renderInsightsNovelHeader() {
+    if (!insightsNovelHeadRowEl) return;
+    const icaoLabel = escapeHtml(t('table.headers.icao', {}, 'ICAO'));
+    const callsignLabel = escapeHtml(t('table.headers.callsign', {}, 'Callsign'));
+    const tailLabel = escapeHtml(t('table.headers.tail', {}, 'Tail'));
+    const operatorLabel = escapeHtml(t('table.headers.operator', {}, 'Operator'));
+    const typeLabel = escapeHtml(t('table.headers.type', {}, 'Type'));
+    const categoryLabel = escapeHtml(insightsText('table.category', {}, 'Category'));
+    insightsNovelHeadRowEl.innerHTML = `<th>${icaoLabel}</th><th>${callsignLabel}</th><th>${tailLabel}</th><th>${operatorLabel}</th><th>${typeLabel}</th><th>${categoryLabel}</th>`;
+  }
+
+  function renderInsightsNovelRows(rows) {
+    if (!insightsNovelBodyEl) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      insightsNovelBodyEl.innerHTML = `<tr><td class="muted" colspan="6">${escapeHtml(insightsText('enhancements.newAircraft.empty', {}, 'No never-seen-before aircraft for this date.'))}</td></tr>`;
+      return;
+    }
+
+    const html = rows.map((raw) => {
+      const row = normalizeInsightsNovelRow(raw);
+      const icao = escapeHtml(row.icao || '--');
+      const callsign = escapeHtml(row.callsign || '--');
+      const tail = escapeHtml(row.tail || '--');
+      const oper = escapeHtml(row.operator || '--');
+      const type = escapeHtml(row.type || '--');
+      const category = escapeHtml(row.category ? insightsText(`category.${row.category}`, {}, row.category) : '--');
+      return `<tr><td class="mono">${icao}</td><td>${callsign}</td><td>${tail}</td><td>${oper}</td><td>${type}</td><td>${category}</td></tr>`;
+    }).join('');
+
+    insightsNovelBodyEl.innerHTML = html;
+  }
+
+  function openInsightsNovelOverlay() {
+    if (!insightsNovelOverlay) return;
+    renderInsightsNovelHeader();
+    insightsNovelOverlay.classList.add('open');
+    insightsNovelOverlay.setAttribute('aria-hidden', 'false');
+    renderInsightsNovelRows(insightsNovelRows);
+    if (insightsNovelStatusEl) {
+      insightsNovelStatusEl.textContent = insightsText('enhancements.newAircraft.count', { count: insightsNovelRows.length }, `${insightsNovelRows.length} aircraft`);
+    }
+    insightsNovelCloseBtn?.focus({ preventScroll: true });
+  }
+
+  function closeInsightsNovelOverlay() {
+    if (!insightsNovelOverlay) return;
+    insightsNovelOverlay.classList.remove('open');
+    insightsNovelOverlay.setAttribute('aria-hidden', 'true');
+    if (insightsNovelBodyEl) insightsNovelBodyEl.innerHTML = '';
+    if (insightsNovelStatusEl) insightsNovelStatusEl.textContent = '';
   }
 
   function thumbnailTargetData(target) {
@@ -2552,16 +3185,77 @@ ${messagesDesc}
     stationInfoCloseBtn?.focus({ preventScroll: true });
   }
 
+  function openInsightsModal() {
+    if (!insightsModal) return;
+    const todayKey = dateKeyFromDateUtc(utcToday());
+    insightsSelectedDateKey = todayKey;
+    insightsWindowStart = null;
+    insightsLastFocus = document.activeElement;
+    insightsModal.classList.add('open');
+    insightsModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    insightsCloseBtn?.focus({ preventScroll: true });
+    // Opening Insights should always reset to today and pull a fresh snapshot,
+    // then hydrate full history in the background for charts and selectors.
+    loadInsights(modeGeneration, { dateKey: 'today', background: false, days: insightsFastDays(), forceRefresh: true });
+    loadInsights(modeGeneration, { dateKey: 'today', background: true, days: insightsFullDays(), forceRefresh: true });
+  }
+
+  function closeInsightsModal() {
+    if (!insightsModal) return;
+    closeInsightsNovelOverlay();
+    insightsModal.classList.remove('open');
+    insightsModal.setAttribute('aria-hidden', 'true');
+    if (!stationInfoModal?.classList.contains('open') && !heatmapModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
+    if (insightsLastFocus && typeof insightsLastFocus.focus === 'function') {
+      insightsLastFocus.focus({ preventScroll: true });
+    }
+    insightsLastFocus = null;
+  }
+
   function closeStationInfoModal() {
     if (!stationInfoModal) return;
     closePaCandidatesOverlay();
     stationInfoModal.classList.remove('open');
     stationInfoModal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    if (!insightsModal?.classList.contains('open') && !heatmapModal?.classList.contains('open') && !photoModal?.classList.contains('open')) {
+      document.body.classList.remove('modal-open');
+    }
     if (stationInfoLastFocus && typeof stationInfoLastFocus.focus === 'function') {
       stationInfoLastFocus.focus({ preventScroll: true });
     }
     stationInfoLastFocus = null;
+  }
+
+  async function tryApplyInitialPageRequest(){
+    if (initialPageRequestHandled || !initialPageRequest) return;
+    if (!document.body) return;
+
+    if (initialPageRequest === 'heatmap' && isPlaneAlertMode()) {
+      // In Plane-Alert mode, ignore heatmap page requests and stay on main view.
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'info') {
+      openStationInfoModal();
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'insights') {
+      openInsightsModal();
+      initialPageRequestHandled = true;
+      return;
+    }
+
+    if (initialPageRequest === 'heatmap') {
+      if (!isHeatmapDataReady()) return;
+      openHeatmapModal();
+      initialPageRequestHandled = true;
+    }
   }
 
   function getGlobalValue(globals, key) {
@@ -2646,10 +3340,1606 @@ ${messagesDesc}
     }
   }
 
+  function fmtDateKeyHuman(key){
+    if (!key || String(key).length !== 6) return String(key || '--');
+    if (key === toYYMMDD(utcToday())) return insightsText('actions.today', {}, 'Today');
+    const y = Number(String(key).slice(0,2));
+    const m = Number(String(key).slice(2,4));
+    const d = Number(String(key).slice(4,6));
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return String(key);
+    const dt = new Date(Date.UTC(2000 + y, m - 1, d));
+    try {
+      return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(dt);
+    } catch (e) {
+      return `${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${2000 + y}`;
+    }
+  }
+
+  function severityClass(sev, deltaPct){
+    const s = String(sev || 'normal').toLowerCase();
+    const d = Number(deltaPct);
+    const isLower = Number.isFinite(d) && d < 0;
+    if (s === 'exceptional') return isLower ? 'severity-exceptional-low' : 'severity-exceptional';
+    if (s === 'high') return isLower ? 'severity-high-low' : 'severity-high';
+    if (s === 'elevated') return isLower ? 'severity-elevated-low' : 'severity-elevated';
+    return 'severity-normal';
+  }
+
+  function pctText(v){
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '--';
+    const sign = n > 0 ? '+' : '';
+    return `${sign}${n.toFixed(1)}%`;
+  }
+
+  function insightsText(key, params, fallback){
+    return t(`insights.${key}`, params || {}, fallback);
+  }
+
+  function insightSeverityLabel(sev){
+    const s = String(sev || 'normal').toLowerCase();
+    return insightsText(`severity.${s}`, {}, s);
+  }
+
+  function insightSeverityDirectionLabel(sev, deltaPct){
+    const s = String(sev || 'normal').toLowerCase();
+    const d = Number(deltaPct);
+    if (s === 'normal' || !Number.isFinite(d) || d === 0) {
+      return insightsText('severity.nearBaseline', {}, 'near baseline');
+    }
+    const dir = d > 0 ? 'above' : 'below';
+    if (s === 'elevated') return insightsText(`severity.elevated.${dir}`, {}, `moderately ${dir} baseline`);
+    if (s === 'high') return insightsText(`severity.high.${dir}`, {}, `significantly ${dir} baseline`);
+    if (s === 'exceptional') return insightsText(`severity.exceptional.${dir}`, {}, `extremely ${dir} baseline`);
+    return insightsText('severity.nearBaseline', {}, 'near baseline');
+  }
+
+  function niceAxisMax(maxValue){
+    const v = Number(maxValue);
+    if (!Number.isFinite(v) || v <= 0) return 25;
+    const rough = v * 1.05;
+    return Math.ceil(rough / 25) * 25;
+  }
+
+  function computeInsightsSharedScaleMax(displaySeries, hourlyProfile){
+    const barMax = Array.isArray(displaySeries) && displaySeries.length
+      ? Math.max(...displaySeries.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1)
+      : 1;
+    const selected = Array.isArray(hourlyProfile?.cumulative_selected) ? hourlyProfile.cumulative_selected : [];
+    const baseline = Array.isArray(hourlyProfile?.cumulative_baseline_median) ? hourlyProfile.cumulative_baseline_median : [];
+    const hourlyMax = (selected.length || baseline.length)
+      ? Math.max(...selected, ...baseline, 1)
+      : 1;
+    return niceAxisMax(Math.max(barMax, hourlyMax, 1));
+  }
+
+  function updateInsightsStaticText(){
+    const stackedTitleEl = document.getElementById('insightsStackedTitle');
+    const categoryTitleEl = document.getElementById('insightsCategoryTitle');
+    const subtypeTitleEl = document.getElementById('insightsSubtypeTitle');
+    const enhancementsTitleEl = document.getElementById('insightsEnhancementsTitle');
+    const hourlyTitleEl = document.getElementById('insightsHourlyTitle');
+    const flowTitleEl = document.getElementById('insightsFlowTitle');
+    const familyTitleEl = document.getElementById('insightsFamilyTitle');
+    const outlierTitleEl = document.getElementById('insightsOutlierTitle');
+    const tableTitleEl = document.getElementById('insightsTableTitle');
+    const headDateEl = document.getElementById('insightsHeadDate');
+    const headTotalEl = document.getElementById('insightsHeadTotal');
+    const headMilitaryEl = document.getElementById('insightsHeadMilitary');
+    const headGovernmentEl = document.getElementById('insightsHeadGovernment');
+    const headAirlineEl = document.getElementById('insightsHeadAirline');
+    const headPrivateJetsEl = document.getElementById('insightsHeadPrivateJets');
+    const headGeneralAviationEl = document.getElementById('insightsHeadGeneralAviation');
+    const headOtherEl = document.getElementById('insightsHeadOther');
+    const stackedPrevEl = document.getElementById('insightsStackedPrev');
+    const stackedNextEl = document.getElementById('insightsStackedNext');
+
+    if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
+      ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
+      : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
+    if (insightsSubtitleEl && !insightsCache.data) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+    if (stackedTitleEl) stackedTitleEl.textContent = insightsText('stackedChartTitle', {}, 'Block Chart');
+    if (categoryTitleEl) categoryTitleEl.textContent = insightsText('categoryMixTitle', {}, 'Category Mix');
+    if (subtypeTitleEl) subtypeTitleEl.textContent = insightsText('subtypeMixTitle', {}, 'Military Mission Mix');
+    if (enhancementsTitleEl) enhancementsTitleEl.textContent = insightsText('enhancements.title', {}, 'Advanced Insights');
+    if (hourlyTitleEl) hourlyTitleEl.textContent = insightsText('enhancements.hourly.title', {}, 'Cumulative Hourly Aircraft Counts');
+    if (flowTitleEl) flowTitleEl.textContent = insightsText('enhancements.flow.title', {}, 'Directional Flow');
+    if (familyTitleEl) familyTitleEl.textContent = insightsText('enhancements.family.title', {}, 'Aircraft Family Trends');
+    if (outlierTitleEl) outlierTitleEl.textContent = insightsText('enhancements.outlier.title', {}, 'Outlier Spotlight');
+    if (tableTitleEl) tableTitleEl.textContent = insightsText('table.title', {}, 'Date / Total / Types');
+    if (headDateEl) headDateEl.textContent = insightsText('table.date', {}, 'Date');
+    if (headTotalEl) headTotalEl.textContent = insightsText('table.total', {}, 'Total');
+    if (headMilitaryEl) headMilitaryEl.textContent = insightsText('table.military', {}, 'Military');
+    if (headGovernmentEl) headGovernmentEl.textContent = insightsText('table.government', {}, 'Government');
+    if (headAirlineEl) headAirlineEl.textContent = insightsText('table.airline', {}, 'Airline');
+    if (headPrivateJetsEl) headPrivateJetsEl.textContent = insightsText('table.private_jets', {}, 'Private Jets');
+    if (headGeneralAviationEl) headGeneralAviationEl.textContent = insightsText('table.general_aviation', {}, 'General Aviation');
+    if (headOtherEl) headOtherEl.textContent = insightsText('table.other', {}, 'Other');
+    if (stackedPrevEl) { const txt = insightsText('nav.prev', {}, 'Show previous 14 days'); stackedPrevEl.title = txt; stackedPrevEl.setAttribute('aria-label', txt); }
+    if (stackedNextEl) { const txt = insightsText('nav.next', {}, 'Show next 14 days'); stackedNextEl.title = txt; stackedNextEl.setAttribute('aria-label', txt); }
+  }
+
+  function ensureInsightsRefs(){
+    insightsPanelEl = insightsPanelEl || document.getElementById('insightsPanel');
+    insightsTitleEl = insightsTitleEl || document.getElementById('insightsTitle');
+    insightsSubtitleEl = insightsSubtitleEl || document.getElementById('insightsSubtitle');
+    insightsKpisEl = insightsKpisEl || document.getElementById('insightsKpis');
+    insightsTrendEl = insightsTrendEl || document.getElementById('insightsTrend');
+    insightsStackedEl = insightsStackedEl || document.getElementById('insightsStacked');
+    insightsBulletsWrapEl = insightsBulletsWrapEl || document.getElementById('insightsBulletsWrap');
+    insightsMixEl = insightsMixEl || document.getElementById('insightsMix');
+    insightsSubtypesEl = insightsSubtypesEl || document.getElementById('insightsSubtypes');
+    insightsTableBodyEl = insightsTableBodyEl || document.getElementById('insightsTableBody');
+    insightsConfidenceEl = insightsConfidenceEl || document.getElementById('insightsConfidence');
+    insightsWeekdayEl = insightsWeekdayEl || document.getElementById('insightsWeekday');
+    insightsAlertsEl = insightsAlertsEl || document.getElementById('insightsAlerts');
+    insightsNovelEl = insightsNovelEl || document.getElementById('insightsNovel');
+    insightsHourlyEl = insightsHourlyEl || document.getElementById('insightsHourly');
+    insightsFlowEl = insightsFlowEl || document.getElementById('insightsFlow');
+    insightsFamiliesEl = insightsFamiliesEl || document.getElementById('insightsFamilies');
+    insightsOutliersEl = insightsOutliersEl || document.getElementById('insightsOutliers');
+    insightsStackedPrevBtn = insightsStackedPrevBtn || document.getElementById('insightsStackedPrev');
+    insightsStackedNextBtn = insightsStackedNextBtn || document.getElementById('insightsStackedNext');
+    insightsStackedRangeEl = insightsStackedRangeEl || document.getElementById('insightsStackedRange');
+    insightsStackedHydrationStatusEl = insightsStackedHydrationStatusEl || document.getElementById('insightsStackedHydrationStatus');
+  }
+
+  function updateInsightsHydrationStatus(show){
+    if (!insightsStackedHydrationStatusEl) return;
+    if (show) {
+      const mobile = !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+      insightsStackedHydrationStatusEl.hidden = false;
+      insightsStackedHydrationStatusEl.textContent = mobile
+        ? insightsText('loadingShort', {}, 'Loading...')
+        : insightsText('loadingAdditionalData', {}, 'Loading additional data...');
+      return;
+    }
+    insightsStackedHydrationStatusEl.hidden = true;
+    insightsStackedHydrationStatusEl.textContent = '';
+  }
+
+  function parseDateKeyUtc(key){
+    if (!/^\d{6}$/.test(String(key || ''))) return null;
+    const y = Number(String(key).slice(0,2));
+    const m = Number(String(key).slice(2,4));
+    const d = Number(String(key).slice(4,6));
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    return new Date(Date.UTC(2000 + y, m - 1, d));
+  }
+
+  function isDateInRecentWindow(dateKey, days){
+    const n = Number(days);
+    if (!Number.isFinite(n) || n < 1) return false;
+    const d = parseDateKeyUtc(dateKey);
+    if (!d) return false;
+    const today = utcToday();
+    const earliest = new Date(today);
+    earliest.setUTCDate(today.getUTCDate() - (Math.floor(n) - 1));
+    return d >= earliest && d <= today;
+  }
+
+  function dateKeyFromDateUtc(d){
+    if (!(d instanceof Date)) return null;
+    const y = String(d.getUTCFullYear() % 100).padStart(2, '0');
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+  }
+
+  function defaultInsightsWindowStart(total){
+    const n = Number(total) || 0;
+    return Math.max(0, n - INSIGHTS_WINDOW_DAYS);
+  }
+
+  function chunkWindowStartForIndex(total, idx){
+    const n = Number(total) || 0;
+    if (n <= INSIGHTS_WINDOW_DAYS) return 0;
+    const latestStart = n - INSIGHTS_WINDOW_DAYS;
+    const distanceFromEnd = Math.max(0, (n - 1) - Math.max(0, Number(idx) || 0));
+    const pagesFromEnd = Math.floor(distanceFromEnd / INSIGHTS_WINDOW_DAYS);
+    return Math.max(0, latestStart - (pagesFromEnd * INSIGHTS_WINDOW_DAYS));
+  }
+
+  function clampInsightsWindowStart(total, start){
+    const n = Number(total) || 0;
+    const maxStart = Math.max(0, n - INSIGHTS_WINDOW_DAYS);
+    const s = Number(start);
+    if (!Number.isFinite(s)) return defaultInsightsWindowStart(n);
+    return Math.max(0, Math.min(maxStart, Math.floor(s)));
+  }
+
+  function computeDisplayWindow(series){
+    const rows = Array.isArray(series) ? series.filter(Boolean) : [];
+    const total = rows.length;
+    const start = clampInsightsWindowStart(total, insightsWindowStart);
+    insightsWindowStart = start;
+    const end = Math.min(total, start + INSIGHTS_WINDOW_DAYS);
+    const windowData = rows.slice(start, end);
+    const hasPrev = start > 0;
+    const hasNext = end < total;
+
+    if (!windowData.length) {
+      return {
+        start,
+        end,
+        total,
+        hasPrev,
+        hasNext,
+        windowData,
+        displaySeries: [],
+        rangeText: ''
+      };
+    }
+
+    let displaySeries;
+    if (windowData.length >= INSIGHTS_WINDOW_DAYS) {
+      displaySeries = windowData.map((d)=> ({ ...d, _empty: false, _slotDate: d.date }));
+    } else {
+      const pad = INSIGHTS_WINDOW_DAYS - windowData.length;
+      const lastDate = parseDateKeyUtc(windowData[windowData.length - 1].date);
+      const slotDates = [];
+      for (let i = 0; i < INSIGHTS_WINDOW_DAYS; i++) {
+        if (lastDate) {
+          const dt = new Date(lastDate);
+          dt.setUTCDate(lastDate.getUTCDate() - (INSIGHTS_WINDOW_DAYS - 1 - i));
+          slotDates.push(dateKeyFromDateUtc(dt));
+        } else {
+          slotDates.push('');
+        }
+      }
+      displaySeries = slotDates.map((k, i)=> {
+        if (i < pad) return { date: k, total: 0, military: 0, government: 0, airline: 0, private_jet: 0, general_aviation: 0, other: 0, _empty: true, _slotDate: k };
+        const d = windowData[i - pad];
+        return { ...d, _empty: false, _slotDate: k || d.date };
+      });
+    }
+
+    const firstDate = windowData[0]?.date || '';
+    const lastDateKey = windowData[windowData.length - 1]?.date || '';
+    const rangeText = `${fmtDateKeyHuman(firstDate)} - ${fmtDateKeyHuman(lastDateKey)}`;
+    return {
+      start,
+      end,
+      total,
+      hasPrev,
+      hasNext,
+      windowData,
+      displaySeries,
+      rangeText
+    };
+  }
+
+  function buildTrendSvg(series, selectedDate){
+    if (!Array.isArray(series) || !series.length) return `<div class="insights-muted">${escapeHtml(insightsText('empty.trend', {}, 'No trend data available.'))}</div>`;
+    const width = 760;
+    const height = 230;
+    const padL = 42;
+    const padR = 10;
+    const padT = 16;
+    const padB = 34;
+    const innerW = width - padL - padR;
+    const innerH = height - padT - padB;
+    const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
+    const scaleMax = niceAxisMax(maxTotal);
+    const dx = series.length > 1 ? innerW / (series.length - 1) : 0;
+    const points = series.map((d, i) => {
+      const x = padL + (dx * i);
+      const y = padT + innerH - ((Math.max(0, Number(d?._empty ? 0 : d.total) || 0) / scaleMax) * innerH);
+      return { x, y, date: d.date, total: Number(d?._empty ? 0 : d.total) || 0, empty: !!d?._empty, slotDate: d?._slotDate || d?.date };
+    });
+    const path = points.map((p, i)=> `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({
+      y: padT + innerH - (f * innerH),
+      v: Math.round(scaleMax * f)
+    }));
+    const selected = points.find((p)=> p.date === selectedDate) || points[points.length - 1];
+    const dots = points.map((p)=> {
+      const active = p.date === (selected && selected.date);
+      const dot = p.empty ? '' : `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${active ? 4 : 2.5}" fill="${active ? 'var(--accent)' : 'var(--muted)'}"></circle>`;
+      const hit = p.empty ? '' : `<circle class="insights-trend-hit" data-insights-date="${p.date}" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="10" fill="transparent"></circle>`;
+      return `${dot}${hit}`;
+    }).join('');
+    const xLabels = [0, Math.max(0, Math.floor((points.length - 1) / 2)), points.length - 1]
+      .filter((v, i, a)=> a.indexOf(v) === i)
+      .map((idx)=> {
+        const p = points[idx];
+        return `<text x="${p.x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(p.slotDate || p.date)}</text>`;
+      }).join('');
+    return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.2"></path>
+      ${dots}
+      ${selected ? `<circle cx="${selected.x.toFixed(2)}" cy="${selected.y.toFixed(2)}" r="6" fill="none" stroke="var(--accent)" stroke-width="2"></circle>` : ''}
+      ${xLabels}
+    </svg>`;
+  }
+
+  function buildTrendFramePlaceholder(message){
+    const width = 760;
+    const height = 230;
+    const padL = 42;
+    const padR = 10;
+    const padT = 16;
+    const padB = 34;
+    const innerH = height - padT - padB;
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({ y: padT + innerH - (f * innerH) }));
+    const label = escapeHtml(message || insightsText('computing', {}, 'Computing trend data...'));
+    return `<svg class="insights-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.trend', {}, 'Daily traffic trend'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line>`).join('')}
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      <text x="${(width / 2).toFixed(2)}" y="${(height / 2).toFixed(2)}" text-anchor="middle" font-size="12" fill="var(--muted)">${label}</text>
+    </svg>`;
+  }
+
+  function buildStackedSvg(series, selectedDate, scaleMaxOverride){
+    if (!Array.isArray(series) || !series.length) return `<div class="insights-muted">${escapeHtml(insightsText('empty.composition', {}, 'No composition data available.'))}</div>`;
+    const width = 760;
+    const height = 180;
+    const padL = 42;
+    const padR = 8;
+    const padT = 14;
+    const padB = 26;
+    const innerW = width - padL - padR;
+    const innerH = height - padT - padB;
+    const barW = Math.max(6, innerW / Math.max(1, series.length));
+    const maxTotal = Math.max(...series.map((d)=> Number(d?._empty ? 0 : d.total) || 0), 1);
+    const parsedOverride = Number(scaleMaxOverride);
+    const scaleMax = Number.isFinite(parsedOverride) && parsedOverride > 0
+      ? parsedOverride
+      : niceAxisMax(maxTotal);
+    const palette = {
+      military: '#c84800',
+      government: '#1f7a8c',
+      airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
+      other: '#6a5acd'
+    };
+
+    const partKeys = ['military','government','airline','private_jet','general_aviation','other'];
+    const partLabels = {
+      military: insightsText('category.military', {}, 'Military'),
+      government: insightsText('category.government', {}, 'Government'),
+      airline: insightsText('category.airline', {}, 'Airline'),
+      private_jet: insightsText('category.private_jet', {}, 'Private Jets'),
+      general_aviation: insightsText('category.general_aviation', {}, 'General Aviation'),
+      other: insightsText('category.other', {}, 'Other')
+    };
+
+    const bars = series.map((d, i)=> {
+      const x = padL + (i * barW);
+      let y = padT + innerH;
+      const rects = [];
+      for (const k of partKeys) {
+        const v = Number(d?._empty ? 0 : d[k]) || 0;
+        const h = (v / scaleMax) * innerH;
+        y -= h;
+        if (v > 0) {
+          rects.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${Math.max(0.1, h).toFixed(2)}" fill="${palette[k]}" stroke="var(--bg)" stroke-width="0.35"></rect>`);
+        }
+      }
+      const active = !d?._empty && d.date === selectedDate;
+      const marker = active ? `<rect x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="none" stroke="var(--accent)" stroke-width="2"></rect>` : '';
+      const total = Number(d?._empty ? 0 : d.total) || 0;
+      const tooltip = d?._empty ? '' : [
+        fmtDateKeyHuman(d.date),
+        `${insightsText('table.total', {}, 'Total')}: ${numberFmt0.format(total)}`,
+        ...partKeys.map((k)=> {
+          const count = Number(d[k]) || 0;
+          const pct = total > 0 ? ((count * 100) / total) : 0;
+          return `${partLabels[k]}: ${numberFmt0.format(count)} (${pct.toFixed(1)}%)`;
+        })
+      ].join('\n');
+      const hit = d?._empty ? '' : `<rect class="insights-stacked-bar-hit" data-insights-date="${d.date}" x="${x.toFixed(2)}" y="${padT}" width="${Math.max(1, barW - 1).toFixed(2)}" height="${innerH}" fill="transparent"><title>${escapeHtml(tooltip)}</title></rect>`;
+      return `${rects.join('')}${marker}${hit}`;
+    }).join('');
+
+    const xLabels = [0, Math.max(0, Math.floor((series.length - 1) / 2)), series.length - 1]
+      .filter((v, i, a)=> a.indexOf(v) === i)
+      .map((idx)=> {
+        const x = padL + (idx * barW) + (barW / 2);
+        return `<text x="${x.toFixed(2)}" y="${(height - 8)}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDateKeyHuman(series[idx]._slotDate || series[idx].date)}</text>`;
+      }).join('');
+
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({
+      y: padT + innerH - (f * innerH),
+      v: Math.round(scaleMax * f)
+    }));
+
+    const legend = `<div class="insights-stacked-legend" aria-hidden="true">
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.military};"></span>${escapeHtml(insightsText('category.military', {}, 'Military'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.government};"></span>${escapeHtml(insightsText('category.government', {}, 'Government'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.airline};"></span>${escapeHtml(insightsText('category.airline', {}, 'Airline'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.private_jet};"></span>${escapeHtml(insightsText('category.private_jet', {}, 'Private Jets'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.general_aviation};"></span>${escapeHtml(insightsText('category.general_aviation', {}, 'General Aviation'))}</span>
+      <span class="insights-stacked-legend-item"><span class="insights-stacked-legend-swatch" style="background:${palette.other};"></span>${escapeHtml(insightsText('category.other', {}, 'Other'))}</span>
+    </div>`;
+
+    return `<svg class="insights-stacked-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('aria.composition', {}, 'Daily category composition'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      <text x="14" y="${(padT + (innerH / 2)).toFixed(2)}" transform="rotate(-90 14 ${(padT + (innerH / 2)).toFixed(2)})" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(insightsText('axis.y.flights', {}, 'Flights'))}</text>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width-padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL-6}" y="${(t.y+4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      <line x1="${padL}" y1="${padT + innerH}" x2="${width - padR}" y2="${padT + innerH}" stroke="var(--soft)" stroke-width="1"></line>
+      ${bars}
+      ${xLabels}
+    </svg>${legend}`;
+  }
+
+  function pickSeverity(deltaPct){
+    const d = Math.abs(Number(deltaPct) || 0);
+    if (d > 50) return 'exceptional';
+    if (d > 25) return 'high';
+    if (d >= 10) return 'elevated';
+    return 'normal';
+  }
+
+  function deriveSelectedInsightsContext(data, selected){
+    const series = Array.isArray(data?.series) ? data.series : [];
+    const idx = series.findIndex((r)=> r && r.date === selected?.date);
+    const selectedIsToday = String(selected?.date || '') === toYYMMDD(utcToday());
+    const effValue = (row, key)=> {
+      if (!row) return 0;
+      if (selectedIsToday) {
+        const cut = Number(row[`${key}_cutoff`]);
+        if (Number.isFinite(cut)) return cut;
+      }
+      const raw = Number(row[key]);
+      return Number.isFinite(raw) ? raw : 0;
+    };
+    const prev = idx > 0 ? series.slice(Math.max(0, idx - INSIGHTS_WINDOW_DAYS), idx) : [];
+    if (!prev.length) {
+      return {
+        baseline_days_used: 0,
+        baseline_total: null,
+        baseline_category_shares: { military: 0, government: 0, airline: 0, private_jet: 0, general_aviation: 0, other: 0 },
+        anomaly_total: { delta: null, delta_pct: null, severity: 'normal' }
+      };
+    }
+    const totals = prev.map((r)=> effValue(r, 'total')).sort((a,b)=> a - b);
+    const mid = Math.floor(totals.length / 2);
+    const baselineTotal = totals.length % 2 ? totals[mid] : ((totals[mid - 1] + totals[mid]) / 2);
+    const sumTotals = prev.reduce((acc, r)=> acc + effValue(r, 'total'), 0);
+    const cats = ['military','government','airline','private_jet','general_aviation','other'];
+    const baselineCategoryShares = {};
+    cats.forEach((k)=> {
+      const catTotal = prev.reduce((acc, r)=> acc + effValue(r, k), 0);
+      baselineCategoryShares[k] = sumTotals > 0 ? (100 * catTotal / sumTotals) : 0;
+    });
+    const selectedTotal = effValue(selected, 'total');
+    const delta = selectedTotal - baselineTotal;
+    const deltaPct = baselineTotal > 0 ? (100 * delta / baselineTotal) : null;
+    return {
+      baseline_days_used: prev.length,
+      baseline_total: baselineTotal,
+      baseline_category_shares: baselineCategoryShares,
+      anomaly_total: {
+        delta,
+        delta_pct: deltaPct,
+        severity: pickSeverity(deltaPct)
+      }
+    };
+  }
+
+  function normalizeSelectedInsights(data, selectedDate){
+    const series = Array.isArray(data?.series) ? data.series : [];
+    const fromSeries = series.find((s)=> s && s.date === selectedDate);
+    const fallback = data?.selected || series[series.length - 1] || {};
+    const base = fromSeries || fallback;
+    const categories = base.categories || {
+      military: Number(base.military) || 0,
+      government: Number(base.government) || 0,
+      airline: Number(base.airline) || 0,
+      private_jet: Number(base.private_jet) || 0,
+      general_aviation: Number(base.general_aviation) || 0,
+      other: Number(base.other) || 0
+    };
+    const total = Number(base.total) || Object.values(categories).reduce((a, b)=> a + (Number(b) || 0), 0);
+    const shares = base.shares || {
+      military: total > 0 ? (100 * categories.military / total) : 0,
+      government: total > 0 ? (100 * categories.government / total) : 0,
+      airline: total > 0 ? (100 * categories.airline / total) : 0,
+      private_jet: total > 0 ? (100 * categories.private_jet / total) : 0,
+      general_aviation: total > 0 ? (100 * categories.general_aviation / total) : 0,
+      other: total > 0 ? (100 * categories.other / total) : 0
+    };
+    const milTypes = (data?.selected?.date === selectedDate && data?.selected?.military_types)
+      ? data.selected.military_types
+      : (base.military_types || {});
+    return {
+      date: selectedDate,
+      total,
+      categories,
+      shares,
+      military_types: milTypes
+    };
+  }
+
+  function selectInsightsDate(dateKey, generation){
+    if (!/^\d{6}$/.test(String(dateKey || ''))) return;
+    if (insightsSelectedDateKey === dateKey) return;
+    beginInsightsPerf(dateKey, 'user-select', { generation, mode: dataMode });
+    insightsSelectedDateKey = dateKey;
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
+    const selectedReqKey = insightsRequestKey(dataMode, dateKey, insightsFullDays());
+    const selectedReqKeyFast = insightsRequestKey(dataMode, dateKey, insightsFastDays());
+    const canUseFastSelectedCache = isDateInRecentWindow(dateKey, insightsFastDays());
+    const cachedSelected = getCachedInsights(selectedReqKey) || (canUseFastSelectedCache ? getCachedInsights(selectedReqKeyFast) : null);
+    const cacheKeyUsed = getCachedInsights(selectedReqKey) ? selectedReqKey : selectedReqKeyFast;
+    const cacheMatchesEnhancementDate = cachedSelected ? payloadEnhancementDateMatches(cachedSelected, dateKey) : false;
+    let renderSource = null;
+    if (insightsCache.key === baseReqKey && insightsCache.data && Array.isArray(insightsCache.data.series)) {
+      renderSource = insightsCache.data;
+    } else {
+      const baseCached = getCachedInsights(baseReqKey);
+      if (baseCached && Array.isArray(baseCached.series)) {
+        renderSource = baseCached;
+      } else if (insightsCache.data && Array.isArray(insightsCache.data.series)) {
+        renderSource = insightsCache.data;
+      } else {
+        for (const [, candidate] of insightsCacheByReqKey.entries()) {
+          if (candidate && Array.isArray(candidate.series) && candidate.series.some((s)=> s && s.date === dateKey)) {
+            renderSource = candidate;
+            break;
+          }
+        }
+      }
+    }
+    if (renderSource && Array.isArray(renderSource.series)) {
+      const idx = renderSource.series.findIndex((s)=> s && s.date === dateKey);
+      if (idx >= 0) {
+        const total = renderSource.series.length;
+        const curStart = clampInsightsWindowStart(total, insightsWindowStart);
+        const curEnd = Math.min(total, curStart + INSIGHTS_WINDOW_DAYS);
+        // Keep current bar range in place when the clicked date is already visible.
+        if (idx < curStart || idx >= curEnd) {
+          insightsWindowStart = chunkWindowStartForIndex(total, idx);
+        }
+        if (cachedSelected && cacheMatchesEnhancementDate) {
+          insightsLog('selected-cache-hit', { date: dateKey, key: cacheKeyUsed, matchesEnhancementDate: true });
+          renderInsights(withBaseSeriesIfAvailable(cachedSelected, dateKey));
+          prefetchAdjacentInsightsDates(generation, dateKey);
+          return;
+        }
+        // Keep the hourly chart/date in a pending state until date-specific enhancements arrive.
+        insightsLog('base-render-source', { date: dateKey, source: 'window/base-cache', seriesLen: renderSource.series.length });
+        renderInsights({ ...renderSource, selected_date: dateKey, _deferEnhancementsDate: true });
+      }
+    }
+    prefetchAdjacentInsightsDates(generation, dateKey);
+    if (cachedSelected) {
+      insightsLog('selected-cache-hit', { date: dateKey, key: cacheKeyUsed, matchesEnhancementDate: cacheMatchesEnhancementDate });
+      if (cacheMatchesEnhancementDate) {
+        renderInsights(withBaseSeriesIfAvailable(cachedSelected, dateKey));
+        return;
+      }
+      insightsLog('selected-cache-stale-enhancements', {
+        date: dateKey,
+        key: cacheKeyUsed,
+        payloadDate: String(cachedSelected?.selected?.date || cachedSelected?.selected_date || '')
+      });
+    }
+    insightsLog('selected-cache-miss', { date: dateKey, fullKey: selectedReqKey, fastKey: selectedReqKeyFast, canUseFastSelectedCache });
+    // Refresh enhancement panels for the selected day without blocking chart interactions.
+    const refreshDays = canUseFastSelectedCache ? insightsFastDays() : insightsFullDays();
+    scheduleInsightsRefresh(generation, dateKey, refreshDays);
+  }
+
+  function shiftInsightsWindow(deltaPages){
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const fullDays = insightsFullDays();
+    const baseReqKey = insightsRequestKey(dataMode, baseDateKey, fullDays);
+    const baseData = (insightsCache.key === baseReqKey && insightsCache.data)
+      ? insightsCache.data
+      : getCachedInsights(baseReqKey);
+    if (!(baseData && Array.isArray(baseData.series) && baseData.series.length)) return;
+    if (insightsCache.key !== baseReqKey) {
+      insightsCache.key = baseReqKey;
+      insightsCache.data = baseData;
+    }
+    const total = baseData.series.length;
+    const likelyHydrationGap = total <= INSIGHTS_WINDOW_DAYS && insightsBaseLoadedDays < fullDays;
+    if (deltaPages < 0 && likelyHydrationGap) {
+      insightsPendingWindowShiftPages += deltaPages;
+      insightsLog('queue-window-shift', {
+        deltaPages,
+        queuedPages: insightsPendingWindowShiftPages,
+        total,
+        baseLoadedDays: insightsBaseLoadedDays,
+        fullDays
+      });
+      loadInsights(modeGeneration, { dateKey: baseDateKey, background: true, days: fullDays });
+      return;
+    }
+    const nextStart = clampInsightsWindowStart(total, (insightsWindowStart == null ? defaultInsightsWindowStart(total) : insightsWindowStart) + (deltaPages * INSIGHTS_WINDOW_DAYS));
+    insightsWindowStart = nextStart;
+    // Keep selected date sticky while paging the bar window; user must explicitly click a date to change selection.
+    const selectedDate = String(
+      insightsSelectedDateKey
+      || baseData?.selected_date
+      || baseData?.selected?.date
+      || (Array.isArray(baseData?.series) && baseData.series.length ? (baseData.series[baseData.series.length - 1]?.date || '') : '')
+    );
+    if (/^\d{6}$/.test(selectedDate)) insightsSelectedDateKey = selectedDate;
+    const resolvedSelected = selectedDate ? insightsResolvedSelectedByDate.get(selectedDate) : null;
+    if (resolvedSelected) {
+      // Preserve the previously resolved selected-day enhancement context while only shifting the visible bar window.
+      renderInsights({ ...resolvedSelected, series: baseData.series, selected_date: selectedDate, _deferEnhancementsDate: false });
+      return;
+    }
+    renderInsights({ ...baseData, selected_date: selectedDate });
+  }
+
+  function applyQueuedWindowShiftIfReady(seriesLen, requestedDays, fullDays){
+    if (insightsPendingWindowShiftPages === 0) return;
+    const n = Number(seriesLen) || 0;
+    if (n <= INSIGHTS_WINDOW_DAYS) return;
+    if (!Number.isFinite(Number(requestedDays)) || Number(requestedDays) < Number(fullDays)) return;
+    const queued = insightsPendingWindowShiftPages;
+    insightsPendingWindowShiftPages = 0;
+    const curStart = clampInsightsWindowStart(n, insightsWindowStart);
+    insightsWindowStart = clampInsightsWindowStart(n, curStart + (queued * INSIGHTS_WINDOW_DAYS));
+    insightsLog('apply-queued-window-shift', {
+      queuedPages: queued,
+      seriesLen: n,
+      newWindowStart: insightsWindowStart,
+      requestedDays
+    });
+  }
+
+  function getBaseInsightsSeries(){
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const fullReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFullDays());
+    const fastReqKey = insightsRequestKey(dataMode, baseDateKey, insightsFastDays());
+
+    if (insightsCache.data && Array.isArray(insightsCache.data.series) && insightsCache.data.series.length) {
+      if (insightsCache.key === fullReqKey || insightsCache.key === fastReqKey) return insightsCache.data.series;
+    }
+
+    const fullData = getCachedInsights(fullReqKey);
+    if (fullData && Array.isArray(fullData.series) && fullData.series.length) return fullData.series;
+
+    const fastData = getCachedInsights(fastReqKey);
+    if (fastData && Array.isArray(fastData.series) && fastData.series.length) return fastData.series;
+
+    return null;
+  }
+
+  function withBaseSeriesIfAvailable(payload, selectedDate){
+    const baseSeries = getBaseInsightsSeries();
+    if (baseSeries) return { ...payload, series: baseSeries, selected_date: selectedDate };
+    return { ...payload, selected_date: selectedDate };
+  }
+
+  function bindInsightsDateInteractions(generation){
+    if (insightsStackedEl) {
+      const stackedTargets = insightsStackedEl.querySelectorAll('[data-insights-date]');
+      stackedTargets.forEach((el)=> {
+        el.addEventListener('click', ()=> {
+          const dateKey = String(el.getAttribute('data-insights-date') || '');
+          selectInsightsDate(dateKey, generation);
+        });
+      });
+    }
+    if (insightsTableBodyEl) {
+      const tableTargets = insightsTableBodyEl.querySelectorAll('[data-insights-date]');
+      tableTargets.forEach((row)=> {
+        row.addEventListener('click', ()=> {
+          const dateKey = String(row.getAttribute('data-insights-date') || '');
+          selectInsightsDate(dateKey, generation);
+        });
+      });
+    }
+    if (insightsStackedPrevBtn && insightsStackedPrevBtn.dataset.bound !== '1') {
+      insightsStackedPrevBtn.addEventListener('click', ()=> shiftInsightsWindow(-1));
+      insightsStackedPrevBtn.dataset.bound = '1';
+    }
+    if (insightsStackedNextBtn && insightsStackedNextBtn.dataset.bound !== '1') {
+      insightsStackedNextBtn.addEventListener('click', ()=> shiftInsightsWindow(1));
+      insightsStackedNextBtn.dataset.bound = '1';
+    }
+  }
+
+  function renderInsightsMix(data){
+    const selected = data?.selected || data;
+    if (!insightsMixEl || !selected || !selected.categories) return;
+    const shares = selected.shares || {};
+    const palette = {
+      military: '#c84800',
+      government: '#1f7a8c',
+      airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
+      other: '#6a5acd'
+    };
+    const labels = {
+      military: insightsText('category.military', {}, 'Military'),
+      government: insightsText('category.government', {}, 'Government'),
+      airline: insightsText('category.airline', {}, 'Airline'),
+      private_jet: insightsText('category.private_jet', {}, 'Private Jets'),
+      general_aviation: insightsText('category.general_aviation', {}, 'General Aviation'),
+      other: insightsText('category.other', {}, 'Other')
+    };
+    const rows = ['military','government','airline','private_jet','general_aviation','other'].map((k)=> {
+      const pct = Number(shares[k]) || 0;
+      const safePct = Math.max(0, Math.min(100, pct));
+      return `<div class="mix-row">
+        <div class="mix-label">${labels[k]}</div>
+        <div class="mix-track"><div class="mix-fill" style="width:${safePct.toFixed(1)}%; background:${palette[k]};"></div></div>
+        <div class="mix-val">${safePct.toFixed(1)}%</div>
+      </div>`;
+    });
+    insightsMixEl.innerHTML = rows.join('');
+  }
+
+  function renderMilitarySubtypeMix(data){
+    if (!insightsSubtypesEl) return;
+    const selected = data?.selected || {};
+    const totalFlights = Number(selected?.total) || 0;
+    const counts = selected?.military_types || {};
+    const categories = selected?.categories || {};
+    const labels = {
+      tanker: insightsText('subtype.tanker', {}, 'Tanker'),
+      transport: insightsText('subtype.transport', {}, 'Transport'),
+      fighter: insightsText('subtype.fighter', {}, 'Fighter'),
+      helicopter: insightsText('subtype.helicopter', {}, 'Helicopter'),
+      trainer: insightsText('subtype.trainer', {}, 'Trainer'),
+      patrol: insightsText('subtype.patrol', {}, 'Patrol/AEW'),
+      vip: insightsText('subtype.vip', {}, 'VIP'),
+      uav: insightsText('subtype.uav', {}, 'UAV'),
+      other_military: insightsText('subtype.other_military', {}, 'Other')
+    };
+    const palette = {
+      tanker: '#9c2f2f',
+      transport: '#5b6cc6',
+      fighter: '#bf5f00',
+      helicopter: '#2a7f62',
+      trainer: '#8b4db6',
+      patrol: '#00838f',
+      vip: '#6d4c41',
+      uav: '#455a64',
+      other_military: '#607d8b'
+    };
+    const nonMilitaryPalette = {
+      government: '#1f7a8c',
+      airline: '#246b2a',
+      private_jet: '#7c4dff',
+      general_aviation: '#005f73',
+      other: '#6a5acd'
+    };
+
+    if (totalFlights <= 0) {
+      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
+      return;
+    }
+
+    const renderRows = (rows, colors)=> rows.map((r)=> `<div class="mix-row">
+      <div class="mix-label">${r.label}</div>
+      <div class="mix-track"><div class="mix-fill" style="width:${r.pct.toFixed(1)}%; background:${colors[r.key]};"></div></div>
+      <div class="mix-val">${r.pct.toFixed(1)}% (${numberFmt0.format(r.cnt)})</div>
+    </div>`).join('');
+
+    const militaryRows = Object.keys(labels).map((k)=> {
+      const cnt = Number(counts[k]) || 0;
+      return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: labels[k] };
+    }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
+
+    const nonMilitaryRows = ['government','airline','private_jet','general_aviation','other'].map((k)=> {
+      const cnt = Number(categories[k]) || 0;
+      return { key: k, cnt, pct: (100 * cnt) / totalFlights, label: insightsText(`category.${k}`, {}, k) };
+    }).filter((r)=> r.cnt > 0).sort((a,b)=> b.cnt - a.cnt);
+
+    const sections = [];
+    if (militaryRows.length) {
+      sections.push(`<div class="mix-section-title">${escapeHtml(insightsText('subtype.section.military', {}, 'Military Flights'))}</div>${renderRows(militaryRows, palette)}`);
+    }
+    if (nonMilitaryRows.length) {
+      sections.push(`<div class="mix-section-title">${escapeHtml(insightsText('subtype.section.nonMilitary', {}, 'Other Flights'))}</div>${renderRows(nonMilitaryRows, nonMilitaryPalette)}`);
+    }
+
+    if (!sections.length) {
+      insightsSubtypesEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
+      return;
+    }
+
+    insightsSubtypesEl.innerHTML = sections.join('');
+  }
+
+  function renderInsightsKpis(data){
+    if (!insightsKpisEl) return;
+    const sel = data.selected || {};
+    const an = data.selectedContext?.anomaly_total || data.anomalies?.total || {};
+    const sev = String(an.severity || 'normal');
+    const sevClass = severityClass(sev, an.delta_pct);
+    const sevLabel = insightSeverityDirectionLabel(sev, an.delta_pct);
+    const cards = [
+      { label: insightsText('kpi.selectedDay', {}, 'Selected Day'), value: fmtDateKeyHuman(sel.date || data.selected_date || '--') },
+      { label: insightsText('kpi.flights', {}, 'Flights'), value: numberFmt0.format(Number(sel.total) || 0) },
+      { label: insightsText('kpi.vsBaseline', {}, 'Vs Baseline'), value: pctText(an.delta_pct) },
+      { label: insightsText('kpi.severity', {}, 'Traffic'), value: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, html: true }
+    ];
+    insightsKpisEl.innerHTML = cards.map((c)=> `<div class="insight-kpi"><div class="label">${c.label}</div><div class="value">${c.html ? c.value : escapeHtml(c.value)}</div></div>`).join('');
+  }
+
+  function renderInsightsBullets(data){
+    if (!insightsBulletsWrapEl) return;
+    const sel = data.selected || {};
+    const shares = sel.shares || {};
+    const an = data.selectedContext?.anomaly_total || data.anomalies?.total || {};
+    const baselineShares = data.selectedContext?.baseline_category_shares || data.baselines?.previous_7d_category_shares || {};
+    const cats = ['military','government','airline','private_jet','general_aviation','other'];
+    const dom = cats
+      .map((k)=> ({ key: k, pct: Number(shares[k]) || 0, count: Number(sel.categories?.[k]) || 0 }))
+      .sort((a,b)=> b.pct - a.pct)[0] || { key: 'other', pct: 0, count: 0 };
+    const shareDelta = (Number(shares[dom.key]) || 0) - (Number(baselineShares[dom.key]) || 0);
+    const sevClass = severityClass(an.severity, an.delta_pct);
+    const sevLabel = insightSeverityDirectionLabel(an.severity || 'normal', an.delta_pct);
+    const subtypes = sel.military_types || {};
+    const topSubtype = Object.entries(subtypes).sort((a,b)=> (Number(b[1]) || 0) - (Number(a[1]) || 0))[0] || ['other_military', 0];
+    const subtypeLabel = ({
+      tanker: insightsText('subtype.tanker', {}, 'Tanker'),
+      transport: insightsText('subtype.transport', {}, 'Transport'),
+      fighter: insightsText('subtype.fighter', {}, 'Fighter'),
+      helicopter: insightsText('subtype.helicopter', {}, 'Helicopter'),
+      trainer: insightsText('subtype.trainer', {}, 'Trainer'),
+      patrol: insightsText('subtype.patrol', {}, 'Patrol/AEW'),
+      vip: insightsText('subtype.vip', {}, 'VIP'),
+      uav: insightsText('subtype.uav', {}, 'UAV'),
+      other_military: insightsText('subtype.other_military', {}, 'Other')
+    })[topSubtype[0]] || insightsText('subtype.other_military', {}, 'Other');
+    const dominantFallbackMap = {
+      military: 'Military',
+      government: 'Government',
+      airline: 'Airline',
+      private_jet: 'Private Jets',
+      general_aviation: 'General Aviation',
+      other: 'Other'
+    };
+    const dominantLabel = insightsText(`category.${dom.key}`, {}, dominantFallbackMap[dom.key] || 'Other');
+    const dayLabel = fmtDateKeyHuman(sel.date || data.selected_date || '--');
+    const bullets = [
+      `${insightsText('bullet.totalTraffic', { dayLabel, severity: `<span class="${sevClass}">${escapeHtml(sevLabel)}</span>`, delta: pctText(an.delta_pct) }, `${dayLabel}: <span class="${sevClass}">${escapeHtml(sevLabel)}</span> (${pctText(an.delta_pct)}).`)}`,
+      `${insightsText('bullet.dominantCategory', { category: dominantLabel, pct: dom.pct.toFixed(1), count: numberFmt0.format(dom.count) }, `${dominantLabel} is dominant at ${dom.pct.toFixed(1)}% (${numberFmt0.format(dom.count)} flights).`)}`,
+      `${insightsText('bullet.shareShift', { shift: `${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)}` }, `Dominant-category share shifted by ${shareDelta >= 0 ? '+' : ''}${shareDelta.toFixed(1)} pts vs previous 7-day mix.`)}`,
+      `${insightsText('bullet.topSubtype', { subtype: subtypeLabel, count: numberFmt0.format(Number(topSubtype[1]) || 0) }, `Top military mission subtype is ${subtypeLabel} (${numberFmt0.format(Number(topSubtype[1]) || 0)} flights).`)}`
+    ];
+    insightsBulletsWrapEl.innerHTML = `<ul class="insights-bullets">${bullets.map((b)=> `<li>${b}</li>`).join('')}</ul>`;
+  }
+
+  function browserTimeZoneAxisLabel(atDate = new Date()){
+    try {
+      const fmt = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' });
+      const parts = fmt.formatToParts(atDate);
+      const tzPart = parts.find((p)=> p.type === 'timeZoneName');
+      const shortLabel = String(tzPart?.value || '').trim();
+      if (/^[A-Za-z]{2,5}$/.test(shortLabel)) return shortLabel;
+    } catch (e) { /* ignore */ }
+    const offsetMin = -new Date().getTimezoneOffset();
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const absMin = Math.abs(offsetMin);
+    const hours = Math.floor(absMin / 60);
+    const mins = String(absMin % 60).padStart(2, '0');
+    return `${sign}${hours}:${mins}`;
+  }
+
+  function buildHourlyCumulativeSvg(profile, selectedDateKey, scaleMaxOverride, options = {}){
+    const selected = Array.isArray(profile?.cumulative_selected) ? profile.cumulative_selected : [];
+    const baseline = Array.isArray(profile?.cumulative_baseline_median) ? profile.cumulative_baseline_median : [];
+    if (!selected.length || !baseline.length) {
+      return `<div class="insights-muted">${escapeHtml(insightsText('empty.trend', {}, 'No trend data available.'))}</div>`;
+    }
+    const width = 760;
+    const height = 224;
+    const padL = 40;
+    const padR = 10;
+    const padT = 14;
+    const padB = 42;
+    const innerW = width - padL - padR;
+    const innerH = height - padT - padB;
+    const maxY = Math.max(...selected, ...baseline, 1);
+    const parsedOverride = Number(scaleMaxOverride);
+    const scaleMax = Number.isFinite(parsedOverride) && parsedOverride > 0
+      ? parsedOverride
+      : niceAxisMax(maxY);
+    const toY = (v)=> padT + innerH - ((Math.max(0, Number(v) || 0) / scaleMax) * innerH);
+    const dx = innerW / 24;
+    const localHourFormatter = (()=> {
+      try {
+        return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+      } catch (e) {
+        return null;
+      }
+    })();
+    const localDateFormatter = (()=> {
+      try {
+        return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    const containerOffsetMinRaw = Number(options.containerOffsetMin);
+    const hasContainerOffset = Number.isFinite(containerOffsetMinRaw);
+    const containerOffsetMin = hasContainerOffset ? containerOffsetMinRaw : 0;
+
+    function parseHmsToHourFloat(hms){
+      const s = String(hms || '');
+      const m = s.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+      if (!m) return null;
+      const hh = Number(m[1]);
+      const mm = Number(m[2]);
+      const ss = Number(m[3] || 0);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm) || !Number.isFinite(ss)) return null;
+      return Math.min(23.999, Math.max(0, hh + (mm / 60) + (ss / 3600)));
+    }
+
+    function selectedCutoffHourInContainerTz(){
+      const tzCutoff = parseHmsToHourFloat(options.selectedCutoffHmsTz);
+      if (Number.isFinite(tzCutoff)) return tzCutoff;
+
+      const genericCutoff = parseHmsToHourFloat(options.selectedCutoffHms);
+      if (Number.isFinite(genericCutoff)) return genericCutoff;
+
+      const utcCutoff = parseHmsToHourFloat(options.selectedCutoffHmsUtc);
+      if (!Number.isFinite(utcCutoff)) return null;
+      if (!hasContainerOffset) return utcCutoff;
+
+      const shifted = utcCutoff + (containerOffsetMin / 60);
+      return ((shifted % 24) + 24) % 24;
+    }
+
+    function selectedDatePartsFromKey(key){
+      const s = String(key || '');
+      if (!/^\d{6}$/.test(s)) return null;
+      const y = Number(s.slice(0, 2));
+      const m = Number(s.slice(2, 4));
+      const d = Number(s.slice(4, 6));
+      if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+      return { year: 2000 + y, month: m, day: d };
+    }
+
+    function browserLabelFromContainerHour(containerHour, referenceBrowserDate){
+      const h = Math.max(0, Math.min(24, Number(containerHour) || 0));
+      const parts = selectedDatePartsFromKey(selectedDateKey);
+      if (!parts || !hasContainerOffset) {
+        return `${String(h).padStart(2, '0')}:00`;
+      }
+      const utcMs = Date.UTC(parts.year, parts.month - 1, parts.day, h, 0, 0) - (containerOffsetMin * 60 * 1000);
+      const dt = new Date(utcMs);
+      let timeLabel = `${String(h).padStart(2, '0')}:00`;
+      if (localHourFormatter) {
+        try {
+          timeLabel = localHourFormatter.format(dt);
+        } catch (e) { /* ignore */ }
+      }
+      if (referenceBrowserDate && localDateFormatter) {
+        try {
+          const refKey = referenceBrowserDate.toDateString();
+          const tickKey = dt.toDateString();
+          if (refKey !== tickKey) {
+            return `${timeLabel} ${localDateFormatter.format(dt)}`;
+          }
+        } catch (e) { /* ignore */ }
+      }
+      return timeLabel;
+    }
+
+    function browserDateFromContainerMoment(hourFloat){
+      const parts = selectedDatePartsFromKey(selectedDateKey);
+      if (!parts || !hasContainerOffset || !Number.isFinite(hourFloat)) return null;
+      const baseHour = Math.floor(hourFloat);
+      const minuteFloat = (hourFloat - baseHour) * 60;
+      const baseMinute = Math.floor(minuteFloat);
+      const secondFloat = (minuteFloat - baseMinute) * 60;
+      const baseSecond = Math.floor(secondFloat);
+      const utcMs = Date.UTC(parts.year, parts.month - 1, parts.day, baseHour, baseMinute, baseSecond) - (containerOffsetMin * 60 * 1000);
+      return new Date(utcMs);
+    }
+
+    function pathForSeries(vals, maxX){
+      const maxFinite = Number.isFinite(maxX) ? Math.max(0, Math.min(24, maxX)) : 24;
+      const fullHours = Math.floor(maxFinite);
+      const points = [{ x: 0, y: 0 }];
+
+      for (let h = 1; h <= fullHours && h <= 24; h += 1) {
+        points.push({ x: h, y: Number(vals[h - 1]) || 0 });
+      }
+
+      if (maxFinite > fullHours && fullHours < 24) {
+        points.push({ x: maxFinite, y: Number(vals[fullHours]) || 0 });
+      }
+
+      return points.map((p, idx)=> `${idx ? 'L' : 'M'}${(padL + (dx * p.x)).toFixed(2)} ${toY(p.y).toFixed(2)}`).join(' ');
+    }
+
+    const selectedIsTodayPartial = options.selectedIsTodayPartial === true;
+    const cutoffHourFloat = selectedCutoffHourInContainerTz();
+    const isTodaySelection = selectedIsTodayPartial && Number.isFinite(cutoffHourFloat);
+    const nowXHour = isTodaySelection ? cutoffHourFloat : 24;
+
+    const selPath = pathForSeries(selected, isTodaySelection ? nowXHour : 24);
+    const basePath = pathForSeries(baseline, 24);
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f)=> ({ y: padT + innerH - (f * innerH), v: Math.round(scaleMax * f) }));
+    const selectedParts = selectedDatePartsFromKey(selectedDateKey);
+    const referenceBrowserDate = (selectedParts && hasContainerOffset)
+      ? new Date(Date.UTC(selectedParts.year, selectedParts.month - 1, selectedParts.day, 0, 0, 0) - (containerOffsetMin * 60 * 1000))
+      : null;
+    const xTickFormatter = (()=> {
+      try {
+        return new Intl.DateTimeFormat(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+      } catch (e) {
+        return null;
+      }
+    })();
+    const xTicks = [0, 6, 12, 18, 24].map((h)=> {
+      const tickDate = browserDateFromContainerMoment(h);
+      let label = `${String(h).padStart(2, '0')}:00`;
+      if (tickDate && xTickFormatter) {
+        try {
+          label = xTickFormatter.format(tickDate);
+        } catch (e) { /* ignore */ }
+      }
+      return { x: padL + (dx * h), l: label };
+    });
+    const xAxisTzLabel = browserTimeZoneAxisLabel(referenceBrowserDate || new Date());
+    const xAxisLabel = `Time (${xAxisTzLabel})`;
+    const pointCutoffHour = isTodaySelection ? nowXHour : 24;
+    const hourlyPointHits = Array.from({ length: 24 }, (_, i) => {
+      const h = i + 1;
+      if (h > pointCutoffHour) return '';
+      const x = padL + (dx * h);
+      const selectedVal = Math.max(0, Number(selected[i]) || 0);
+      const baselineVal = Math.max(0, Number(baseline[i]) || 0);
+      const ySel = toY(selectedVal);
+      const hourLabel = browserLabelFromContainerHour(h, referenceBrowserDate);
+      const hitTitle = `${hourLabel} · selected ${numberFmt0.format(selectedVal)} · median ${numberFmt0.format(baselineVal)}`;
+      return `<circle class="insights-hourly-hit" data-hour-label="${escapeHtml(hourLabel)}" data-selected="${selectedVal}" data-baseline="${baselineVal}" cx="${x.toFixed(2)}" cy="${ySel.toFixed(2)}" r="8" fill="transparent"><title>${escapeHtml(hitTitle)}</title></circle>`;
+    }).join('');
+    const nowMarker = isTodaySelection
+      ? (()=> {
+          const markerDt = browserDateFromContainerMoment(nowXHour);
+          let markerClock = String(options.selectedCutoffHms || '').slice(0, 5);
+          if (markerDt && localHourFormatter) {
+            try {
+              markerClock = localHourFormatter.format(markerDt);
+            } catch (e) { /* ignore */ }
+          }
+          if (!/^\d{2}:\d{2}$/.test(markerClock)) markerClock = '--:--';
+          const markerTz = browserTimeZoneAxisLabel(markerDt || new Date());
+          const markerLabel = `Now (${markerClock} ${markerTz})`;
+          return `<line x1="${(padL + (dx * nowXHour)).toFixed(2)}" y1="${padT}" x2="${(padL + (dx * nowXHour)).toFixed(2)}" y2="${(padT + innerH)}" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="3 3"></line>
+        <text x="${Math.min(width - padR - 4, (padL + (dx * nowXHour) + 5)).toFixed(2)}" y="${(padT + 11).toFixed(2)}" text-anchor="start" font-size="10" fill="#c2185b">${escapeHtml(markerLabel)}</text>`;
+        })()
+      : '';
+    const legend = `<div class="insights-hourly-legend" aria-hidden="true">
+      <span class="insights-hourly-legend-item"><span class="insights-hourly-legend-line" style="border-top-color: var(--accent);"></span>${escapeHtml(insightsText('enhancements.hourly.legend.selected', {}, 'Selected day cumulative'))}</span>
+      <span class="insights-hourly-legend-item"><span class="insights-hourly-legend-line" style="border-top-color: #2a7f62; border-top-style: dashed;"></span>${escapeHtml(insightsText('enhancements.hourly.legend.baseline', {}, '7-day median cumulative'))}</span>
+    </div>`;
+    return `<svg class="insights-hourly-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(insightsText('enhancements.hourly.aria', {}, 'Cumulative hourly comparison'))}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+      ${yTicks.map((t)=> `<line x1="${padL}" y1="${t.y.toFixed(2)}" x2="${(width - padR)}" y2="${t.y.toFixed(2)}" stroke="var(--soft)" stroke-width="1"></line><text x="${padL - 6}" y="${(t.y + 4).toFixed(2)}" text-anchor="end" font-size="11" fill="var(--muted)">${t.v}</text>`).join('')}
+      ${nowMarker}
+      <path d="${basePath}" fill="none" stroke="#2a7f62" stroke-width="2" stroke-dasharray="5 4"></path>
+      <path d="${selPath}" fill="none" stroke="var(--accent)" stroke-width="2.4"></path>
+      ${hourlyPointHits}
+      ${xTicks.map((t)=> `<text x="${t.x.toFixed(2)}" y="${(height - 18)}" text-anchor="middle" font-size="11" fill="var(--muted)">${t.l}</text>`).join('')}
+      <text x="${(width / 2).toFixed(2)}" y="${(height - 4)}" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(xAxisLabel)}</text>
+    </svg>${legend}<div class="insights-hourly-tooltip" aria-hidden="true"></div>`;
+  }
+
+  function bindInsightsHourlyInteractions(){
+    if (!insightsHourlyEl) return;
+    const svg = insightsHourlyEl.querySelector('.insights-hourly-svg');
+    const tooltip = insightsHourlyEl.querySelector('.insights-hourly-tooltip');
+    if (!svg || !tooltip) return;
+
+    const hideTooltip = () => {
+      tooltip.classList.remove('open');
+      tooltip.setAttribute('aria-hidden', 'true');
+    };
+
+    const showTooltipForHit = (hitEl) => {
+      if (!hitEl || !(hitEl instanceof Element)) return;
+      const hourLabel = String(hitEl.getAttribute('data-hour-label') || '--:--');
+      const selectedVal = Number(hitEl.getAttribute('data-selected') || 0);
+      const baselineVal = Number(hitEl.getAttribute('data-baseline') || 0);
+      tooltip.innerHTML = `<div class="tip-title">${escapeHtml(hourLabel)}</div>
+      <div class="tip-row"><span>${escapeHtml(insightsText('enhancements.hourly.legend.selected', {}, 'Selected day cumulative'))}</span><strong>${numberFmt0.format(selectedVal)}</strong></div>
+      <div class="tip-row"><span>${escapeHtml(insightsText('enhancements.hourly.legend.baseline', {}, '7-day median cumulative'))}</span><strong>${numberFmt0.format(baselineVal)}</strong></div>`;
+
+      const svgRect = svg.getBoundingClientRect();
+      const hostRect = insightsHourlyEl.getBoundingClientRect();
+      const vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : { width: 760, height: 224 };
+      const cx = Number(hitEl.getAttribute('cx') || 0);
+      const cy = Number(hitEl.getAttribute('cy') || 0);
+      const px = (svgRect.left - hostRect.left) + ((vb.width > 0 ? cx / vb.width : 0) * svgRect.width);
+      const py = (svgRect.top - hostRect.top) + ((vb.height > 0 ? cy / vb.height : 0) * svgRect.height);
+      const hostWidth = Math.max(0, hostRect.width);
+      const hostHeight = Math.max(0, hostRect.height);
+      const edgePad = 8;
+
+      tooltip.style.left = '0px';
+      tooltip.style.top = '0px';
+      tooltip.classList.add('open');
+      tooltip.setAttribute('aria-hidden', 'false');
+
+      const tipWidth = Math.max(0, tooltip.offsetWidth);
+      const tipHeight = Math.max(0, tooltip.offsetHeight);
+
+      let left = px - (tipWidth / 2);
+      left = Math.max(edgePad, Math.min(left, hostWidth - tipWidth - edgePad));
+
+      let top = py - tipHeight - 10;
+      if (top < edgePad) {
+        top = py + 10;
+      }
+      top = Math.max(edgePad, Math.min(top, hostHeight - tipHeight - edgePad));
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.classList.add('open');
+      tooltip.setAttribute('aria-hidden', 'false');
+    };
+
+    insightsHourlyEl.onclick = (ev) => {
+      const hit = ev.target && ev.target.closest ? ev.target.closest('.insights-hourly-hit') : null;
+      if (!hit) {
+        hideTooltip();
+        return;
+      }
+      showTooltipForHit(hit);
+    };
+
+    insightsHourlyEl.onmouseleave = hideTooltip;
+  }
+
+  function renderEnhancements(data, scaleMax){
+    const deferEnhancementsDate = !!data?._deferEnhancementsDate;
+    const enh = data?.enhancements || {};
+    const confidence = enh?.confidence || {};
+    const weekday = enh?.weekday_context || {};
+    const alerts = Array.isArray(enh?.alerts?.active) ? enh.alerts.active : [];
+    const flow = Array.isArray(enh?.directional_flow?.top_routes) ? enh.directional_flow.top_routes : [];
+    const qualifyingFlow = flow.filter((r)=> (Number(r?.count) || 0) >= 4);
+    const families = enh?.family_trends || {};
+    const outliers = enh?.outliers || {};
+    const profile = enh?.hourly_profile || {};
+    const novelAircraft = enh?.new_aircraft || {};
+    const timeContext = data?.time_context || {};
+    const baselineMeta = data?.baselines || {};
+
+    if (insightsHourlyEl) {
+      if (deferEnhancementsDate) {
+        insightsHourlyEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('enhancements.hourly.pending', {}, 'Updating cumulative profile...'))}</div>`;
+        insightsLog('cumulative-pending', { date: String(data?.selected_date || data?.selected?.date || '') });
+      } else {
+        insightsHourlyEl.innerHTML = buildHourlyCumulativeSvg(profile, data?.selected_date || data?.selected?.date, scaleMax, {
+          containerOffsetMin: Number(timeContext?.selected_tz_offset_min),
+          selectedIsTodayPartial: baselineMeta?.selected_is_today_partial === true,
+          selectedCutoffHmsTz: baselineMeta?.selected_cutoff_hms_tz || null,
+          selectedCutoffHmsUtc: baselineMeta?.selected_cutoff_hms_utc || null,
+          selectedCutoffHms: baselineMeta?.selected_cutoff_hms_tz || baselineMeta?.selected_cutoff_hms_utc || null
+        });
+        bindInsightsHourlyInteractions();
+        markInsightsCumulativeComplete(String(data?.selected_date || data?.selected?.date || ''), { deferEnhancementsDate: false });
+      }
+    }
+    const hourlyTitleEl = document.getElementById('insightsHourlyTitle');
+    if (hourlyTitleEl) {
+      hourlyTitleEl.textContent = insightsText('enhancements.hourly.title', {}, 'Cumulative Hourly Aircraft Counts');
+    }
+
+    if (insightsConfidenceEl) {
+      const score = Number(confidence?.score);
+      const bandRaw = String(confidence?.band || 'unknown').toLowerCase();
+      const band = insightsText(`enhancements.confidence.band.${bandRaw}`, {}, bandRaw || 'unknown');
+      const counts = confidence?.counts || {};
+      insightsConfidenceEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.confidenceBand', {}, 'Summarizes how trustworthy the day\'s category classifications are. Higher is better and means fewer ambiguous identifications.'))}">${escapeHtml(insightsText('enhancements.confidence.band', {}, 'Confidence'))}</span><span class="mini-val">${escapeHtml(band)}${Number.isFinite(score) ? ` (${score.toFixed(1)}%)` : ''}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.signalQuality', {}, 'Breakdown of classification certainty. H uses strong matches; M uses pattern matches; L is least certain and should be interpreted cautiously.'))}">${escapeHtml(insightsText('enhancements.confidence.breakdown', {}, 'Signal quality'))}</span><span class="mini-val">H ${numberFmt0.format(Number(counts.high) || 0)} / M ${numberFmt0.format(Number(counts.medium) || 0)} / L ${numberFmt0.format(Number(counts.low) || 0)}</span></div>`;
+    }
+
+    if (insightsWeekdayEl) {
+      insightsWeekdayEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayMedian', {}, 'Expected \"typical\" traffic for this weekday from recent history (robust median, less sensitive to outliers).'))}">${escapeHtml(insightsText('enhancements.weekday.median', {}, 'Same-weekday median'))}</span><span class="mini-val">${numberFmt0.format(Number(weekday.median) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayRange', {}, 'Typical spread for this weekday. Values outside this p25-p75 band indicate unusually low/high activity.'))}">${escapeHtml(insightsText('enhancements.weekday.range', {}, 'Normal range (p25-p75)'))}</span><span class="mini-val">${numberFmt0.format(Number(weekday.p25) || 0)} - ${numberFmt0.format(Number(weekday.p75) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.weekdayDelta', {}, 'How far the selected day deviates from typical weekday traffic. Positive means busier than normal, negative means quieter.'))}">${escapeHtml(insightsText('enhancements.weekday.delta', {}, 'Delta vs median'))}</span><span class="mini-val">${pctText(weekday.delta_pct_vs_weekday_median)}</span></div>`;
+    }
+
+    if (insightsAlertsEl) {
+      if (!alerts.length) {
+        insightsAlertsEl.innerHTML = `<div class="insights-badges"><span class="insights-badge sev-normal">${escapeHtml(insightsText('enhancements.alerts.none', {}, 'No active alerts'))}</span></div>`;
+      } else {
+        insightsAlertsEl.innerHTML = `<div class="insights-badges">${alerts.map((a)=> {
+          const alertId = String(a?.id || 'alert');
+          const label = insightsText(`enhancements.alert.id.${alertId}`, {}, alertId.replace(/_/g, ' '));
+          return `<span class="insights-badge sev-${escapeHtml(String(a.severity || 'normal'))}" title="${escapeHtml(String(a.message || ''))}">${escapeHtml(label)}</span>`;
+        }).join('')}</div>`;
+      }
+    }
+
+    if (insightsNovelEl) {
+      const count = Number(novelAircraft?.count) || 0;
+      const pct = Number(novelAircraft?.pct_of_daily_total) || 0;
+      const list = Array.isArray(novelAircraft?.list) ? novelAircraft.list : [];
+      insightsNovelRows = list;
+      const label = escapeHtml(insightsText('enhancements.newAircraft.label', {}, 'Aircraft never seen before'));
+      const val = `${numberFmt0.format(count)} (${pct.toFixed(1)}%)`;
+      insightsNovelEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.newAircraft', {}, 'Unique ICAO aircraft present on the selected date that were not seen in any earlier date within the loaded history window.'))}"><a href="#" class="pa-candidates-link" data-action="open-insights-novel-list">${label}</a></span><span class="mini-val">${escapeHtml(val)}</span></div>`;
+    }
+
+    if (insightsFlowEl) {
+      const flowTitleEl = document.getElementById('insightsFlowTitle');
+      if (flowTitleEl) flowTitleEl.style.display = qualifyingFlow.length ? '' : 'none';
+      insightsFlowEl.style.display = qualifyingFlow.length ? '' : 'none';
+      if (!qualifyingFlow.length) {
+        insightsFlowEl.innerHTML = '';
+      } else {
+        insightsFlowEl.innerHTML = qualifyingFlow.slice(0, 4).map((r)=> `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.flow', {}, 'Origin-to-destination routes with at least four flights on the selected day. Percentage shows change versus recent daily average for the same route.'))}">${escapeHtml(String(r.route || '--'))}</span><span class="mini-val">${numberFmt0.format(Number(r.count) || 0)} (${pctText(r.delta_pct)})</span></div>`).join('');
+      }
+    }
+
+    if (insightsFamiliesEl) {
+      const selectedCounts = families?.selected_counts || {};
+      const baselineMedian = families?.baseline_daily_median || families?.baseline_daily_avg || {};
+      const labels = {
+        jet: insightsText('family.jet', {}, 'Jet'),
+        turboprop: insightsText('family.turboprop', {}, 'Turboprop'),
+        piston: insightsText('family.piston', {}, 'Piston'),
+        rotorcraft: insightsText('family.rotorcraft', {}, 'Rotorcraft'),
+        uav: insightsText('family.uav', {}, 'UAV'),
+        other: insightsText('family.other', {}, 'Other')
+      };
+      insightsFamiliesEl.innerHTML = Object.keys(labels).map((k)=> {
+        const s = Number(selectedCounts[k]) || 0;
+        const b = Number(baselineMedian[k]) || 0;
+        const d = b > 0 ? ((s - b) / b) * 100 : null;
+        return `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.family', {}, 'Compares selected-day counts by aircraft family against the recent daily median. Large deltas help explain why the day looked unusual.'))}">${labels[k]}</span><span class="mini-val">${numberFmt0.format(s)} vs ${numberFmt1.format(b)} median (${pctText(d)})</span></div>`;
+      }).join('');
+    }
+
+    if (insightsOutliersEl) {
+      const shift = outliers?.top_category_share_shift || {};
+      const shiftKeyRaw = String(shift?.key || '');
+      const shiftKeyLabel = shiftKeyRaw ? insightsText(`category.${shiftKeyRaw}`, {}, shiftKeyRaw.replace(/_/g, ' ')) : '--';
+      insightsOutliersEl.innerHTML = `<div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeak', {}, 'Hour where traffic peaked on the selected container-local day. Use with the baseline below to gauge spike intensity.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHour', {}, 'Peak container-day hour'))}</span><span class="mini-val">${String(Number(outliers.peak_hour_tz ?? outliers.peak_hour_utc) || 0).padStart(2,'0')}:00 (${numberFmt0.format(Number(outliers.peak_hour_count) || 0)})</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierPeakBaseline', {}, 'Typical traffic level for that same hour over recent days. Compare directly with peak-hour count to detect surges.'))}">${escapeHtml(insightsText('enhancements.outlier.peakHourBaseline', {}, 'Peak-hour baseline'))}</span><span class="mini-val">${numberFmt0.format(Number(outliers.peak_hour_baseline_median) || 0)}</span></div>
+        <div class="mini-row"><span class="mini-key" title="${escapeHtml(insightsText('enhancements.help.outlierShareShift', {}, 'Category whose traffic share moved the most versus recent baseline composition. Helps identify what changed, not just how much.'))}">${escapeHtml(insightsText('enhancements.outlier.shareShift', {}, 'Largest share shift'))}</span><span class="mini-val">${escapeHtml(shiftKeyLabel)}: ${pctText(shift.value)}</span></div>`;
+    }
+  }
+
+  function renderInsightsTable(data){
+    if (!insightsTableBodyEl) return;
+    const rows = Array.isArray(data.series) ? data.series.slice().reverse() : [];
+    if (!rows.length) {
+      insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+      return;
+    }
+    const selectedDate = data.selected_date || data.selected?.date || '';
+    insightsTableBodyEl.innerHTML = rows.map((r)=> `
+      <tr data-insights-date="${r.date}" class="${r.date === selectedDate ? 'is-selected' : ''}">
+        <td>${fmtDateKeyHuman(r.date)}</td>
+        <td>${numberFmt0.format(Number(r.total) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.military) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.government) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.airline) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.private_jet) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.general_aviation) || 0)}</td>
+        <td>${numberFmt0.format(Number(r.other) || 0)}</td>
+      </tr>`).join('');
+  }
+
+  function renderInsights(data){
+    ensureInsightsRefs();
+    if (!insightsPanelEl) return;
+    if (!data || !Array.isArray(data.series) || !data.series.length) {
+      updateInsightsStaticText();
+      updateInsightsHydrationStatus(false);
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('empty.subtitle', {}, 'Insights are unavailable for the selected range.');
+      if (insightsTrendEl) insightsTrendEl.innerHTML = `<div class="insights-muted">${escapeHtml(insightsText('empty.analytics', {}, 'No analytics data available.'))}</div>`;
+      if (insightsStackedEl) insightsStackedEl.innerHTML = '';
+      if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
+      if (insightsMixEl) insightsMixEl.innerHTML = '';
+      if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
+      if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
+      if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
+      if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsNovelEl) insightsNovelEl.innerHTML = '';
+      if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
+      if (insightsFlowEl) insightsFlowEl.innerHTML = '';
+      if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
+      if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
+      insightsNovelRows = [];
+      if (insightsKpisEl) insightsKpisEl.innerHTML = '';
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+      return;
+    }
+    const selectedDate = data.selected_date || data.selected?.date || data.series[data.series.length - 1].date;
+    if (/^\d{6}$/.test(String(selectedDate || ''))) {
+      insightsSelectedDateKey = String(selectedDate);
+    }
+    const selected = normalizeSelectedInsights(data, selectedDate);
+    const window = computeDisplayWindow(data.series);
+    insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, Number(data?.history_days) || 0, Array.isArray(data?.series) ? data.series.length : 0);
+    const selectedContext = deriveSelectedInsightsContext(data, selected);
+    const enhancementsBaseDate = String(data?.selected?.date || data?.selected_date || '');
+    const deferEnhancementsDate = !!(data?._deferEnhancementsDate || (enhancementsBaseDate && enhancementsBaseDate !== selectedDate));
+    const dataForSelected = { ...data, selected_date: selectedDate, selected, selectedContext, _deferEnhancementsDate: deferEnhancementsDate };
+    const resolvedSelected = insightsResolvedSelectedByDate.get(String(selectedDate));
+    let effectiveDataForSelected = dataForSelected;
+    if (shouldPreferResolvedEnhancements(dataForSelected, resolvedSelected, selectedDate)) {
+      effectiveDataForSelected = {
+        ...dataForSelected,
+        enhancements: resolvedSelected?.enhancements,
+        time_context: resolvedSelected?.time_context,
+        baselines: resolvedSelected?.baselines,
+        _deferEnhancementsDate: false
+      };
+      insightsLog('preserve-resolved-enhancements', {
+        date: String(selectedDate),
+        incomingScore: insightsEnhancementQualityScore(dataForSelected, selectedDate),
+        resolvedScore: insightsEnhancementQualityScore(resolvedSelected, selectedDate)
+      });
+    }
+    const sharedScaleMax = computeInsightsSharedScaleMax(window.displaySeries, effectiveDataForSelected?.enhancements?.hourly_profile);
+    if (!effectiveDataForSelected._deferEnhancementsDate) {
+      insightsResolvedSelectedByDate.set(String(selectedDate), {
+        ...effectiveDataForSelected,
+        selected_date: selectedDate,
+        _deferEnhancementsDate: false
+      });
+      while (insightsResolvedSelectedByDate.size > INSIGHTS_CACHE_LIMIT) {
+        const oldest = insightsResolvedSelectedByDate.keys().next();
+        if (oldest && !oldest.done) insightsResolvedSelectedByDate.delete(oldest.value);
+        else break;
+      }
+    }
+    if (insightsTitleEl) insightsTitleEl.textContent = isPlaneAlertMode()
+      ? insightsText('title.planeAlert', {}, 'Plane-Alert Traffic Insights')
+      : insightsText('title.planefence', {}, 'Planefence Traffic Insights');
+    if (insightsSubtitleEl) {
+      const baseline = selectedContext.baseline_total;
+      const baseDays = Number(selectedContext.baseline_days_used) || 0;
+      insightsSubtitleEl.textContent = insightsText(
+        'subtitle',
+        { date: fmtDateKeyHuman(selectedDate), baseline: baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0), days: String(baseDays || INSIGHTS_WINDOW_DAYS) },
+        `Selected ${fmtDateKeyHuman(selectedDate)}. Baseline (${baseDays || INSIGHTS_WINDOW_DAYS}d median): ${baseline == null ? '--' : numberFmt0.format(Number(baseline) || 0)}.`
+      );
+    }
+    if (insightsStackedRangeEl) insightsStackedRangeEl.textContent = window.rangeText;
+    const awaitingAdditionalData = window.total < insightsFullDays() && insightsBaseLoadedDays < insightsFullDays();
+    updateInsightsHydrationStatus(awaitingAdditionalData);
+    const canExpandPrevAfterHydration = window.total <= INSIGHTS_WINDOW_DAYS && insightsBaseLoadedDays < insightsFullDays();
+    if (insightsStackedPrevBtn) insightsStackedPrevBtn.disabled = !(window.hasPrev || canExpandPrevAfterHydration);
+    if (insightsStackedNextBtn) insightsStackedNextBtn.disabled = !window.hasNext;
+    renderInsightsKpis(effectiveDataForSelected);
+    if (insightsStackedEl) {
+      insightsStackedEl.innerHTML = buildStackedSvg(window.displaySeries, selectedDate, sharedScaleMax);
+    }
+    renderInsightsBullets(effectiveDataForSelected);
+    renderInsightsMix(effectiveDataForSelected);
+    renderMilitarySubtypeMix(effectiveDataForSelected);
+    renderEnhancements(effectiveDataForSelected, sharedScaleMax);
+    renderInsightsTable(effectiveDataForSelected);
+    markInsightsRenderComplete(selectedDate, {
+      seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
+      windowStart: window.start,
+      windowEnd: window.end,
+      deferEnhancementsDate: effectiveDataForSelected._deferEnhancementsDate
+    });
+    bindInsightsDateInteractions(modeGeneration);
+  }
+
+  async function loadInsights(generation, opts = {}){
+    ensureInsightsRefs();
+    if (!insightsPanelEl) return;
+    const dateKey = opts.dateKey || insightsSelectedDateKey || effectiveHistoryParam() || 'today';
+    const baseDateKey = effectiveHistoryParam() || 'today';
+    const isBaseRequest = dateKey === baseDateKey;
+    const background = !!opts.background;
+    const forceRefresh = opts.forceRefresh === true;
+    const fullDays = insightsFullDays();
+    const fastDays = insightsFastDays();
+    const requestedDays = Number.isFinite(Number(opts.days))
+      ? Number(opts.days)
+      : (background ? fullDays : fastDays);
+    const reqKey = insightsRequestKey(dataMode, dateKey, requestedDays);
+    const requestStartedAt = insightsNowMs();
+
+    if (!background && !currentInsightsPerf(dateKey)) {
+      beginInsightsPerf(dateKey, 'load-insights', { generation, mode: dataMode, requestedDays, reqKey });
+    }
+
+    insightsLog('load-start', {
+      generation,
+      mode: dataMode,
+      date: dateKey,
+      baseDate: baseDateKey,
+      requestedDays,
+      background,
+      reqKey
+    });
+
+    const scheduleHydration = () => {
+      if (background || !isBaseRequest || requestedDays >= fullDays) return;
+      const fullReqKey = insightsRequestKey(dataMode, dateKey, fullDays);
+      if (insightsCache.key === fullReqKey || getCachedInsights(fullReqKey) || insightsFetchPromises.has(fullReqKey)) return;
+      setTimeout(() => {
+        if (generation !== modeGeneration) return;
+        loadInsights(generation, { dateKey, background: true, days: fullDays });
+      }, 0);
+    };
+
+    if (!background) {
+      updateInsightsStaticText();
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('loading', {}, 'Loading analytics...');
+      if (insightsStackedEl) insightsStackedEl.innerHTML = buildTrendFramePlaceholder(insightsText('computing', {}, 'Computing trend data...'));
+    }
+
+    if (!forceRefresh && insightsCache.key === reqKey && insightsCache.data) {
+      insightsLog('cache-hit-active', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
+      seedSelectedDateCacheAlias(dataMode, requestedDays, insightsCache.data);
+      if (isBaseRequest) {
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays);
+        applyQueuedWindowShiftIfReady(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0, requestedDays, fullDays);
+      }
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(insightsCache.data.series) && insightsCache.data.series.some((s)=> s && s.date === selected)) {
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (isBaseRequest) renderInsights({ ...insightsCache.data, selected_date: selected, _deferEnhancementsDate: shouldDeferFastToday });
+        else renderInsights(withBaseSeriesIfAvailable(insightsCache.data, selected));
+      } else {
+        insightsWindowStart = defaultInsightsWindowStart(Array.isArray(insightsCache.data.series) ? insightsCache.data.series.length : 0);
+        renderInsights(insightsCache.data);
+      }
+      scheduleHydration();
+      return;
+    }
+
+    const cached = forceRefresh ? null : getCachedInsights(reqKey);
+    if (cached) {
+      insightsLog('cache-hit-map', { date: dateKey, reqKey, msSinceLoadStart: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10 });
+      seedSelectedDateCacheAlias(dataMode, requestedDays, cached);
+      if (isBaseRequest) {
+        insightsCache.key = reqKey;
+        insightsCache.data = cached;
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays);
+        applyQueuedWindowShiftIfReady(Array.isArray(cached.series) ? cached.series.length : 0, requestedDays, fullDays);
+      }
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(cached.series) && cached.series.some((s)=> s && s.date === selected)) {
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (isBaseRequest) renderInsights({ ...cached, selected_date: selected, _deferEnhancementsDate: shouldDeferFastToday });
+        else renderInsights(withBaseSeriesIfAvailable(cached, selected));
+      } else {
+        if (isBaseRequest) {
+          insightsWindowStart = defaultInsightsWindowStart(Array.isArray(cached.series) ? cached.series.length : 0);
+        }
+        renderInsights(cached);
+      }
+      scheduleHydration();
+      return;
+    }
+
+    try {
+      let fetchPromise = insightsFetchPromises.get(reqKey);
+      const reusingInflight = !!fetchPromise;
+      if (!fetchPromise) {
+        const modeForRun = dataMode;
+        insightsLog('fetch-start', { date: dateKey, reqKey, requestedDays, background, mode: modeForRun });
+        fetchPromise = (async () => {
+          const resp = await fetch(buildInsightsUrl(modeForRun, dateKey, requestedDays), { cache: 'no-store' });
+          if (!resp.ok) throw new Error(`Insights endpoint failed (${resp.status})`);
+          const payload = await resp.json();
+          if (payload && payload.error) throw new Error(String(payload.error));
+          return payload;
+        })();
+        insightsFetchPromises.set(reqKey, fetchPromise);
+      } else {
+        insightsLog('fetch-reuse-inflight', { date: dateKey, reqKey, requestedDays, background });
+      }
+
+      const data = await fetchPromise;
+      const fetchMs = Math.round((insightsNowMs() - requestStartedAt) * 10) / 10;
+      insightsLog('fetch-complete', {
+        date: dateKey,
+        reqKey,
+        requestedDays,
+        background,
+        reusedInflight: reusingInflight,
+        ms: fetchMs,
+        seriesLen: Array.isArray(data?.series) ? data.series.length : 0,
+        selectedDate: String(data?.selected_date || data?.selected?.date || '')
+      });
+      insightsFetchPromises.delete(reqKey);
+      if (generation !== modeGeneration) return;
+      if (isBaseRequest) {
+        insightsCache.key = reqKey;
+        insightsCache.data = data;
+      }
+      rememberInsightsCache(reqKey, data);
+      seedSelectedDateCacheAlias(dataMode, requestedDays, data);
+      if (isBaseRequest) {
+        insightsBaseLoadedDays = Math.max(insightsBaseLoadedDays, requestedDays, Number(data?.history_days) || 0, Array.isArray(data?.series) ? data.series.length : 0);
+        insightsWindowStart = defaultInsightsWindowStart(Array.isArray(data.series) ? data.series.length : 0);
+        applyQueuedWindowShiftIfReady(Array.isArray(data.series) ? data.series.length : 0, requestedDays, fullDays);
+      }
+      const selected = insightsSelectedDateKey;
+      if (selected && Array.isArray(data.series) && data.series.some((s)=> s && s.date === selected)) {
+        const selectedEnhancementMatch = payloadEnhancementDateMatches(data, selected);
+        const shouldDeferFastToday = isBaseRequest && !background && requestedDays < fullDays && (String(dateKey || '') === 'today' || String(selected || '') === toYYMMDD(utcToday()));
+        if (selectedEnhancementMatch && !shouldDeferFastToday) {
+          if (isBaseRequest) renderInsights({ ...data, selected_date: selected });
+          else renderInsights(withBaseSeriesIfAvailable(data, selected));
+        } else if (background && isBaseRequest) {
+          insightsLog('skip-base-background-render-stale-enhancements', {
+            date: dateKey,
+            reqKey,
+            selectedDate: selected,
+            payloadDate: String(data?.selected?.date || data?.selected_date || ''),
+            deferFastToday: shouldDeferFastToday
+          });
+        } else {
+          renderInsights({ ...data, selected_date: selected, _deferEnhancementsDate: true });
+        }
+      } else {
+        renderInsights(data);
+      }
+      scheduleHydration();
+    } catch (e) {
+      insightsFetchPromises.delete(reqKey);
+      insightsLog('fetch-error', {
+        date: dateKey,
+        reqKey,
+        requestedDays,
+        background,
+        ms: Math.round((insightsNowMs() - requestStartedAt) * 10) / 10,
+        error: String(e && e.message ? e.message : e)
+      });
+      if (generation !== modeGeneration) return;
+      if (background) {
+        console.warn('background insights refresh failed', e);
+        return;
+      }
+      if (insightsSubtitleEl) insightsSubtitleEl.textContent = insightsText('error.subtitle', {}, 'Unable to load analytics right now.');
+      if (insightsStackedEl) insightsStackedEl.innerHTML = `<div class="insights-muted">${escapeHtml(String(e && e.message ? e.message : e))}</div>`;
+      if (insightsBulletsWrapEl) insightsBulletsWrapEl.innerHTML = '';
+      if (insightsMixEl) insightsMixEl.innerHTML = '';
+      if (insightsSubtypesEl) insightsSubtypesEl.innerHTML = '';
+      if (insightsConfidenceEl) insightsConfidenceEl.innerHTML = '';
+      if (insightsWeekdayEl) insightsWeekdayEl.innerHTML = '';
+      if (insightsAlertsEl) insightsAlertsEl.innerHTML = '';
+      if (insightsNovelEl) insightsNovelEl.innerHTML = '';
+      if (insightsHourlyEl) insightsHourlyEl.innerHTML = '';
+      if (insightsFlowEl) insightsFlowEl.innerHTML = '';
+      if (insightsFamiliesEl) insightsFamiliesEl.innerHTML = '';
+      if (insightsOutliersEl) insightsOutliersEl.innerHTML = '';
+      insightsNovelRows = [];
+      if (insightsKpisEl) insightsKpisEl.innerHTML = '';
+      if (insightsTableBodyEl) insightsTableBodyEl.innerHTML = `<tr><td colspan="8" class="insights-muted">${escapeHtml(insightsText('empty.table', {}, 'No recent daily data.'))}</td></tr>`;
+    }
+  }
+
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
+    if (ev.key === 'Escape' && insightsNovelOverlay?.classList.contains('open')) {
+      ev.preventDefault();
+      closeInsightsNovelOverlay();
+    } else if (ev.key === 'Escape' && paCandidatesOverlay?.classList.contains('open')) {
       ev.preventDefault();
       closePaCandidatesOverlay();
+    } else if (ev.key === 'Escape' && insightsModal?.classList.contains('open')) {
+      ev.preventDefault();
+      closeInsightsModal();
     } else if (ev.key === 'Escape' && stationInfoModal?.classList.contains('open')) {
       ev.preventDefault();
       closeStationInfoModal();
@@ -4613,6 +6903,14 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
   }
 
   function restartDataPipelines(){
+    if (!setupRequirementChecked) {
+      checkSetupRequirement();
+      return;
+    }
+    if (setupRequired) {
+      showSetupRequiredPage(setupConfigUrl);
+      return;
+    }
     if (!planefenceFeatureEnabled && !planeAlertFeatureEnabled) {
       showFatalConfigurationErrorPage();
       return;
@@ -4622,6 +6920,13 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       return;
     }
     modeGeneration++;
+    if (insightsRefreshTimer) {
+      clearTimeout(insightsRefreshTimer);
+      insightsRefreshTimer = null;
+    }
+    insightsBaseLoadedDays = 0;
+    insightsPendingWindowShiftPages = 0;
+    insightsSelectedDateKey = null;
     resetTableState();
     stopStreamReader();
     stopPollingLoop();
@@ -4629,10 +6934,12 @@ async function pollAndMerge(modeForRun, generation, opts = {}) {
       try { if (table) table.order([[0, 'desc']]).draw(); } catch (e) { /* ignore */ }
       const label = historyDateLabel || formatHistoryDateDisplay(historyDateFromKey(historyDate) || utcToday());
       setHistoricStatus(label);
+      loadInsights(modeGeneration);
       pollAndMerge(dataMode, modeGeneration, { historyDate: historyDate, isHistory: true, historyLabel: label });
       return;
     }
     setLiveStatusPlaceholders();
+    loadInsights(modeGeneration);
     const liveHistoryParam = effectiveHistoryParam();
     const allowPlaneAlertDefaultAll = isPlaneAlertMode() && historyDate !== 'today';
     if (allowPlaneAlertDefaultAll) {

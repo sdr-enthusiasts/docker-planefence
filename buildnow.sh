@@ -16,7 +16,7 @@ IMAGE1="$BASETARGET1/docker-planefence:$TAG"
 echo "press enter to start building $IMAGE1 from $BRANCH"
 
 #shellcheck disable=SC2162
-read
+# read
 
 starttime="$(date +%s)"
 # rebuild the container

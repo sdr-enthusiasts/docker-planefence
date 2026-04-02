@@ -5,10 +5,15 @@ services:
     container_name: planefence
     hostname: planefence
     restart: always
-    # by adding a ports mapping, the planefence website is exposed to the
+    # by adding a ports mapping, the Planefence website is exposed to the
     # host and your internal network.
+    # Internal port :80 is where the main PF website is served.
+    # Internal port :9999 is where the Configuration website is served.
+    # Browse to http://localhost:8088 to access the main website
+    # and http://localhost:9999 to access the configuration website.
     ports:
       - 8088:80
+      - 9999:9999
     #
     # LOGLEVEL can be "INFO" (default - all logs) or "ERROR" (only errors)
     environment:
@@ -16,10 +21,10 @@ services:
       - LOGLEVEL=INFO
     volumes:
       # adopt this one to point at a subdirectory of where your docker-compose.yml file is located:
-      - ./planefence-config:/usr/share/planefence/persist
+      - ./planefence/config:/usr/share/planefence/persist
       # the following exposes the html directory to the host, in case you
       # want to use an external http daemon (lighttpd, nginx, etc)
-      - ./planefence-html:/usr/share/planefence/html
+      - ./planefence/html:/usr/share/planefence/html
     tmpfs:
       - /run:rw,nosuid,nodev,exec,relatime,size=512M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M

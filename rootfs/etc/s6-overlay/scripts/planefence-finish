@@ -4,7 +4,7 @@ set -euo pipefail
 
 source /scripts/pf-common
 # Persist the latest Planefence artifacts when the service stops.
-"${s6wrap[@]}" echo "Backing up data before exit"
+log_print INFO "Backing up data before exit"
 TODAY="${TODAY:-$(date +%y%m%d)}"
 RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
 RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
@@ -12,25 +12,25 @@ RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
 # Copy the most recent compressed records back to the persistent store.
 if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then
   cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"
-  "${s6wrap[@]}" echo "backed up ${RECORDSFILE##*/}"
+  log_print INFO "backed up ${RECORDSFILE##*/}"
 fi
 
 # Sync the day’s Planefence and Plane-Alert outputs to the HTML directory.
 if [[ -f "/run/planefence/planefence-${TODAY}.json" ]]; then
   cp -f "/run/planefence/planefence-${TODAY}.json" "/usr/share/planefence/html/planefence-${TODAY}.json"
-  "${s6wrap[@]}" echo "backed up planefence-${TODAY}.json"
+  log_print INFO "backed up planefence-${TODAY}.json"
 fi
 if [[ -f "/run/planefence/plane-alert-${TODAY}.json" ]]; then
   cp -f "/run/planefence/plane-alert-${TODAY}.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"
-  "${s6wrap[@]}" echo "backed up plane-alert-${TODAY}.json"
+  log_print INFO "backed up plane-alert-${TODAY}.json"
 fi
 if [[ -f "/run/planefence/planefence-${TODAY}.csv" ]]; then
   cp -f "/run/planefence/planefence-${TODAY}.csv" "/usr/share/planefence/html/planefence-${TODAY}.csv"
-  "${s6wrap[@]}" echo "backed up planefence-${TODAY}.csv"
+  log_print INFO "backed up planefence-${TODAY}.csv"
 fi
 if [[ -f "/run/planefence/plane-alert-${TODAY}.csv" ]]; then
   cp -f "/run/planefence/plane-alert-${TODAY}.csv" "/usr/share/planefence/html/plane-alert-${TODAY}.csv"
-  "${s6wrap[@]}" echo "backed up plane-alert-${TODAY}.csv"
+  log_print INFO "backed up plane-alert-${TODAY}.csv"
 fi
 
-"${s6wrap[@]}" echo "data backup complete"
+log_print INFO "data backup complete"
