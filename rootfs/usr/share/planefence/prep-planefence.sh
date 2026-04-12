@@ -125,9 +125,9 @@ if [[ ! -f /usr/share/planefence/persist/planefence.config ]]; then
 fi
 # -----------------------------------------------------------------------------------
 # Do one last check. If FEEDER_LAT= empty or 90.12345, then the user obviously hasn't touched the config file.
-if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "$FEEDER_LONG" ]] || [[ "$FEEDER_LONG" == "-70.12345" ]]; then
+if [[ -z "$FEEDER_LAT" ]] || [[ "$FEEDER_LAT" == "90.12345" ]] || [[ -z "${FEEDER_LON:-$FEEDER_LONG}" ]] || [[ "${FEEDER_LON:-$FEEDER_LONG}" == "-70.12345" ]]; then
 	log_print ERR "----------------------------------------------------------"
-	log_print ERR "!!! SETUP REQUIRED !!!! FEEDER_LONG and/or FEEDER_LAT are still defaults or empty."
+	log_print ERR "!!! SETUP REQUIRED !!!! FEEDER_LON and/or FEEDER_LAT are still defaults or empty."
 	log_print ERR "Browse to the configuration web page on PF_CONFIG_HTTP_PORT (default 9999)."
 	log_print ERR "Once you save valid coordinates, Planefence will continue automatically."
 	log_print ERR "----------------------------------------------------------"
@@ -157,11 +157,10 @@ else
 	stop_service
 fi
 
-FEEDER_LONG="${FEEDER_LON:-$FEEDER_LONG}"
-if [[ -n "$FEEDER_LONG" ]]; then
-	configure_planefence "LON" "$FEEDER_LONG"
+if [[ -n "${FEEDER_LON:-$FEEDER_LONG}" ]]; then
+	configure_planefence "LON" "${FEEDER_LON:-$FEEDER_LONG}"
 else
-	log_print ERR "Error - \$FEEDER_LONG not defined"
+	log_print ERR "Error - \$FEEDER_LON not defined"
 	stop_service
 fi
 
@@ -354,14 +353,14 @@ if [[ "$PF_DISTUNIT" != $(sed -n 's/^\s*distanceunit=\(.*\)/\1/p' /usr/share/soc
 	[[ "$PF_ALTUNIT" != $(sed -n 's/^\s*altitudeunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
 	[[ "$PF_SPEEDUNIT" != $(sed -n 's/^\s*speedunit=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
 	[[ "$FEEDER_LAT" != $(sed -n 's/^\s*latitude=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
-	[[ "$FEEDER_LONG" != $(sed -n 's/^\s*longitude=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
+	[[ "${FEEDER_LON:-$FEEDER_LONG}" != $(sed -n 's/^\s*longitude=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
 	[[ "$PF_SOCK30003HOST" != $(sed -n 's/^\s*PEER_HOST=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]] ||
 	[[ "${PF_SOCK30003PORT:-30003}" != $(sed -n 's/^\s*PEER_PORT=\(.*\)/\1/p' /usr/share/socket30003/socket30003.cfg) ]]; then
 	[[ -n "$PF_DISTUNIT" ]] && sed -i 's/\(^\s*distanceunit=\).*/\1'"$PF_DISTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_SPEEDUNIT" ]] && sed -i 's/\(^\s*speedunit=\).*/\1'"$PF_SPEEDUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	[[ -n "$PF_ALTUNIT" ]] && sed -i 's/\(^\s*altitudeunit=\).*/\1'"$PF_ALTUNIT"'/' /usr/share/socket30003/socket30003.cfg
 	sed -i 's/\(^\s*latitude=\).*/\1'"$FEEDER_LAT"'/' /usr/share/socket30003/socket30003.cfg
-	sed -i 's/\(^\s*longitude=\).*/\1'"$FEEDER_LONG"'/' /usr/share/socket30003/socket30003.cfg
+	sed -i 's/\(^\s*longitude=\).*/\1'"${FEEDER_LON:-$FEEDER_LONG}"'/' /usr/share/socket30003/socket30003.cfg
 	sed -i 's|\(^\s*PEER_HOST=\).*|\1'"$PF_SOCK30003HOST"'|' /usr/share/socket30003/socket30003.cfg
 	sed -i 's|\(^\s*PEER_PORT=\).*|\1'"${PF_SOCK30003PORT:-30003}"'|' /usr/share/socket30003/socket30003.cfg
 	pkill socket30003.pl
