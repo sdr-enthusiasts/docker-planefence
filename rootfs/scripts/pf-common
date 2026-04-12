@@ -165,8 +165,19 @@ READ_RECORDS() {
   local RECORDSDIR="${RECORDSDIR:-/run/planefence}"
   local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
 
-  if [[ ! -f "$RECORDSFILE" ]]; then 
-    log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found - initializing"
+  if [[ "${1,,}" != "ignore-lock" && -f "/tmp/.records.lock" ]]; then
+  # wait until the lock is gone, or 120 seconds (whichever is shorter)
+    starttime="$(date +%s)"
+    log_print DEBUG "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
+    while :; do
+      sleep "0.${RANDOM: -3}s"
+      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
+    done
+    log_print DEBUG ".records.lock unlocked. Continuing..."
+  fi
+
+  if [[ ! -f "$RECORDSFILE" || ! gzip -t "$RECORDSFILE" ]]; then 
+    log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found or corrupt - initializing"
     declare -gA records=()
     declare -gA pa_records=()
     declare -gA heatmap=()
@@ -178,19 +189,10 @@ READ_RECORDS() {
     LASTPROCESSEDLINE=""
     return
   fi
-  if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
-  # wait until the lock is gone, or 120 seconds (whichever is shorter)
-    starttime="$(date +%s)"
-    log_print DEBUG "Waiting for .records.lock ($(</tmp/.records.lock)) to become unlocked. This will be latest at $(date -d "@$((starttime + MAXWAITTIME))")"
-    while :; do
-      sleep "0.${RANDOM: -3}s"
-      if [[ ! -f "/tmp/.records.lock" ]] || (( $(date +%s) - starttime > MAXWAITTIME )); then break; fi
-    done
-    log_print DEBUG ".records.lock unlocked. Continuing..."
-  fi
+
   log_print DEBUG "records read by $(basename "$0")"
   # shellcheck disable=SC1090
-  source <(gzip -cd "$RECORDSFILE")
+  source <(gzip -cd "$RECORDSFILE" || true)
 
 }
 
