@@ -68,6 +68,7 @@ CALLSIGN:GNY?(-)[0-9][0-9]*:German Navy
 CALLSIGN:HAF?(-)[0-9][0-9]*:Greece / Hellenic Air Force
 CALLSIGN:HERKY?(-)[0-9][0-9]*:United States Air Force
 CALLSIGN:HKY?(-)[0-9][0-9]*:United States Air Force
+CALLSIGN:HLE?(-)[0-9][0-9]*:UK HEMS Air Ambulance
 CALLSIGN:HUAF?(-)[0-9][0-9]*:Hungarian Air Force
 CALLSIGN:HUF?(-)[0-9][0-9]*:Hungarian Air Force
 CALLSIGN:HUNAF?(-)[0-9][0-9]*:Hungarian Air Force
