@@ -85,13 +85,13 @@ declare -A pa_squawkmatch     # icao -> "true" if the icao matches the squawk fi
 declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices ready_to_notify_initial
 
 if [[ -z "$TRACKSERVICE" || "${TRACKSERVICE,,}" == "adsbexchange" ]]; then
-  TRACKURL="globe.adsbexchange.com"
-elif [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then
-  TRACKURL="flightaware"
+  TRACKURL="https://globe.adsbexchange.com"
+elif [[ "${TRACKSERVICE,,}" == "adsb.lol" ]]; then
+  TRACKURL="https://adsb.lol"
+elif [[ "${TRACKSERVICE,,}" == "airplanes.live" ]]; then
+  TRACKURL="https://globe.airplanes.live"
 elif [[ -n "$TRACKSERVICE" ]]; then
-  TRACKURL="$(sed -E 's|^(https?://)?([^/]+).*|\2|' <<< "$TRACKSERVICE")"
-else
-  TRACKURL="globe.adsbexchange.com"
+  TRACKURL="$TRACKSERVICE"
 fi
 PA_FILE="$(GET_PARAM pa PLANEFILE)"
 PA_FILE="${PA_FILE:-/usr/share/planefence/persist/.internal/plane-alert-db.txt}"
@@ -1318,13 +1318,12 @@ for line in "${socketrecords[@]}"; do
     if [[ -z ${records["$idx":icao]} ]]; then
       records["$idx":icao]="$icao"
       # map link at first touch
-      if [[ -n $lat && -n $lon ]]; then
-        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
+      if [[ "${TRACKSERVICE,,}" != "flightaware" && -n $lat && -n $lon ]]; then
+        records["$idx":link:map]="$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
       else
-        records["$idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$tracedate"
+        records["$idx":link:map]="$TRACKURL/?icao=$icao&showTrace=$tracedate"
       fi
     fi
-
     # add a tail if there isn't any
     if [[ "${records["$idx":checked:tail]}" != "true" && -z "${records["$idx":tail]}" ]]; then
       records["$idx":tail]="$(GET_TAIL "$icao")"
@@ -1334,6 +1333,9 @@ for line in "${socketrecords[@]}"; do
         elif [[ ${icao:0:1} =~ [cC] ]]; then
           t="${records["$idx":tail]:1}"  # remove leading C
           records["$idx":link:faa]="https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimpRes.aspx?m=%7c${t//-/}%7c"
+        fi
+        if [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then 
+          records["$idx":link:map]="http://flightaware.com/live/flight/${records["$idx":tail]}"
         fi
       fi
       records["$idx":checked:tail]=true
@@ -1427,13 +1429,13 @@ for line in "${socketrecords[@]}"; do
     if [[ -z ${pa_records["$pa_idx":icao]} ]]; then
       pa_records["$pa_idx":icao]="$icao"
       # map link at first touch
-      if [[ -n $lat && -n $lon ]]; then
-        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
+      if [[ "${TRACKSERVICE,,}" != "flightaware" && -n $lat && -n $lon ]]; then
+        pa_records["$pa_idx":link:map]="$TRACKURL/?icao=$icao&lat=$lat&lon=$lon&showTrace=$tracedate"
       else
-        pa_records["$pa_idx":link:map]="https://$TRACKURL/?icao=$icao&showTrace=$tracedate"
+        pa_records["$pa_idx":link:map]="$TRACKURL/?icao=$icao&showTrace=$tracedate"
       fi
     fi
-    
+
     # get info from the plane-alert-db file:
     if [[ "${pa_records["$pa_idx":checked:db]}" != "true" ]]; then
       IFS=',' read -r Registration CPMG Tag1 Tag2 Tag3 Category Link ImageLink1 ImageLink2 ImageLink3 <<< "$(GET_PA_INFO "$icao")"
@@ -1456,6 +1458,9 @@ for line in "${socketrecords[@]}"; do
     if [[ "${pa_records["$pa_idx":checked:tail]}" != "true" && -z "${pa_records["$pa_idx":tail]}" ]]; then
       pa_records["$pa_idx":tail]="$(GET_TAIL "$icao")"
       pa_records["$pa_idx":checked:tail]=true
+      if [[ "${TRACKSERVICE,,}" == "flightaware" ]]; then 
+        pa_records["$pa_idx":link:map]="http://flightaware.com/live/flight/${records["$idx":tail]}"
+      fi
     fi
     if [[ "${pa_records["$pa_idx":checked:faa]}" != "true" && -n "${pa_records["$pa_idx":tail]}" && -z "${pa_records["$pa_idx":link:faa]}" ]]; then
       if [[ ${icao:0:1} =~ [aA] ]]; then
