@@ -176,7 +176,7 @@ READ_RECORDS() {
     log_print DEBUG ".records.lock unlocked. Continuing..."
   fi
 
-  if [[ ! -f "$RECORDSFILE" || ! gzip -t "$RECORDSFILE" ]]; then 
+  if [[ ! -f "$RECORDSFILE" ]] || ! gzip -t "$RECORDSFILE" >/dev/null 2>&1; then
     log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found or corrupt - initializing"
     declare -gA records=()
     declare -gA pa_records=()
