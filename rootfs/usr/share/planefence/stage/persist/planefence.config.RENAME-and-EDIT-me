@@ -149,7 +149,7 @@ PF_MOTD="<b>Welcome to my Planefence Instance!</b>"
 PF_DELETEAFTER=90
 # ---------------------------------------------------------------------
 # PF_NOISECAPT: base URL of your NoiseCapt container (optional).
-# See https://github.com/kx1t/docker-noisecapt.
+# See https://github.com/kx1t/docker-noisecapt
 PF_NOISECAPT=
 # ---------------------------------------------------------------------
 # PF_IGNOREDUPES: if set to yes/on/true/1/enabled, show only the first ICAO+flight combo per day.

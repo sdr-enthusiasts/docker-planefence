@@ -3342,14 +3342,14 @@ ${messagesDesc}
 
   function fmtDateKeyHuman(key){
     if (!key || String(key).length !== 6) return String(key || '--');
-    if (key === toYYMMDD(utcToday())) return insightsText('actions.today', {}, 'Today');
     const y = Number(String(key).slice(0,2));
     const m = Number(String(key).slice(2,4));
     const d = Number(String(key).slice(4,6));
     if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return String(key);
     const dt = new Date(Date.UTC(2000 + y, m - 1, d));
     try {
-      return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(dt);
+      // Keep UTC day selection semantics, but let the browser locale drive date formatting.
+      return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(dt);
     } catch (e) {
       return `${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${2000 + y}`;
     }
