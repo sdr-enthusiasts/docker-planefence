@@ -384,6 +384,11 @@ GET_PA_INFO () {
   local idx name
   for idx in "${!__pa_header[@]}"; do
     name="${__pa_header[$idx]}"
+    name="${name#\"}"
+    name="${name%\"}"
+    name="${name#"${name%%[![:space:]]*}"}"
+    name="${name%"${name##*[![:space:]]}"}"
+    [[ -n "$name" ]] || continue
     __pa_cols["$name"]=$idx
   done
 
