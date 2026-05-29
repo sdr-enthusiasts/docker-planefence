@@ -107,12 +107,14 @@ GET_ADSB_META() {
 
 GET_PS_PHOTO_LINK() {
 	local icao=${1^^}
-	local json link
+	local json link pf_ver pf_ua
   ImageLink=""
 	local ctime=$((3 * 24 * 3600))
 	local dir="/usr/share/planefence/persist/planepix/cache"
 	local lnk="$dir/$icao.link"
 	local na="$dir/$icao.notavailable"
+	pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+	pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
 
 	# Default to enabled unless explicitly disabled.
 	chk_enabled "${SHOWIMAGES:-true}" || return 0

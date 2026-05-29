@@ -127,8 +127,10 @@ GET_TYPE () {
 
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-  local icao="$1" returntype json link thumb CACHETIME
+  local icao="$1" returntype json link thumb CACHETIME pf_ver pf_ua
   returntype="${2:-link}"; returntype="${returntype,,}"
+  pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+  pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
 
   # validate
   case "$returntype" in
