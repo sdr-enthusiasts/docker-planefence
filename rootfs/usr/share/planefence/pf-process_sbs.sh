@@ -457,7 +457,7 @@ GET_PS_PHOTO () {
   esac
 
   # fetch
-  if json="$(curl -m 30 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+  if json="$(planespotters_fetch_json "$icao" 30)" && \
      link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
      thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
      [[ -n $link && -n $thumb ]]; then

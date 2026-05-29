@@ -21,7 +21,7 @@ log_print INFO "Adding ImageLinks to $file. This should be a one-time process th
 
 get_imagelink() {
   local icao="$1" json image_link
-  json="$(curl -m 20 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao" 2>/dev/null || true)"
+  json="$(planespotters_fetch_json "$icao" 20 || true)"
   image_link="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" 2>/dev/null | head -n1 || true)"
   printf '%s' "$image_link"
 }
