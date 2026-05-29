@@ -252,12 +252,12 @@ GET_PS_PHOTO () {
 	fi
 
 	# If we don't have a cached file, let's see if we can get one from PlaneSpotters.net
-	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+	if json="$(curl -ssL --fail -A "Planefence/5.33 (+https://sdr-e.com/docker-planefence)" "https://api.planespotters.net/pub/photos/hex/$1")" && \
 					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
           thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
 				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
 		# If we have a link, let's download the photo
-		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		curl -ssL --fail --clobber -A "Planefence/5.33 (+https://sdr-e.com/docker-planefence)" "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"

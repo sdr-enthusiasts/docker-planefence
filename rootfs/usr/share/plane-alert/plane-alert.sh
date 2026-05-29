@@ -82,12 +82,12 @@ GET_PS_PHOTO () {
 		return 0
 	fi
 	# If we don't have a cache file, let's see if we can get one from PlaneSpotters.net
-	if json="$(curl -ssL --fail "https://api.planespotters.net/pub/photos/hex/$1")" && \
+	if json="$(curl -ssL --fail -A "Planefence/5.33 (+https://sdr-e.com/docker-planefence)" "https://api.planespotters.net/pub/photos/hex/$1")" && \
 					link="$(jq -r 'try .photos[].link | select( . != null )' <<< "$json")" && \
           thumb="$(jq -r 'try .photos[].thumbnail_large.src | select( . != null )' <<< "$json")" && \
 				  [[ -n "$link" ]] && [[ -n "$thumb" ]]; then
 		# If we have a link, let's download the photo
-		curl -ssL --fail --clobber "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
+		curl -ssL --fail --clobber -A "Planefence/5.33 (+https://sdr-e.com/docker-planefence)" "$thumb" -o "/usr/share/planefence/persist/planepix/cache/$1.jpg"
 		echo "$link" > "/usr/share/planefence/persist/planepix/cache/$1.link"
 		echo "$thumb" > "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
 		touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$1.link" "/usr/share/planefence/persist/planepix/cache/$1.thumb.link"
@@ -394,7 +394,7 @@ if [[ "$(cat /tmp/pa-diff.csv | wc -l)" != "0" ]]; then
 			if [[ " jpg jpeg png gif " =~ " ${tag##*.} " ]]; then
 				if [[ "${tag:0:4}" != "http" ]]; then tag="https://$tag"; fi
 				if [[ ! -f "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}" ]]; then
-					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"; then
+					if curl -sL -A "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0 Planefence/5.33 (+https://sdr-e.com/docker-planefence)" "$tag" --clobber -o "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"; then
 						images+=("/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}")
 						touch -d "+$((HISTTIME+1)) days" "/usr/share/planefence/persist/planepix/cache/$ICAO-$counter.${tag##*.}"
 					else
