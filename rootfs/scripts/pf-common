@@ -137,10 +137,12 @@ planespotters_json_error_message() {
 planespotters_fetch_json() {
   local icao="${1^^}"
   local timeout="${2:-30}"
-  local url response curl_rc error_message
+  local url response curl_rc error_message pf_ver pf_ua
 
   url="$(planespotters_api_url "$icao")"
-  if response="$(curl -m "$timeout" -fsSL --fail "$url" 2>&1)"; then
+  pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+  pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
+  if response="$(curl -m "$timeout" -fsSL --fail -A "$pf_ua" "$url" 2>&1)"; then
     error_message="$(planespotters_json_error_message "$response")"
     if [[ -n "$error_message" ]]; then
       error_message="${error_message//$'\r'/ }"
