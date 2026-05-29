@@ -127,7 +127,7 @@ GET_PS_PHOTO_LINK() {
 		return 0
 	fi
 
-	if json="$(curl -m 20 -fsSL --fail -A "$pf_ua" "https://api.planespotters.net/pub/photos/hex/$icao" 2>/dev/null)" && \
+	if json="$(planespotters_fetch_json "$icao" 20)" && \
 		 ImageLink="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
 		 link="$(jq -r 'try .photos[].link | select(. != null) | .' <<< "$json" | head -n1)" && \
 		 [[ -n "$link" ]]; then

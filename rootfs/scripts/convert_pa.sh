@@ -160,7 +160,7 @@ GET_PS_PHOTO () {
   esac
 
   # fetch
-  if json="$(curl -m 30 -fsSL --fail -A "$pf_ua" "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+  if json="$(planespotters_fetch_json "$icao" 30)" && \
      link="$(jq -r 'try .photos[].link | select(. != null) | .' <<< "$json" | head -n1)" && \
      thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
      [[ -n $link && -n $thumb ]]; then
@@ -312,4 +312,3 @@ for LINE in "${pa_lines[@]}"; do
   log_print DEBUG "Added record for ICAO $icao as index $idx (line $linesread of $filteredrecords)."
 
 done
-

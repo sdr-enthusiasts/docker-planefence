@@ -20,10 +20,8 @@ trap 'rm -f "$tmp"' EXIT
 log_print INFO "Adding ImageLinks to $file. This should be a one-time process that can take a few minutes"
 
 get_imagelink() {
-  local icao="$1" json image_link pf_ver pf_ua
-  pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
-  pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
-  json="$(curl -m 20 -fsSL --fail -A "$pf_ua" "https://api.planespotters.net/pub/photos/hex/$icao" 2>/dev/null || true)"
+  local icao="$1" json image_link
+  json="$(planespotters_fetch_json "$icao" 20 || true)"
   image_link="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" 2>/dev/null | head -n1 || true)"
   printf '%s' "$image_link"
 }
