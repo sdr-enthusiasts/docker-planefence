@@ -117,6 +117,52 @@ log_print() {
   fi
 }
 
+planespotters_api_url() {
+  printf 'https://api.planespotters.net/pub/photos/hex/%s\n' "$1"
+}
+
+planespotters_json_error_message() {
+  jq -r '
+    def error_messages:
+      if . == null then empty
+      elif type == "string" then select(length > 0)
+      elif type == "array" then .[] | error_messages
+      elif type == "object" then .error?, .message?, .detail?, .errors? | error_messages
+      else empty
+      end;
+    [error_messages] | first // empty
+  ' <<<"$1" 2>/dev/null || :
+}
+
+planespotters_fetch_json() {
+  local icao="${1^^}"
+  local timeout="${2:-30}"
+  local url response curl_rc error_message pf_ver pf_ua
+
+  url="$(planespotters_api_url "$icao")"
+  pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+  pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
+  if response="$(curl -m "$timeout" -fsSL --fail -A "$pf_ua" "$url" 2>&1)"; then
+    error_message="$(planespotters_json_error_message "$response")"
+    if [[ -n "$error_message" ]]; then
+      error_message="${error_message//$'\r'/ }"
+      error_message="${error_message//$'\n'/ }"
+      log_print WARN "Planespotters API returned an error for ICAO $icao while requesting $url: $error_message"
+      return 1
+    fi
+
+    printf '%s' "$response"
+    return 0
+  fi
+
+  curl_rc=$?
+  response="${response//$'\r'/ }"
+  response="${response//$'\n'/ }"
+  [[ -n "$response" ]] || response="no curl output"
+  log_print WARN "Planespotters API request failed for ICAO $icao while requesting $url (curl exit code $curl_rc): $response"
+  return 1
+}
+
 
 WAIT_LOCK() {
   if [[ -f "/tmp/.records.lock" ]]; then

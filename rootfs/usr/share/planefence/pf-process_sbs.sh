@@ -384,6 +384,11 @@ GET_PA_INFO () {
   local idx name
   for idx in "${!__pa_header[@]}"; do
     name="${__pa_header[$idx]}"
+    name="${name#\"}"
+    name="${name%\"}"
+    name="${name#"${name%%[![:space:]]*}"}"
+    name="${name%"${name##*[![:space:]]}"}"
+    [[ -n "$name" ]] || continue
     __pa_cols["$name"]=$idx
   done
 
@@ -426,8 +431,10 @@ GET_PA_INFO () {
 
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-  local icao="$1" returntype json link thumb CACHETIME
+  local icao="$1" returntype json link thumb CACHETIME pf_ver pf_ua
   returntype="${2:-link}"; returntype="${returntype,,}"
+  pf_ver="$(sed 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' <<< "${VERSION:-0.0}")"
+  pf_ua="Planefence/$pf_ver (+https://sdr-e.com/docker-planefence)"
 
   # validate
   case "$returntype" in
@@ -457,7 +464,7 @@ GET_PS_PHOTO () {
   esac
 
   # fetch
-  if json="$(curl -m 30 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+  if json="$(planespotters_fetch_json "$icao" 30)" && \
      link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
      thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
      [[ -n $link && -n $thumb ]]; then

@@ -127,8 +127,10 @@ GET_TYPE () {
 
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-  local icao="$1" returntype json link thumb CACHETIME
+  local icao="$1" returntype json link thumb CACHETIME pf_ver pf_ua
   returntype="${2:-link}"; returntype="${returntype,,}"
+  pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+  pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
 
   # validate
   case "$returntype" in
@@ -158,7 +160,7 @@ GET_PS_PHOTO () {
   esac
 
   # fetch
-  if json="$(curl -m 30 -fsSL --fail "https://api.planespotters.net/pub/photos/hex/$icao")" && \
+  if json="$(planespotters_fetch_json "$icao" 30)" && \
      link="$(jq -r 'try .photos[].link | select(. != null) | .' <<< "$json" | head -n1)" && \
      thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<< "$json" | head -n1)" && \
      [[ -n $link && -n $thumb ]]; then
@@ -310,4 +312,3 @@ for LINE in "${pa_lines[@]}"; do
   log_print DEBUG "Added record for ICAO $icao as index $idx (line $linesread of $filteredrecords)."
 
 done
-
