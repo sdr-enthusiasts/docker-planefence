@@ -22,10 +22,11 @@ where:
 
 import argparse
 import paho.mqtt.client as mqtt # type: ignore
+from paho.mqtt.enums import CallbackAPIVersion
 
 def publish_message(broker, port, topic, qos, message, client_id, username=None, password=None):
     # Create an MQTT client instance
-    client = mqtt.Client(client_id)
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id)
 
     # Set username and password if provided
     if username and password:
