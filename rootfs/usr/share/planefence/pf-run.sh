@@ -24,9 +24,12 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
-renice -n 10 -p $$ >/dev/null 2>&1 || true
-
 source /scripts/pf-common
+
+nicevalue="$(GET_PARAM base PF_PROCESS_NICE)"
+PF_PROCESS_NICE="${PF_PROCESS_NICE:-${nicevalue:-10}}"
+
+renice -n "$PF_PROCESS_NICE" -p $$ >/dev/null 2>&1 || true
 
 PF_PATH="/usr/share/planefence"
 PA_PATH="/usr/share/planefence"
