@@ -24,9 +24,12 @@
 # If not, see https://www.gnu.org/licenses/.
 # -----------------------------------------------------------------------------------
 
-renice -n 10 -p $$ >/dev/null 2>&1 || true
-
 source /scripts/pf-common
+
+nicevalue="$(GET_PARAM base PF_PROCESS_NICE)"
+PF_PROCESS_NICE="${PF_PROCESS_NICE:-${nicevalue:-10}}"
+
+renice -n "$PF_PROCESS_NICE" -p $$ >/dev/null 2>&1 || true
 
 PF_PATH="/usr/share/planefence"
 PA_PATH="/usr/share/planefence"
@@ -96,13 +99,45 @@ find /tmp -maxdepth 1 -mindepth 1 \
   -mmin +"${DELETEAFTER}" \
   -exec rm -rf -- {} + 2>/dev/null || :
 
-# Run notifiers scripts in the background
+# Run notifiers scripts in the background with timeout protection
+NOTIFIER_TIMEOUT="${NOTIFIER_TIMEOUT:-120}"  # default 120 second timeout
+declare -a notifier_pids=()
+
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   while read -r script; do
-      bash "$script" || true &  
+      ( 
+        # Run notifier in subshell with timeout
+        timeout "$NOTIFIER_TIMEOUT" bash "$script" || {
+          exitcode=$?
+          if [[ $exitcode -eq 124 ]]; then
+            log_print WARN "Notifier ${script##*/} timed out after ${NOTIFIER_TIMEOUT}s and was terminated"
+          fi
+        }
+      ) &
+      notifier_pids+=($!)
   done <<< "$script_array"
 fi
-wait # wait for all notifier background processes to finish
+
+# Wait for all notifier processes with additional timeout protection
+if [[ ${#notifier_pids[@]} -gt 0 ]]; then
+  wait_start=$(date +%s)
+  max_wait=$((NOTIFIER_TIMEOUT + 10))
+  
+  for pid in "${notifier_pids[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      wait "$pid" 2>/dev/null || true
+    fi
+    
+    # Safety check: if we've been waiting too long, kill remaining processes
+    if (( $(date +%s) - wait_start > max_wait )); then
+      log_print WARN "Notifier wait exceeded ${max_wait}s, terminating remaining processes"
+      for remaining_pid in "${notifier_pids[@]}"; do
+        kill "$remaining_pid" 2>/dev/null || true
+      done
+      break
+    fi
+  done
+fi
 
 # Backup data files if needed
 if [[ "$backup_data_files" == true ]]; then

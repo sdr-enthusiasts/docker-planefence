@@ -89,6 +89,11 @@ PF_ELEVATION=0
 # Used as fallback to identify aircraft owner when other sources fail.
 # Set to "OFF" to prevent downloads (use previously stored copy if present).
 OPENSKYDB_DOWNLOAD=ON
+# ---------------------------------------------------------------------
+# PF_PROCESS_NICE: set priority for the date processing scripts. Permitted values -20 (highest priority) to 19 (nicest, lowest priority).
+# Default value if omitted is 10.
+# We strongly recommend not changing this parameter unless you know what you are doing!
+PF_PROCESS_NICE=10
 
 ###############################################################################
 # Web Page Related Parameters
