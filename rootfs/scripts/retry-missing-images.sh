@@ -146,6 +146,7 @@ is_missing_image() {
 has_valid_image_ext() {
   # Returns 0 (true) if the URL ends with a known image extension (case-insensitive).
   local url="${1,,}"    # lowercase
+  [[ "$url" == *planespotter.net* ]] && return 0
   url="${url%%[?#]*}"   # strip query string and fragment
   [[ "$url" =~ \.(jpg|jpeg|png|gif|bmp|webp|tiff?|heic|heif|avif|svg|ico)$ ]]
 }
