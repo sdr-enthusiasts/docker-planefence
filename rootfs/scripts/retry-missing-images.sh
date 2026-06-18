@@ -143,8 +143,16 @@ is_missing_image() {
   [[ -z "${prefix:image:thumblink}" && -z "${prefix:image:link}" && -z "${prefix:image:file}" ]]
 }
 
+has_valid_image_ext() {
+  # Returns 0 (true) if the URL ends with a known image extension (case-insensitive).
+  local url="${1,,}"    # lowercase
+  url="${url%%[?#]*}"   # strip query string and fragment
+  [[ "$url" =~ \.(jpg|jpeg|png|gif|bmp|webp|tiff?|heic|heif|avif|svg|ico)$ ]]
+}
+
 process_pf() {
-  local idx icao thumblink link file result lastseen
+  local idx icao thumblink link file result lastseen existing_link cache_dir
+  cache_dir="/usr/share/planefence/persist/planepix/cache"
 
   for (( idx=0; idx<=records[maxindex]; idx++ )); do
     [[ -n "${records["$idx":icao]:-}" ]] || continue
@@ -152,6 +160,16 @@ process_pf() {
     [[ "$lastseen" =~ ^[0-9]+$ ]] || lastseen=0
     (( lastseen >= TODAY_EPOCH )) || continue
     icao="${records["$idx":icao]}"
+
+    existing_link="${records["$idx":image:link]:-}"
+    if [[ -n "$existing_link" ]] && ! has_valid_image_ext "$existing_link"; then
+      rm -f "$cache_dir/$icao.jpg" "$cache_dir/$icao.link" "$cache_dir/$icao.thumb.link" 2>/dev/null || :
+      records["$idx":image:link]=""
+      records["$idx":image:thumblink]=""
+      records["$idx":image:file]=""
+      records["$idx":checked:image]=""
+      printf 'PF,%s,%s,cleared-bad-link,%s,\n' "$idx" "$icao" "$existing_link"
+    fi
 
     if [[ -z "${records["$idx":image:thumblink]:-}" && -z "${records["$idx":image:link]:-}" && -z "${records["$idx":image:file]:-}" ]]; then
       thumblink="$(GET_PS_PHOTO "$icao" thumblink || true)"
@@ -176,7 +194,8 @@ process_pf() {
 }
 
 process_pa() {
-  local idx icao thumblink link file result lastseen
+  local idx icao thumblink link file result lastseen existing_link cache_dir
+  cache_dir="/usr/share/planefence/persist/planepix/cache"
 
   for (( idx=0; idx<=pa_records[maxindex]; idx++ )); do
     [[ -n "${pa_records["$idx":icao]:-}" ]] || continue
@@ -184,6 +203,16 @@ process_pa() {
     [[ "$lastseen" =~ ^[0-9]+$ ]] || lastseen=0
     (( lastseen >= TODAY_EPOCH )) || continue
     icao="${pa_records["$idx":icao]}"
+
+    existing_link="${pa_records["$idx":image:link]:-}"
+    if [[ -n "$existing_link" ]] && ! has_valid_image_ext "$existing_link"; then
+      rm -f "$cache_dir/$icao.jpg" "$cache_dir/$icao.link" "$cache_dir/$icao.thumb.link" 2>/dev/null || :
+      pa_records["$idx":image:link]=""
+      pa_records["$idx":image:thumblink]=""
+      pa_records["$idx":image:file]=""
+      pa_records["$idx":checked:image]=""
+      printf 'PA,%s,%s,cleared-bad-link,%s,\n' "$idx" "$icao" "$existing_link"
+    fi
 
     if [[ -z "${pa_records["$idx":image:thumblink]:-}" && -z "${pa_records["$idx":image:link]:-}" && -z "${pa_records["$idx":image:file]:-}" ]]; then
       thumblink="$(GET_PS_PHOTO "$icao" thumblink || true)"
