@@ -190,6 +190,7 @@ fi
 configure_planealert "HISTTIME" "$PA_HISTTIME"
 configure_planealert "ALERTHEADER" "'$PF_ALERTHEADER'"
 if chk_disabled "$PF_SHOWIMAGES"; then configure_planefence "SHOWIMAGES" "false"; else configure_planefence "SHOWIMAGES" "true"; fi
+configure_planefence "PREFER_PA_DB_FOR_PHOTOS" "$PREFER_PA_DB_FOR_PHOTOS"
 if chk_disabled "$PA_SHOWIMAGES"; then configure_planealert "SHOWIMAGES" "false"; else configure_planealert "SHOWIMAGES" "true"; fi
 
 if chk_disabled "$PF_CHECKROUTE"; then configure_planefence "CHECKROUTE" "false"; else configure_planefence "CHECKROUTE" "true"; fi

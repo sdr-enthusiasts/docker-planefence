@@ -180,6 +180,7 @@ function pf_cfg_fixed_options(): array {
     'PA_TABLESIZE' => ['10', '25', '50', '100', 'all'],
     'PA_COLLECT_CANDIDATES' => ['ON', 'OFF'],
     'PA_SHOW_STALE_PAGE' => ['', 'true', 'false'],
+    'PREFER_PA_DB_FOR_PHOTOS' => ['', 'ON', 'OFF'],
     'PF_NOTIFEVERY' => ['true', 'false'],
     'PF_NOTIF_BEHAVIOR' => ['pre', 'post'],
     'PA_DISCORD' => ['OFF', 'ON'],
