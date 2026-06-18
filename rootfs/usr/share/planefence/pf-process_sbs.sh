@@ -468,10 +468,24 @@ GET_PA_IMAGE_LINK () {
 
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-  local icao="$1" returntype json link thumb pa_link CACHETIME pf_ver pf_ua
+  local icao="$1" returntype json link thumb pa_link CACHETIME pf_ver pf_ua pf_major pf_minor pf_rest
   local got_photo=false prefer_pa_db=false na_fresh=false
   returntype="${2:-link}"; returntype="${returntype,,}"
-  pf_ver="$(sed 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' <<< "${VERSION:-0.0}")"
+
+  pf_ver="${VERSION:-0.0}"
+  pf_major="${pf_ver%%.*}"
+  pf_rest="${pf_ver#*.}"
+  if [[ "$pf_rest" == "$pf_ver" ]]; then
+    pf_minor=0
+  else
+    pf_minor="${pf_rest%%.*}"
+  fi
+  pf_major="${pf_major//[^0-9]/}"
+  pf_minor="${pf_minor//[^0-9]/}"
+  [[ -n "$pf_major" ]] || pf_major=0
+  [[ -n "$pf_minor" ]] || pf_minor=0
+  pf_ver="$pf_major.$pf_minor"
+
   pf_ua="Planefence/$pf_ver (+https://sdr-e.com/docker-planefence)"
 
   # validate
