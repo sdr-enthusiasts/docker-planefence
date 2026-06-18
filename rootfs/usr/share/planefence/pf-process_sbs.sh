@@ -469,7 +469,7 @@ GET_PA_IMAGE_LINK () {
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
   local icao="$1" returntype json link thumb pa_link CACHETIME pf_ver pf_ua
-  local got_photo=false prefer_pa_db=false
+  local got_photo=false prefer_pa_db=false na_fresh=false
   returntype="${2:-link}"; returntype="${returntype,,}"
   pf_ver="$(sed 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' <<< "${VERSION:-0.0}")"
   pf_ua="Planefence/$pf_ver (+https://sdr-e.com/docker-planefence)"
@@ -492,8 +492,6 @@ GET_PS_PHOTO () {
   local tlnk="$dir/$icao.thumb.link"
   local na="$dir/$icao.notavailable"
 
-  [[ -f "$na" ]] && return 0
-
   # cache hits
   case "$returntype" in
     image)     if [[ -f "$jpg"  ]] && (( $(date +%s) - $(stat -c %Y -- "$jpg") < CACHETIME )); then printf '%s\n' "$jpg";  return 0; fi ;;
@@ -501,18 +499,25 @@ GET_PS_PHOTO () {
     thumblink) if [[ -f "$tlnk" ]] && (( $(date +%s) - $(stat -c %Y -- "$tlnk") < CACHETIME )); then cat "$tlnk"; return 0; fi ;;
   esac
 
+  if [[ -f "$na" ]] && (( $(date +%s) - $(stat -c %Y -- "$na") < CACHETIME )); then
+    na_fresh=true
+  fi
+
   if chk_enabled "$PREFER_PA_DB_FOR_PHOTOS"; then
     prefer_pa_db=true
   fi
 
   if ! $prefer_pa_db; then
     # Behavior A: planespotters first, then PA_FILE fallback.
-    if json="$(planespotters_fetch_json "$icao" 30)" && \
-       link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
-       thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
-       [[ -n $link && -n $thumb ]]; then
-      got_photo=true
-    elif pa_link="$(GET_PA_IMAGE_LINK "$icao")"; then
+    if ! $na_fresh; then
+      if json="$(planespotters_fetch_json "$icao" 30)" && \
+         link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
+         thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
+         [[ -n $link && -n $thumb ]]; then
+        got_photo=true
+      fi
+    fi
+    if ! $got_photo && pa_link="$(GET_PA_IMAGE_LINK "$icao")"; then
       link="$pa_link"
       thumb="$pa_link"
       got_photo=true
@@ -523,11 +528,12 @@ GET_PS_PHOTO () {
       link="$pa_link"
       thumb="$pa_link"
       got_photo=true
-    elif json="$(planespotters_fetch_json "$icao" 30)" && \
+    elif ! $na_fresh && \
+         json="$(planespotters_fetch_json "$icao" 30)" && \
          link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
          thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
          [[ -n $link && -n $thumb ]]; then
-      got_photo=true
+        got_photo=true
     fi
   fi
 
