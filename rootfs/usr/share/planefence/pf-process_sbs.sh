@@ -452,7 +452,7 @@ GET_PA_IMAGE_LINK () {
         sub(/[?#].*$/, "", base)
         if (match(base, /\.([a-z0-9]{2,8})$/, m)) {
           ext = m[1]
-          if (ext !~ /^(html?|php|asp|aspx|jsp|json|txt|csv|xml|pdf)$/) {
+          if (ext ~ /^(jpg|jpeg|png|gif|bmp|webp|tiff?|heic|heif|avif|svg|ico)$/) {
             print v
             exit
           }
@@ -538,7 +538,7 @@ GET_PS_PHOTO () {
   fi
 
   if $got_photo; then
-    curl -m 30 -fsSL --fail "$thumb" > "$jpg" || :
+    curl -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || :
     printf '%s\n' "$link"  >"$lnk"
     printf '%s\n' "$thumb" >"$tlnk"
 
