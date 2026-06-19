@@ -717,6 +717,35 @@ function pf_cfg_names_for_match(string $match, array $sourceFields): array {
   ));
 }
 
+function pf_cfg_ui_has_field(array $tabs, string $name): bool {
+  foreach ($tabs as $tab) {
+    foreach (($tab['fields'] ?? []) as $field) {
+      if ((string)($field['name'] ?? '') === $name) return true;
+    }
+    foreach (($tab['subtabs'] ?? []) as $subtab) {
+      foreach (($subtab['fields'] ?? []) as $field) {
+        if ((string)($field['name'] ?? '') === $name) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function pf_cfg_ui_inject_web_field(array $tabs, array $field): array {
+  foreach ($tabs as $idx => $tab) {
+    $tabId = (string)($tab['id'] ?? '');
+    $tabTitle = strtolower((string)($tab['title'] ?? ''));
+    if ($tabId === 'web' || $tabTitle === 'web ui') {
+      if (!is_array($tabs[$idx]['fields'] ?? null)) {
+        $tabs[$idx]['fields'] = [];
+      }
+      $tabs[$idx]['fields'][] = $field;
+      return $tabs;
+    }
+  }
+  return $tabs;
+}
+
 function pf_cfg_build_default_ui(array $sections, array $values, array $schema): array {
   $fieldOverrides = is_array($schema['fieldOverrides'] ?? null) ? $schema['fieldOverrides'] : [];
   $tabs = [];
@@ -835,6 +864,14 @@ function pf_cfg_build_ui_from_schema(array $sections, array $values, array $sche
     }
 
     $tabs[] = $tab;
+  }
+
+  // Backward-compatibility safeguard: older persisted schemas can hide newly added fields.
+  if (!pf_cfg_ui_has_field($tabs, 'PREFER_PA_DB_FOR_PHOTOS') && isset($fieldMap['PREFER_PA_DB_FOR_PHOTOS'])) {
+    $field = pf_cfg_select_fields_from_names(['PREFER_PA_DB_FOR_PHOTOS'], $fieldMap, $values, $fieldOverrides);
+    if (count($field) > 0) {
+      $tabs = pf_cfg_ui_inject_web_field($tabs, $field[0]);
+    }
   }
 
   $intro = is_array($schema['intro'] ?? null) ? $schema['intro'] : [
