@@ -282,32 +282,28 @@ configure_both "DB_WAL_AUTOCHECKPOINT_PAGES" "${PF_DB_WAL_AUTOCHECKPOINT_PAGES:-
 if [[ "${PF_RECORDS_BACKEND,,}" == "sqlite" ]]; then
 	runtime_db="/run/planefence/planefence-records.sqlite"
 	persist_db="/usr/share/planefence/persist/records/planefence-records.sqlite"
-	migration_marker="/usr/share/planefence/persist/.internal/sqlite-migration-v1.done"
-	if [[ ! -f "$runtime_db" && -f "$persist_db" ]]; then
-		cp -f "$persist_db" "$runtime_db" || true
-	fi
+	mkdir -p /usr/share/planefence/persist/records
 
-	db_init_cmd=(/usr/share/planefence/pf-db.py init --db /run/planefence/planefence-records.sqlite)
-	[[ -n "${PF_DB_PROFILE:-}" ]] && db_init_cmd+=(--profile "$PF_DB_PROFILE")
-	[[ "${PF_DB_CHECKPOINT_INTERVAL:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CHECKPOINT_INTERVAL > 0 )) && db_init_cmd+=(--checkpoint-interval-sec "$PF_DB_CHECKPOINT_INTERVAL")
-	[[ "${PF_DB_BUSY_TIMEOUT_MS:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_BUSY_TIMEOUT_MS > 0 )) && db_init_cmd+=(--busy-timeout-ms "$PF_DB_BUSY_TIMEOUT_MS")
-	[[ "${PF_DB_CACHE_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CACHE_MB > 0 )) && db_init_cmd+=(--cache-mb "$PF_DB_CACHE_MB")
-	[[ "${PF_DB_MMAP_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_MMAP_MB > 0 )) && db_init_cmd+=(--mmap-mb "$PF_DB_MMAP_MB")
-	[[ "${PF_DB_WAL_AUTOCHECKPOINT_PAGES:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_WAL_AUTOCHECKPOINT_PAGES > 0 )) && db_init_cmd+=(--wal-autocheckpoint-pages "$PF_DB_WAL_AUTOCHECKPOINT_PAGES")
-	if ! "${db_init_cmd[@]}" >/run/planefence/pf-db-init.json 2>/tmp/pf-db-init.err; then
-		log_print WARN "SQLite init failed; keeping legacy data path active. See /tmp/pf-db-init.err"
-	fi
+	# Build the restore-or-init command with any user-supplied tuning overrides
+	db_restore_cmd=(/usr/share/planefence/pf-db.py restore-or-init
+		--db "$runtime_db"
+		--persist-db "$persist_db"
+		--legacy-records-dir /usr/share/planefence/persist/records
+	)
+	[[ -n "${PF_DB_PROFILE:-}" ]] && db_restore_cmd+=(--profile "$PF_DB_PROFILE")
+	[[ "${PF_DB_CHECKPOINT_INTERVAL:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CHECKPOINT_INTERVAL > 0 )) && db_restore_cmd+=(--checkpoint-interval-sec "$PF_DB_CHECKPOINT_INTERVAL")
+	[[ "${PF_DB_BUSY_TIMEOUT_MS:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_BUSY_TIMEOUT_MS > 0 )) && db_restore_cmd+=(--busy-timeout-ms "$PF_DB_BUSY_TIMEOUT_MS")
+	[[ "${PF_DB_CACHE_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CACHE_MB > 0 )) && db_restore_cmd+=(--cache-mb "$PF_DB_CACHE_MB")
+	[[ "${PF_DB_MMAP_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_MMAP_MB > 0 )) && db_restore_cmd+=(--mmap-mb "$PF_DB_MMAP_MB")
+	[[ "${PF_DB_WAL_AUTOCHECKPOINT_PAGES:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_WAL_AUTOCHECKPOINT_PAGES > 0 )) && db_restore_cmd+=(--wal-autocheckpoint-pages "$PF_DB_WAL_AUTOCHECKPOINT_PAGES")
 
-	if [[ ! -f "$migration_marker" ]]; then
-		for legacy_gz in /usr/share/planefence/persist/records/planefence-records-*.gz; do
-			[[ -f "$legacy_gz" ]] || continue
-			day_key="${legacy_gz##*-}"
-			day_key="${day_key%.gz}"
-			if [[ "$day_key" =~ ^[0-9]{6}$ ]]; then
-				/usr/share/planefence/pf-db.py migrate-legacy-day --db "$runtime_db" --day "$day_key" --legacy-gz "$legacy_gz" >/tmp/pf-db-migrate-"$day_key".json 2>/tmp/pf-db-migrate-"$day_key".err || true
-			fi
-		done
-		touch "$migration_marker"
+	if restore_result="$("${db_restore_cmd[@]}" 2>/tmp/pf-db-init.err)"; then
+		restore_source="$(jq -r '.source // "unknown"' <<<"$restore_result" 2>/dev/null || echo unknown)"
+		log_print INFO "SQLite backend ready (source: ${restore_source})"
+		echo "$restore_result" >/run/planefence/pf-db-init.json
+	else
+		log_print WARN "SQLite restore-or-init failed; keeping legacy data path active. See /tmp/pf-db-init.err"
+		configure_both "RECORDS_BACKEND" "legacy"
 	fi
 fi
 

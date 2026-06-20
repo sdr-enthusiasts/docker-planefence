@@ -275,6 +275,111 @@ def cmd_load_day(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_delete_old_snapshots(args: argparse.Namespace) -> int:
+    before_day = str(args.before_day).strip()
+    if not before_day or not before_day.isdigit() or len(before_day) != 6:
+        print(json.dumps({"ok": False, "error": "before_day must be 6 digits (YYMMDD)"}))
+        return 2
+    with open_db(args.db) as conn:
+        cur = conn.execute(
+            "DELETE FROM day_snapshots WHERE day_key < ?",
+            (before_day,),
+        )
+        deleted = cur.rowcount
+    print(json.dumps({"ok": True, "db": args.db, "before_day": before_day, "deleted": deleted}))
+    return 0
+
+
+def cmd_restore_or_init(args: argparse.Namespace) -> int:
+    """
+    Integrity-gated startup restore for the sqlite backend.
+
+    Resolution order:
+      1. If runtime DB exists and passes integrity_check → keep it in place, done.
+      2. Else if a persist DB exists and passes integrity_check → copy it to runtime path.
+      3. Else scan legacy gz day files and import any that exist (best-effort recovery).
+      4. Always run init to ensure schema/pragmas are current.
+      5. Return 0 on success (including a clean-init fallback), non-zero only on hard failure.
+    """
+    runtime_db = Path(args.db)
+    persist_db = Path(args.persist_db)
+    profile = args.profile or select_profile()
+    settings = profile_settings(profile)
+    if args.cache_mb is not None:
+        settings["cache_mb"] = int(args.cache_mb)
+    if args.mmap_mb is not None:
+        settings["mmap_mb"] = int(args.mmap_mb)
+    if args.busy_timeout_ms is not None:
+        settings["busy_timeout_ms"] = int(args.busy_timeout_ms)
+    if args.wal_autocheckpoint_pages is not None:
+        settings["wal_autocheckpoint_pages"] = int(args.wal_autocheckpoint_pages)
+    if args.checkpoint_interval_sec is not None:
+        settings["checkpoint_interval_sec"] = int(args.checkpoint_interval_sec)
+
+    def db_ok(path: Path) -> bool:
+        if not path.is_file() or path.stat().st_size == 0:
+            return False
+        try:
+            with open_db(str(path)) as c:
+                row = c.execute("PRAGMA integrity_check").fetchone()
+                return bool(row and str(row[0]).lower() == "ok")
+        except Exception:
+            return False
+
+    source = "none"
+    if db_ok(runtime_db):
+        source = "runtime_ok"
+    elif db_ok(persist_db):
+        runtime_db.parent.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.copy2(str(persist_db), str(runtime_db))
+        source = "persist_restored"
+    else:
+        # Remove any corrupt file so init starts clean
+        runtime_db.unlink(missing_ok=True)
+        source = "clean_init"
+
+    # Always ensure schema + pragmas are up to date
+    now = int(time.time())
+    with open_db(str(runtime_db)) as conn:
+        apply_pragmas(conn, settings)
+        create_schema(conn)
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("INSERT OR REPLACE INTO db_meta(key,value) VALUES('schema_version','1')")
+        conn.execute("INSERT OR REPLACE INTO db_meta(key,value) VALUES('profile',?)", (profile,))
+        conn.execute(
+            "INSERT OR REPLACE INTO globals_kv(key,value,updated_at) VALUES('db:last_restore_or_init',?,?)",
+            (str(now), now),
+        )
+        conn.execute("COMMIT")
+
+    # If we got here via clean_init, opportunistically import legacy day files
+    if source == "clean_init" and args.legacy_records_dir:
+        import glob as glob_mod
+        pattern = str(Path(args.legacy_records_dir) / "planefence-records-*.gz")
+        for legacy_gz in sorted(glob_mod.glob(pattern)):
+            p = Path(legacy_gz)
+            day_key = p.stem.replace("planefence-records-", "")
+            if not day_key.isdigit() or len(day_key) != 6:
+                continue
+            try:
+                with gzip.open(legacy_gz, "rt", encoding="utf-8", errors="replace") as f:
+                    payload = f.read()
+                with open_db(str(runtime_db)) as conn:
+                    conn.execute("BEGIN IMMEDIATE")
+                    conn.execute(
+                        """INSERT OR IGNORE INTO day_snapshots(day_key,payload_text,payload_format,updated_at)
+                           VALUES(?,?,'bash_declare_v1',?)""",
+                        (day_key, payload, now),
+                    )
+                    conn.execute("COMMIT")
+            except Exception:
+                pass
+
+    print(json.dumps({"ok": True, "db": str(runtime_db), "source": source, "profile": profile}))
+    return 0
+
+
 def cmd_migrate_legacy_day(args: argparse.Namespace) -> int:
     day_key = str(args.day).strip()
     legacy_gz = Path(args.legacy_gz)
@@ -340,6 +445,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_profile = sub.add_parser("show-profile", help="print selected profile settings")
     p_profile.add_argument("--profile", choices=["pi3", "pi45", "x86"])
     p_profile.set_defaults(func=cmd_show_profile)
+
+    p_del = sub.add_parser("delete-old-snapshots", help="purge day snapshots older than a day key")
+    p_del.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_del.add_argument("--before-day", required=True)
+    p_del.set_defaults(func=cmd_delete_old_snapshots)
+
+    p_restore = sub.add_parser("restore-or-init", help="integrity-gated startup restore/init")
+    p_restore.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_restore.add_argument("--persist-db", default="/usr/share/planefence/persist/records/planefence-records.sqlite")
+    p_restore.add_argument("--legacy-records-dir", default="")
+    p_restore.add_argument("--profile", choices=["pi3", "pi45", "x86"])
+    p_restore.add_argument("--cache-mb", type=int)
+    p_restore.add_argument("--mmap-mb", type=int)
+    p_restore.add_argument("--busy-timeout-ms", type=int)
+    p_restore.add_argument("--wal-autocheckpoint-pages", type=int)
+    p_restore.add_argument("--checkpoint-interval-sec", type=int)
+    p_restore.set_defaults(func=cmd_restore_or_init)
 
     p_save = sub.add_parser("save-day", help="store bash snapshot payload for a day")
     p_save.add_argument("--db", default=DEFAULT_DB_PATH)
