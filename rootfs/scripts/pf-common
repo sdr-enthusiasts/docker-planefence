@@ -1,4 +1,4 @@
-# shellcheck shell=bash disable=SC1091,SC2034,SC2154
+# shellcheck shell=bash disable=SC1090,SC1091,SC2034,SC2154
 # -----------------------------------------------------------------------------------
 # Copyright 2026 Ramon F. Kolb, kx1t - licensed under the terms and conditions
 # of GPLv3. The terms and conditions of this license are included with the Github
@@ -33,6 +33,53 @@ NEWLINE="
 "
 
 declare -gA records pa_records
+
+PF_RECORDS_BACKEND_GET() {
+  local backend="${PF_RECORDS_BACKEND:-${RECORDS_BACKEND:-}}"
+  if [[ -z "$backend" ]] && command -v GET_PARAM >/dev/null 2>&1; then
+    backend="$(GET_PARAM base PF_RECORDS_BACKEND 2>/dev/null || true)"
+  fi
+  backend="${backend,,}"
+  if [[ -z "$backend" ]]; then
+    backend="legacy"
+  fi
+  printf '%s' "$backend"
+}
+
+PF_RECORDS_DB_PATH() {
+  printf '%s' "${PF_RECORDS_DB_PATH:-/run/planefence/planefence-records.sqlite}"
+}
+
+PF_RECORDS_PERSIST_DB_PATH() {
+  printf '%s' "${PF_RECORDS_PERSIST_DB_PATH:-/usr/share/planefence/persist/records/planefence-records.sqlite}"
+}
+
+PF_SQLITE_CHECKPOINT_TO_PERSIST() {
+  if [[ "$(PF_RECORDS_BACKEND_GET)" != "sqlite" ]]; then
+    return 0
+  fi
+  local runtime_db persist_db
+  runtime_db="$(PF_RECORDS_DB_PATH)"
+  persist_db="$(PF_RECORDS_PERSIST_DB_PATH)"
+  mkdir -p "$(dirname "$persist_db")"
+  if [[ -f "$runtime_db" ]]; then
+    cp -f "$runtime_db" "$persist_db"
+    chmod a+r "$persist_db" 2>/dev/null || true
+    log_print DEBUG "sqlite checkpoint copied to persist store"
+  fi
+}
+
+PF_RECORDS_INIT_EMPTY() {
+  declare -gA records=()
+  declare -gA pa_records=()
+  declare -gA heatmap=()
+  declare -gA last_idx_for_icao=()
+  declare -gA lastseen_for_icao=()
+  declare -gA pa_last_idx_for_icao=()
+  records[maxindex]=-1
+  pa_records[maxindex]=-1
+  LASTPROCESSEDLINE=""
+}
 
 should_weblog_mirror() {
   if [[ -z "${_PF_WEBLOGS_MIRROR_INIT:-}" ]]; then
@@ -190,6 +237,10 @@ WAIT_LOCK() {
 
 # shellcheck disable=SC2120
 LOCK_RECORDS() {
+  if [[ "$(PF_RECORDS_BACKEND_GET)" == "sqlite" ]]; then
+    log_print DEBUG "LOCK_RECORDS bypassed in sqlite mode"
+    return 0
+  fi
   if [[ "${1,,}" != "ignore-lock" ]] && [[ -f "/tmp/.records.lock" ]]; then
     WAIT_LOCK ""
   fi
@@ -198,6 +249,10 @@ LOCK_RECORDS() {
 }
 
 UNLOCK_RECORDS() {
+  if [[ "$(PF_RECORDS_BACKEND_GET)" == "sqlite" ]]; then
+    log_print DEBUG "UNLOCK_RECORDS bypassed in sqlite mode"
+    return 0
+  fi
   if [[ -f "/tmp/.records.lock" ]]; then
     log_print DEBUG "Unlocking .records.lock locked by $(</tmp/.records.lock)"
     rm -f "/tmp/.records.lock"
@@ -210,6 +265,24 @@ READ_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSDIR="${RECORDSDIR:-/run/planefence}"
   local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local backend
+  backend="$(PF_RECORDS_BACKEND_GET)"
+
+  if [[ "$backend" == "sqlite" ]]; then
+    local db_path
+    db_path="$(PF_RECORDS_DB_PATH)"
+    PF_RECORDS_INIT_EMPTY
+    if /usr/share/planefence/pf-db.py load-day --db "$db_path" --day "$TODAY" >/tmp/pf-db-day-load.$$ 2>/tmp/pf-db-day-load.err; then
+      # shellcheck disable=SC1091
+      source /tmp/pf-db-day-load.$$ || true
+      rm -f /tmp/pf-db-day-load.$$ /tmp/pf-db-day-load.err
+      log_print DEBUG "records loaded from sqlite day snapshot"
+      return 0
+    fi
+    rm -f /tmp/pf-db-day-load.$$ /tmp/pf-db-day-load.err
+    log_print DEBUG "sqlite day snapshot not found - initialized empty maps"
+    return 0
+  fi
 
   if [[ "${1,,}" != "ignore-lock" && -f "/tmp/.records.lock" ]]; then
   # wait until the lock is gone, or 120 seconds (whichever is shorter)
@@ -224,15 +297,7 @@ READ_RECORDS() {
 
   if [[ ! -f "$RECORDSFILE" ]] || ! gzip -t "$RECORDSFILE" >/dev/null 2>&1; then
     log_print DEBUG "RECORDSFILE (\"$RECORDSFILE\") not found or corrupt - initializing"
-    declare -gA records=()
-    declare -gA pa_records=()
-    declare -gA heatmap=()
-    declare -gA last_idx_for_icao=()
-    declare -gA lastseen_for_icao=()
-    declare -gA pa_last_idx_for_icao=()
-    records[maxindex]=-1
-    pa_records[maxindex]=-1
-    LASTPROCESSEDLINE=""
+    PF_RECORDS_INIT_EMPTY
     return
   fi
 
@@ -247,11 +312,11 @@ WRITE_RECORDS() {
   local TODAY="${TODAY:-$(date +%y%m%d)}"
   local RECORDSDIR="${RECORDSDIR:-/run/planefence}"
   local RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
+  local backend
+  backend="$(PF_RECORDS_BACKEND_GET)"
   local tmpfile
   tmpfile="$(mktemp)"
 
-  LOCK_RECORDS "$1"
-  #declare -A records pf_last_idx_for_icao pf_lastseen_for_icao  # declare them just in case they don't exist yet
   { declare -p records
     declare -p heatmap
     declare -p last_idx_for_icao
@@ -259,10 +324,27 @@ WRITE_RECORDS() {
     declare -p pa_records
     declare -p pa_last_idx_for_icao
     echo "LASTPROCESSEDLINE=\"$LASTPROCESSEDLINE\""
-  } | \
-    sed -e 's/declare \(-.\{1\}\) /declare \1g /g' | \
-    gzip -c > "$tmpfile"
-  mv -f "$tmpfile" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+  } | sed -e 's/declare \(-.\{1\}\) /declare \1g /g' > "$tmpfile"
+
+  if [[ "$backend" == "sqlite" ]]; then
+    local db_path
+    db_path="$(PF_RECORDS_DB_PATH)"
+    if ! /usr/share/planefence/pf-db.py save-day --db "$db_path" --day "$TODAY" < "$tmpfile" >/tmp/pf-db-day-save.json 2>/tmp/pf-db-day-save.err; then
+      log_print WARN "SQLite save failed; state not persisted to sqlite for day $TODAY"
+      rm -f "$tmpfile"
+      return 1
+    fi
+    rm -f /tmp/pf-db-day-save.json /tmp/pf-db-day-save.err "$tmpfile"
+    log_print DEBUG "Records written to sqlite day snapshot by $(basename "$0")"
+    return 0
+  fi
+
+  LOCK_RECORDS "$1"
+  local tmpgz
+  tmpgz="$(mktemp)"
+  gzip -c < "$tmpfile" > "$tmpgz"
+  mv -f "$tmpgz" "$RECORDSFILE"  # using a tmpfile and mv to ensure atomic write
+  rm -f "$tmpfile"
   chmod a+r "$RECORDSFILE"
   log_print DEBUG "Records written by $(basename "$0")"
   if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_RECORDS; fi

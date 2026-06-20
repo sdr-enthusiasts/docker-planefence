@@ -9,6 +9,10 @@ TODAY="${TODAY:-$(date +%y%m%d)}"
 RECORDSDIR="${RECORDSDIR:-/usr/share/planefence/persist/records}"
 RECORDSFILE="${RECORDSFILE:-$RECORDSDIR/planefence-records-${TODAY}.gz}"
 
+if [[ "$(PF_RECORDS_BACKEND_GET)" == "sqlite" ]]; then
+  PF_SQLITE_CHECKPOINT_TO_PERSIST
+fi
+
 # Copy the most recent compressed records back to the persistent store.
 if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then
   cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"

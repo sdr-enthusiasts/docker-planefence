@@ -44,6 +44,14 @@ BACKUPTIME=600  # seconds
 # shellcheck disable=SC2174
 mkdir -p -m 0750 /run/planefence
 
+if [[ "$(PF_RECORDS_BACKEND_GET)" == "sqlite" ]]; then
+  runtime_db="$(PF_RECORDS_DB_PATH)"
+  persist_db="$(PF_RECORDS_PERSIST_DB_PATH)"
+  if [[ ! -f "$runtime_db" && -f "$persist_db" ]]; then
+    cp -f "$persist_db" "$runtime_db" || true
+  fi
+fi
+
 # -----------------------------------------------------------------------------------
 #       SETTINGS STUFF
 # -----------------------------------------------------------------------------------
@@ -141,6 +149,9 @@ fi
 
 # Backup data files if needed
 if [[ "$backup_data_files" == true ]]; then
+  if [[ "$(PF_RECORDS_BACKEND_GET)" == "sqlite" ]]; then
+    PF_SQLITE_CHECKPOINT_TO_PERSIST
+  fi
   if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then  cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"; fi
   if [[ -f "/run/planefence/planefence-${TODAY}.json" ]]; then  cp -f "/run/planefence/planefence-${TODAY}.json" "/usr/share/planefence/html/planefence-${TODAY}.json"; fi
   if [[ -f "/run/planefence/plane-alert-${TODAY}.json" ]]; then  cp -f "/run/planefence/plane-alert-${TODAY}.json" "/usr/share/planefence/html/plane-alert-${TODAY}.json"; fi

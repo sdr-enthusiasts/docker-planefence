@@ -169,6 +169,8 @@ function pf_cfg_apply_prime_fallback_aliases(array $vals): array {
 function pf_cfg_fixed_options(): array {
   return [
     'GENERATE_CSV' => ['OFF', 'ON'],
+    'PF_RECORDS_BACKEND' => ['legacy', 'sqlite'],
+    'PF_DB_PROFILE' => ['', 'pi3', 'pi45', 'x86'],
     'PF_DISTUNIT' => ['kilometer', 'nauticalmile', 'mile', 'meter'],
     'PF_ALTUNIT' => ['meter', 'feet'],
     'PF_SPEEDUNIT' => ['kilometerph', 'knotph', 'mileph'],

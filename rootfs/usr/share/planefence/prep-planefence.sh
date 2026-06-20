@@ -271,6 +271,45 @@ configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
 configure_both "DISCORD_AVATAR_URL" "${DISCORD_AVATAR_URL}"
 #configure_both "NOTIFICATION_SERVER" "$NOTIFICATION_SERVER"
 configure_both "GENERATE_CSV" "${GENERATE_CSV:-OFF}"
+configure_both "RECORDS_BACKEND" "${PF_RECORDS_BACKEND:-legacy}"
+configure_both "DB_PROFILE" "${PF_DB_PROFILE:-}"
+configure_both "DB_CHECKPOINT_INTERVAL" "${PF_DB_CHECKPOINT_INTERVAL:-300}"
+configure_both "DB_BUSY_TIMEOUT_MS" "${PF_DB_BUSY_TIMEOUT_MS:-8000}"
+configure_both "DB_CACHE_MB" "${PF_DB_CACHE_MB:-0}"
+configure_both "DB_MMAP_MB" "${PF_DB_MMAP_MB:-0}"
+configure_both "DB_WAL_AUTOCHECKPOINT_PAGES" "${PF_DB_WAL_AUTOCHECKPOINT_PAGES:-0}"
+
+if [[ "${PF_RECORDS_BACKEND,,}" == "sqlite" ]]; then
+	runtime_db="/run/planefence/planefence-records.sqlite"
+	persist_db="/usr/share/planefence/persist/records/planefence-records.sqlite"
+	migration_marker="/usr/share/planefence/persist/.internal/sqlite-migration-v1.done"
+	if [[ ! -f "$runtime_db" && -f "$persist_db" ]]; then
+		cp -f "$persist_db" "$runtime_db" || true
+	fi
+
+	db_init_cmd=(/usr/share/planefence/pf-db.py init --db /run/planefence/planefence-records.sqlite)
+	[[ -n "${PF_DB_PROFILE:-}" ]] && db_init_cmd+=(--profile "$PF_DB_PROFILE")
+	[[ "${PF_DB_CHECKPOINT_INTERVAL:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CHECKPOINT_INTERVAL > 0 )) && db_init_cmd+=(--checkpoint-interval-sec "$PF_DB_CHECKPOINT_INTERVAL")
+	[[ "${PF_DB_BUSY_TIMEOUT_MS:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_BUSY_TIMEOUT_MS > 0 )) && db_init_cmd+=(--busy-timeout-ms "$PF_DB_BUSY_TIMEOUT_MS")
+	[[ "${PF_DB_CACHE_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_CACHE_MB > 0 )) && db_init_cmd+=(--cache-mb "$PF_DB_CACHE_MB")
+	[[ "${PF_DB_MMAP_MB:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_MMAP_MB > 0 )) && db_init_cmd+=(--mmap-mb "$PF_DB_MMAP_MB")
+	[[ "${PF_DB_WAL_AUTOCHECKPOINT_PAGES:-0}" =~ ^[0-9]+$ ]] && (( PF_DB_WAL_AUTOCHECKPOINT_PAGES > 0 )) && db_init_cmd+=(--wal-autocheckpoint-pages "$PF_DB_WAL_AUTOCHECKPOINT_PAGES")
+	if ! "${db_init_cmd[@]}" >/run/planefence/pf-db-init.json 2>/tmp/pf-db-init.err; then
+		log_print WARN "SQLite init failed; keeping legacy data path active. See /tmp/pf-db-init.err"
+	fi
+
+	if [[ ! -f "$migration_marker" ]]; then
+		for legacy_gz in /usr/share/planefence/persist/records/planefence-records-*.gz; do
+			[[ -f "$legacy_gz" ]] || continue
+			day_key="${legacy_gz##*-}"
+			day_key="${day_key%.gz}"
+			if [[ "$day_key" =~ ^[0-9]{6}$ ]]; then
+				/usr/share/planefence/pf-db.py migrate-legacy-day --db "$runtime_db" --day "$day_key" --legacy-gz "$legacy_gz" >/tmp/pf-db-migrate-"$day_key".json 2>/tmp/pf-db-migrate-"$day_key".err || true
+			fi
+		done
+		touch "$migration_marker"
+	fi
+fi
 
 # Add OPENAIPKEY for use with OpenAIP, necessary for it to work if PF_OPENAIP_LAYER is ON
 configure_planefence "OPENAIPKEY" "$PF_OPENAIPKEY"

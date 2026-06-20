@@ -94,6 +94,32 @@ OPENSKYDB_DOWNLOAD=ON
 # Default value if omitted is 10.
 # We strongly recommend not changing this parameter unless you know what you are doing!
 PF_PROCESS_NICE=10
+# ---------------------------------------------------------------------
+# PF_RECORDS_BACKEND: record storage backend selector.
+#   legacy  -> current associative-array file model (default)
+#   sqlite  -> SQLite-backed model (migration scaffold, not yet default)
+PF_RECORDS_BACKEND=legacy
+# ---------------------------------------------------------------------
+# PF_DB_PROFILE: optional SQLite tuning profile override.
+# Empty means auto profile selection based on architecture and memory.
+# Allowed: pi3, pi45, x86
+PF_DB_PROFILE=
+# ---------------------------------------------------------------------
+# PF_DB_CHECKPOINT_INTERVAL: checkpoint cadence in seconds for runtime DB persistence.
+PF_DB_CHECKPOINT_INTERVAL=300
+# ---------------------------------------------------------------------
+# PF_DB_BUSY_TIMEOUT_MS: SQLite busy timeout in milliseconds.
+PF_DB_BUSY_TIMEOUT_MS=8000
+# ---------------------------------------------------------------------
+# PF_DB_CACHE_MB: SQLite page cache size in MiB. Set to 0 to use profile default.
+PF_DB_CACHE_MB=0
+# ---------------------------------------------------------------------
+# PF_DB_MMAP_MB: SQLite mmap size in MiB. Set to 0 to use profile default.
+PF_DB_MMAP_MB=0
+# ---------------------------------------------------------------------
+# PF_DB_WAL_AUTOCHECKPOINT_PAGES: SQLite WAL autocheckpoint pages.
+# Set to 0 to use profile default.
+PF_DB_WAL_AUTOCHECKPOINT_PAGES=0
 
 ###############################################################################
 # Web Page Related Parameters

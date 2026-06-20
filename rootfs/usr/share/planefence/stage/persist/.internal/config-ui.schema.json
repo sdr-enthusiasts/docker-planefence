@@ -30,7 +30,14 @@
         "PF_FUDGELOC",
         "PF_TRACKSERVICE",
         "PF_ELEVATION",
-        "OPENSKYDB_DOWNLOAD"
+        "OPENSKYDB_DOWNLOAD",
+        "PF_RECORDS_BACKEND",
+        "PF_DB_PROFILE",
+        "PF_DB_CHECKPOINT_INTERVAL",
+        "PF_DB_BUSY_TIMEOUT_MS",
+        "PF_DB_CACHE_MB",
+        "PF_DB_MMAP_MB",
+        "PF_DB_WAL_AUTOCHECKPOINT_PAGES"
       ]
     },
     {
@@ -113,6 +120,46 @@
         "OFF"
       ],
       "useDefaultWhenEmpty": true
+    },
+    "PF_RECORDS_BACKEND": {
+      "type": "select",
+      "options": [
+        "legacy",
+        "sqlite"
+      ],
+      "description": "Record storage backend selector. Keep legacy unless explicitly testing SQLite backend.",
+      "useDefaultWhenEmpty": true
+    },
+    "PF_DB_PROFILE": {
+      "type": "select",
+      "options": [
+        "",
+        "pi3",
+        "pi45",
+        "x86"
+      ],
+      "description": "Optional SQLite tuning profile override. Empty uses auto-detected profile.",
+      "useDefaultWhenEmpty": true
+    },
+    "PF_DB_CHECKPOINT_INTERVAL": {
+      "type": "number",
+      "description": "Checkpoint cadence in seconds for SQLite runtime persistence."
+    },
+    "PF_DB_BUSY_TIMEOUT_MS": {
+      "type": "number",
+      "description": "SQLite busy timeout in milliseconds."
+    },
+    "PF_DB_CACHE_MB": {
+      "type": "number",
+      "description": "SQLite cache size in MiB. Set 0 for profile default."
+    },
+    "PF_DB_MMAP_MB": {
+      "type": "number",
+      "description": "SQLite mmap size in MiB. Set 0 for profile default."
+    },
+    "PF_DB_WAL_AUTOCHECKPOINT_PAGES": {
+      "type": "number",
+      "description": "SQLite WAL autocheckpoint page threshold. Set 0 for profile default."
     },
     "PF_SOCK30003HOST": {
       "type": "text"
