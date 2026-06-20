@@ -128,6 +128,12 @@ PF_MAPZOOM=7
 # Default YES. Set to NO to disable.
 PF_SHOWIMAGES=YES
 # ---------------------------------------------------------------------
+# PREFER_PA_DB_FOR_PHOTOS: image lookup order preference for Planefence.
+# When ON, Planefence checks the Plane-Alert DB first and falls back to planespotters.net.
+# OFF or empty keeps the current behavior (planespotters.net first, then Plane-Alert DB).
+# Allowed values: ON, OFF, or empty.
+PREFER_PA_DB_FOR_PHOTOS=
+# ---------------------------------------------------------------------
 # Show OpenAIP layer on heatmap when ON.
 # Requires a valid OpenAIP API key in PF_OPENAIPKEY.
 PF_OPENAIP_LAYER=OFF

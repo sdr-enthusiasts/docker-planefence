@@ -143,6 +143,16 @@
       ],
       "description": "Include aircraft photos from planespotters.net in UI and notifications."
     },
+    "PREFER_PA_DB_FOR_PHOTOS": {
+      "type": "select",
+      "options": [
+        "",
+        "ON",
+        "OFF"
+      ],
+      "description": "Image lookup preference. ON checks Plane-Alert DB first and falls back to planespotters.net. OFF or empty checks planespotters.net first and falls back to Plane-Alert DB.",
+      "useDefaultWhenEmpty": true
+    },
     "PF_DELETEAFTER": {
       "useDefaultWhenEmpty": true,
       "type": "text"

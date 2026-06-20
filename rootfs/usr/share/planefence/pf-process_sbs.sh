@@ -429,11 +429,63 @@ GET_PA_INFO () {
   (IFS=','; printf '%s\n' "${out[*]}")
 }
 
+GET_PA_IMAGE_LINK () {
+  # Usage: GET_PA_IMAGE_LINK ICAO
+  # Returns first image-looking HTTP(S) URL in the matching PA_FILE row.
+  local lookup="${1^^}" pa_link
+
+  [[ -n "$lookup" && -f "$PA_FILE" ]] || return 1
+
+  pa_link="$(awk -F',' -v key="$lookup" '
+    function trimq(s) {
+      gsub(/^[[:space:]\"]+|[[:space:]\"]+$/, "", s)
+      return s
+    }
+    BEGIN { IGNORECASE=1 }
+    NR > 1 {
+      row_icao = trimq($1)
+      if (toupper(row_icao) != toupper(key)) next
+      for (i = 2; i <= NF; i++) {
+        v = trimq($i)
+        if (v !~ /^https?:\/\//) continue
+        base = tolower(v)
+        sub(/[?#].*$/, "", base)
+        if (match(base, /\.([a-z0-9]{2,8})$/, m)) {
+          ext = m[1]
+          if (ext ~ /^(jpg|jpeg|png|gif|bmp|webp|tiff?|heic|heif|avif|svg|ico)$/) {
+            print v
+            exit
+          }
+        }
+      }
+      exit
+    }
+  ' "$PA_FILE" 2>/dev/null)"
+
+  [[ -n "$pa_link" ]] || return 1
+  printf '%s\n' "$pa_link"
+}
+
 GET_PS_PHOTO () {
   # Usage: GET_PS_PHOTO ICAO [image|link|thumblink]
-  local icao="$1" returntype json link thumb CACHETIME pf_ver pf_ua
+  local icao="$1" returntype json link thumb pa_link CACHETIME pf_ver pf_ua pf_major pf_minor pf_rest
+  local got_photo=false prefer_pa_db=false na_fresh=false
   returntype="${2:-link}"; returntype="${returntype,,}"
-  pf_ver="$(sed 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/' <<< "${VERSION:-0.0}")"
+
+  pf_ver="${VERSION:-0.0}"
+  pf_major="${pf_ver%%.*}"
+  pf_rest="${pf_ver#*.}"
+  if [[ "$pf_rest" == "$pf_ver" ]]; then
+    pf_minor=0
+  else
+    pf_minor="${pf_rest%%.*}"
+  fi
+  pf_major="${pf_major//[^0-9]/}"
+  pf_minor="${pf_minor//[^0-9]/}"
+  [[ -n "$pf_major" ]] || pf_major=0
+  [[ -n "$pf_minor" ]] || pf_minor=0
+  pf_ver="$pf_major.$pf_minor"
+
   pf_ua="Planefence/$pf_ver (+https://sdr-e.com/docker-planefence)"
 
   # validate
@@ -454,8 +506,6 @@ GET_PS_PHOTO () {
   local tlnk="$dir/$icao.thumb.link"
   local na="$dir/$icao.notavailable"
 
-  [[ -f "$na" ]] && return 0
-
   # cache hits
   case "$returntype" in
     image)     if [[ -f "$jpg"  ]] && (( $(date +%s) - $(stat -c %Y -- "$jpg") < CACHETIME )); then printf '%s\n' "$jpg";  return 0; fi ;;
@@ -463,13 +513,46 @@ GET_PS_PHOTO () {
     thumblink) if [[ -f "$tlnk" ]] && (( $(date +%s) - $(stat -c %Y -- "$tlnk") < CACHETIME )); then cat "$tlnk"; return 0; fi ;;
   esac
 
-  # fetch
-  if json="$(planespotters_fetch_json "$icao" 30)" && \
-     link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
-     thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
-     [[ -n $link && -n $thumb ]]; then
+  if [[ -f "$na" ]] && (( $(date +%s) - $(stat -c %Y -- "$na") < CACHETIME )); then
+    na_fresh=true
+  fi
 
-    curl -m 30 -fsSL --fail "$thumb" > "$jpg" || :
+  if chk_enabled "$PREFER_PA_DB_FOR_PHOTOS"; then
+    prefer_pa_db=true
+  fi
+
+  if ! $prefer_pa_db; then
+    # Behavior A: planespotters first, then PA_FILE fallback.
+    if ! $na_fresh; then
+      if json="$(planespotters_fetch_json "$icao" 30)" && \
+         link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
+         thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
+         [[ -n $link && -n $thumb ]]; then
+        got_photo=true
+      fi
+    fi
+    if ! $got_photo && pa_link="$(GET_PA_IMAGE_LINK "$icao")"; then
+      link="$pa_link"
+      thumb="$pa_link"
+      got_photo=true
+    fi
+  else
+    # Behavior B: PA_FILE first, then planespotters fallback.
+    if pa_link="$(GET_PA_IMAGE_LINK "$icao")"; then
+      link="$pa_link"
+      thumb="$pa_link"
+      got_photo=true
+    elif ! $na_fresh && \
+         json="$(planespotters_fetch_json "$icao" 30)" && \
+         link="$(jq -r 'try .photos[].link | select(. != null) | .' <<<"$json" | head -n1)" && \
+         thumb="$(jq -r 'try .photos[].thumbnail_large.src | select(. != null) | .' <<<"$json" | head -n1)" && \
+         [[ -n $link && -n $thumb ]]; then
+        got_photo=true
+    fi
+  fi
+
+  if $got_photo; then
+    curl -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || :
     printf '%s\n' "$link"  >"$lnk"
     printf '%s\n' "$thumb" >"$tlnk"
 
@@ -484,7 +567,7 @@ GET_PS_PHOTO () {
   fi
 
   # do a quick cache cleanup
-  find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumblink' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
+  find /usr/share/planefence/persist/planepix/cache -type f '(' -name '*.jpg' -o -name '*.link' -o -name '*.thumb.link' -o -name '*.notavailable' ')' -mmin +"$(( CACHETIME / 60 ))" -delete 2>/dev/null
 }
 
 # Returns 0 (true) when TWEET_MINTIME delay is still active for this record,
