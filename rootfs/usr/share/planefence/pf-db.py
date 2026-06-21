@@ -424,6 +424,205 @@ def cmd_migrate_legacy_day(args: argparse.Namespace) -> int:
     return 0
 
 
+def _to_int(value: str) -> int | None:
+    try:
+        return int(str(value))
+    except Exception:
+        return None
+
+
+def _load_json_payload(raw: str | None) -> Dict[str, str]:
+    if not raw:
+        return {}
+    try:
+        decoded = json.loads(raw)
+        if isinstance(decoded, dict):
+            return {str(k): str(v) for k, v in decoded.items()}
+    except Exception:
+        return {}
+    return {}
+
+
+def cmd_sync_hot_data(args: argparse.Namespace) -> int:
+    day_key = str(args.day).strip()
+    if not day_key:
+        print(json.dumps({"ok": False, "error": "day is required"}))
+        return 2
+
+    pf_updates: Dict[int, Dict[str, str]] = {}
+    pa_updates: Dict[int, Dict[str, str]] = {}
+    heatmap_updates: Dict[str, int] = {}
+    global_updates: Dict[str, str] = {}
+
+    for raw in sys.stdin:
+        line = raw.rstrip("\n")
+        if not line:
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        tag = parts[0]
+
+        if tag in ("PF", "PA"):
+            if len(parts) < 4:
+                continue
+            idx = _to_int(parts[1])
+            if idx is None or idx < 0:
+                continue
+            field = parts[2]
+            value = "\t".join(parts[3:])
+            target = pf_updates if tag == "PF" else pa_updates
+            rec = target.setdefault(idx, {})
+            rec[field] = value
+        elif tag == "HM":
+            if len(parts) < 3:
+                continue
+            latlon_key = parts[1]
+            hit_count = _to_int(parts[2])
+            if not latlon_key or hit_count is None:
+                continue
+            heatmap_updates[latlon_key] = hit_count
+        elif tag == "G":
+            if len(parts) < 3:
+                continue
+            key = parts[1]
+            value = "\t".join(parts[2:])
+            if key:
+                global_updates[key] = value
+
+    now = int(time.time())
+    with open_db(args.db) as conn:
+        apply_pragmas(
+            conn,
+            {
+                "cache_mb": max(int(args.cache_mb or 8), 1),
+                "mmap_mb": max(int(args.mmap_mb or 64), 1),
+                "wal_autocheckpoint_pages": max(int(args.wal_autocheckpoint_pages or 512), 1),
+                "busy_timeout_ms": max(int(args.busy_timeout_ms or 8000), 1),
+                "checkpoint_interval_sec": max(int(args.checkpoint_interval_sec or 300), 1),
+            },
+        )
+        create_schema(conn)
+        conn.execute("BEGIN IMMEDIATE")
+
+        for rec_index, delta in pf_updates.items():
+            existing = conn.execute(
+                "SELECT payload_json FROM pf_records WHERE day_key=? AND rec_index=?",
+                (day_key, rec_index),
+            ).fetchone()
+            merged = _load_json_payload(existing[0] if existing else None)
+            merged.update(delta)
+
+            conn.execute(
+                """
+                INSERT INTO pf_records(
+                  day_key, rec_index, icao, callsign, time_firstseen, time_lastseen,
+                  ready_to_notify, complete, updated_at, payload_json
+                ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(day_key, rec_index) DO UPDATE SET
+                  icao=excluded.icao,
+                  callsign=excluded.callsign,
+                  time_firstseen=excluded.time_firstseen,
+                  time_lastseen=excluded.time_lastseen,
+                  ready_to_notify=excluded.ready_to_notify,
+                  complete=excluded.complete,
+                  updated_at=excluded.updated_at,
+                  payload_json=excluded.payload_json,
+                  version=pf_records.version + 1
+                """,
+                (
+                    day_key,
+                    rec_index,
+                    merged.get("icao"),
+                    merged.get("callsign"),
+                    _to_int(merged.get("time:firstseen", "")),
+                    _to_int(merged.get("time:lastseen", "")),
+                    merged.get("ready_to_notify"),
+                    merged.get("complete"),
+                    now,
+                    json.dumps(merged, separators=(",", ":"), ensure_ascii=False),
+                ),
+            )
+
+        for rec_index, delta in pa_updates.items():
+            existing = conn.execute(
+                "SELECT payload_json FROM pa_records WHERE day_key=? AND rec_index=?",
+                (day_key, rec_index),
+            ).fetchone()
+            merged = _load_json_payload(existing[0] if existing else None)
+            merged.update(delta)
+
+            conn.execute(
+                """
+                INSERT INTO pa_records(
+                  day_key, rec_index, icao, callsign, time_firstseen, time_lastseen,
+                  complete, updated_at, payload_json
+                ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(day_key, rec_index) DO UPDATE SET
+                  icao=excluded.icao,
+                  callsign=excluded.callsign,
+                  time_firstseen=excluded.time_firstseen,
+                  time_lastseen=excluded.time_lastseen,
+                  complete=excluded.complete,
+                  updated_at=excluded.updated_at,
+                  payload_json=excluded.payload_json,
+                  version=pa_records.version + 1
+                """,
+                (
+                    day_key,
+                    rec_index,
+                    merged.get("icao"),
+                    merged.get("callsign"),
+                    _to_int(merged.get("time:firstseen", "")),
+                    _to_int(merged.get("time:lastseen", "")),
+                    merged.get("complete"),
+                    now,
+                    json.dumps(merged, separators=(",", ":"), ensure_ascii=False),
+                ),
+            )
+
+        for latlon_key, hit_count in heatmap_updates.items():
+            conn.execute(
+                """
+                INSERT INTO heatmap(day_key, latlon_key, hit_count, updated_at)
+                VALUES(?, ?, ?, ?)
+                ON CONFLICT(day_key, latlon_key) DO UPDATE SET
+                  hit_count=excluded.hit_count,
+                  updated_at=excluded.updated_at
+                """,
+                (day_key, latlon_key, hit_count, now),
+            )
+
+        for key, value in global_updates.items():
+            conn.execute(
+                """
+                INSERT INTO globals_kv(key, value, updated_at)
+                VALUES(?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                  value=excluded.value,
+                  updated_at=excluded.updated_at
+                """,
+                (key, value, now),
+            )
+
+        conn.execute("COMMIT")
+
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "db": args.db,
+                "day": day_key,
+                "pf_rows": len(pf_updates),
+                "pa_rows": len(pa_updates),
+                "heatmap_rows": len(heatmap_updates),
+                "globals": len(global_updates),
+            }
+        )
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Planefence SQLite helper")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -484,6 +683,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_migrate.add_argument("--legacy-gz", required=True)
     p_migrate.add_argument("--force", action="store_true")
     p_migrate.set_defaults(func=cmd_migrate_legacy_day)
+
+    p_hot = sub.add_parser("sync-hot-data", help="upsert touched PF/PA/heatmap rows from stdin")
+    p_hot.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_hot.add_argument("--day", required=True)
+    p_hot.add_argument("--cache-mb", type=int)
+    p_hot.add_argument("--mmap-mb", type=int)
+    p_hot.add_argument("--busy-timeout-ms", type=int)
+    p_hot.add_argument("--wal-autocheckpoint-pages", type=int)
+    p_hot.add_argument("--checkpoint-interval-sec", type=int)
+    p_hot.set_defaults(func=cmd_sync_hot_data)
 
     return p
 

@@ -81,6 +81,7 @@ COLLAPSEWITHIN_SECS=${COLLAPSEWITHIN:?}
 declare -A last_idx_for_icao pa_last_idx_for_icao   # icao -> most recent idx within window
 declare -A lastseen_for_icao  # icao -> lastseen epoch
 declare -A heatmap            # lat,lon -> count
+declare -A heatmap_touched
 declare -A pa_squawkmatch     # icao -> "true" if the icao matches the squawk filter (and has been seen with that squawk for at least SQUAWKTIME seconds), empty or "false" otherwise. This is used to mark records that match the squawk filter in the planefence and plane-alert records, and is updated in real time as new squawks are seen.
 declare -a updatedrecords newrecords processed_indices pa_updatedrecords pa_newrecords pa_processed_indices ready_to_notify_initial
 
@@ -837,6 +838,64 @@ to_epoch() {
   # compute offset using seconds since epoch at midnight plus H:M:S. Precompute midnight once:
 }
 
+SQLITE_SYNC_HOT_TABLES() {
+  if [[ "$(PF_RECORDS_BACKEND_GET)" != "sqlite" ]]; then
+    return 0
+  fi
+
+  local db_path day_key rc
+  db_path="$(PF_RECORDS_DB_PATH)"
+  day_key="${TODAY:-$(date +%y%m%d)}"
+
+  {
+    declare -A pf_touched=() pa_touched=()
+    local idx key subkey value
+
+    for idx in "${!newrecords[@]}"; do pf_touched["$idx"]=1; done
+    for idx in "${!updatedrecords[@]}"; do pf_touched["$idx"]=1; done
+    for idx in "${!processed_indices[@]}"; do pf_touched["$idx"]=1; done
+
+    for idx in "${!pa_newrecords[@]}"; do pa_touched["$idx"]=1; done
+    for idx in "${!pa_updatedrecords[@]}"; do pa_touched["$idx"]=1; done
+    for idx in "${!pa_processed_indices[@]}"; do pa_touched["$idx"]=1; done
+
+    for key in "${!records[@]}"; do
+      [[ "$key" =~ ^([0-9]+):(.+)$ ]] || continue
+      idx="${BASH_REMATCH[1]}"
+      subkey="${BASH_REMATCH[2]}"
+      [[ -n "${pf_touched["$idx"]}" ]] || continue
+      value="${records["$key"]}"
+      printf 'PF\t%s\t%s\t%s\n' "$idx" "$subkey" "$value"
+    done
+
+    for key in "${!pa_records[@]}"; do
+      [[ "$key" =~ ^([0-9]+):(.+)$ ]] || continue
+      idx="${BASH_REMATCH[1]}"
+      subkey="${BASH_REMATCH[2]}"
+      [[ -n "${pa_touched["$idx"]}" ]] || continue
+      value="${pa_records["$key"]}"
+      printf 'PA\t%s\t%s\t%s\n' "$idx" "$subkey" "$value"
+    done
+
+    for key in "${!heatmap_touched[@]}"; do
+      printf 'HM\t%s\t%s\n' "$key" "${heatmap["$key"]}"
+    done
+
+    printf 'G\tLASTPROCESSEDLINE\t%s\n' "${LASTPROCESSEDLINE:-}"
+    printf 'G\trecords:maxindex\t%s\n' "${records[maxindex]:--1}"
+    printf 'G\tpa_records:maxindex\t%s\n' "${pa_records[maxindex]:--1}"
+    printf 'G\trecords:LASTUPDATE\t%s\n' "${records[LASTUPDATE]:-0}"
+    printf 'G\tpa_records:LASTUPDATE\t%s\n' "${pa_records[LASTUPDATE]:-0}"
+  } | /usr/share/planefence/pf-db.py sync-hot-data --db "$db_path" --day "$day_key" >/tmp/pf-db-hot-sync.$$ 2>/tmp/pf-db-hot-sync.err
+  rc=$?
+  if (( rc != 0 )); then
+    log_print WARN "sqlite hot-data sync failed (rc=$rc): $(tr '\n' ' ' </tmp/pf-db-hot-sync.err 2>/dev/null)"
+  else
+    log_print DEBUG "sqlite hot-data sync complete"
+  fi
+  rm -f /tmp/pf-db-hot-sync.$$ /tmp/pf-db-hot-sync.err
+}
+
 GENERATE_PF_CSV() {
   # This looks complex but is highly opimized for speed by using awk for the heavy lifting.
   local tmpfile="$(mktemp)"
@@ -1343,6 +1402,7 @@ for line in "${socketrecords[@]}"; do
     # Heatmap tally (for PF records only)
     latlonkey="$(printf "%.3f,%.3f" "$lat" "$lon")"
     heatmap["$latlonkey"]=$(( ${heatmap["$latlonkey"]:-0} + 1 ))
+    heatmap_touched["$latlonkey"]=1
     mode_pf=true
   else
     mode_pf=false
@@ -1900,6 +1960,8 @@ log_print INFO "Processing complete. Now writing results to disk..."
 # ==========================
 # Save state
 # ==========================
+SQLITE_SYNC_HOT_TABLES
+
 { WRITE_RECORDS ignore-lock
   log_print DEBUG "Wrote RECORDSFILE"
 } &
