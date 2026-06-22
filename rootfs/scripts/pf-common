@@ -272,11 +272,18 @@ READ_RECORDS() {
     local db_path
     db_path="$(PF_RECORDS_DB_PATH)"
     PF_RECORDS_INIT_EMPTY
+    if /usr/share/planefence/pf-db.py load-day-state --db "$db_path" --day "$TODAY" >/tmp/pf-db-day-load.$$ 2>/tmp/pf-db-day-load.err; then
+      # shellcheck disable=SC1091
+      source /tmp/pf-db-day-load.$$ || true
+      rm -f /tmp/pf-db-day-load.$$ /tmp/pf-db-day-load.err
+      log_print DEBUG "records loaded from sqlite row tables"
+      return 0
+    fi
     if /usr/share/planefence/pf-db.py load-day --db "$db_path" --day "$TODAY" >/tmp/pf-db-day-load.$$ 2>/tmp/pf-db-day-load.err; then
       # shellcheck disable=SC1091
       source /tmp/pf-db-day-load.$$ || true
       rm -f /tmp/pf-db-day-load.$$ /tmp/pf-db-day-load.err
-      log_print DEBUG "records loaded from sqlite day snapshot"
+      log_print DEBUG "records loaded from sqlite day snapshot fallback"
       return 0
     fi
     rm -f /tmp/pf-db-day-load.$$ /tmp/pf-db-day-load.err

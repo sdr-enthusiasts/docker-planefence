@@ -15,6 +15,7 @@ import sqlite3
 import sys
 import time
 import gzip
+import shlex
 from pathlib import Path
 from typing import Dict
 
@@ -272,6 +273,123 @@ def cmd_load_day(args: argparse.Namespace) -> int:
     if not row:
         return 3
     sys.stdout.write(str(row[0]))
+    return 0
+
+
+def _bash_quote(value: str) -> str:
+    return shlex.quote(str(value))
+
+
+def _emit_bash_assoc(name: str, mapping: Dict[str, str]) -> str:
+    items = []
+    for k in sorted(mapping.keys()):
+        items.append(f"[{_bash_quote(k)}]={_bash_quote(mapping[k])}")
+    return f"declare -Ag {name}=({ ' '.join(items) })"
+
+
+def cmd_load_day_state(args: argparse.Namespace) -> int:
+    day_key = str(args.day).strip()
+    if not day_key:
+        return 2
+
+    records: Dict[str, str] = {}
+    pa_records: Dict[str, str] = {}
+    heatmap: Dict[str, str] = {}
+    last_idx_for_icao: Dict[str, str] = {}
+    lastseen_for_icao: Dict[str, str] = {}
+    pa_last_idx_for_icao: Dict[str, str] = {}
+    last_processed_line = ""
+
+    with open_db(args.db) as conn:
+        # PF rows
+        pf_rows = conn.execute(
+            "SELECT rec_index, payload_json FROM pf_records WHERE day_key=?",
+            (day_key,),
+        ).fetchall()
+        pf_max_idx = -1
+        pf_seen: Dict[str, tuple[int, int]] = {}
+        for row in pf_rows:
+            rec_index = int(row[0])
+            pf_max_idx = max(pf_max_idx, rec_index)
+            payload = _load_json_payload(row[1])
+            for key, value in payload.items():
+                records[f"{rec_index}:{key}"] = value
+            icao = payload.get("icao", "")
+            ts = _to_int(payload.get("time:lastseen", "")) or 0
+            if icao:
+                prev = pf_seen.get(icao)
+                if prev is None or ts >= prev[1]:
+                    pf_seen[icao] = (rec_index, ts)
+
+        # PA rows
+        pa_rows = conn.execute(
+            "SELECT rec_index, payload_json FROM pa_records WHERE day_key=?",
+            (day_key,),
+        ).fetchall()
+        pa_max_idx = -1
+        pa_seen: Dict[str, tuple[int, int]] = {}
+        for row in pa_rows:
+            rec_index = int(row[0])
+            pa_max_idx = max(pa_max_idx, rec_index)
+            payload = _load_json_payload(row[1])
+            for key, value in payload.items():
+                pa_records[f"{rec_index}:{key}"] = value
+            icao = payload.get("icao", "")
+            ts = _to_int(payload.get("time:lastseen", "")) or 0
+            if icao:
+                prev = pa_seen.get(icao)
+                if prev is None or ts >= prev[1]:
+                    pa_seen[icao] = (rec_index, ts)
+
+        # Heatmap rows
+        hm_rows = conn.execute(
+            "SELECT latlon_key, hit_count FROM heatmap WHERE day_key=?",
+            (day_key,),
+        ).fetchall()
+        for row in hm_rows:
+            heatmap[str(row[0])] = str(int(row[1]))
+
+        # Globals used by existing shell paths
+        g_rows = conn.execute(
+            "SELECT key, value FROM globals_kv WHERE key IN (?, ?, ?, ?, ?)",
+            (
+                "LASTPROCESSEDLINE",
+                "records:maxindex",
+                "pa_records:maxindex",
+                "records:LASTUPDATE",
+                "pa_records:LASTUPDATE",
+            ),
+        ).fetchall()
+        g = {str(r[0]): str(r[1]) for r in g_rows}
+
+        records["maxindex"] = g.get("records:maxindex", str(pf_max_idx))
+        pa_records["maxindex"] = g.get("pa_records:maxindex", str(pa_max_idx))
+        if "records:LASTUPDATE" in g:
+            records["LASTUPDATE"] = g["records:LASTUPDATE"]
+        if "pa_records:LASTUPDATE" in g:
+            pa_records["LASTUPDATE"] = g["pa_records:LASTUPDATE"]
+        last_processed_line = g.get("LASTPROCESSEDLINE", "")
+
+        for icao, (idx, ts) in pf_seen.items():
+            last_idx_for_icao[icao] = str(idx)
+            lastseen_for_icao[icao] = str(ts)
+        for icao, (idx, _ts) in pa_seen.items():
+            pa_last_idx_for_icao[icao] = str(idx)
+
+    # No row-table state found for the day
+    if len(pf_rows) == 0 and len(pa_rows) == 0 and len(hm_rows) == 0:
+        return 3
+
+    output = [
+        _emit_bash_assoc("records", records),
+        _emit_bash_assoc("heatmap", heatmap),
+        _emit_bash_assoc("last_idx_for_icao", last_idx_for_icao),
+        _emit_bash_assoc("lastseen_for_icao", lastseen_for_icao),
+        _emit_bash_assoc("pa_records", pa_records),
+        _emit_bash_assoc("pa_last_idx_for_icao", pa_last_idx_for_icao),
+        f"LASTPROCESSEDLINE={_bash_quote(last_processed_line)}",
+    ]
+    sys.stdout.write("\n".join(output) + "\n")
     return 0
 
 
@@ -676,6 +794,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_load.add_argument("--db", default=DEFAULT_DB_PATH)
     p_load.add_argument("--day", required=True)
     p_load.set_defaults(func=cmd_load_day)
+
+    p_state = sub.add_parser("load-day-state", help="materialize bash state from sqlite row tables")
+    p_state.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_state.add_argument("--day", required=True)
+    p_state.set_defaults(func=cmd_load_day_state)
 
     p_migrate = sub.add_parser("migrate-legacy-day", help="import one legacy gz day file")
     p_migrate.add_argument("--db", default=DEFAULT_DB_PATH)
