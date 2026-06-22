@@ -139,37 +139,109 @@ CLEANUP ()
 
 # GET_ICAO_DB: Mictronics updates their ICAO-to-Tail database once a week.
 # If the existing file is older than last Monday's (or if none exists), then get a new one
-GET_ICAO_DB ()
-{
+GET_ICAO_DB () {
+  local zip_file json_dir out_file
+  zip_file="/tmp/icao24plus.zip"
+  json_dir="/tmp/icao24plus_json"
+  out_file="/tmp/icao24plus.txt"
+
     if (( $(date -r /run/planefence/icao2plane.txt +%s 2>/dev/null || echo 0) < $(date -d "next monday - 7 days" +%s) ))
     then
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
         # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
-        if ! curl -s -L -f -o /tmp/icao24plus.zip https://www.mictronics.de/aircraft-database/icao24plus.php; then
+    if ! curl -s -L -f -o "$zip_file" https://www.mictronics.de/aircraft-database/aircraft_db.php; then
             log_print INFO "Retrieving ICAO to TAIL database from https://www.mictronics.de FAILED!"
-            return 1
+      rm -f "$zip_file" "$out_file"
+      rm -rf "$json_dir"
+      return 0
         fi
 
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "unzipping ... " || true
-        # unzipping *will* fail when the retrieved file is not a valid ZIP file
-        if ! unzip -qq -d /tmp -o /tmp/icao24plus.zip 2>/dev/null; then
+    # unzipping *will* fail when the retrieved file is not a valid ZIP file
+    rm -rf "$json_dir"
+    mkdir -p "$json_dir"
+    if ! unzip -qq -d "$json_dir" -o "$zip_file" 2>/dev/null; then
             log_print INFO "Unzipping ICAO to TAIL database from https://www.mictronics.de FAILED!"
-            return 1
+      rm -f "$zip_file" "$out_file"
+      rm -rf "$json_dir"
+      return 0
         fi
 
-        rm -f /tmp/icao24plus.zip
-        # now convert the text based file into a CSV file
+    rm -f "$zip_file"
+    # Flatten JSON shards into CSV: hexid,tail,type_designator,description
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "converting ... " || true
-        if ! sed -i 's|\([0-9A-F]\{6\}\)\s*\([A-Z0-9\-]*\)\s*\([A-Z0-9]*\)\s*\(.*\)|\1,\2,\3,\4|g' /tmp/icao24plus.txt; then
+    if ! python3 - "$json_dir" "$out_file" << 'PY'
+import json
+import os
+import sys
+
+src_root = sys.argv[1]
+out_file = sys.argv[2]
+hex_chars = set("0123456789ABCDEF")
+rows = []
+
+for dirpath, _, filenames in os.walk(src_root):
+  for filename in filenames:
+    if not filename.lower().endswith(".json"):
+      continue
+
+    prefix = os.path.splitext(filename)[0].strip().upper()
+    if not prefix or any(ch not in hex_chars for ch in prefix):
+      continue
+
+    json_path = os.path.join(dirpath, filename)
+    try:
+      with open(json_path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    except Exception:
+      continue
+
+    if not isinstance(payload, dict):
+      continue
+
+    for suffix, rec in payload.items():
+      if not isinstance(rec, dict):
+        continue
+
+      suffix = str(suffix).strip().upper()
+      hexid = f"{prefix}{suffix}"
+      if len(hexid) != 6 or any(ch not in hex_chars for ch in hexid):
+        continue
+
+      tail = str(rec.get("r", "")).strip().replace(",", " ")
+      type_designator = str(rec.get("t", "")).strip().replace(",", " ")
+      description = str(rec.get("desc", "")).strip().replace(",", " ")
+      rows.append(f"{hexid},{tail},{type_designator},{description}\n")
+
+if not rows:
+  raise SystemExit(1)
+
+rows.sort()
+with open(out_file, "w", encoding="utf-8", newline="") as out:
+  out.writelines(rows)
+PY
+    then
             log_print INFO "Converting ICAO to TAIL database from https://www.mictronics.de FAILED!"
-            return 1
+      rm -f "$out_file"
+      rm -rf "$json_dir"
+      return 0
         fi
 
-        mv -f /tmp/icao24plus.txt /run/planefence/icao2plane.txt
+    if [[ ! -s "$out_file" ]]; then
+      log_print INFO "Converting ICAO to TAIL database produced no rows; keeping existing database"
+      rm -f "$out_file"
+      rm -rf "$json_dir"
+      return 0
+    fi
+
+    rm -rf "$json_dir"
+    mv -f "$out_file" /run/planefence/icao2plane.txt
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "done!" || true
     else
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "ICAO to TAIL database is up to date" || true
     fi
+
+  return 0
 }
 #
 # GET_AIRLINE_DB retrieves the list of airline names from 2 sources:
@@ -200,9 +272,9 @@ GET_AIRLINE_DB ()
 while true
 do
   [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Performing a cleanup run..." || true
-  CLEANUP
-  GET_ICAO_DB
-  GET_AIRLINE_DB
+  CLEANUP || true
+  GET_ICAO_DB || true
+  GET_AIRLINE_DB || true
   if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then 
     { /scripts/masto_expire.sh delete || true; } & 
   fi
