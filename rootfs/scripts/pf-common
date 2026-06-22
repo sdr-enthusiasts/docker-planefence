@@ -357,7 +357,267 @@ WRITE_RECORDS() {
   if [[ "${1,,}" != "stay-locked" ]]; then UNLOCK_RECORDS; fi
 }
 
+# ============================================================================
+# Phase 5: Unified Direct-Query Database Functions
+# These functions provide homogenized access to sqlite records without
+# requiring all consumers to know about the underlying implementation.
+# ============================================================================
+
+DB_QUERY_RECORDS() {
+  # Query records with optional filters
+  # Usage: DB_QUERY_RECORDS [--table pf_records|pa_records] [--day YYMMDD] [--where "..."]
+  # Returns: JSON array of records, or empty array if none found
+  local table="pf_records" day where db_path rc result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --table) table="$2"; shift 2 ;;
+      --day) day="$2"; shift 2 ;;
+      --where) where="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if ! result=$(/usr/share/planefence/pf-db.py query-records --db "$db_path" --table "$table" ${day:+--day "$day"} ${where:+--where "$where"} 2>/dev/null); then
+    log_print DEBUG "DB_QUERY_RECORDS failed for table=$table day=$day"
+    echo "[]"
+    return 1
+  fi
+  
+  printf '%s' "$result" | jq -c '.records // []' 2>/dev/null || echo "[]"
+}
+
+DB_GET_RECORD() {
+  # Fetch a single record by ICAO from a specific day
+  # Usage: DB_GET_RECORD --day YYMMDD --icao ABC1234 [--type pf|pa]
+  # Returns: JSON object of record data
+  local day icao type="pf" db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      --icao) icao="$2"; shift 2 ;;
+      --type) type="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" || -z "$icao" ]]; then
+    log_print ERROR "DB_GET_RECORD: day and icao are required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py get-record --db "$db_path" --day "$day" --icao "$icao" --type "$type" 2>/dev/null); then
+    log_print DEBUG "DB_GET_RECORD not found: day=$day icao=$icao type=$type"
+    return 3
+  fi
+
+  printf '%s' "$result" | jq -c '.record // {}' 2>/dev/null || echo "{}"
+}
+
+DB_SET_RECORD() {
+  # Set or update a record. Reads field=value pairs from stdin.
+  # Usage: DB_SET_RECORD --day YYMMDD --icao ABC1234 --index 0 [--type pf|pa] < field_updates.txt
+  # Returns: JSON result with ok/error
+  local day icao index type="pf" db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      --icao) icao="$2"; shift 2 ;;
+      --index) index="$2"; shift 2 ;;
+      --type) type="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" || -z "$icao" || -z "$index" ]]; then
+    log_print ERROR "DB_SET_RECORD: day, icao, and index are required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py set-record --db "$db_path" --day "$day" --icao "$icao" --index "$index" --type "$type" 2>/dev/null); then
+    log_print DEBUG "DB_SET_RECORD failed: day=$day icao=$icao index=$index"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq '.ok // false' 2>/dev/null || return 1
+}
+
+DB_DELETE_RECORD() {
+  # Delete a record by ICAO from a specific day
+  # Usage: DB_DELETE_RECORD --day YYMMDD --icao ABC1234 [--type pf|pa]
+  # Returns: JSON result with deleted count
+  local day icao type="pf" db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      --icao) icao="$2"; shift 2 ;;
+      --type) type="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" || -z "$icao" ]]; then
+    log_print ERROR "DB_DELETE_RECORD: day and icao are required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py delete-record --db "$db_path" --day "$day" --icao "$icao" --type "$type" 2>/dev/null); then
+    log_print DEBUG "DB_DELETE_RECORD failed: day=$day icao=$icao"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq '.ok // false' 2>/dev/null || return 1
+}
+
+DB_QUERY_READY_FOR_NOTIFICATION() {
+  # Get ICAO codes of records ready for notification
+  # Usage: DB_QUERY_READY_FOR_NOTIFICATION --day YYMMDD [--type pf|pa]
+  # Returns: JSON array of ICAO strings
+  local day type="pf" db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      --type) type="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" ]]; then
+    log_print ERROR "DB_QUERY_READY_FOR_NOTIFICATION: day is required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py query-ready-for-notification --db "$db_path" --day "$day" --type "$type" 2>/dev/null); then
+    log_print DEBUG "DB_QUERY_READY_FOR_NOTIFICATION failed: day=$day type=$type"
+    echo "[]"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq -c '.icaos // []' 2>/dev/null || echo "[]"
+}
+
+DB_GET_KV() {
+  # Get a global key-value pair
+  # Usage: DB_GET_KV --key KEYNAME
+  # Returns: value string, or empty if not found
+  local key db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --key) key="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$key" ]]; then
+    log_print ERROR "DB_GET_KV: key is required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py get-kv --db "$db_path" --key "$key" 2>/dev/null); then
+    return 3
+  fi
+
+  printf '%s' "$result" | jq -r '.value // ""' 2>/dev/null || return 1
+}
+
+DB_SET_KV() {
+  # Set a global key-value pair
+  # Usage: DB_SET_KV --key KEYNAME --value VALUE
+  # Returns: 0 on success, non-zero on error
+  local key value db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --key) key="$2"; shift 2 ;;
+      --value) value="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$key" ]]; then
+    log_print ERROR "DB_SET_KV: key is required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py set-kv --db "$db_path" --key "$key" --value "${value:-}" 2>/dev/null); then
+    log_print DEBUG "DB_SET_KV failed: key=$key"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq '.ok // false' 2>/dev/null || return 1
+}
+
+DB_GET_HEATMAP() {
+  # Get heatmap rows for a specific day
+  # Usage: DB_GET_HEATMAP --day YYMMDD
+  # Returns: JSON array of {latlon_key, hit_count} objects
+  local day db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" ]]; then
+    log_print ERROR "DB_GET_HEATMAP: day is required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py get-heatmap --db "$db_path" --day "$day" 2>/dev/null); then
+    log_print DEBUG "DB_GET_HEATMAP failed: day=$day"
+    echo "[]"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq -c '.heatmap // []' 2>/dev/null || echo "[]"
+}
+
+DB_SET_HEATMAP_ROW() {
+  # Set or update a heatmap row
+  # Usage: DB_SET_HEATMAP_ROW --day YYMMDD --latlon-key "latlon_key" --hit-count N
+  # Returns: 0 on success, non-zero on error
+  local day latlon_key hit_count db_path result
+  db_path="$(PF_RECORDS_DB_PATH)"
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --day) day="$2"; shift 2 ;;
+      --latlon-key) latlon_key="$2"; shift 2 ;;
+      --hit-count) hit_count="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$day" || -z "$latlon_key" || -z "$hit_count" ]]; then
+    log_print ERROR "DB_SET_HEATMAP_ROW: day, latlon_key, and hit_count are required"
+    return 1
+  fi
+
+  if ! result=$(/usr/share/planefence/pf-db.py set-heatmap-row --db "$db_path" --day "$day" --latlon-key "$latlon_key" --hit-count "$hit_count" 2>/dev/null); then
+    log_print DEBUG "DB_SET_HEATMAP_ROW failed: day=$day latlon_key=$latlon_key"
+    return 1
+  fi
+
+  printf '%s' "$result" | jq '.ok // false' 2>/dev/null || return 1
+}
+
 # convert_color <color>
+
 # Accepts:
 #   - Named colors:  red, green, blue, gold, blurple, etc.
 #   - Hex with '#':  "#FF0000"

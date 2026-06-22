@@ -741,6 +741,392 @@ def cmd_sync_hot_data(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_query_records(args: argparse.Namespace) -> int:
+    """
+    Query records from a table with optional WHERE clause filtering.
+    Outputs JSON array of matching record objects.
+    """
+    table = (args.table or "pf_records").lower()
+    if table not in ("pf_records", "pa_records"):
+        print(json.dumps({"ok": False, "error": "table must be pf_records or pa_records"}))
+        return 2
+
+    where_clause = (args.where or "").strip()
+    day_key = (args.day or "").strip()
+
+    try:
+        with open_db(args.db) as conn:
+            query = f"SELECT rec_index, payload_json FROM {table}"
+            params = []
+
+            if day_key:
+                query += " WHERE day_key=?"
+                params.append(day_key)
+                if where_clause:
+                    query += f" AND ({where_clause})"
+            elif where_clause:
+                query += f" WHERE {where_clause}"
+
+            query += " ORDER BY rec_index"
+
+            rows = conn.execute(query, params).fetchall()
+            results = []
+            for row in rows:
+                rec_index = int(row[0])
+                payload = _load_json_payload(row[1])
+                payload["_index"] = rec_index
+                results.append(payload)
+
+            print(json.dumps({"ok": True, "count": len(results), "records": results}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_query_ready_for_notification(args: argparse.Namespace) -> int:
+    """
+    Get records ready for notification (ready_to_notify != '' and complete != 'yes').
+    Returns list of ICAO codes.
+    """
+    day_key = (args.day or "").strip()
+    rec_type = (args.type or "pf").lower()
+    table = "pf_records" if rec_type == "pf" else "pa_records"
+
+    try:
+        with open_db(args.db) as conn:
+            if table == "pf_records":
+                query = """
+                    SELECT DISTINCT icao FROM pf_records
+                    WHERE day_key=? AND ready_to_notify IS NOT NULL AND ready_to_notify != ''
+                    AND (complete IS NULL OR complete != 'yes')
+                    ORDER BY icao
+                """
+            else:
+                query = """
+                    SELECT DISTINCT icao FROM pa_records
+                    WHERE day_key=?
+                    ORDER BY icao
+                """
+
+            rows = conn.execute(query, (day_key,)).fetchall()
+            icaos = [str(row[0]) for row in rows if row[0]]
+
+            print(json.dumps({"ok": True, "count": len(icaos), "icaos": icaos}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_get_record(args: argparse.Namespace) -> int:
+    """
+    Fetch a single record by ICAO code from a specific day and table.
+    Returns JSON object with record data.
+    """
+    day_key = (args.day or "").strip()
+    icao = (args.icao or "").strip().upper()
+    rec_type = (args.type or "pf").lower()
+    table = "pf_records" if rec_type == "pf" else "pa_records"
+
+    if not day_key or not icao:
+        print(json.dumps({"ok": False, "error": "day and icao are required"}))
+        return 2
+
+    try:
+        with open_db(args.db) as conn:
+            row = conn.execute(
+                f"SELECT rec_index, payload_json FROM {table} WHERE day_key=? AND UPPER(icao)=?",
+                (day_key, icao),
+            ).fetchone()
+
+            if not row:
+                print(json.dumps({"ok": False, "error": "record not found", "day": day_key, "icao": icao}))
+                return 3
+
+            rec_index = int(row[0])
+            payload = _load_json_payload(row[1])
+            payload["_index"] = rec_index
+
+            print(json.dumps({"ok": True, "record": payload}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_set_record(args: argparse.Namespace) -> int:
+    """
+    Set or update a record. If it doesn't exist, create it.
+    Reads field=value pairs from stdin, one per line.
+    """
+    day_key = (args.day or "").strip()
+    icao = (args.icao or "").strip().upper()
+    rec_index = _to_int(args.index or "-1")
+    rec_type = (args.type or "pf").lower()
+    table = "pf_records" if rec_type == "pf" else "pa_records"
+
+    if not day_key or not icao:
+        print(json.dumps({"ok": False, "error": "day and icao are required"}))
+        return 2
+
+    if rec_index is None or rec_index < 0:
+        print(json.dumps({"ok": False, "error": "index must be non-negative"}))
+        return 2
+
+    delta = {}
+    for line in sys.stdin:
+        line = line.rstrip("\n")
+        if "=" not in line:
+            continue
+        key, sep, value = line.partition("=")
+        delta[key.strip()] = value
+
+    if not delta:
+        print(json.dumps({"ok": False, "error": "no fields provided"}))
+        return 2
+
+    try:
+        now = int(time.time())
+        with open_db(args.db) as conn:
+            apply_pragmas(
+                conn,
+                {
+                    "cache_mb": max(int(args.cache_mb or 8), 1),
+                    "mmap_mb": max(int(args.mmap_mb or 64), 1),
+                    "wal_autocheckpoint_pages": max(int(args.wal_autocheckpoint_pages or 512), 1),
+                    "busy_timeout_ms": max(int(args.busy_timeout_ms or 8000), 1),
+                    "checkpoint_interval_sec": max(int(args.checkpoint_interval_sec or 300), 1),
+                },
+            )
+            create_schema(conn)
+
+            existing = conn.execute(
+                f"SELECT payload_json FROM {table} WHERE day_key=? AND rec_index=?",
+                (day_key, rec_index),
+            ).fetchone()
+
+            merged = _load_json_payload(existing[0] if existing else None)
+            merged.update(delta)
+
+            if table == "pf_records":
+                conn.execute(
+                    f"""
+                    INSERT INTO {table}(
+                      day_key, rec_index, icao, callsign, time_firstseen, time_lastseen,
+                      ready_to_notify, complete, updated_at, payload_json
+                    ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(day_key, rec_index) DO UPDATE SET
+                      icao=excluded.icao,
+                      callsign=excluded.callsign,
+                      time_firstseen=excluded.time_firstseen,
+                      time_lastseen=excluded.time_lastseen,
+                      ready_to_notify=excluded.ready_to_notify,
+                      complete=excluded.complete,
+                      updated_at=excluded.updated_at,
+                      payload_json=excluded.payload_json,
+                      version={table}.version + 1
+                    """,
+                    (
+                        day_key,
+                        rec_index,
+                        merged.get("icao", icao),
+                        merged.get("callsign"),
+                        _to_int(merged.get("time:firstseen", "")),
+                        _to_int(merged.get("time:lastseen", "")),
+                        merged.get("ready_to_notify"),
+                        merged.get("complete"),
+                        now,
+                        json.dumps(merged, separators=(",", ":"), ensure_ascii=False),
+                    ),
+                )
+            else:
+                conn.execute(
+                    f"""
+                    INSERT INTO {table}(
+                      day_key, rec_index, icao, callsign, time_firstseen, time_lastseen,
+                      complete, updated_at, payload_json
+                    ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(day_key, rec_index) DO UPDATE SET
+                      icao=excluded.icao,
+                      callsign=excluded.callsign,
+                      time_firstseen=excluded.time_firstseen,
+                      time_lastseen=excluded.time_lastseen,
+                      complete=excluded.complete,
+                      updated_at=excluded.updated_at,
+                      payload_json=excluded.payload_json,
+                      version={table}.version + 1
+                    """,
+                    (
+                        day_key,
+                        rec_index,
+                        merged.get("icao", icao),
+                        merged.get("callsign"),
+                        _to_int(merged.get("time:firstseen", "")),
+                        _to_int(merged.get("time:lastseen", "")),
+                        merged.get("complete"),
+                        now,
+                        json.dumps(merged, separators=(",", ":"), ensure_ascii=False),
+                    ),
+                )
+            conn.commit()
+
+            print(json.dumps({"ok": True, "day": day_key, "icao": icao, "index": rec_index, "fields_updated": len(delta)}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_delete_record(args: argparse.Namespace) -> int:
+    """
+    Delete a record by ICAO from a specific day.
+    """
+    day_key = (args.day or "").strip()
+    icao = (args.icao or "").strip().upper()
+    rec_type = (args.type or "pf").lower()
+    table = "pf_records" if rec_type == "pf" else "pa_records"
+
+    if not day_key or not icao:
+        print(json.dumps({"ok": False, "error": "day and icao are required"}))
+        return 2
+
+    try:
+        with open_db(args.db) as conn:
+            cur = conn.execute(
+                f"DELETE FROM {table} WHERE day_key=? AND UPPER(icao)=?",
+                (day_key, icao),
+            )
+            deleted = cur.rowcount
+
+            print(json.dumps({"ok": True, "day": day_key, "icao": icao, "deleted": deleted}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_get_kv(args: argparse.Namespace) -> int:
+    """
+    Get a global key-value pair.
+    """
+    key = (args.key or "").strip()
+    if not key:
+        print(json.dumps({"ok": False, "error": "key is required"}))
+        return 2
+
+    try:
+        with open_db(args.db) as conn:
+            row = conn.execute(
+                "SELECT value FROM globals_kv WHERE key=?",
+                (key,),
+            ).fetchone()
+
+            if not row:
+                print(json.dumps({"ok": False, "error": "key not found", "key": key}))
+                return 3
+
+            print(json.dumps({"ok": True, "key": key, "value": str(row[0])}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_set_kv(args: argparse.Namespace) -> int:
+    """
+    Set a global key-value pair.
+    """
+    key = (args.key or "").strip()
+    value = (args.value or "").strip()
+
+    if not key:
+        print(json.dumps({"ok": False, "error": "key is required"}))
+        return 2
+
+    try:
+        now = int(time.time())
+        with open_db(args.db) as conn:
+            create_schema(conn)
+            conn.execute(
+                """
+                INSERT INTO globals_kv(key, value, updated_at)
+                VALUES(?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                  value=excluded.value,
+                  updated_at=excluded.updated_at
+                """,
+                (key, value, now),
+            )
+            conn.commit()
+
+            print(json.dumps({"ok": True, "key": key, "value": value}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_get_heatmap(args: argparse.Namespace) -> int:
+    """
+    Get heatmap rows for a specific day. Returns JSON array of {latlon_key, hit_count}.
+    """
+    day_key = (args.day or "").strip()
+    if not day_key:
+        print(json.dumps({"ok": False, "error": "day is required"}))
+        return 2
+
+    try:
+        with open_db(args.db) as conn:
+            rows = conn.execute(
+                "SELECT latlon_key, hit_count FROM heatmap WHERE day_key=? ORDER BY latlon_key",
+                (day_key,),
+            ).fetchall()
+
+            results = [{"latlon_key": str(r[0]), "hit_count": int(r[1])} for r in rows]
+
+            print(json.dumps({"ok": True, "day": day_key, "count": len(results), "heatmap": results}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
+def cmd_set_heatmap_row(args: argparse.Namespace) -> int:
+    """
+    Set or update a heatmap row.
+    """
+    day_key = (args.day or "").strip()
+    latlon_key = (args.latlon_key or "").strip()
+    hit_count = _to_int(args.hit_count or "0")
+
+    if not day_key or not latlon_key or hit_count is None:
+        print(json.dumps({"ok": False, "error": "day, latlon_key, and hit_count are required"}))
+        return 2
+
+    try:
+        now = int(time.time())
+        with open_db(args.db) as conn:
+            create_schema(conn)
+            conn.execute(
+                """
+                INSERT INTO heatmap(day_key, latlon_key, hit_count, updated_at)
+                VALUES(?, ?, ?, ?)
+                ON CONFLICT(day_key, latlon_key) DO UPDATE SET
+                  hit_count=excluded.hit_count,
+                  updated_at=excluded.updated_at
+                """,
+                (day_key, latlon_key, hit_count, now),
+            )
+            conn.commit()
+
+            print(json.dumps({"ok": True, "day": day_key, "latlon_key": latlon_key, "hit_count": hit_count}))
+            return 0
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+        return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Planefence SQLite helper")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -816,6 +1202,69 @@ def build_parser() -> argparse.ArgumentParser:
     p_hot.add_argument("--wal-autocheckpoint-pages", type=int)
     p_hot.add_argument("--checkpoint-interval-sec", type=int)
     p_hot.set_defaults(func=cmd_sync_hot_data)
+
+    p_query = sub.add_parser("query-records", help="query records with optional WHERE clause")
+    p_query.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_query.add_argument("--table", default="pf_records", help="pf_records or pa_records")
+    p_query.add_argument("--day", help="filter by day_key")
+    p_query.add_argument("--where", help="WHERE clause (e.g., \"icao='ABC1234' AND complete != 'yes'\")")
+    p_query.set_defaults(func=cmd_query_records)
+
+    p_ready = sub.add_parser("query-ready-for-notification", help="get records ready for notification")
+    p_ready.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_ready.add_argument("--day", required=True)
+    p_ready.add_argument("--type", default="pf", help="pf or pa")
+    p_ready.set_defaults(func=cmd_query_ready_for_notification)
+
+    p_getrec = sub.add_parser("get-record", help="fetch a single record by ICAO")
+    p_getrec.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_getrec.add_argument("--day", required=True)
+    p_getrec.add_argument("--icao", required=True)
+    p_getrec.add_argument("--type", default="pf", help="pf or pa")
+    p_getrec.set_defaults(func=cmd_get_record)
+
+    p_setrec = sub.add_parser("set-record", help="set or update a record (reads field=value from stdin)")
+    p_setrec.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_setrec.add_argument("--day", required=True)
+    p_setrec.add_argument("--icao", required=True)
+    p_setrec.add_argument("--index", required=True, help="record index")
+    p_setrec.add_argument("--type", default="pf", help="pf or pa")
+    p_setrec.add_argument("--cache-mb", type=int)
+    p_setrec.add_argument("--mmap-mb", type=int)
+    p_setrec.add_argument("--busy-timeout-ms", type=int)
+    p_setrec.add_argument("--wal-autocheckpoint-pages", type=int)
+    p_setrec.add_argument("--checkpoint-interval-sec", type=int)
+    p_setrec.set_defaults(func=cmd_set_record)
+
+    p_delrec = sub.add_parser("delete-record", help="delete a record by ICAO")
+    p_delrec.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_delrec.add_argument("--day", required=True)
+    p_delrec.add_argument("--icao", required=True)
+    p_delrec.add_argument("--type", default="pf", help="pf or pa")
+    p_delrec.set_defaults(func=cmd_delete_record)
+
+    p_getkv = sub.add_parser("get-kv", help="get a global key-value pair")
+    p_getkv.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_getkv.add_argument("--key", required=True)
+    p_getkv.set_defaults(func=cmd_get_kv)
+
+    p_setkv = sub.add_parser("set-kv", help="set a global key-value pair")
+    p_setkv.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_setkv.add_argument("--key", required=True)
+    p_setkv.add_argument("--value", default="", help="value to set")
+    p_setkv.set_defaults(func=cmd_set_kv)
+
+    p_gethm = sub.add_parser("get-heatmap", help="get heatmap rows for a day")
+    p_gethm.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_gethm.add_argument("--day", required=True)
+    p_gethm.set_defaults(func=cmd_get_heatmap)
+
+    p_sethm = sub.add_parser("set-heatmap-row", help="set or update a heatmap row")
+    p_sethm.add_argument("--db", default=DEFAULT_DB_PATH)
+    p_sethm.add_argument("--day", required=True)
+    p_sethm.add_argument("--latlon-key", required=True)
+    p_sethm.add_argument("--hit-count", required=True)
+    p_sethm.set_defaults(func=cmd_set_heatmap_row)
 
     return p
 
