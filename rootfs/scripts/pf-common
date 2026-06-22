@@ -137,7 +137,7 @@ log_print() {
 
   if [[ "$loglevel" == "DEBUG" ]]; then
     local currenttime
-    if [[ -z "$execstarttime" ]]; then
+    if [[ -z "${execstarttime:-}" ]]; then
       execstarttime="$(date +%s.%3N)"
       execlaststeptime="$execstarttime"
     fi
