@@ -9,7 +9,7 @@
 # This package may incorporate other software and license terms.
 # -----------------------------------------------------------------------------------
 #
-# This script converts a Plane-Alert.csv file generatedd by Plane-Alert v5 into 
+# This script converts a Plane-Alert.csv file generatedd by Plane-Alert v5 into
 # a Planefence record file for v6.
 # It will check if there's already an existing record file. If so, it will not overwrite
 # existing records, but only add new ones.
@@ -38,7 +38,7 @@ fi
 GET_PA_INFO () {
   local lookup="$1"
   if ! chk_enabled "$PLANEALERT" || [[ -z $lookup ]] || [[ ! -f $PA_FILE ]]; then
-    log_print DEBUG "Plane-Alert: No PA data available for $lookup (PLANEALERT=$PLANEALERT, PA_FILE=$PA_FILE)" 
+    log_print DEBUG "Plane-Alert: No PA data available for $lookup (PLANEALERT=$PLANEALERT, PA_FILE=$PA_FILE)"
     return
   fi
   local header_line
@@ -130,6 +130,7 @@ GET_PS_PHOTO () {
   local icao="$1" returntype json link thumb CACHETIME pf_ver pf_ua
   returntype="${2:-link}"; returntype="${returntype,,}"
   pf_ver="$(sed -n 's/^[[:space:]]*VERSION=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/share/planefence/planefence.conf 2>/dev/null || true)"
+  # shellcheck disable=SC2034  # pf_ua is intentionally retained for future use
   pf_ua="Planefence/${pf_ver:-0.0} (+https://sdr-e.com/docker-planefence)"
 
   # validate

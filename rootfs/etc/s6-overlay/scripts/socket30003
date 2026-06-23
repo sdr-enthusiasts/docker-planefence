@@ -79,7 +79,7 @@ while true; do
 		# clean up logs
 		for f in /run/socket30003/*.txt; do
 			tmpfile="$(mktemp -p /run/socket30003)"
-			
+
 			norm="${MAXLOGTIME:-3 hours}"; [[ $norm =~ ^[0-9]+$ ]] && norm=${norm}s
 			cutD=$(date +%Y/%m/%d -d "-$norm")
 			cutT=$(date +%H:%M:%S -d "-$norm")

@@ -87,20 +87,20 @@ td, table.dataTable tbody td {
 
 <body class="dark">
 <script type="text/javascript">
-    $(document).ready(function() { 
+    $(document).ready(function() {
         $("#mytable").dataTable( {
             order: [[0, 'desc']],
             pageLength: ||TABLESIZE||,
             lengthMenu: [10, 25, 50, 100, { label: 'All', value: -1 }],
             layout: { top2Start: { buttons: ['copy', 'csv', 'excel', 'pdf', 'print'] },
-                      top1Start: { search: { placeholder: 'Type search here' } }, 
+                      top1Start: { search: { placeholder: 'Type search here' } },
                       topEnd: '',
                     }
         });
 		    $("#mytable").colResizable({
-            liveDrag: true, 
-            gripInnerHtml: "<div class='grip'></div>", 
-            draggingClass: "dragging", 
+            liveDrag: true,
+            gripInnerHtml: "<div class='grip'></div>",
+            draggingClass: "dragging",
             resizeMode: 'flex',
 			postbackSave: true
         });
@@ -132,7 +132,7 @@ td, table.dataTable tbody td {
   <li>Please note that the reported station coordinates and the center of the circle on the heatmap are rounded for privacy protection. They do not reflect the exact location of the station
   <! Notification links here -->
   <||NOTIFICATIONS||>
-  
+
 <!--PA||><li>Click <a href="||PALINK||" target="_blank">here</a> to visit Plane Alert: a watchlist of aircraft in general range of the station<||PA-->
 </ul>
 </details>

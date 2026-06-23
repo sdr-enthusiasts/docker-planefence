@@ -23,7 +23,7 @@ LOOPTIME="3h"
 # If $PF_DELETEAFTER is set to "0" then we never delete.
 # Note - files in /tmp will get deleted if they are older than 2 days.
 # -----------------------------------------------------------------------
-# CACHETIME is the time that the planespotters photo cache expires. By TOC of the planespotters site, 
+# CACHETIME is the time that the planespotters photo cache expires. By TOC of the planespotters site,
 # we may not keep cached thumbnails for more than 24 hours.
 CACHETIME="${LOOPTIME//h/ hours}"
 CACHETIME="${CACHETIME//m/ minutes}"
@@ -110,7 +110,7 @@ CLEANUP ()
     find /usr/share/planefence/persist/planepix/cache/plane*-screenshot-* -type f ! -newer /tmp/timestamp.screenshotcache -delete 2>/dev/null || true
     find /tmp -mindepth 1 -type f ! -newer /tmp/timestamp -delete 2>/dev/null || true
     find /usr/share/planefence/persist/.internal/routecache* -type f ! -newer /tmp/timestamp.routecache -delete 2>/dev/null || true
-    
+
     rm -f /tmp/timestamp*
     shopt -s nullglob && for f in /run/socket30003/*.txt
     do
@@ -267,8 +267,8 @@ do
   CLEANUP
   GET_ICAO_DB || true
   GET_AIRLINE_DB || true
-  if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then 
-    { /scripts/masto_expire.sh delete || true; } & 
+  if [[ -n "$MASTODON_SERVER$MASTODON_ACCESS_TOKEN" ]]; then
+    { /scripts/masto_expire.sh delete || true; } &
   fi
   [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Cleanup done. Sleeping for $LOOPTIME" || true
   sleep $LOOPTIME

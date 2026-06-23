@@ -23,7 +23,7 @@ You should also already have a Telegram account. If you don't, please go to [Tel
 
 1. Start a conversation with [@BotFather](https://web.telegram.org/a/#93372553) on Telegram
 2. Say: `/newbot`. Give it a name and a username that is unique
-![Create a bot](.img/telegram-new-bot.png)
+   ![Create a bot](.img/telegram-new-bot.png)
 3. Copy the HTTP API Token. This will be the value for the`TELEGRAM_BOT_TOKEN` parameter that we will discuss below.
 
 ## Step 2: Create a Telegram channel you will post to
@@ -33,8 +33,8 @@ You should also already have a Telegram account. If you don't, please go to [Tel
 1. From the screen that lists all of your Chats, click the square-with-pencil icon and create a "New Channel".
 2. Add **yourself** and **the bot you just created** to the channel. The bot must have **Admin privileges**, but the only attribute it needs is to "Post Messages". The other permissions can safely be switched off
 3. Send a test message to the channel
-4. Right-click the test message and select "Copy Message Link" *)
-5. Paste the link somewhere to see the URL, which will look like this: <https://t.me/c/123456789/2>. The numbers in `c/...../` are your CHAT_ID (in our case: `123456789`). Please note this as you  will use it below.
+4. Right-click the test message and select "Copy Message Link" \*)
+5. Paste the link somewhere to see the URL, which will look like this: <https://t.me/c/123456789/2>. The numbers in `c/...../` are your CHAT_ID (in our case: `123456789`). Please note this as you will use it below.
 
 The "Copy Message Link" option appears to be available only when you are using a web client for Telegram. Go to [https://web.telegram.org/a](Telegram on the web) and log in there to see this.
 
@@ -74,8 +74,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+along with this program. If not, see <https://www.gnu.org/licenses/>.

@@ -73,7 +73,7 @@ if [[ $inhibit_update == "false" ]]; then
 		fi
 	done
 	count_end="$(wc -l < /usr/share/planefence/persist/.internal/plane-alert-db.txt)"
-	if (( count_start - count_end > 0 )); then  
+	if (( count_start - count_end > 0 )); then
 		log_print DEBUG "$(( count_start -  count_end )) entries excluded."
 		chmod a+r /usr/share/planefence/persist/.internal/plane-alert-db.txt
 	fi

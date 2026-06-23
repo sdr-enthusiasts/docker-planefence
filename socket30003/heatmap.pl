@@ -104,7 +104,7 @@ $datadirectory  = $datadirectory   || $setting{'heatmap'}{'datadirectory'}   || 
 $logdirectory   = $logdirectory    || $setting{'heatmap'}{'logdirectory'}    || $setting{'common'}{'logdirectory'}    || "/tmp";
 $outputdirectory= $outputdirectory || $setting{'heatmap'}{'outputdirectory'} || $setting{'common'}{'outputdirectory'} || "/tmp";
 $latitude       = $latitude        || $setting{'heatmap'}{'latitude'}        || $setting{'common'}{'latitude'}        || 52.085624; # Antenna location
-$longitude      = $longitude       || $setting{'heatmap'}{'longitude'}       || $setting{'common'}{'longitude'}       || 5.0890591; # 
+$longitude      = $longitude       || $setting{'heatmap'}{'longitude'}       || $setting{'common'}{'longitude'}       || 5.0890591; #
 $filemask       = $filemask        || $setting{'heatmap'}{'filemask'}        || $setting{'common'}{'filemask'}        || "dump*txt";
 $override       = $override        || $setting{'heatmap'}{'override'}        || $setting{'common'}{'override'}        || "no";  # override output file if exists.
 $timestamp      = $timestamp       || $setting{'heatmap'}{'timestamp'}       || $setting{'common'}{'timestamp'}       || "no"; # add timestamp to output file name.
@@ -118,10 +118,10 @@ $max_weight     = $max_weight      || $setting{'heatmap'}{'max_weight'}      || 
 #===============================================================================
 # Check options:
 if ($help) {
-	print "\nThis $scriptname script creates heatmap data 
+	print "\nThis $scriptname script creates heatmap data
 which can be displated in a modified variant of dump1090-mutobility.
 
-It creates an output file with location data in csv format, which can 
+It creates an output file with location data in csv format, which can
 be imported using the dump1090 GUI.
 
 Please read this post for more info:
@@ -131,30 +131,30 @@ This script uses the data file(s) created by the 'socket30003.pl'
 script, which are by default stored in '$outputdirectory' in this format:
 dump1090-<hostname/ip_address>-YYMMDD.txt
 
-The script will automaticly use the correct units (feet, meter, 
-kilometer, mile, natical mile) for 'altitude' and 'distance' when 
-the input files contain column headers with the unit type between 
-parentheses. When the input files doesn't contain column headers 
+The script will automaticly use the correct units (feet, meter,
+kilometer, mile, natical mile) for 'altitude' and 'distance' when
+the input files contain column headers with the unit type between
+parentheses. When the input files doesn't contain column headers
 (as produced by older versions of 'socket30003.pl' script)
 you can specify the units using startup parameters or in the config
 file. Otherwise this script will use the default units.
 
-This script will create a heatmap of a square area around your 
+This script will create a heatmap of a square area around your
 antenna. You can change the default range by specifing the number
 of degrees -/+ to your antenna locations. (The default values will
-probably satisfy.) This area will be devided in to small squares. 
-The default heatmap has a resolution of 1000 x 1000 squares. 
+probably satisfy.) This area will be devided in to small squares.
+The default heatmap has a resolution of 1000 x 1000 squares.
 The script will read all the flight position data from the source
-file(s) and count the times they match with a square on the heatmap. 
+file(s) and count the times they match with a square on the heatmap.
 
-The more positions match with a particular square on the heatmap, 
-the more the 'weight' that heatmap position gets. We use only the 
+The more positions match with a particular square on the heatmap,
+the more the 'weight' that heatmap position gets. We use only the
 squares with the most matches (most 'weight) to create the heatmap.
-This is because the map in the browser gets to slow when you use 
-too much positions in the heatmap. Of cource this also depends on 
-the amount of memory of your system. You can change the default 
-number of heatmap positions. You can also set the maximum of 
-'weight' per heatmap position. 
+This is because the map in the browser gets to slow when you use
+too much positions in the heatmap. Of cource this also depends on
+the amount of memory of your system. You can change the default
+number of heatmap positions. You can also set the maximum of
+'weight' per heatmap position.
 
 CSV output format:
 \"weight\";\"lat\";\"lon\"
@@ -170,44 +170,44 @@ Syntax: $scriptname
 Optional parameters:
   -data <data directory>  The data files are stored in
                           '$datadirectory' by default.
-  -log <log directory>    The data files are stored in 
+  -log <log directory>    The data files are stored in
                           '$logdirectory' by default.
-  -output <output         The data files are stored in 
+  -output <output         The data files are stored in
           directory>      '$outputdirectory' by default.
-  -file <filename>        The output file name. 
+  -file <filename>        The output file name.
                           '$outputdatafile' by default.
-  -filemask <mask>        Specify a filemask for the source data. 
+  -filemask <mask>        Specify a filemask for the source data.
                           The default filemask is '$filemask'.
-  -override               Override output file if exists. 
+  -override               Override output file if exists.
                           Default is '$override'.
-  -timestamp              Add timestamp to output file name. 
+  -timestamp              Add timestamp to output file name.
                           Default is '$timestamp'.
-  -sequencenumber         Add sequence number to output file name. 
+  -sequencenumber         Add sequence number to output file name.
                           Default is '$sequencenumber'.
   -lon <lonitude>         Location of your antenna.
   -lat <latitude>
   -maxpositions <max      Maximum spots in the heatmap. Default is
              positions>   '$max_positions' positions.
-  -maxweight <number>     Maximum position weight. The default is 
+  -maxweight <number>     Maximum position weight. The default is
                           '$max_weight'.
   -resolution <number>    Number of horizontal and vertical positions
-                          in output file. Default is '$resolution', 
+                          in output file. Default is '$resolution',
                           which means '${resolution}x${resolution}' positions.
   -degrees <number>       To determine boundaries of area around the
-                          antenna. (lat-degree <--> lat+degree) x 
+                          antenna. (lat-degree <--> lat+degree) x
                           (lon-degree <--> lon+degree)
                           De default is '$degrees' degree.
   -debug                  Displays raw socket messages.
   -verbose                Displays verbose log messages.
   -help                   This help page.
 
-note: 
-  The default values can be changed within the config file 
-  'socket30003.cfg', section [common] and section [heatmap]. 
+note:
+  The default values can be changed within the config file
+  'socket30003.cfg', section [common] and section [heatmap].
 
 Examples:
-  $scriptname 
-  $scriptname -data /home/pi -log /var/log 
+  $scriptname
+  $scriptname -data /home/pi -log /var/log
   $scriptname -lat 52.1 -lon 4.1 -maxposition 50000\n\n";
 	exit 0;
 }
@@ -250,7 +250,7 @@ if ($max_positions) {
 		LOG("The maximum number of positions '$max_positions' is invalid!","E");
 		LOG("It should be between 100 and 999999.","E");
 		exit;
-	} 
+	}
 } else {
 	$max_positions = 100000;
 }
@@ -266,7 +266,7 @@ if ($max_weight) {
         $max_weight = 1000;
 }
 LOG("The maximum position weight will be not more then '$max_weight'.","I");
-#=============================================================================== 
+#===============================================================================
 # Is the specified directories for the output file writeable?
 if (!-w $outputdirectory) {
         LOG("The directory does not exists or you have no write permissions in output directory '$outputdirectory'!","E");
@@ -352,7 +352,7 @@ foreach my $filename (@files) {
 		chomp($line);
 		$linecounter++;
                 # Data Header
-                # First line? 
+                # First line?
                 if (($linecounter == 1) || ($line =~ /hex_ident/)){
 			if ($linecounter != 1) {
 				$message  .= "- ".($linecounter-1)." processed.";
@@ -414,7 +414,7 @@ foreach my $filename (@files) {
 my %sort;
 foreach my $lat (keys %pos) {
 	foreach my $lon (keys %{$pos{$lat}}) {
-		my $number = sprintf("%08d",$pos{$lat}{$lon}); 
+		my $number = sprintf("%08d",$pos{$lat}{$lon});
 		# Save lat/lon sorted by the number of times they were recorded
 		$sort{"$number,$lat,$lon"} = 1;
 	}
@@ -447,7 +447,7 @@ $counter = 0;
 foreach my $sort (reverse sort keys %sort) {
 	my ($weight,$lat,$lon) = split(/,/,$sort);
 	last if ($weight < 3);
-	$weight = int(($max_weight / $highest_weight * $weight) + ($lowest_weight * $max_weight / $highest_weight * (($highest_weight - $weight) / $highest_weight)) + 1); 
+	$weight = int(($max_weight / $highest_weight * $weight) + ($lowest_weight * $max_weight / $highest_weight * (($highest_weight - $weight) / $highest_weight)) + 1);
 	$counter++;
 	# stop after the maximum number of heatmap positions is reached:
 	last if ($counter >= $max_positions);

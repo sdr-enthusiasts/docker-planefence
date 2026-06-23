@@ -107,8 +107,8 @@ fi
 # Now, if we got nothing, then let's try the Plane-Alert database.
 # The Plane-Alert db has the tail number in field 2 and the full name in field 3:
 if [[ -z "$b" ]] && [[ -f "$PLANEFILE" ]]; then
-  if [[ -n "$c" ]] ; then 
-    # look up by ICAO if it's provided:    
+  if [[ -n "$c" ]] ; then
+    # look up by ICAO if it's provided:
     b="$(awk -F ',' -v a="$c" '{IGNORECASE=1; if ($1 == a){print $3;exit;}}' "$PLANEFILE")"
   else
     # Look up by tail number if no ICAO is provided:
@@ -242,7 +242,7 @@ if [[ "$MUSTCACHE" == "1" ]]; then printf "%s,%s,%s,%s\n" "$a" "$b" "$(date +%s)
 if [[ "$MUSTCACHE" == "2" ]]; then printf "%s,%s,%s,%s\n" "${a:0:4}" "$b" "$(date +%s)" "$q" >> "$CACHEFILE"; fi
 if [[ "$MUSTCACHE" != "0" ]]; then CLEANUP_CACHE "$CACHEFILE" "$OWNERDBCACHE"; fi
 
-# so.... if we got no reponse from the remote server, then remove it now:
+# so.... if we got no response from the remote server, then remove it now:
 if  [[ "$b" == "#NOTFOUND" ]] || [[ "$b" == "NOTFOUND" ]]; then b=""; fi
 # Lookup is done - return the result
 echo "${b//$'\n'/ }"

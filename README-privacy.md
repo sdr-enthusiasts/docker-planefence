@@ -79,7 +79,7 @@ We may update this Privacy Statement from time to time, for example, if we chang
 
 If you have any questions about this Privacy Statement or believe that we may have inadvertently collected personal information, you can contact us at:
 
-Email: planefence (at) kx1t (dot) com  
+Email: planefence (at) kx1t (dot) com
 Postal address: PO Box 11, Belmont, MA 02478, USA
 
 We will review and respond in accordance with applicable privacy laws.

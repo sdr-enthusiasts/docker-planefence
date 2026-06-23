@@ -105,7 +105,7 @@ declare -a notifier_pids=()
 
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   while read -r script; do
-      ( 
+      (
         # Run notifier in subshell with timeout
         timeout "$NOTIFIER_TIMEOUT" bash "$script" || {
           exitcode=$?
@@ -122,12 +122,12 @@ fi
 if [[ ${#notifier_pids[@]} -gt 0 ]]; then
   wait_start=$(date +%s)
   max_wait=$((NOTIFIER_TIMEOUT + 10))
-  
+
   for pid in "${notifier_pids[@]}"; do
     if kill -0 "$pid" 2>/dev/null; then
       wait "$pid" 2>/dev/null || true
     fi
-    
+
     # Safety check: if we've been waiting too long, kill remaining processes
     if (( $(date +%s) - wait_start > max_wait )); then
       log_print WARN "Notifier wait exceeded ${max_wait}s, terminating remaining processes"

@@ -191,7 +191,7 @@ if (( image_count == 0 )); then
     # shellcheck disable=SC2090
     response="$(eval "$curlcmd")"
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
-    
+
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
       log_print ERR "Error sending text-only message to Telegram: (original had http instead of hxttp):
         ${response//http/hxttp}

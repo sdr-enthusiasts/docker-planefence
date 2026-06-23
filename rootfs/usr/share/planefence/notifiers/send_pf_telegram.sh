@@ -22,7 +22,7 @@ source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, butspost2telegram is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, butspost2telegram is called from another script, and we don't want to pollute the returns with info text
 
 
 # shellcheck disable=SC2034
@@ -117,7 +117,7 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
   template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]//-/}" "$template")"
   template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]}" != "${records["$idx":callsign]}" ]] && echo "#${records["$idx":tail]//-/}" || true)" "$template")"
-  if [[ "${records["$idx":route]}" != "n/a" ]]; then 
+  if [[ "${records["$idx":route]}" != "n/a" ]]; then
     template="$(template_replace "||ROUTE||" "#${records["$idx":route]//-/-#}" "$template")"
   else
     template="$(template_replace "||ROUTE||" "" "$template")"

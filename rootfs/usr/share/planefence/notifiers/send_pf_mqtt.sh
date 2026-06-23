@@ -4,7 +4,7 @@
 # send_mqtt.sh
 # A script to generate MQTT posts from Planefence
 #
-# Usage: ./send_mqtt.sh 
+# Usage: ./send_mqtt.sh
 #
 # This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.
@@ -37,7 +37,7 @@ TODAY=$(date --date="today" '+%y%m%d')
 generate_mqtt() {
   # Generate a MQTT notification
 
-	local idx="$1" key 
+	local idx="$1" key
 
 	if [[ -n "$MQTT_URL" ]]; then
 		# convert $records[@] into a JSON object; if (PF_)MQTT_FIELDS is defined, then only use those fields. Exclude any internal stuff
@@ -46,10 +46,10 @@ generate_mqtt() {
 			if [[ $k == "$idx:"* ]]; then keys+=("$k"); fi
 		done
 
-		MQTT_JSON="$(for i in "${keys[@]}"; do 
-									if [[ -z "$MQTT_FIELDS" ]] || [[ $MQTT_FIELDS == *${i#*:}* ]]; then 
+		MQTT_JSON="$(for i in "${keys[@]}"; do
+									if [[ -z "$MQTT_FIELDS" ]] || [[ $MQTT_FIELDS == *${i#*:}* ]]; then
 										printf '{"%s":"%s"}\n' "${i#*:}" "$(json_encode "${records[$i]}")"
-									fi 
+									fi
 									done | jq -sc add)"
 
 		# prep the MQTT host, port, etc

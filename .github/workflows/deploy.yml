@@ -21,7 +21,7 @@ on:
   pull_request:
     types: [closed]
     branches:
-     - main
+      - main
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}

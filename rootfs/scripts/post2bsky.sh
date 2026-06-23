@@ -12,7 +12,7 @@
 source /scripts/pf-common
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to pollute the returns with info text
 
 shopt -s extglob
 
@@ -196,7 +196,7 @@ for image in "${IMAGES[@]}"; do
     cid+=("$cid_local")
     size["$cid_local"]="$size_local"
     mimetype["$cid_local"]="$mimetype_local"
-    log_print DEBUG "$image uploaded succesfully to BlueSky. $ratelimit_str"
+    log_print DEBUG "$image uploaded successfully to BlueSky. $ratelimit_str"
   fi
 done
 
@@ -249,7 +249,7 @@ for url in "${urls[@]}"; do
   if (( ${#post_text} + 7 <= BLUESKY_MAXLENGTH )); then
     # We have a generic link. Add it to the post text
     basetext="$(extract_base "$url")"
-    if [[ -z "$basetext" ]]; then basetext="link"; fi 
+    if [[ -z "$basetext" ]]; then basetext="link"; fi
     post_text+=" $basetext"
     index="link$((linkcounter++))"
     urllabel["$index"]=" $basetext"
@@ -318,7 +318,7 @@ if chk_enabled "$DEBUG"; then
     echo "FACET CALCULATION SNAPSHOT:"
     echo "Sanitized TEXT: $TEXT"
     echo "Post text (JSON-safe): $post_text"
-    echo "Facet text (\\n -> newline, for offsets):"
+    printf '%s\n' 'Facet text (\n -> newline, for offsets):'
     printf '%s\n' "$facet_text"
     echo "Hashtags detected: ${hashtags[*]}"
     echo "Tag facets (start-end):"

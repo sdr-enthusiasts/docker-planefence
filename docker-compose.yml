@@ -1,5 +1,4 @@
 services:
-
   planefence:
     image: ghcr.io/sdr-enthusiasts/docker-planefence
     container_name: planefence
