@@ -145,34 +145,52 @@ unset cid size mimetype tagstart tagend urlstart urlend urluri urllabel
 declare -A size mimetype tagstart tagend urlstart urlend urluri urllabel
 
 for image in "${IMAGES[@]}"; do
-  # skip if the image is not a file that exists or if it's greater than 1MB (max file size for BlueSky)
-  if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
+  # skip if the image is empty
+  if [[ -z "$image" ]]; then
+      continue
+  fi
+  
+  # If image is a URL (not a local file), try to download it temporarily
+  local image_to_use="$image"
+  if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
+    local tmp_img="/tmp/bsky_img_$$.jpg"
+    if curl -m 30 -fsSL --fail "$image" -o "$tmp_img" 2>/dev/null; then
+      image_to_use="$tmp_img"
+      log_print DEBUG "Downloaded external image $image to $tmp_img"
+    else
+      log_print WARN "Failed to download external image: $image"
+      continue
+    fi
+  fi
+  
+  # skip if the image file doesn't exist or is greater than 1MB (max file size for BlueSky)
+  if [[ ! -f "$image_to_use" ]]; then
       continue
   fi
 
   # figure out what type the image is: jpeg, png, gif, and reduce size if necessary/possible.
-  mimetype_local="$(file --mime-type -b "$image")"
-  imgsize_org="$(stat -c%s "$image")"
-  modtime_org="$(stat -c "%y" "$image")"
+  mimetype_local="$(file --mime-type -b "$image_to_use")"
+  imgsize_org="$(stat -c%s "$image_to_use")"
+  modtime_org="$(stat -c "%y" "$image_to_use")"
 
   if (( imgsize_org >= 950000 )); then
     if [[ "$mimetype_local" == "image/jpeg" ]]; then
-      jpegoptim -q -S950 -s "$image"	# if it's JPG and > 1 MB, we can optimize for it
+      jpegoptim -q -S950 -s "$image_to_use"	# if it's JPG and > 1 MB, we can optimize for it
       # try again if still too big
-      if (( $(stat -c%s "$image") >= 950000 )); then
-          jpegoptim -q -S850 -s "$image"
+      if (( $(stat -c%s "$image_to_use") >= 950000 )); then
+          jpegoptim -q -S850 -s "$image_to_use"
       fi
     elif [[ "$mimetype_local" == "image/png" ]]; then
-      pngquant -f -o "${image}.tmp" 64 "$image"	# if it's PNG and > 1 MB, we can optimize for it
-      mv -f "${image}.tmp" "$image"
+      pngquant -f -o "${image_to_use}.tmp" 64 "$image_to_use"	# if it's PNG and > 1 MB, we can optimize for it
+      mv -f "${image_to_use}.tmp" "$image_to_use"
     else
       log_print WARN "Omitting image $image as it is too big ($imgsize)"
       continue # skip if it's not JPG or PNG
     fi
-    touch -d "$modtime_org" "$image"    # restore original modification date of the image (for cache management purposes)
+    touch -d "$modtime_org" "$image_to_use"    # restore original modification date of the image (for cache management purposes)
     log_print DEBUG "Image size of $image reduced from $imgsize_org to $(stat -c%s "$image")"
   fi
-  if (( $(stat -c%s "$image") >= 950000 )); then
+  if (( $(stat -c%s "$image_to_use") >= 950000 )); then
     log_print WARN "Omitting image $image as the size reduction was insufficient: before: $imgsize_org; now: $(stat -c%s "$image")"
     continue;
   fi # skip if it's still > 1MB
@@ -181,22 +199,24 @@ for image in "${IMAGES[@]}"; do
   response="$(curl -v -sL -X POST "$BLUESKY_API/com.atproto.repo.uploadBlob" \
     -H "Content-Type: $mimetype_local" \
     -H "Authorization: Bearer $access_jwt" \
-    --data-binary "@$image" 2>/tmp/bsky.headers)"
+    --data-binary "@$image_to_use" 2>/tmp/bsky.headers)"
   #Get the CID, size, and official MIME type of the image. Need need this to correctly refer to it in the subsequent post
   cid_local="$(jq -r '.blob.ref."$link"' <<< "$response")"
   size_local="$(jq -r '.blob.size' <<< "$response")"
   get_rate_str
   if [[ -z "$cid_local" ]] || [[ "$cid_local" == "null" ]]; then
-    log_print ERR "Error uploading $image to BlueSky: $response. $ratelimit_str. Local size is $(stat -c%s "$image"); reported blob size is $size_local."
+    log_print ERR "Error uploading $image to BlueSky: $response. $ratelimit_str. Local size is $(stat -c%s "$image_to_use"); reported blob size is $size_local."
     { echo "{ \"title\": \"BlueSky Image Upload Error\""
       echo "  \"response\": $response ,"
       echo "  \"ratelimit\": $ratelimit_str } ,"
     } >> /tmp/bsky.json
+    [[ "$image_to_use" =~ /tmp/bsky_img ]] && rm -f "$image_to_use"  # cleanup temp file on error
   else
     cid+=("$cid_local")
     size["$cid_local"]="$size_local"
     mimetype["$cid_local"]="$mimetype_local"
     log_print DEBUG "$image uploaded succesfully to BlueSky. $ratelimit_str"
+    [[ "$image_to_use" =~ /tmp/bsky_img ]] && rm -f "$image_to_use"  # cleanup temp file on success
   fi
 done
 
