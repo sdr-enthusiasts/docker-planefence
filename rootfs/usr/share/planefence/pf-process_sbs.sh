@@ -554,12 +554,12 @@ GET_PS_PHOTO () {
   if $got_photo; then
     # Try to cache the thumbnail image locally, but don't fail if external URL can't be downloaded
     if [[ "$thumb" =~ ^https?:// ]]; then
-      curl -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || :
+      curl -A "$pf_ua" -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || :
       # For external images, if cache download fails, that's OK - we'll use the external URL directly
       [[ -f "$jpg" ]] || jpg=""  # Clear jpg if download failed, fall back to using link URL
     else
       # For local or already-cached images, require successful download
-      curl -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || return 1
+      curl -A "$pf_ua" -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || return 1
     fi
     
     printf '%s\n' "$link"  >"$lnk"
