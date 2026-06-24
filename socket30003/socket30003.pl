@@ -67,6 +67,7 @@ BEGIN {
 	use POSIX qw(strftime);
 	use Time::Local;
 	use Socket; # For constants like AF_INET and SOCK_STREAM
+	use IO::Socket::INET; # For the TCP reachability probe of the peer host
 	use Getopt::Long;
 	use File::Basename;
 	use Cwd 'abs_path';
@@ -323,18 +324,19 @@ if (!-w $logdirectory) {
 # Was a hostname specified?
 $PEER_HOST = $peerhost if ($peerhost);
 # Test peer host:
-my @ping =`ping -w 4 -c 1 $PEER_HOST`;
-my $result;
-foreach my $output (@ping) {
-	# rtt min/avg/max/mdev = 162.207/162.207/162.207/0.000 ms
-        if ($output =~ /=\s*\d{1,4}\.\d{1,4}\/\d{1,4}\.\d{1,4}\/\d{1,4}\.\d{1,4}\/\d{1,4}\.\d{1,4}\s*ms/) {
-		$result = "ok";
-	}
-}
-if (!$result) {
-	LOG("Unable to connect to peer host '$PEER_HOST'!","E");
+# Probe the actual TCP port the feed uses instead of ICMP ping. ICMP requires
+# CAP_NET_RAW and can cause the container to crash even if the TCP service is reachable.
+my $probe = IO::Socket::INET->new(
+	PeerAddr => $PEER_HOST,
+	PeerPort => $PEER_PORT,
+	Proto    => 'tcp',
+	Timeout  => 4,
+);
+if (!$probe) {
+	LOG("Unable to connect to peer host '$PEER_HOST' on port $PEER_PORT!","E");
 	exit 1;
 } else {
+	close($probe);
 	LOG("Trying to connect to peer host '$PEER_HOST'...","I");
 }
 # Was a time message margin specified?

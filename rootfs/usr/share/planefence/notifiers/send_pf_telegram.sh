@@ -143,6 +143,8 @@ for idx in "${INDEX[@]}"; do
   img_array=()
   if [[ -n "${records["$idx":image:file]}" && -f "${records["$idx":image:file]}" ]]; then
     img_array+=("${records["$idx":image:file]}")
+  elif [[ -n "${records["$idx":image:link]}" ]]; then
+    img_array+=("${records["$idx":image:link]}")
   fi
   if [[ -n "${records["$idx":screenshot:file]}" && -f "${records["$idx":screenshot:file]}" ]]; then
     img_array+=("${records["$idx":screenshot:file]}")

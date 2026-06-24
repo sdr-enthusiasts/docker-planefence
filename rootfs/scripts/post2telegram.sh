@@ -120,10 +120,26 @@ if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
 if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
 
 for image in "${IMAGES[@]}"; do
-    # Skip if the image is not a file that exists
-    if [[ -z "$image" ]] || [[ ! -f "$image" ]]; then
+    # Skip if the image is empty
+    if [[ -z "$image" ]]; then
       continue
     fi
+    
+    # Handle external URLs: download them temporarily
+    local image_to_use="$image"
+    if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
+      local tmp_img="/tmp/tg_img_$$.jpg"
+      if curl -m 30 -fsSL --fail "$image" -o "$tmp_img" 2>/dev/null; then
+        image_to_use="$tmp_img"
+      else
+        log_print WARN "Failed to download external image: $image"
+        continue
+      fi
+    elif [[ ! -f "$image" ]]; then
+      # Neither a URL nor a local file
+      continue
+    fi
+    
     if (( image_count > 1 )); then
       if ((image_counter == 1 )); then
         image_text="Image $image_counter of $image_count"
@@ -139,7 +155,7 @@ for image in "${IMAGES[@]}"; do
       printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
         "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
         "chat_id=${TELEGRAM_CHAT_ID}" \
-        "photo=@${image}" \
+        "photo=@${image_to_use}" \
         "caption=${image_text}${image_text:+$'\n'}${TEXT}" \
         "parse_mode=HTML"
       # shellcheck disable=SC2090
@@ -149,7 +165,7 @@ for image in "${IMAGES[@]}"; do
       printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q -F %q' \
         "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendPhoto" \
         "chat_id=${TELEGRAM_CHAT_ID}" \
-        "photo=@${image}" \
+        "photo=@${image_to_use}" \
         "caption=${image_text}" \
         "parse_mode=HTML"
       # shellcheck disable=SC2090
@@ -178,6 +194,8 @@ for image in "${IMAGES[@]}"; do
       fi
     fi
 
+    # Cleanup temporary external image files
+    [[ "$image_to_use" =~ /tmp/tg_img ]] && rm -f "$image_to_use"
     image_counter=$((image_counter + 1))
 done
 

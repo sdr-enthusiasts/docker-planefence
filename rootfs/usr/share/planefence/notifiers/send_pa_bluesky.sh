@@ -132,8 +132,12 @@ for idx in "${INDEX[@]}"; do
 
   # Handle images
   img_array=()
+  # Try to use local cached image first
   if [[ -n "${pa_records["$idx":image:file]}" && -f "${pa_records["$idx":image:file]}" ]]; then
     img_array+=("${pa_records["$idx":image:file]}")
+  # Fallback: if no local cache, try external image link (will be downloaded by post2bsky.sh if needed)
+  elif [[ -n "${pa_records["$idx":image:link]}" ]]; then
+    img_array+=("${pa_records["$idx":image:link]}")
   fi
   if [[ -n "${pa_records["$idx":screenshot:file]}" && -f "${pa_records["$idx":screenshot:file]}" ]]; then
     img_array+=("${pa_records["$idx":screenshot:file]}")
