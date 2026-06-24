@@ -116,6 +116,100 @@ if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   done <<< "$script_array"
 fi
 
+# Sync notifier results from records into runtime JSON so stream/UI can render links.
+sync_notifier_links_into_json() {
+  local mode="$1" json_file="$2"
+  local max idx tmp_map tmp_json tmp_map_new
+  local discord_link discord_notified bsky_link bsky_notified telegram_link telegram_notified mastodon_link mastodon_notified mqtt_notified
+
+  [[ -f "$json_file" ]] || return 0
+
+  tmp_map="$(mktemp)"
+  printf '{}' > "$tmp_map"
+
+  if [[ "$mode" == "pa" ]]; then
+    max="${pa_records[maxindex]:--1}"
+  else
+    max="${records[maxindex]:--1}"
+  fi
+
+  if [[ "$max" =~ ^[0-9]+$ ]] && (( max >= 0 )); then
+    for ((idx=0; idx<=max; idx++)); do
+      if [[ "$mode" == "pa" ]]; then
+        discord_link="${pa_records["$idx:discord:link"]}"
+        discord_notified="${pa_records["$idx:discord:notified"]}"
+        bsky_link="${pa_records["$idx:bsky:link"]}"
+        bsky_notified="${pa_records["$idx:bsky:notified"]}"
+        telegram_link="${pa_records["$idx:telegram:link"]}"
+        telegram_notified="${pa_records["$idx:telegram:notified"]}"
+        mastodon_link="${pa_records["$idx:mastodon:link"]}"
+        mastodon_notified="${pa_records["$idx:mastodon:notified"]}"
+        mqtt_notified="${pa_records["$idx:mqtt:notified"]}"
+      else
+        discord_link="${records["$idx:discord:link"]}"
+        discord_notified="${records["$idx:discord:notified"]}"
+        bsky_link="${records["$idx:bsky:link"]}"
+        bsky_notified="${records["$idx:bsky:notified"]}"
+        telegram_link="${records["$idx:telegram:link"]}"
+        telegram_notified="${records["$idx:telegram:notified"]}"
+        mastodon_link="${records["$idx:mastodon:link"]}"
+        mastodon_notified="${records["$idx:mastodon:notified"]}"
+        mqtt_notified="${records["$idx:mqtt:notified"]}"
+      fi
+
+      if [[ -n "$discord_link$discord_notified$bsky_link$bsky_notified$telegram_link$telegram_notified$mastodon_link$mastodon_notified$mqtt_notified" ]]; then
+        tmp_map_new="$(mktemp)"
+        jq \
+          --arg idx "$idx" \
+          --arg dlink "$discord_link" \
+          --arg dnot "$discord_notified" \
+          --arg blink "$bsky_link" \
+          --arg bnot "$bsky_notified" \
+          --arg tlink "$telegram_link" \
+          --arg tnot "$telegram_notified" \
+          --arg mlink "$mastodon_link" \
+          --arg mnot "$mastodon_notified" \
+          --arg qnot "$mqtt_notified" \
+          '. + {($idx): {
+            "discord:link": $dlink,
+            "discord:notified": $dnot,
+            "bsky:link": $blink,
+            "bsky:notified": $bnot,
+            "telegram:link": $tlink,
+            "telegram:notified": $tnot,
+            "mastodon:link": $mlink,
+            "mastodon:notified": $mnot,
+            "mqtt:notified": $qnot
+          }}' \
+          "$tmp_map" > "$tmp_map_new" && mv -f "$tmp_map_new" "$tmp_map"
+      fi
+    done
+  fi
+
+  tmp_json="$(mktemp)"
+  if jq --argfile notify "$tmp_map" '
+      map(
+        if (type == "object" and (.index? != null)) then
+          (.index|tostring) as $idx
+          | if ($notify[$idx] // null) != null then . + $notify[$idx] else . end
+        else . end
+      )
+    ' "$json_file" > "$tmp_json"; then
+    mv -f "$tmp_json" "$json_file"
+  else
+    log_print WARN "Unable to sync notifier links into $json_file"
+    rm -f "$tmp_json"
+  fi
+
+  rm -f "$tmp_map"
+}
+
+LOCK_RECORDS
+READ_RECORDS ignore-lock
+sync_notifier_links_into_json pf "/run/planefence/planefence-${TODAY}.json"
+sync_notifier_links_into_json pa "/run/planefence/plane-alert-${TODAY}.json"
+UNLOCK_RECORDS
+
 # Backup data files if needed
 if [[ "$backup_data_files" == true ]]; then
   if [[ -f "/run/planefence/${RECORDSFILE##*/}" ]]; then  cp -f "/run/planefence/${RECORDSFILE##*/}" "$RECORDSDIR/"; fi
