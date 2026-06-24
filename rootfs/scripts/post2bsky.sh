@@ -149,11 +149,11 @@ for image in "${IMAGES[@]}"; do
   if [[ -z "$image" ]]; then
       continue
   fi
-  
+
   # If image is a URL (not a local file), try to download it temporarily
-  local image_to_use="$image"
+  image_to_use="$image"
   if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
-    local tmp_img="/tmp/bsky_img_$$.jpg"
+    tmp_img="/tmp/bsky_img_$$.jpg"
     if curl -m 30 -fsSL --fail "$image" -o "$tmp_img" 2>/dev/null; then
       image_to_use="$tmp_img"
       log_print DEBUG "Downloaded external image $image to $tmp_img"
@@ -162,7 +162,7 @@ for image in "${IMAGES[@]}"; do
       continue
     fi
   fi
-  
+
   # skip if the image file doesn't exist or is greater than 1MB (max file size for BlueSky)
   if [[ ! -f "$image_to_use" ]]; then
       continue

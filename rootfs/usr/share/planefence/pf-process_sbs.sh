@@ -561,7 +561,7 @@ GET_PS_PHOTO () {
       # For local or already-cached images, require successful download
       curl -A "$pf_ua" -m 30 -fsSL --fail "$thumb" > "$jpg" 2>/dev/null || return 1
     fi
-    
+
     printf '%s\n' "$link"  >"$lnk"
     printf '%s\n' "$thumb" >"$tlnk"
 
