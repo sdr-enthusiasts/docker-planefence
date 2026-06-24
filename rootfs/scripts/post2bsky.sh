@@ -151,9 +151,9 @@ for image in "${IMAGES[@]}"; do
   fi
   
   # If image is a URL (not a local file), try to download it temporarily
-  local image_to_use="$image"
+  image_to_use="$image"
   if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
-    local tmp_img="/tmp/bsky_img_$$.jpg"
+    tmp_img="/tmp/bsky_img_$$.jpg"
     if curl -m 30 -fsSL --fail "$image" -o "$tmp_img" 2>/dev/null; then
       image_to_use="$tmp_img"
       log_print DEBUG "Downloaded external image $image to $tmp_img"
@@ -338,6 +338,7 @@ if chk_enabled "$DEBUG"; then
     echo "FACET CALCULATION SNAPSHOT:"
     echo "Sanitized TEXT: $TEXT"
     echo "Post text (JSON-safe): $post_text"
+    # shellcheck disable=SC2028
     echo "Facet text (\\n -> newline, for offsets):"
     printf '%s\n' "$facet_text"
     echo "Hashtags detected: ${hashtags[*]}"

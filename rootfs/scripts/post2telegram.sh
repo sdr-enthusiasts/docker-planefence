@@ -126,9 +126,9 @@ for image in "${IMAGES[@]}"; do
     fi
     
     # Handle external URLs: download them temporarily
-    local image_to_use="$image"
+    image_to_use="$image"
     if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
-      local tmp_img="/tmp/tg_img_$$.jpg"
+      tmp_img="/tmp/tg_img_$$.jpg"
       if curl -m 30 -fsSL --fail "$image" -o "$tmp_img" 2>/dev/null; then
         image_to_use="$tmp_img"
       else
