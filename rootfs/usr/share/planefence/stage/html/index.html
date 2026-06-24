@@ -2519,7 +2519,22 @@ ${messagesDesc}
     photoModalImg.alt = caption || t('photo.modal.label', {}, 'Aircraft photo');
     if (photoModalCaption) {
       const safeCaption = caption || '';
-      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">${t('photo.source', {}, 'Planespotters.net')}</a>` : '';
+      let sourceText = 'Image Source';
+      if (linkHref) {
+        try {
+          const urlObj = new URL(linkHref.startsWith('http') ? linkHref : 'https://' + linkHref);
+          const domain = urlObj.hostname || '';
+          if (domain.includes('jetphotos')) sourceText = 'JetPhotos';
+          else if (domain.includes('planespotters')) sourceText = 'Planespotters';
+          else if (domain.includes('airliners')) sourceText = 'Airliners.net';
+          else if (domain.includes('wikipedia')) sourceText = 'Wikipedia';
+          else if (domain.includes('flickr')) sourceText = 'Flickr';
+          else sourceText = domain.replace(/^www\./, '');
+        } catch (e) {
+          sourceText = 'Image Source';
+        }
+      }
+      const linkHtml = linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">${sourceText}</a>` : '';
       photoModalCaption.innerHTML = `${safeCaption}${linkHtml ? ` · ${linkHtml}` : ''}`;
     }
     photoModalLastFocus = document.activeElement;

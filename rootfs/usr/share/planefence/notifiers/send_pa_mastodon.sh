@@ -135,6 +135,8 @@ for idx in "${INDEX[@]}"; do
   img_array=()
   if [[ -n "${pa_records["$idx":image:file]}" && -f "${pa_records["$idx":image:file]}" ]]; then
     img_array+=("${pa_records["$idx":image:file]}")
+  elif [[ -n "${pa_records["$idx":image:link]}" ]]; then
+    img_array+=("${pa_records["$idx":image:link]}")
   fi
   if [[ -n "${pa_records["$idx":screenshot:file]}" && -f "${pa_records["$idx":screenshot:file]}" ]]; then
     img_array+=("${pa_records["$idx":screenshot:file]}")
