@@ -187,11 +187,11 @@ sync_notifier_links_into_json() {
   fi
 
   tmp_json="$(mktemp)"
-  if jq --argfile notify "$tmp_map" '
+  if jq --slurpfile notify "$tmp_map" '
       map(
         if (type == "object" and (.index? != null)) then
           (.index|tostring) as $idx
-          | if ($notify[$idx] // null) != null then . + $notify[$idx] else . end
+          | if (($notify[0][$idx] // null) != null) then . + $notify[0][$idx] else . end
         else . end
       )
     ' "$json_file" > "$tmp_json"; then
