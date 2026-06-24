@@ -102,12 +102,16 @@ TEXT="${TEXT:0:$TELEGRAM_MAX_LENGTH}"      # limit to max characters
 TEXT="${TEXT//[[:cntrl:]]/$'\n'}"            # Replace control characters with newlines
 
 # Send images to Telegram if available
-image_count=0
+declare -a valid_images=()
 for image in "${IMAGES[@]}"; do
-  if [[ -n "$image" ]]; then
-    image_count="$((image_count + 1))"  # only count non-empty image paths
+  if [[ -z "$image" ]]; then
+    continue
+  fi
+  if [[ "$image" =~ ^https?:// ]] || [[ -s "$image" ]]; then
+    valid_images+=("$image")
   fi
 done
+image_count="${#valid_images[@]}"
 image_counter=1
 # shellcheck disable=SC2001
 
@@ -119,7 +123,8 @@ if [[ -n "$TAIL" ]]; then image_header+="Tail ${TAIL//#/} - "; fi
 if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
 if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
 
-for image in "${IMAGES[@]}"; do
+sent_any_image=false
+for image in "${valid_images[@]}"; do
     # Skip if the image is empty
     if [[ -z "$image" ]]; then
       continue
@@ -194,13 +199,15 @@ for image in "${IMAGES[@]}"; do
       fi
     fi
 
+    sent_any_image=true
+
     # Cleanup temporary external image files
     [[ "$image_to_use" =~ /tmp/tg_img ]] && rm -f "$image_to_use"
     image_counter=$((image_counter + 1))
 done
 
 # If no images or image sending failed, send text only
-if (( image_count == 0 )); then
+if ! $sent_any_image; then
     printf -v curlcmd 'curl --max-time 30 -sSL -X POST %q -F %q -F %q -F %q' \
       "${TELEGRAM_API}${TELEGRAM_BOT_TOKEN}/sendMessage" \
       "chat_id=${TELEGRAM_CHAT_ID}" \

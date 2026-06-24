@@ -164,7 +164,10 @@ for image in "${IMAGES[@]}"; do
   fi
   
   # skip if the image file doesn't exist or is greater than 1MB (max file size for BlueSky)
-  if [[ ! -f "$image_to_use" ]]; then
+  if [[ ! -f "$image_to_use" ]] || [[ ! -s "$image_to_use" ]]; then
+      if [[ -f "$image_to_use" ]] && [[ ! -s "$image_to_use" ]]; then
+        log_print WARN "Skipping empty image file: $image_to_use"
+      fi
       continue
   fi
 

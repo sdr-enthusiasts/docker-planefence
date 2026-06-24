@@ -86,6 +86,11 @@ for image in "${IMAGES[@]}"; do
     log_print WARNING "no image available at $image"
     continue
   fi
+  if [[ ! -s "$image_to_use" ]]; then
+    log_print WARN "Skipping empty image file: $image_to_use"
+    [[ "$image_to_use" =~ /tmp/masto_img ]] && rm -f "$image_to_use"
+    continue
+  fi
   
   response="$(curl --max-time 30 -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@$image_to_use")"
   [[ "$(jq -r '.id' <<< "${response}" 2>/dev/null)" != "null" ]] && mast_id="$(jq -r '.id' <<< "${response}" 2>/dev/null)" || mast_id=""

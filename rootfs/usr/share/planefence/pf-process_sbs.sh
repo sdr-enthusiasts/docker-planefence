@@ -508,10 +508,14 @@ GET_PS_PHOTO () {
 
   # cache hits
   case "$returntype" in
-    image)     if [[ -f "$jpg"  ]] && (( $(date +%s) - $(stat -c %Y -- "$jpg") < CACHETIME )); then printf '%s\n' "$jpg";  return 0; fi ;;
+    image)     if [[ -s "$jpg"  ]] && (( $(date +%s) - $(stat -c %Y -- "$jpg") < CACHETIME )); then printf '%s\n' "$jpg";  return 0; fi ;;
     link)      if [[ -f "$lnk"  ]] && (( $(date +%s) - $(stat -c %Y -- "$lnk") < CACHETIME )); then cat "$lnk"; return 0; fi ;;
     thumblink) if [[ -f "$tlnk" ]] && (( $(date +%s) - $(stat -c %Y -- "$tlnk") < CACHETIME )); then cat "$tlnk"; return 0; fi ;;
   esac
+
+  if [[ "$returntype" == "image" ]] && [[ -f "$jpg" ]] && [[ ! -s "$jpg" ]]; then
+    rm -f "$jpg"
+  fi
 
   if [[ -f "$na" ]] && (( $(date +%s) - $(stat -c %Y -- "$na") < CACHETIME )); then
     na_fresh=true
