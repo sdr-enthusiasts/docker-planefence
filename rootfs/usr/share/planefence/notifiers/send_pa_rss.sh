@@ -4,7 +4,7 @@
 # send_rss.sh
 # A script to generate RSS feeds from Planefence CSV files
 #
-# Usage: ./send_rss.sh 
+# Usage: ./send_rss.sh
 #
 # This script is distributed as part of the Planefence package and is dependent
 # on that package for its execution.

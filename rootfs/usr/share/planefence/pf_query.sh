@@ -64,7 +64,7 @@ else
 	READ_RECORDS ignore-lock
 	shopt -s nocasematch
 	csv=""
-	for ((idx=${records[maxindex]}; idx>=0; idx--)); do
+	for ((idx=records[maxindex]; idx>=0; idx--)); do
 		if [[ $idx =~ ${index:-xxxxxx} || \
 				${records["$idx":icao]} =~ ${hex:-xxxxxx} || \
 				${records["$idx":tail]} =~ ${tail:-xxxxxx} || \
@@ -75,7 +75,7 @@ else
 				${records["$idx":lat]} =~ ${lat:-xxxxxx} || \
 				${records["$idx":lon]} =~ ${lon:-xxxxxx} ]]; then
 			readarray -t headers < <(printf '%s\n' "${!records[@]}" | sed -n "s/^${idx}:\(.*\)$/\1/p" | LC_ALL=C sort)
-			
+
 			# Build the CSV line:
 			line="index=${idx},"
 			for h in "${headers[@]}"; do

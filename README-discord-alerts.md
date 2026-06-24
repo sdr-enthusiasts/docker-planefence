@@ -8,13 +8,13 @@ Setting up Discord notifications involves only two simple steps:
 We'll go into the details of each step below.
 
 ## Table of Contents
+
 - [Send a message to Discord for each new plane in Planefence](#send-a-message-to-discord-for-each-new-plane-in-planefence)
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
   - [Creating a Webhook URL](#creating-a-webhook-url)
   - [Configure Planefence](#configure-planefence)
 - [Summary of License Terms](#summary-of-license-terms)
-
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 
 - Config the Name that you'd like messages to appear as and set a profile image then click "Copy Webhook URL"
 
-- If you want to post to the [#planefence-alert channel](https://discord.gg/ytAW4WZ66B) on the SDR-Enthusiasts Discord Server (which is where most of us hang out), please join that server and send a DM to @kx1t. 
+- If you want to post to the [#planefence-alert channel](https://discord.gg/ytAW4WZ66B) on the SDR-Enthusiasts Discord Server (which is where most of us hang out), please join that server and send a DM to @kx1t.
 
 ## Configure Planefence
 
@@ -44,7 +44,7 @@ If you're sending alerts to a channel that you control you'll need to set up a W
 
 - To set the highlight color of Plane-Alert messages, set `PA_DISCORD_COLOR` to a hexadecimal color code with a leading "0x" (`0xRRGGBB`, so for example `0x00FF00` would be pure green.) The default is `0xf2e718` (a yellow color). You can use [this site](https://www.w3schools.com/colors/colors_picker.asp) or [this site](https://www.color-hex.com) to pick a color and get its hex code. Note that planes with emergencies, i.e. squawking 7500, 7600, or 7700, will always be highlighted in red (`0xff0000`) regardless of the color you set, so you shouldn't use red for your normal alerts.
 
-# Summary of License Terms
+## Summary of License Terms
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -53,8 +53,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+along with this program. If not, see <https://www.gnu.org/licenses/>.

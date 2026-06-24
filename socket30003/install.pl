@@ -73,12 +73,12 @@ sub LOG(@){
         common->LOG($logfile,@_);
 }
 #
-#=============================================================================== 
+#===============================================================================
 # Check options:
 if ($help) {
 	print "\nThis $scriptname script installs the socket30003 scripts.
 It will create the directories, copy the files, check and set the permissions.
-In case of an update, it will backup the original config file and add new 
+In case of an update, it will backup the original config file and add new
 parameters if applicable.
 
 Please read this post for more info:
@@ -89,11 +89,11 @@ Syntax: $scriptname
 Optional parameters:
   -install <install       The script will be installed in
             directory>    '/home/pi/socket30003' by default.
-  -data <data directory>  The data files will be stored in 
+  -data <data directory>  The data files will be stored in
                           '/tmp' by default.
-  -log  <data directory>  The log files will be stored in 
+  -log  <data directory>  The log files will be stored in
                           '/tmp' by default.
-  -output <output         The output files will be stored in 
+  -output <output         The output files will be stored in
             directory>    '' by default.
   -pid <pid directory>    The pid files will be stored in
                           '/tmp'.
@@ -102,7 +102,7 @@ Optional parameters:
   -help                   This help page.
 
 Examples:
-  $scriptname 
+  $scriptname
   $scriptname -install /user/share/socket30003
   $scriptname -data /home/pi/data -log /home/pi/log -output /home/pi/result \n\n";
 	exit 0;
@@ -119,10 +119,10 @@ $logdirectory     = $logdirectory      || $setting{'install'}{'logdirectory'}   
 $piddirectory     = $piddirectory      || $setting{'install'}{'piddirectory'}     || $setting{'common'}{'piddirectory'}     || "/tmp";
 $outputdirectory  = $outputdirectory   || $setting{'install'}{'outputdirectory'}  || $setting{'common'}{'outputdirectory'}  || "/tmp";
 #
-#=============================================================================== 
+#===============================================================================
 # Does the directory exist? Is it readable and writable?
 $installdirectory = common->CheckDirectory('install',$installdirectory);
-#=============================================================================== 
+#===============================================================================
 # Look for old config file
 my %oldsetting;
 my $oldconfigfile = $installdirectory.'/socket30003.cfg';
@@ -183,7 +183,7 @@ foreach my $line (@cmd) {
 		if ((exists $checkconfigfile{$section}) && ($checkconfigfile{$section}{$parameter})) {
 			LOG("The line '$line' in config file '$configfile' already exists! It has value '$checkconfigfile{$section}{$parameter}'.","W");
 		}
-		# Use value from existing config file if it is different: 
+		# Use value from existing config file if it is different:
 		my $par = $parameter;
 		my $param = $parameter;
 		$par =~ s/^#//;
@@ -211,11 +211,11 @@ foreach my $line (@cmd) {
 				$parameter = '#'.$parameter if ($answer =~ /y/);
 			}
 		}
-		# 
+		#
 		if ($parameter !~ /^#/) {
                 	# save section, parameter & value
                 	$checkconfigfile{$section}{$parameter} = $value;
-			# Ask what values should be used: 
+			# Ask what values should be used:
 			if ($parameter =~ /filemask/) {
 				$val = common->ReadInput("Which 'filemask' do you want to use?","filemask",$modify,"$val");
 			} elsif ($parameter =~ /^#?(\w+)directory$/) {
@@ -232,13 +232,13 @@ print "VAL=$val\n";
 			} elsif ($parameter =~ /(override|timestamp|sequencenumber|showpositions)/) {
 				$val = common->ReadInput("Which value for '$1' do you want to use?","multiplechoice",$modify,$val,"yes","no");
 			} elsif ($parameter =~ /outputdatafile/) {
-				$val = common->ReadInput("Which 'outputdatafile' name do you want to use?","file",$modify,"$val");	
+				$val = common->ReadInput("Which 'outputdatafile' name do you want to use?","file",$modify,"$val");
 			} elsif ($parameter =~ /PEER_HOST/) {
                                 $val = common->ReadInput("Which 'PEER_HOST' name do you want to use?","ipaddress",$modify,"$val");
                         }
 		}
 		# Value different as source config value?
-                if ((($parameter !~ /^#/) && ($value !~ /\Q$val\E/)) || (($parameter !~ /\Q$par\E/))) { 
+                if ((($parameter !~ /^#/) && ($value !~ /\Q$val\E/)) || (($parameter !~ /\Q$par\E/))) {
 			if ((!exists $comment{$section}{"$line"}) || (!exists $comment{$section}{"#$line"})) {
 				$line = "#".$line if ($line !~ /^#/);
 				$comment{$section}{"$line"} = "";
@@ -274,7 +274,7 @@ if ($modify =~ /no/) {
 	$datadirectory   = common->CheckDirectory('data',$datadirectory,"no");
 	$outputdirectory = common->CheckDirectory('output',$outputdirectory,"no");
 }
-#=============================================================================== 
+#===============================================================================
 # Set log file path and name
 my ($second,$day,$month,$year,$minute,$hour) = (localtime)[0,3,4,5,1,2];
 my $filedate = 'install-'.sprintf '%02d%02d%02d', $year-100,($month+1),$day;

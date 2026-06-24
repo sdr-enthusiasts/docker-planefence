@@ -137,7 +137,7 @@ GET_SCREENSHOT () {
 	# Function to get a screenshot
 	# Usage: GET_SCREENSHOT index dataset_name dataset_label
   # returns file path to screenshot if successful, or empty if no screenshot was captured
-  
+
   local idx="$1"
   local dataset_name="$2"
   local dataset_label="$3"
@@ -155,7 +155,7 @@ GET_SCREENSHOT () {
     log_print ERR "${dataset_label}: Unable to create temp file for curl stderr"
     return
   fi
-  
+
   # get new screenshot
   if curl -sL --fail --max-time "${SCREENSHOT_TIMEOUT:-60}" "${SCREENSHOTURL:-http://screenshot:5042}/snap/${icao}" --clobber > "$screenfile" 2>"$curl_error"; then
     image=$(mktemp)
@@ -389,4 +389,3 @@ fi
 # Cleanup old screenshots
 find "$SCREENFILEDIR" -type f -name '*-screenshot-*.png' -mmin +180 -exec rm -f {} \;
 log_print INFO "Screenshot run completed."
-

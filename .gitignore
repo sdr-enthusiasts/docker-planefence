@@ -117,3 +117,5 @@ __pycache__/
 test-results/
 .venv/
 .vscode/
+.direnv
+.pre-commit-config.yaml

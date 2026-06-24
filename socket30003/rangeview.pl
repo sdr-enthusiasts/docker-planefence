@@ -102,7 +102,7 @@ sub LOG(@){
 # Read settings from config file
 my %setting = common->READCONFIG('socket30003.cfg',$fullscriptname);
 # Use parameters & values from the 'rangeview' section. If empty or not-exists, then use from the 'common' section, otherwise script defaults.
-$number_of_directions    = $number_of_directions    || $setting{'rangeview'}{'numberofdirections'}       || 1440;  # 
+$number_of_directions    = $number_of_directions    || $setting{'rangeview'}{'numberofdirections'}       || 1440;  #
 $number_of_altitudezones = $number_of_altitudezones || $setting{'rangeview'}{'numberofaltitudezones'}    || 24;
 $max_altitude_meter = $max_altitude    || $setting{'rangeview'}{'maxaltitudemeter'} || 12000; # specified in meter
 $max_altitude_feet  = $max_altitude    || $setting{'rangeview'}{'maxaltitudefeet'}  || 36000; # specified in feet
@@ -116,13 +116,13 @@ $override         = $override          || $setting{'rangeview'}{'override'}     
 $timestamp        = $timestamp         || $setting{'rangeview'}{'timestamp'}        || $setting{'common'}{'timestamp'}       || "no"; # add timestamp to output file name.
 $sequencenumber   = $sequencenumber    || $setting{'rangeview'}{'sequencenumber'}   || $setting{'common'}{'sequencenumber'}  || "no"; # add sequence number to output file name.
 $antenna_latitude = $antenna_latitude  || $setting{'rangeview'}{'latitude'}         || $setting{'common'}{'latitude'}        || 52.085624;    # Home location, default (Utrecht, The Netherlands)
-$antenna_longitude= $antenna_longitude || $setting{'rangeview'}{'longitude'}        || $setting{'common'}{'longitude'}       || 5.0890591; 
+$antenna_longitude= $antenna_longitude || $setting{'rangeview'}{'longitude'}        || $setting{'common'}{'longitude'}       || 5.0890591;
 $distanceunit     =($distanceunit      || $setting{'rangeview'}{'distanceunit'}     || $setting{'common'}{'distanceunit'}    || "kilometer").','.
                    ($distanceunit      || $setting{'rangeview'}{'distanceunit'}     || $setting{'common'}{'distanceunit'}    || "kilometer"); # specify input & output unit! kilometer, nauticalmile, mile or meter
 $altitudeunit     =($altitudeunit      || $setting{'rangeview'}{'altitudeunit'}     || $setting{'common'}{'altitudeunit'}    || "meter").','.
                    ($altitudeunit      || $setting{'rangeview'}{'altitudeunit'}     || $setting{'common'}{'altitudeunit'}    || "meter");     # specify input & output unit! meter or feet
 #
-#=============================================================================== 
+#===============================================================================
 # Is the log directory writeable?
 if (!-w $logdirectory) {
         LOG("The log directory does not exists or you have no write permissions in '$logdirectory'!","E");
@@ -133,7 +133,7 @@ my ($second,$day,$month,$year,$minute,$hour) = (localtime)[0,3,4,5,1,2];
 my $filedate = 'rangeview-'.sprintf '%02d%02d%02d', $year-100,($month+1),$day;
 $logfile = common->LOGset($logdirectory,"$filedate.log",$verbose);
 #
-#=============================================================================== 
+#===============================================================================
 #
 my %fileunit;
 # defaultdistanceunit
@@ -192,7 +192,7 @@ if ($error) {
         LOG("The default altitude unit '$altitudeunit' is invalid! It should be one of these: meter or feet.","E");
         LOG("If you specify two units (seperated by a comma) then the first is for incomming flight position data and the second is for the range/altitude view output file.","E");
         LOG("for example: '-distanceunit meter' or '-distanceunit feet,meter'","E");
-        exit 1; 
+        exit 1;
 }
 # Get correct max altitude:
 if ($altitudeunit{'out'} =~ /feet/) {
@@ -205,13 +205,13 @@ if ($altitudeunit{'out'} =~ /feet/) {
 #===============================================================================
 # Check options:
 if ($help) {
-	print "\nThis $scriptname script creates location data 
-for a range/altitude view which can be displated in a modified 
+	print "\nThis $scriptname script creates location data
+for a range/altitude view which can be displated in a modified
 fork of dump1090-mutobility.
 
 The script creates two output files:
-rangeview.csv) A file with location data in csv format can be 
-imported in to tools like http://www.gpsvisualizer.com. 
+rangeview.csv) A file with location data in csv format can be
+imported in to tools like http://www.gpsvisualizer.com.
 rangeview.kml) A file with location data in kml format, which
 can be imported into a modified dum1090-mutability.
 
@@ -222,18 +222,18 @@ This script uses the output file(s) of the 'socket30003.pl'
 script, which are by default stored in /tmp in this format:
 dump1090-<hostname/ip_address>-YYMMDD.txt
 
-It will read the files one by one and it will automaticly use 
+It will read the files one by one and it will automaticly use
 the correct units (feet, meter, mile, nautical mile of kilometer)
-for 'altitude' and 'distance' when the input files contain 
-column headers with the unit type between parentheses. When 
-the input files doesn't contain column headers (as produced 
-by older versions of 'socket30003.pl' script) you can specify 
+for 'altitude' and 'distance' when the input files contain
+column headers with the unit type between parentheses. When
+the input files doesn't contain column headers (as produced
+by older versions of 'socket30003.pl' script) you can specify
 the units.Otherwise this script will use the default units.
 
-The flight position data is sorted in to altitude zones. For 
-each zone and for each direction the most remote location is 
-saved. The most remote locations per altitude zone will be 
-written to a file as a track. 
+The flight position data is sorted in to altitude zones. For
+each zone and for each direction the most remote location is
+saved. The most remote locations per altitude zone will be
+written to a file as a track.
 
 Default .kml output format:
 <?xml version="1.0" encoding="UTF-8"?>
@@ -268,85 +268,85 @@ Default .kml output format:
 5.08400,52.01463,357
 5.08345,52.01579,357
 5.08293,52.01683,357
-  
-Optional CSV output format:  
-type,new_track,name,color,trackpoint,altitudezone,destination,hex_ident,Altitude(meter),latitude,longitude,date,time,angle,distance(kilometer)  
-T,1,Altitude zone 1: 00000-  500,7fffff00,1,     0,-718,484646,357,52.00493,5.08865,2017/01/10,10:46:15.738,-179.72,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,2,     0,-717,484646,357,52.00616,5.08808,2017/01/10,10:46:17.164,-179.32,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,3,     0,-714,484646,357,52.00788,5.08722,2017/01/10,10:46:19.740,-178.7,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,4,     0,-713,484646,357,52.00914,5.08667,2017/01/10,10:46:21.041,-178.28,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,5,     0,-711,484646,357,52.01039,5.08604,2017/01/10,10:46:22.622,-177.79,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,6,     0,-709,484646,357,52.01125,5.08560,2017/01/10,10:46:23.892,-177.44,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,7,     0,-708,484646,357,52.01230,5.08518,2017/01/10,10:46:25.244,-177.09,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,8,     0,-706,484646,357,52.01335,5.08461,2017/01/10,10:46:26.625,-176.62,8  
-T,0,Altitude zone 1: 00000-  500,7fffff00,9,     0,-704,484646,357,52.01463,5.08400,2017/01/10,10:46:28.031,-176.09,7  
-T,0,Altitude zone 1: 00000-  500,7fffff00,10,     0,-702,484646,357,52.01579,5.08345,2017/01/10,10:46:29.475,-175.59,7  
-T,0,Altitude zone 1: 00000-  500,7fffff00,11,     0,-700,484646,357,52.01683,5.08293,2017/01/10,10:46:30.940,-175.11,7  
-  
+
+Optional CSV output format:
+type,new_track,name,color,trackpoint,altitudezone,destination,hex_ident,Altitude(meter),latitude,longitude,date,time,angle,distance(kilometer)
+T,1,Altitude zone 1: 00000-  500,7fffff00,1,     0,-718,484646,357,52.00493,5.08865,2017/01/10,10:46:15.738,-179.72,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,2,     0,-717,484646,357,52.00616,5.08808,2017/01/10,10:46:17.164,-179.32,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,3,     0,-714,484646,357,52.00788,5.08722,2017/01/10,10:46:19.740,-178.7,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,4,     0,-713,484646,357,52.00914,5.08667,2017/01/10,10:46:21.041,-178.28,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,5,     0,-711,484646,357,52.01039,5.08604,2017/01/10,10:46:22.622,-177.79,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,6,     0,-709,484646,357,52.01125,5.08560,2017/01/10,10:46:23.892,-177.44,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,7,     0,-708,484646,357,52.01230,5.08518,2017/01/10,10:46:25.244,-177.09,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,8,     0,-706,484646,357,52.01335,5.08461,2017/01/10,10:46:26.625,-176.62,8
+T,0,Altitude zone 1: 00000-  500,7fffff00,9,     0,-704,484646,357,52.01463,5.08400,2017/01/10,10:46:28.031,-176.09,7
+T,0,Altitude zone 1: 00000-  500,7fffff00,10,     0,-702,484646,357,52.01579,5.08345,2017/01/10,10:46:29.475,-175.59,7
+T,0,Altitude zone 1: 00000-  500,7fffff00,11,     0,-700,484646,357,52.01683,5.08293,2017/01/10,10:46:30.940,-175.11,7
+
 Syntax: $scriptname
 
 Optional parameters:
-  -data <data directory>  The data files are stored in 
+  -data <data directory>  The data files are stored in
                           '$datadirectory' by default.
-  -log  <data directory>  The log files are stored in 
+  -log  <data directory>  The log files are stored in
                           '$logdirectory' by default.
-  -output <output         The output file is stored in 
+  -output <output         The output file is stored in
             directory>    '$outputdirectory' by default.
-  -file <filename>        The output file name. The extention 
-                          (.kml or .csv) determines the 
-                          file structure!  
+  -file <filename>        The output file name. The extention
+                          (.kml or .csv) determines the
+                          file structure!
                           '$outputdatafile' by default.
-  -filemask <mask>        Specify a filemask. 
+  -filemask <mask>        Specify a filemask.
                           The default filemask is '$filemask'.
-  -override               Override output file if exists. 
+  -override               Override output file if exists.
                           Default is '$override'.
-  -timestamp              Add timestamp to output file name. 
+  -timestamp              Add timestamp to output file name.
                           Default is '$timestamp'.
-  -sequencenumber         Add sequence number to output file name. 
+  -sequencenumber         Add sequence number to output file name.
                           Default is '$sequencenumber'.
-  -max <altitude>         Upper limit. Default is '$max_altitude $altitudeunit{'out'}'. 
+  -max <altitude>         Upper limit. Default is '$max_altitude $altitudeunit{'out'}'.
                           Higher values in the input data will be skipped.
-  -min <altitude>         Lower limit. Default is '$min_altitude $altitudeunit{'out'}'. 
+  -min <altitude>         Lower limit. Default is '$min_altitude $altitudeunit{'out'}'.
                           Lower values in the input data will be skipped.
-  -directions <number>    Number of compass direction (pie slices). 
+  -directions <number>    Number of compass direction (pie slices).
                           Minimal 8, maximal 7200. Default = '$number_of_directions'.
-  -zones <number>         Number of altitude zones. 
-                          Minimal 1, maximum 99. 
+  -zones <number>         Number of altitude zones.
+                          Minimal 1, maximum 99.
                           Default = '$number_of_altitudezones'.
   -lon <lonitude>         Location of your antenna.
-  -lat <latitude>          
-  -distanceunit <unit>,[<unit>] 
+  -lat <latitude>
+  -distanceunit <unit>,[<unit>]
                           Type of unit: kilometer, nauticalmile,
-                          mile or meter. First unit is for the 
+                          mile or meter. First unit is for the
                           incoming source, the file(s) with flight
-                          positions. The second unit is for the 
-                          output file. No unit means it is the 
+                          positions. The second unit is for the
+                          output file. No unit means it is the
                           same as incoming.
-                          Default distance unit's are: 
+                          Default distance unit's are:
                           '$distanceunit'.
-  -altitudeunit <unit>[,<unit>] 
+  -altitudeunit <unit>[,<unit>]
                           Type of unit: feet or meter. First unit
-                          is for the incoming source, the file(s) 
-                          with flight positions. The second unit 
-                          is for the output file. No unit means it 
-                          is the same as incoming. 
-                          Default altitude unit's are: 
+                          is for the incoming source, the file(s)
+                          with flight positions. The second unit
+                          is for the output file. No unit means it
+                          is the same as incoming.
+                          Default altitude unit's are:
                           '$altitudeunit'.
   -debug                  Displays raw socket messages.
   -verbose                Displays verbose log messages.
   -help                   This help page.
 
-notes: 
+notes:
   - The default values can be changed within the config file 'socket30003.cfg'.
   - The source units will be overruled in case the input file header contains unit information.
 
 Examples:
-  $scriptname 
+  $scriptname
   $scriptname -distanceunit kilometer,nauticalmile -altitudeunit meter,feet
   $scriptname -data /home/pi/data -log /home/pi/log -output /home/pi/result \n\n";
 	exit 0;
 }
-#=============================================================================== 
+#===============================================================================
 print "The altitude will be converted from '$altitudeunit{'in'}' to '$altitudeunit{'out'}'.\n";
 print "The distance will be converted from '$distanceunit{'in'}' to '$distanceunit{'out'}.\n";
 my %convertalt;
@@ -392,8 +392,8 @@ sub dis(@) {
 	my $result =         int($convertdis{'out'} * $distance_in_meters);
 }
 #
-#=============================================================================== 
-# Is the specified directories for the output file writeable? 
+#===============================================================================
+# Is the specified directories for the output file writeable?
 if (!-w $outputdirectory) {
         LOG("The output directory does not exists or you have no write permissions in '$datadirectory'!","E");
         exit 1;
@@ -452,7 +452,7 @@ my $diff_altitude  = $max_altitude - $min_altitude;
 my $zone_altitude  = int($diff_altitude / $number_of_altitudezones);
 LOG("An altitude zone is $zone_altitude $altitudeunit{'out'}.","I");
 #
-#=============================================================================== 
+#===============================================================================
 # Get source file names
 my @files = common->GetSourceData($datadirectory,$filemask);
 #===============================================================================
@@ -470,14 +470,14 @@ foreach my $filename (@files) {
 	# Read data file
 	open(my $data_filehandle, '<', $filename) or die "Could not open file '$filename' $!";
 	my $linecounter = 0;
-	my @header; 
+	my @header;
 	my %hdr;
 	my $message;
 	while (my $line = <$data_filehandle>) {
 		chomp($line);
 		$linecounter++;
 		# Data Header
-		# First line? 
+		# First line?
 		if (($linecounter == 1) || ($line =~ /hex_ident/)){
 			if ($linecounter != 1){
 				$message .= "- ".($linecounter-1)." processed.";
@@ -527,7 +527,7 @@ foreach my $filename (@files) {
 		# Skip lower then min_altitude.
 		next if ($altitude < $min_altitude);
 		# Skip higher then max_altitude is the highest zone:
-		next if ($altitude > $max_altitude); 
+		next if ($altitude > $max_altitude);
 		# Calculate the altitude zone and direction zone
 		my $altitude_zone  = sprintf("% 6d",int($altitude / $zone_altitude) * $zone_altitude);
 		my $direction_zone = sprintf("% 4d",int($col[$hdr{'angle'}] / 360 * $number_of_directions));
@@ -580,25 +580,25 @@ sub hsl_to_bgr(@) {
         	$b = hue2rgb($p, $q, $h - 1/3);
     	}
     	$r = sprintf("%x",int($r * 255));
-	$g = sprintf("%x",int($g * 255)); 
+	$g = sprintf("%x",int($g * 255));
 	$b = sprintf("%x",int($b * 255));
 	return $b.$g.$r;
 }
 #================================================================================
-# 
+#
 my @zone;
 foreach my $altitude_zone (sort {$a<=>$b} keys %data) {
 	foreach my $dz (0..$number_of_directions) {
 		$direction_zone = sprintf("% 4d",$dz);
 		foreach my $previous_altitude_zone (@zone) {
 			# Higher altitude zones reache atleast as far as the lower altitude zones.
-			if ((exists $data{$previous_altitude_zone}) && (exists $data{$previous_altitude_zone}{$direction_zone}) && 
-			    ((!exists $data{$altitude_zone}{$direction_zone}) || 
+			if ((exists $data{$previous_altitude_zone}) && (exists $data{$previous_altitude_zone}{$direction_zone}) &&
+			    ((!exists $data{$altitude_zone}{$direction_zone}) ||
 			     ($data{$previous_altitude_zone}{$direction_zone}{'distance'} > $data{$altitude_zone}{$direction_zone}{'distance'}))) {
 				foreach my $header ("hex_ident","altitude","latitude","longitude","date","time","angle","distance") {
                         		$data{$altitude_zone}{$direction_zone}{$header} = $data{$previous_altitude_zone}{$direction_zone}{$header};
 				}
-				
+
 			}
 		}
 	}
@@ -681,7 +681,7 @@ foreach my $altitude_zone (sort {$a<=>$b} keys %data) {
 		}
 		$trackpoint++;
 		if ($outputdatafile =~ /kml$/i) {
-	  		print $kml_filehandle "$data{$altitude_zone}{$direction_zone}{'longitude'},$data{$altitude_zone}{$direction_zone}{'latitude'},$data{$altitude_zone}{$direction_zone}{'altitude'}\n";	
+	  		print $kml_filehandle "$data{$altitude_zone}{$direction_zone}{'longitude'},$data{$altitude_zone}{$direction_zone}{'latitude'},$data{$altitude_zone}{$direction_zone}{'altitude'}\n";
 		} else {
 			print $data_filehandle "T,$newtrack,Altitude zone $track: $alt_zone_name,$color[$colornumber],$trackpoint,$altitude_zone,$direction_zone,".join(",",@row)."\n";
 		}
@@ -702,4 +702,3 @@ foreach my $altitude_zone (sort {$a<=>$b} keys %data) {
 print $kml_filehandle "</Document>
 </kml>\n" if ($outputdatafile =~ /kml$/i);
 close $outputdatafile;
-

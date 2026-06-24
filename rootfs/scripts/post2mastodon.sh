@@ -13,7 +13,7 @@ source /scripts/pf-common
 DEBUG="${DEBUG:-false}"
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
-                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to polute the returns with info text
+                    # Normally this isn't an issue, but post2bsky is called from another script, and we don't want to pollute the returns with info text
 
 shopt -s extglob
 
@@ -71,7 +71,7 @@ fi
 # send pictures to Mastodon
 for image in "${IMAGES[@]}"; do
   if [[ -z "$image" ]]; then continue; fi
-  
+
   # Handle external URLs: download them temporarily
   image_to_use="$image"
   if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
@@ -86,12 +86,12 @@ for image in "${IMAGES[@]}"; do
     log_print WARNING "no image available at $image"
     continue
   fi
-  
+
   response="$(curl -s -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@$image_to_use")"
   [[ "$(jq '.id' <<< "${response}" | xargs)" != "null" ]] && mast_id="$(jq '.id' <<< "${response}" | xargs)" || mast_id=""
   if [[ -n "${mast_id}" ]]; then media_id+="${media_id:+ }-F media_ids[]=${mast_id}"; fi
   log_print DEBUG "image $image successfully uploaded to Mastodon"
-  
+
   # Cleanup temporary external image files
   [[ "$image_to_use" =~ /tmp/masto_img ]] && rm -f "$image_to_use"
 done

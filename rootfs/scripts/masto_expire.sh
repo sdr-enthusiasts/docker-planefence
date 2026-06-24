@@ -87,7 +87,7 @@ while : ; do
                 (( expired++ )) || true
                 if [[ "$1" == "delete" ]]; then
                     delete_toot "$t";
-                fi 
+                fi
             else
                 (( unexpired++ )) || true
             fi
@@ -96,7 +96,7 @@ while : ; do
             exit
         fi
     done
-    if chk_enabled "$MASTODON_DEBUG"; then 
+    if chk_enabled "$MASTODON_DEBUG"; then
         output+=("($unexpired unexpired; $expired expired; oldest $(date -d "@$oldest") ($(( (now - oldest)/(60*60*24) )) days); newest $(date -d "@$newest") ($(( (now - newest)/(60*60*24) )) days))")
         log_print INFO "${output[@]}"
     fi

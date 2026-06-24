@@ -95,7 +95,7 @@
 39AE68,FHLTI,Government of Togo,Dassault Falcon 7X
 3CC011,YV3000,Venezuela Air Force,Dornier228NG
 3CE2D2,YV3083,Venezuela Air Force,Dornier D228
-40013D,VPBAT,Goverment of Qatar,
+40013D,VPBAT,Government of Qatar,
 424238,VPBBF,SW Business Aviation,Gulfstream Aerospace G650
 4243E4,VQBMZ,Government of Jordan,Gulfstream Aerospace G650
 424565,VQBSK,Worldwide Aircraft Holding Company,

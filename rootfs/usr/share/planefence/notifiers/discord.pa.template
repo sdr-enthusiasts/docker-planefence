@@ -2,7 +2,7 @@
   "username": "||USER||",
   "avatar_url": "||AVATAR||",
   "tts": false,
-  "embeds": 
+  "embeds":
     [
       {
         "tts": false,

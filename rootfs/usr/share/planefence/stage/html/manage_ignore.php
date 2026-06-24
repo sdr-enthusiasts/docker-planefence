@@ -4,10 +4,10 @@
   ini_set('display_errors', 1);
 
   // Detailed logging
-  file_put_contents('/tmp/form_debug.log', 
-      date('Y-m-d H:i:s') . "\n" . 
-      'GET: ' . print_r($_GET, true) . "\n" . 
-      'SERVER: ' . print_r($_SERVER, true) . "\n\n", 
+  file_put_contents('/tmp/form_debug.log',
+      date('Y-m-d H:i:s') . "\n" .
+      'GET: ' . print_r($_GET, true) . "\n" .
+      'SERVER: ' . print_r($_SERVER, true) . "\n\n",
       FILE_APPEND
   );
 
@@ -48,7 +48,7 @@
         print_r($_GET);
         die("<br>Invalid mode specified, must be either 'pf' or 'pa'.");
       }
-    } else { 
+    } else {
       print_r($_GET);
       die("<br>You must specific a mode parameter, and it must be either 'pf' or 'pa'.");
     }
@@ -68,7 +68,7 @@
         $callback_url .= "&";
       }
       $callback_url .= "token=" . urlencode(substr($uuid, 0, 8));
-      
+
       header("Location:" . $callback_url);
       die;
     } else {

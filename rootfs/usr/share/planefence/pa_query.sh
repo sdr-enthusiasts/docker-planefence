@@ -75,7 +75,7 @@ else
 				${pa_records["$idx":lat]} =~ ${lat:-xxxxxx} || \
 				${pa_records["$idx":lon]} =~ ${lon:-xxxxxx} ]]; then
 			readarray -t headers < <(printf '%s\n' "${!records[@]}" | sed -n "s/^${idx}:\(.*\)$/\1/p" | LC_ALL=C sort)
-			
+
 			# Build the CSV line:
 			line="index=${idx},"
 			for h in "${headers[@]}"; do

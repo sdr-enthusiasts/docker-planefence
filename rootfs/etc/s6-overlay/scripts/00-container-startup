@@ -45,7 +45,7 @@ else
             sed -i "s|<hr>Note - soon.*<hr>||g" /usr/share/planefence/html/plane-alert/index.html
         else
             sed -i "s|</h1>.*<\!-- pa_updated -->|</h1><h2>IMPORTANT:<br>This page is no longer maintained. To see current Plane-Alert entries, click <a href=\"${PF_PA_LINK:-../index.html?mode=pa}\">here</a>.</h2><\!-- pa_updated -->|g" /usr/share/planefence/html/plane-alert/index.html
-        fi        
+        fi
     fi
 fi
 
