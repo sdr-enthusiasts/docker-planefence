@@ -99,9 +99,9 @@ find /tmp -maxdepth 1 -mindepth 1 \
   -mmin +"${DELETEAFTER}" \
   -exec rm -rf -- {} + 2>/dev/null || :
 
-# Run notifiers scripts in the background with timeout protection
-NOTIFIER_TIMEOUT="${NOTIFIER_TIMEOUT:-120}"  # default 120 second timeout
-declare -a notifier_pids=()
+# Run notifier scripts sequentially with timeout protection.
+# Sequential execution avoids lock contention on /tmp/.records.lock between notifiers.
+NOTIFIER_TIMEOUT="${NOTIFIER_TIMEOUT:-600}"  # default 10 minute timeout per notifier
 
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   while read -r script; do
@@ -136,8 +136,100 @@ if [[ ${#notifier_pids[@]} -gt 0 ]]; then
       done
       break
     fi
-  done
+  done <<< "$script_array"
 fi
+
+# Sync notifier results from records into runtime JSON so stream/UI can render links.
+sync_notifier_links_into_json() {
+  local mode="$1" json_file="$2"
+  local max idx tmp_map tmp_json tmp_map_new
+  local discord_link discord_notified bsky_link bsky_notified telegram_link telegram_notified mastodon_link mastodon_notified mqtt_notified
+
+  [[ -f "$json_file" ]] || return 0
+
+  tmp_map="$(mktemp)"
+  printf '{}' > "$tmp_map"
+
+  if [[ "$mode" == "pa" ]]; then
+    max="${pa_records[maxindex]:--1}"
+  else
+    max="${records[maxindex]:--1}"
+  fi
+
+  if [[ "$max" =~ ^[0-9]+$ ]] && (( max >= 0 )); then
+    for ((idx=0; idx<=max; idx++)); do
+      if [[ "$mode" == "pa" ]]; then
+        discord_link="${pa_records["$idx:discord:link"]}"
+        discord_notified="${pa_records["$idx:discord:notified"]}"
+        bsky_link="${pa_records["$idx:bsky:link"]}"
+        bsky_notified="${pa_records["$idx:bsky:notified"]}"
+        telegram_link="${pa_records["$idx:telegram:link"]}"
+        telegram_notified="${pa_records["$idx:telegram:notified"]}"
+        mastodon_link="${pa_records["$idx:mastodon:link"]}"
+        mastodon_notified="${pa_records["$idx:mastodon:notified"]}"
+        mqtt_notified="${pa_records["$idx:mqtt:notified"]}"
+      else
+        discord_link="${records["$idx:discord:link"]}"
+        discord_notified="${records["$idx:discord:notified"]}"
+        bsky_link="${records["$idx:bsky:link"]}"
+        bsky_notified="${records["$idx:bsky:notified"]}"
+        telegram_link="${records["$idx:telegram:link"]}"
+        telegram_notified="${records["$idx:telegram:notified"]}"
+        mastodon_link="${records["$idx:mastodon:link"]}"
+        mastodon_notified="${records["$idx:mastodon:notified"]}"
+        mqtt_notified="${records["$idx:mqtt:notified"]}"
+      fi
+
+      if [[ -n "$discord_link$discord_notified$bsky_link$bsky_notified$telegram_link$telegram_notified$mastodon_link$mastodon_notified$mqtt_notified" ]]; then
+        tmp_map_new="$(mktemp)"
+        jq \
+          --arg idx "$idx" \
+          --arg dlink "$discord_link" \
+          --arg dnot "$discord_notified" \
+          --arg blink "$bsky_link" \
+          --arg bnot "$bsky_notified" \
+          --arg tlink "$telegram_link" \
+          --arg tnot "$telegram_notified" \
+          --arg mlink "$mastodon_link" \
+          --arg mnot "$mastodon_notified" \
+          --arg qnot "$mqtt_notified" \
+          '. + {($idx): {
+            "discord:link": $dlink,
+            "discord:notified": $dnot,
+            "bsky:link": $blink,
+            "bsky:notified": $bnot,
+            "telegram:link": $tlink,
+            "telegram:notified": $tnot,
+            "mastodon:link": $mlink,
+            "mastodon:notified": $mnot,
+            "mqtt:notified": $qnot
+          }}' \
+          "$tmp_map" > "$tmp_map_new" && mv -f "$tmp_map_new" "$tmp_map"
+      fi
+    done
+  fi
+
+  tmp_json="$(mktemp)"
+  if jq --slurpfile notify "$tmp_map" '
+      map(
+        if (type == "object" and (.index? != null)) then
+          (.index|tostring) as $idx
+          | if (($notify[0][$idx] // null) != null) then . + $notify[0][$idx] else . end
+        else . end
+      )
+    ' "$json_file" > "$tmp_json"; then
+    mv -f "$tmp_json" "$json_file"
+  else
+    log_print WARN "Unable to sync notifier links into $json_file"
+    rm -f "$tmp_json"
+  fi
+
+  rm -f "$tmp_map"
+}
+
+READ_RECORDS ignore-lock
+sync_notifier_links_into_json pf "/run/planefence/planefence-${TODAY}.json"
+sync_notifier_links_into_json pa "/run/planefence/plane-alert-${TODAY}.json"
 
 # Backup data files if needed
 if [[ "$backup_data_files" == true ]]; then

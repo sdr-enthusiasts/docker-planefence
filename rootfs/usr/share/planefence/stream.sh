@@ -475,7 +475,7 @@ if ! jq -r --arg todays_version "${TODAYS_VERSION:-}" --argjson planealert_enabl
     "link:map","image:link","image:thumblink",
     "noisegraph:link","spectro:link","mp3:link",
     "link:fa","link:faa",
-    "discord:link","discord:notified","bsky:link","bsky:notified","telegram:link","telegram:notified","mqtt:notified",
+    "discord:link","discord:notified","bsky:link","bsky:notified","telegram:link","telegram:notified","mastodon:link","mastodon:notified","mqtt:notified",
     "sound:color","sound:loudness","sound:peak",
     "screenshot:file","image:file","noisegraph:file","spectro:file","mp3:file",
     "db:cpmg","db:tag1","db:tag2","db:tag3","db:category","db:link","db:imagelink1","db:imagelink2",
