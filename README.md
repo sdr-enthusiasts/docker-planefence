@@ -46,7 +46,7 @@ Planefence is deployed as a Docker container and is pre-built for the following 
 - linux/ARM64: Raspberry Pi 4B/5 with 64-bits Debian OS 10 or later (RaspOS, Armbian, DietPi, Ubuntu, etc.)
 - linux/AMD64: 64-bits PC architecture (Intel x86 or AMD) running Debian 10 Linux or later (incl. Ubuntu)
 
-The Docker container is available at `ghcr.io/sdr-enthusiasts/docker-planefence` and can be pulled directy using this Docker command: `docker pull ghcr.io/sdr-enthusiasts/docker-planefence`.
+The Docker container is available at `ghcr.io/sdr-enthusiasts/docker-planefence` and can be pulled directly using this Docker command: `docker pull ghcr.io/sdr-enthusiasts/docker-planefence`.
 
 ## Who is it for?
 
@@ -69,18 +69,18 @@ There must already be an instance of `ultrafeeder`, `tar1090`, `dump1090[-fa]`, 
 1. If you are adding this to an existing stack of Docker containers on your machine, you can add the information from this project to your existing `docker-compose.yml`. Example data is available [in this file](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml).
 2. If you are not adding this to an existing container stack, you should create a project directory:
 
-    ```bash
-    sudo mkdir -p -m 0777 /opt/planefence
-    sudo chmod a+rwx /opt/planefence
-    cd /opt/planefence
-    ```
+   ```bash
+   sudo mkdir -p -m 0777 /opt/planefence
+   sudo chmod a+rwx /opt/planefence
+   cd /opt/planefence
+   ```
 
 3. Important — if you are using adsb.im, you MUST put Planefence in its own directory, like `/opt/planefence`. You should never add it to an existing stack.
 4. Then add the template [`docker-compose.yml`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/docker-compose.yml) file from here:
 
-    ```bash
-    curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
-    ```
+   ```bash
+   curl -s https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/main/docker-compose.yml > docker-compose.yml
+   ```
 
 ### Planefence Configuration
 
@@ -110,27 +110,27 @@ Previous configurations will be stored in `./planefence/config/config-backups`, 
 
 ##### Manual Configuration
 
-Although we recommend using the web interface to configure your Planefence options,  can also manually configure them by creating and editing a configuration file
+Although we recommend using the web interface to configure your Planefence options, can also manually configure them by creating and editing a configuration file
 
 - After you start the container for the first time, it will create a few directories with setup files. You MUST edit these setup files before things will work!
 - MANDATORY: After first start, a file named `planefence.config.RENAME-and-EDIT-me` appears in `./planefence/config`. Copy it to `planefence.config`, and then edit that file.
 
-    ```bash
-    cd /opt/planefence
-    cd ./planefence/config
-    # Copy to planefence.config
-    cp planefence.config.RENAME-and-EDIT-me planefence.config
-    # Edit the template
-    # Note - when you are done, save and exit with CTRL-x (and follow the prompts)
-    nano planefence.config
-    ```
+  ```bash
+  cd /opt/planefence
+  cd ./planefence/config
+  # Copy to planefence.config
+  cp planefence.config.RENAME-and-EDIT-me planefence.config
+  # Edit the template
+  # Note - when you are done, save and exit with CTRL-x (and follow the prompts)
+  nano planefence.config
+  ```
 
 - IMPORTANT: Review all parameters in `planefence.config`; their function is explained in that file. Edit to your liking and save/exit using `Ctrl-X`. THIS IS THE MOST IMPORTANT AND MANDATORY CONFIG FILE TO EDIT!
 - Restart the container to apply your settings:
 
-    ```bash
-    docker compose up -d planefence --force-recreate
-    ```
+  ```bash
+  docker compose up -d planefence --force-recreate
+  ```
 
 - OPTIONAL: `nano planefence-ignore.txt`. In this file, you can add aircraft that Planefence will ignore. If there are specific planes that fly too often over your home, add them here. Use 1 line per entry, and the entry can be a ICAO, flight number, etc. You can even use regular expressions if you want. Be careful -- we use this file as an input to a "grep" filter. If you put something that is broad (`.*` for example), then ALL PLANES will be filtered out.
 - OPTIONAL: `nano airlinecodes.txt`. This file maps the first 3 characters of the flight number to the names of the airlines. We scraped this list from a Wikipedia page, and it is by no means complete. Feel free to add more to them -- please add an issue at <https://github.com/sdr-enthusiasts/docker-planefence/issues> so we can add your changes to the default file.
@@ -141,21 +141,21 @@ Although we recommend using the web interface to configure your Planefence optio
 
 #### Staying up to date with new Planefence features
 
-Generally, any new features will be described in the default/example [`planefence.config.RENAME-and-EDIT-me`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me) file. A raw version of this file can be downloaded here: <hhttps://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/refs/heads/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me>. Note - you cannot use this file as-is; you MUST configure the parameters as appropriate for your station.
+Generally, any new features will be described in the default/example [`planefence.config.RENAME-and-EDIT-me`](https://github.com/sdr-enthusiasts/docker-planefence/blob/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me) file. A raw version of this file can be downloaded here: <https://raw.githubusercontent.com/sdr-enthusiasts/docker-planefence/refs/heads/main/rootfs/usr/share/planefence/stage/persist/planefence.config.RENAME-and-EDIT-me>. Note - you cannot use this file as-is; you MUST configure the parameters as appropriate for your station.
 
 New features will also appear in the Web Configuration Page as they become available.
 
 #### Plane-Alert Exclusions
 
-In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desireable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in the Configuration Webpage, and in `planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
+In some circumstances you may wish to blacklist certain planes, or types of planes, from appearing in Plane-Alert and its Mastodon and Discord posts. This may be desirable if, for example, you're located near a military flight training base, where you could be flooded with dozens of notifications about T-6 Texan training aircraft every day, which could drown out more interesting planes. To that end, excluding planes can be accomplished using the `PA_EXCLUSIONS=` parameter in the Configuration Webpage, and in `planefence.config`. Currently, you may exclude whole ICAO Types (such as `TEX2` to remove all T-6 Texans), specific ICAO hexes (e.g. `AE1ECB`), specific registrations and tail codes (e.g. `N24HD` or `92-03327`), or any freeform string (e.g. `UC-12`, `Mayweather`, `Kid Rock`). Multiple exclusions should be separated by commas. Exclusions are case insensitive and spaces **must** be escaped with a slash `\`. An example:
 
 ```yml
 PA_EXCLUSIONS=tex2,AE06D9,ae27fe,Floyd\ Mayweather,UC-12W
 ```
 
-This would exclude *all* T-6 Texans, the planes with ICAO hexes `AE06D9` (a Marine Corps UC-12F Huron) and `AE27FE` (a Coast Guard MH-60T), any planes with "Floyd Mayweather" anywhere in the database entry, and any planes with "UC-12W" anywhere in the database entry. URLs and image links are intentionally not searched.
+This would exclude _all_ T-6 Texans, the planes with ICAO hexes `AE06D9` (a Marine Corps UC-12F Huron) and `AE27FE` (a Coast Guard MH-60T), any planes with "Floyd Mayweather" anywhere in the database entry, and any planes with "UC-12W" anywhere in the database entry. URLs and image links are intentionally not searched.
 
-*Please note:* this is a **powerful feature** which may produce unintended consequences. You should verify that it's working correctly by examining the container logs after making changes to `planefence.config`. You should see, e.g.:
+_Please note:_ this is a **powerful feature** which may produce unintended consequences. You should verify that it's working correctly by examining the container logs after making changes to `planefence.config`. You should see, e.g.:
 
 ```text
 tex2 appears to be an ICAO type and is valid, entries excluded: 479
@@ -217,8 +217,8 @@ docker logs -f planefence
 
 `PF_WEBLOGS` controls where the logs page is exposed:
 
-| Parameter | Values | Description |
-| --- | --- | --- |
+| Parameter    | Values                                                   | Description                                                                                                                                                                                |
+| ------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `PF_WEBLOGS` | `config` (default), `main`, `off`, `disabled`, `0`, `no` | `config`: expose logs on the configuration web server. `main`: expose logs on the main Planefence web server. `off`/`disabled`/`0`/`no` (case-insensitive): do not expose a logs web page. |
 
 After changing `PF_WEBLOGS`, restart/recreate the container so lighttpd can apply the listener mapping.
@@ -241,11 +241,11 @@ The Planefence web UI supports additional URL query parameters for selecting dat
 
 ### Supported query parameters
 
-| Parameter | Values | Description |
-| --- | --- | --- |
-| `mode` | `pf`, `planefence`, `pa`, `plane-alert`, `planealert` | Selects the data mode on load. |
-| `lang` | language code such as `en-US`, `nl-NL`, `es-ES` | Selects the UI language (if available in `locales/strings.json`). |
-| `page` | `info`, `heatmap`, `insights` | Opens the corresponding UI page/modal on load. |
+| Parameter | Values                                                | Description                                                       |
+| --------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `mode`    | `pf`, `planefence`, `pa`, `plane-alert`, `planealert` | Selects the data mode on load.                                    |
+| `lang`    | language code such as `en-US`, `nl-NL`, `es-ES`       | Selects the UI language (if available in `locales/strings.json`). |
+| `page`    | `info`, `heatmap`, `insights`                         | Opens the corresponding UI page/modal on load.                    |
 
 ### `page` behavior notes
 
@@ -278,31 +278,31 @@ Planefence and Plane-Alert keep a limited amount of data available. By default, 
 
 ### API parameters and usage examples
 
-The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` .  Query arguments are case-insensitive: looking for `n` or for `N` yields the same results.
+The Planefence and Plane-Alert APIs accept awk-style Regular Expressions as arguments. For example, a tail number starting with N, followed by 1 digit, followed by 1 or more digits or letters would be represented by this RegEx: `n[0-9][0-9A-Z]*` . Query arguments are case-insensitive: looking for `n` or for `N` yields the same results.
 Each query must contain at least one of the parameters listed below. Optionally, the `type` parameter indicates the output type. Accepted values are `json` or `csv`; if omitted, `json` is the default value. (These argument values must be provided in lowercase.)
 Note that the `call` parameter (see below) will start with `@` followed by the call (tail number or flight number as reported via ADS-B/MLAT/UAT) if a notification was sent for the entry. So make sure to start your `call` query with `^@?`.
 
 #### Planefence Query parameters
 
-| Parameter | Description | Example |
-| --- | --- | --- |
-| `hex` | Hex ID to return | <https://planeboston.com/planefence/pf_query.php?hex=^A[AB>][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits |
-| `tail` | Call sign (flight number or tail) to return | <https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json> returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if a notification for the entry was sent, in which case the `tweet_url` field contains a link to the notification (legacy field name - notification is probably NOT to X/Twitter!)) |
-| `start` | Start time in `secs_since_epoch` | <https://planeboston.com/planefence/pf_query.php?start=163989.*&type=csv> returns all entries that started on Dec 19, 2021. |
-| `end` | End time, format `secs_since_epoch` | <https://planeboston.com/planefence/pf_query.php?end=163989.*&type=csv> returns all entries that ended before Dec 19, 2021. |
+| Parameter | Description                                 | Example                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hex`     | Hex ID to return                            | <https://planeboston.com/planefence/pf_query.php?hex=^A[AB>][A-F0-9]\*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by A or B, followed by 0 or more hexadecimal digits                                                                                                                                                                           |
+| `tail`    | Call sign (flight number or tail) to return | <https://planeboston.com/planefence/pf_query.php?call=^@?AAL[0-9]*&type=json> returns any flights of which the call starts with "AAL" or "@AAL" followed by only numbers. (Note - the call value will start with `@` if a notification for the entry was sent, in which case the `tweet_url` field contains a link to the notification (legacy field name - notification is probably NOT to X/Twitter!)) |
+| `start`   | Start time in `secs_since_epoch`            | <https://planeboston.com/planefence/pf_query.php?start=163989.*&type=csv> returns all entries that started on Dec 19, 2021.                                                                                                                                                                                                                                                                              |
+| `end`     | End time, format `secs_since_epoch`         | <https://planeboston.com/planefence/pf_query.php?end=163989.*&type=csv> returns all entries that ended before Dec 19, 2021.                                                                                                                                                                                                                                                                              |
 
 #### Plane-Alert Query parameters
 
-| Parameter | Description | Example |
-| --- | --- | --- |
-| `hex` | Hex ID to return | <https://planeboston.com/plane-alert/pa_query.php?hex=^A[EF>][A-F0-9]*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by E or F, followed by 0 or more hexadecimal digits. (Note - this query returns most US military planes!) |
-| `tail` | Tail number of the aircraft | <https://planeboston.com/plane-alert/pa_query.php?tail=N14[0-9]NE&type=csv> returns any records of which the tail starts with "N14", followed by 1 digit, followed by "NE". |
-| `name` | Aircraft owner's name | <https://planeboston.com/plane-alert/pa_query.php?name=%20Life\|%20MedFlight&type=csv> returns any records that have " Life" or " MedFlight" in the owner's name. |
-| `equipment` | Equipment make and model | <https://planeboston.com/plane-alert/pa_query.php?equipment=EuroCopter> returns any records of which the equipment contains the word "EuroCopter" |
-| `timestamp` | Time first seen, format `yyyy/MM/dd hh:mm:ss` | <https://planeboston.com/plane-alert/pa_query.php?timestamp=163989.*> returns any records from Dec 19, 2021. |
-| `call` | Callsign as reported by aircraft | <https://planeboston.com/plane-alert/pa_query.php?call=SAM> returns any records of which the callsign contains "SAM". |
-| `lat` | Latitude first observation, in decimal degrees | <https://planeboston.com/plane-alert/pa_query.php?lat=^43> returns any records of which the latitude starts with "43" (i.e., 43 deg N) |
-| `lon` | Longitude first observation, in decimal degrees | <https://planeboston.com/plane-alert/pa_query.php?lon=^-68> returns any records of which the longitude starts with "-68" (i.e., 68 deg W) |
+| Parameter   | Description                                     | Example                                                                                                                                                                                                                                                                               |
+| ----------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hex`       | Hex ID to return                                | <https://planeboston.com/plane-alert/pa_query.php?hex=^A[EF>][A-F0-9]\*&type=csv returns a CSV with any Planefence records of which the Hex IDs that start with A, followed by E or F, followed by 0 or more hexadecimal digits. (Note - this query returns most US military planes!) |
+| `tail`      | Tail number of the aircraft                     | <https://planeboston.com/plane-alert/pa_query.php?tail=N14[0-9]NE&type=csv> returns any records of which the tail starts with "N14", followed by 1 digit, followed by "NE".                                                                                                           |
+| `name`      | Aircraft owner's name                           | <https://planeboston.com/plane-alert/pa_query.php?name=%20Life\|%20MedFlight&type=csv> returns any records that have " Life" or " MedFlight" in the owner's name.                                                                                                                     |
+| `equipment` | Equipment make and model                        | <https://planeboston.com/plane-alert/pa_query.php?equipment=EuroCopter> returns any records of which the equipment contains the word "EuroCopter"                                                                                                                                     |
+| `timestamp` | Time first seen, format `yyyy/MM/dd hh:mm:ss`   | <https://planeboston.com/plane-alert/pa_query.php?timestamp=163989.*> returns any records from Dec 19, 2021.                                                                                                                                                                          |
+| `call`      | Callsign as reported by aircraft                | <https://planeboston.com/plane-alert/pa_query.php?call=SAM> returns any records of which the callsign contains "SAM".                                                                                                                                                                 |
+| `lat`       | Latitude first observation, in decimal degrees  | <https://planeboston.com/plane-alert/pa_query.php?lat=^43> returns any records of which the latitude starts with "43" (i.e., 43 deg N)                                                                                                                                                |
+| `lon`       | Longitude first observation, in decimal degrees | <https://planeboston.com/plane-alert/pa_query.php?lon=^-68> returns any records of which the longitude starts with "-68" (i.e., 68 deg W)                                                                                                                                             |
 
 ## Troubleshooting
 
@@ -315,21 +315,22 @@ Note that the `call` parameter (see below) will start with `@` followed by the c
     - The name of another container in the same Docker compose stack, e.g., `ultrafeeder` or `tar1090`
     - IP address or an external hostname to a different server
     - IP address or an external hostname to the same server if the Docker instance of `ultrafeeder`, `tar1090`, etc. is in a different stack, e.g., adsb.im feeder image
-  - Did you enable SBS (BaseStation -- *not* Beast!) output? Here are some hints on how to enable this:
+  - Did you enable SBS (BaseStation -- _not_ Beast!) output? Here are some hints on how to enable this:
     - For non-containerized `dump1090[-fa]`/`readsb`/`tar1090`: add command line option `--net-sbs-port 30003`
     - For containerized `readsb-protobuf`: add to the `environment:` section of your `docker-compose.yml` file:
-  
+
       ```yaml
-            - READSB_NET_SBS_OUTPUT_PORT=30003
-            - READSB_EXTRA_ARGS=--net-beast-reduce-interval 2 --net-sbs-reduce
+      - READSB_NET_SBS_OUTPUT_PORT=30003
+      - READSB_EXTRA_ARGS=--net-beast-reduce-interval 2 --net-sbs-reduce
       ```
 
     - For users of the `ultrafeeder` container, no additional changes should be needed (see below for enabling MLAT aircraft)
+
   - If you are using multiple Docker container stacks, then you should also add `- 30003:30003` to the `ports:` section in the `docker-compose.yml` file that contains your `ultrafeeder`, `tar1090`, `readsb`, or service.
   - For users of `ultrafeeder`, if you want to enabled MLAT, make sure to set the following parameter in the `ultrafeeder` environment variables:
 
     ```yaml
-          - READSB_FORWARD_MLAT_SBS=true
+    - READSB_FORWARD_MLAT_SBS=true
     ```
 
 ## Getting help

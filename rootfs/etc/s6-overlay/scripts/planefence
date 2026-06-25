@@ -50,7 +50,7 @@ fi
 #
 initial_looptime="$(( RANDOM % (LOOPTIME*2) ))"
 
-if [[ "$LOGLEVEL" != "ERROR" ]]; then 
+if [[ "$LOGLEVEL" != "ERROR" ]]; then
     log_print INFO "Planefence is deployed and will first run at $(date -d "+$initial_looptime secs" +"%F %T %Z") (in $initial_looptime secs)"
 else
     log_print INFO "Planefence is deployed. Note that LOGLEVEL is set to \"ERROR\". Only failures and error messages will be written to the Docker Logs."

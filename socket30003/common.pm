@@ -2,7 +2,7 @@
 # Ted Sluis 2015-12-20
 # Filename : common.pm
 #===============================================================================
-# common sub routines 
+# common sub routines
 #===============================================================================
 package common;
 use strict;
@@ -90,7 +90,7 @@ sub READCONFIG(@) {
 	if ( defined($_[0]) && $_[0] eq "common" ) { shift; }
 	# config file name:
 	my $config = shift;
-	# full scriptname:		
+	# full scriptname:
 	my $fullscriptname = shift;
 	my %config;
         my $scriptname  = basename($fullscriptname);
@@ -162,7 +162,7 @@ sub LOGset(@){
         #
         # LOGset routine sets the log path. If the log file does
 	# not exists, it will be created and the permissions will
-	# be set. 
+	# be set.
         #
         # Input: path to log file.
         # Input: log file name.
@@ -202,7 +202,7 @@ sub setdebug(@){
 #===============================================================================
 sub LOGverbose(@){
         #
-        # Sets verbose logging mode. 
+        # Sets verbose logging mode.
         #
         # Input: none or 'off' to disable verbose logging.
         # Return: none
@@ -286,7 +286,7 @@ sub LOG(@) {
 		@tmplog=();
         	close OUT;
 	}
-	# 
+	#
         return if $type eq "H";
         # Write message to display
         if (($interactive) && ((($type =~ /L/) && ($verbose)) || ($type =~ /[EeIiDWw]/))) {
@@ -325,7 +325,7 @@ sub SetOutput(@) {
 	# Add timestamp
 	my ($second,$day,$month,$year,$minute,$hour) = (localtime)[0,3,4,5,1,2];
 	my $date = sprintf '%02d%02d%02d-%02d%02d%02d', $year-100,($month+1),$day,$hour,$minute,$second;
-	$name .= '-'.$date if ($timestamp eq "yes");    
+	$name .= '-'.$date if ($timestamp eq "yes");
 	# Add sequence number.
 	if ($sequencenumber eq "yes") {
 	        my $mask = "'$name*$extention'";
@@ -367,11 +367,11 @@ sub SetOutput(@) {
 	LOG($logfile,"Output file: '$outputdatafile'","I");
 	return $outputdatafile;
 }
-#=============================================================================== 
+#===============================================================================
 sub GetSourceData(@){
-	# 
+	#
 	# Get the file names of the source data
-	# 
+	#
 	#
         if ( defined($_[0]) && $_[0] eq "common" ) { shift; }
 	my $datadirectory = shift || "/tmp";
@@ -436,7 +436,7 @@ sub CheckDirectory(@) {
 	if ($modify eq 'yes') {
 		$answer = common->ReadInput("Do you want to use '$directory' as $directorytype directory?","multiplechoice",$modify,"y","n");
 		if ($answer =~ /n/i) {
-			$directory = common->ReadInput("Specify the $directorytype directory","directory",$modify,$directory);	
+			$directory = common->ReadInput("Specify the $directorytype directory","directory",$modify,$directory);
 		}
 	}
         if (!-e $directory) {

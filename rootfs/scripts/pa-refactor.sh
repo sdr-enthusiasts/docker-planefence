@@ -1,5 +1,5 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash 
+#shellcheck shell=bash
 # shellcheck disable=SC1091
 # Consolidate Plane-Alert records from recent days.
 

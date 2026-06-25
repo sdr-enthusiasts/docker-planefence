@@ -64,7 +64,7 @@ if (( ${#record[@]} > 1 )); then
       json+="}"
       if which jq >/dev/null 2>&1; then jq . <<< "$json"; else echo "$json"; fi
     ;;
-    
+
     *)
       print_usage
       exit 1

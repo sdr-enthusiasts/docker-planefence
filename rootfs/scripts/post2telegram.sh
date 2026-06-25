@@ -129,7 +129,7 @@ for image in "${valid_images[@]}"; do
     if [[ -z "$image" ]]; then
       continue
     fi
-    
+
     # Handle external URLs: download them temporarily
     image_to_use="$image"
     if [[ "$image" =~ ^https?:// ]] && [[ ! -f "$image" ]]; then
@@ -144,7 +144,7 @@ for image in "${valid_images[@]}"; do
       # Neither a URL nor a local file
       continue
     fi
-    
+
     if (( image_count > 1 )); then
       if ((image_counter == 1 )); then
         image_text="Image $image_counter of $image_count"
@@ -216,7 +216,7 @@ if ! $sent_any_image; then
     # shellcheck disable=SC2090
     response="$(eval "$curlcmd")"
     message_id="$(jq -r '.result.message_id' <<< "$response" 2>/dev/null)"
-    
+
     if [[ -z "$message_id" ]] || [[ "$message_id" == "null" ]]; then
       log_print ERR "Error sending text-only message to Telegram: (original had http instead of hxttp):
         ${response//http/hxttp}

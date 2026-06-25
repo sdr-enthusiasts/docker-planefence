@@ -27,7 +27,7 @@ LOOPTIME=6h
 
 while true
 do
-	if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Restarting in $LOOPTIME"; fi 
+	if [[ "$LOGLEVEL" != "ERROR" ]]; then log_print INFO "Restarting in $LOOPTIME"; fi
 	sleep $LOOPTIME
 	/usr/share/planefence/get-pa-alertlist.sh
 	/usr/share/planefence/get-silhouettes.sh

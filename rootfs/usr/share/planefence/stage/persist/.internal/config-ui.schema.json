@@ -108,10 +108,7 @@
     },
     "OPENSKYDB_DOWNLOAD": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "useDefaultWhenEmpty": true
     },
     "PF_SOCK30003HOST": {
@@ -126,10 +123,7 @@
     "PF_OPENAIP_LAYER": {
       "description": "Show OpenAIP layer on heatmap when ON.",
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ]
+      "options": ["ON", "OFF"]
     },
     "PF_OPENAIPKEY": {
       "description": "Valid OpenAIP API key from https://www.openaip.net",
@@ -137,19 +131,12 @@
     },
     "PF_SHOWIMAGES": {
       "type": "select",
-      "options": [
-        "YES",
-        "NO"
-      ],
+      "options": ["YES", "NO"],
       "description": "Include aircraft photos from planespotters.net in UI and notifications."
     },
     "PREFER_PA_DB_FOR_PHOTOS": {
       "type": "select",
-      "options": [
-        "",
-        "ON",
-        "OFF"
-      ],
+      "options": ["", "ON", "OFF"],
       "description": "Image lookup preference. ON checks Plane-Alert DB first and falls back to planespotters.net. OFF or empty checks planespotters.net first and falls back to Plane-Alert DB.",
       "useDefaultWhenEmpty": true
     },
@@ -159,39 +146,24 @@
     },
     "PLANEFENCE": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ]
+      "options": ["ON", "OFF"]
     },
     "PF_IGNOREDUPES": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ]
+      "options": ["ON", "OFF"]
     },
     "PLANEALERT": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ]
+      "options": ["ON", "OFF"]
     },
     "PA_SHOW_STALE_PAGE": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "useDefaultWhenEmpty": true
     },
     "PA_COLLECT_CANDIDATES": {
       "type": "select",
-      "options": [
-        "YES",
-        "NO"
-      ],
+      "options": ["YES", "NO"],
       "useDefaultWhenEmpty": true,
       "defaultValue": "YES",
       "description": "Enable automatic collection of potential Plane-Alert candidates from socket30003 data."
@@ -206,20 +178,14 @@
     },
     "PF_NOTIFEVERY": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ]
+      "options": ["ON", "OFF"]
     },
     "PF_NOTIF_MINTIME": {
       "type": "text"
     },
     "PF_NOTIF_BEHAVIOR": {
       "type": "select",
-      "options": [
-        "pre",
-        "post"
-      ],
+      "options": ["pre", "post"],
       "description": "Notification timing behavior: pre measures from first observation; post measures from last observation."
     },
     "PF_SCREENSHOTURL": {
@@ -257,20 +223,14 @@
     },
     "PF_BLUESKY_ENABLED": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "defaultValue": "OFF",
       "useDefaultWhenEmpty": true,
       "description": "Enable BlueSky notifications for Planefence."
     },
     "PA_BLUESKY_ENABLED": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "defaultValue": "OFF",
       "useDefaultWhenEmpty": true,
       "description": "Enable BlueSky notifications for Plane-Alert."
@@ -285,34 +245,22 @@
     },
     "PF_TELEGRAM_ENABLED": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "description": "Enable Telegram notifications for Planefence."
     },
     "PA_TELEGRAM_ENABLED": {
       "type": "select",
-      "options": [
-        "ON",
-        "OFF"
-      ],
+      "options": ["ON", "OFF"],
       "description": "Enable Telegram notifications for Plane-Alert."
     },
     "PF_TELEGRAM_CHAT_TYPE": {
       "type": "select",
-      "options": [
-        "normal",
-        "dm"
-      ],
+      "options": ["normal", "dm"],
       "description": "Planefence Telegram delivery mode. Use dm for direct messages (no retained channel link), or normal for channel-style posts."
     },
     "PA_TELEGRAM_CHAT_TYPE": {
       "type": "select",
-      "options": [
-        "normal",
-        "dm"
-      ],
+      "options": ["normal", "dm"],
       "description": "Plane-Alert Telegram delivery mode. Use dm for direct messages (no retained channel link), or normal for channel-style posts."
     },
     "PF_MQTT_URL": {

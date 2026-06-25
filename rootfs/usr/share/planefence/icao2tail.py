@@ -26,7 +26,7 @@ def get_suffix(offset):
     """
     Compute the suffix for the tail number given an offset
     offset < suffix_size
-    An offset of 0 returns in a valid emtpy suffix
+    An offset of 0 returns in a valid empty suffix
     A non-zero offset return a string containing one or two character from 'charset'
     Reverse function of suffix_shift()
 
@@ -83,7 +83,7 @@ def suffix_offset(s):
         print("parameter of suffix_shift() invalid")
         print(s)
         return None
-    
+
     count = (len(charset)+1)*charset.index(s[0]) + 1
     if len(s)==2:
         count += charset.index(s[1]) + 1
@@ -123,7 +123,7 @@ def n_to_icao(nnumber):
                 break
     if not valid:
         return None
-    
+
     prefix = 'a'
     count = 0
 
@@ -168,7 +168,7 @@ def icao_to_n(icao):
             if c not in hexset:
                 valid = False
                 break
-    
+
     # return None for invalid parameter
     if not valid:
         return None
@@ -217,7 +217,7 @@ def print_help():
     print(('Usage: python '+sys.argv[0]+' [icao / nnumber]'))
     print()
     print('Convert an ICAO address to a N-Number (Tail Number) and reciprocally')
-    print('Only works for aircrafts registered in the United States')
+    print('Only works for aircraft registered in the United States')
     print("US N-Numbers are alphanumerical, start with 'N', and are at most 6 character long")
     print("US ICAO addresses are hexideciaml, start with 'a', and are at most 6 character long")
     print()
@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     if val in ['H', '-H', 'HELP', '-HELP', '--HELP']:
         print_help()
-    
+
     if val[0] == 'N': # N-Number
         res = n_to_icao(val)
     elif val[0] == 'A': # icao

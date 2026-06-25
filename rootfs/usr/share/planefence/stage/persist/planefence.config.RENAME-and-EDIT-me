@@ -99,7 +99,7 @@ PF_PROCESS_NICE=10
 # Web Page Related Parameters
 ###############################################################################
 # PF_HTTP_PORT: the HTTP port used inside the container. If omitted, port 80 is used.
-# This parameter can be used to use a unique port for the Planefence container in podman 
+# This parameter can be used to use a unique port for the Planefence container in podman
 # when using shared name spaces with other containers using port 80. Do not change unless
 # you know what you are doing.
 PF_HTTP_PORT=80
@@ -170,7 +170,7 @@ PF_IGNOREDUPES=ON
 # treat them as separate entries; closer observations are collapsed.
 # Note - to completely ignore specific aircraft in Planefence, you can create a file named
 #        planefence-ignore.txt in the same directory as this config file. In that file, you can
-#        list ICAOs, callsigns, or regex patterns, with one entry per line. Regexes should be 
+#        list ICAOs, callsigns, or regex patterns, with one entry per line. Regexes should be
 #        compatible with the Linux grep command.
 #        Since aircraft often only transmit their callsign once every X messages, adding callsigns to
 #        this list may not be as effective as adding ICAO patterns.
@@ -272,7 +272,7 @@ NOTIF_DATEFORMAT="%F %T %Z"
 # Allowed values: ON or OFF. Default is OFF.
 PF_NOTIFEVERY=OFF
 # ---------------------------------------------------------------------
-# PF_NOTIF_MINTIME is the minimum wait time (in seconds) before a Planefence notification is sent, 
+# PF_NOTIF_MINTIME is the minimum wait time (in seconds) before a Planefence notification is sent,
 # depending on the PF_NOTIF_BEHAVIOR setting. Default value is 0 (secs) - this means "immediately" when
 # the plane is determined to have passed the closest location to the receiver.
 # Note that the record will be marked "ready to notify" when PF_COLLAPSEWITHIN has expired, regardless of the PF_NOTIF_MINTIME value.
@@ -414,7 +414,7 @@ PA_BLUESKY_ENABLED=OFF
 # BLUESKY_HANDLE: your BSky handle (value after '@', e.g., abcd.bsky.social).
 BLUESKY_HANDLE=""
 # BLUESKY_APP_PASSWORD: create an App Password at https://bsky.app/settings/app-passwords and enter it here
-# (format aaaa-bbbb-cccc-dddd). 
+# (format aaaa-bbbb-cccc-dddd).
 BLUESKY_APP_PASSWORD=""
 # BLUESKY_API: use a different federated serve. Do not change unless you know what you are doing.
 BLUESKY_API="https://bsky.social/xrpc"    # do not change unless you are sure that you know what you are doing!
@@ -427,7 +427,7 @@ BLUESKY_API="https://bsky.social/xrpc"    # do not change unless you are sure th
 # TELEGRAM_BOT_TOKEN format: 123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ.
 # IMPORTANT: add your Bot as a channel Administrator (requires you being an Admin).
 #
-# If you set the parameter without the PA_ or PF_ prefix, it will apply to both PA and PF. 
+# If you set the parameter without the PA_ or PF_ prefix, it will apply to both PA and PF.
 # However, if you also set the PA_TELEGRAM_... or PF_TELEGRAM_..., that value will have preference
 TELEGRAM_BOT_TOKEN=""
 # Target Telegram chat for Planefence notifications: numeric ID (private) or public name (e.g., @yourchannel).

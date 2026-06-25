@@ -77,7 +77,7 @@ log_print() {
   else
     logmsg="$2"
   fi
-  
+
   if [[ "${logmsg:0:7}" == "output=" ]]; then
     # Special case for "output=" messages: log the message without prefix and to a separate file
     logfile="${logmsg#output=}"
@@ -341,7 +341,7 @@ xml_encode() {
 json_encode() {
   local s=${1-}
   case "$s" in
-    (*[\"\\$'\n'$'\r'$'\t'$'\b'$'\f']*) ;; 
+    (*[\"\\$'\n'$'\r'$'\t'$'\b'$'\f']*) ;;
     (*) printf '%s' "$s"; return ;;
   esac
 
@@ -529,7 +529,7 @@ GET_SQUAWK_DESCRIPTION () {
 
 deg_to_compass() {
   local d=${1%%.*}
-  if [[ ! $d =~ ^-?[0-9]+$ ]]; then 
+  if [[ ! $d =~ ^-?[0-9]+$ ]]; then
     log_print ERR "$1 is not a valid angle"
     return 1
   fi
@@ -688,7 +688,7 @@ build_index_and_stale() {
     log_print ERR "build_index_and_stale: notifservice argument missing"
     return 1
   fi
-   
+
   _INDEX=(); _STALE=()
 
   local record_array="records"
@@ -730,7 +730,7 @@ build_index_and_stale() {
         else if (key==rkey)                        ready[id]=val
         else if (key=="checked:screenshot")       schecked[id]=val
       }
-      END {        
+      END {
         CSTN = CST+0
         # Evaluate only ids that have lastseen
         for (id in ids) {
@@ -804,4 +804,4 @@ if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 		;;
 	esac
 fi
-(( ${ALTCORR:-0} > 0 )) && ALTREF="AGL" || ALTREF="MSL" 
+(( ${ALTCORR:-0} > 0 )) && ALTREF="AGL" || ALTREF="MSL"

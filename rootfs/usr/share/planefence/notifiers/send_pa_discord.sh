@@ -33,7 +33,7 @@ if ! chk_enabled "$DISCORD_ENABLED"; then
 fi
 
 log_print DEBUG "Hello. Starting Discord notification run"
-  
+
 if [[ -z "$DISCORD_WEBHOOKS" ]]; then
   log_print ERR "No Discord webhooks defined. Aborting."
   exit 1
@@ -130,8 +130,8 @@ for idx in "${INDEX[@]}"; do
   template="$(template_replace "||TRACK||" "${pa_records["$idx:track:value"]}°" "$template")"
   template="$(template_replace "||TIMESTAMP||" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$template")"
   template="$(template_replace "||YEAR||" "$(date -u +'%Y')" "$template")"
-  template="$(template_replace "||VERSION||" "$VERSION" "$template")" 
-  
+  template="$(template_replace "||VERSION||" "$VERSION" "$template")"
+
   if [[ -n "${DISCORD_AVATAR_URL}" ]]; then
     template="$(template_replace "||AVATAR||" "${DISCORD_AVATAR_URL}" "$template")"
   else
@@ -167,7 +167,7 @@ for idx in "${INDEX[@]}"; do
     template="$(template_replace "||ROUTE||" "${pa_records["$idx":route]}" "$template")"
   else
     template="$(sed -z 's/||ROUTE--.*--ROUTE||//g' <<< "$template")"
-  fi    
+  fi
 
   if [[ -n "${pa_records["$idx":db:category]}" ]]; then
     template="$(template_replace "||CATEGORY--" "" "$template")"

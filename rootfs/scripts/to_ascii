@@ -210,7 +210,7 @@ function to_ascii() {
   conv[ḃ]="b"
   conv[ḅ]="b"
   conv[ḇ]="b"
-  
+
   conv[ç]="c"
   conv[č]="cz"
   conv[ĉ]="c"

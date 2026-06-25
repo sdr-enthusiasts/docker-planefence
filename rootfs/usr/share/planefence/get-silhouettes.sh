@@ -34,7 +34,7 @@ then
 	then
 		log_print ERR "Retrieval of silhouettes from $SILLINK failed, using the existing list."
 		log_print ERR "To fix, in planefence.config, please set PF_SILHOUETTES_LINK to OFF or to the correct retrieval URL."
-		if [[ -f /tmp/silhouettes-org.zip ]]; then 
+		if [[ -f /tmp/silhouettes-org.zip ]]; then
 			cp -f /tmp/silhouettes-org.zip /tmp/silhouettes.zip
 		else
 			log_print ERR "No original silhouettes file found either, silhouettes will not be updated."
@@ -55,7 +55,7 @@ then
 	then
 		log_print ERR "Retrieval of Operator Flags from $OPFLINK failed, using the existing list."
 		log_print ERR "To fix, in planefence.config, please set PF_OPERATORFLAGS_LINK to OFF or to the correct retrieval URL."
-		if [[ -f /tmp/operatorflags-org.zip ]]; then 
+		if [[ -f /tmp/operatorflags-org.zip ]]; then
 			cp -f /tmp/operatorflags-org.zip /tmp/operatorflags.zip
 		else
 			log_print ERR "No original operator flags file found either, operator flags will not be updated."
