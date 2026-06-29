@@ -91,7 +91,7 @@ for image in "${IMAGES[@]}"; do
     [[ "$image_to_use" =~ /tmp/masto_img ]] && rm -f "$image_to_use"
     continue
   fi
-  
+
   response="$(curl --max-time 30 -sS -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -H "Content-Type: multipart/form-data" -X POST "${MASTODON_SERVER}/api/v1/media" --form file="@$image_to_use")"
   [[ "$(jq -r '.id' <<< "${response}" 2>/dev/null)" != "null" ]] && mast_id="$(jq -r '.id' <<< "${response}" 2>/dev/null)" || mast_id=""
   if [[ -n "${mast_id}" ]]; then
@@ -100,7 +100,7 @@ for image in "${IMAGES[@]}"; do
   else
     log_print WARN "Failed to upload image to Mastodon: ${response//http/hxttp}"
   fi
-  
+
   # Cleanup temporary external image files
   [[ "$image_to_use" =~ /tmp/masto_img ]] && rm -f "$image_to_use"
 done
