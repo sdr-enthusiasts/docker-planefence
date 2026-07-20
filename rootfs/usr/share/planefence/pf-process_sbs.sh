@@ -7,7 +7,9 @@
 set -euo pipefail
 
 # Source common helpers (if they exist – harmless if not)
+# shellcheck disable=SC1091
 source /scripts/pf-common 2>/dev/null || true
+# shellcheck disable=SC1091
 source /usr/share/planefence/planefence.conf 2>/dev/null || true
 
 PY_SCRIPT="/usr/share/planefence/pf-process_sbs.py"
