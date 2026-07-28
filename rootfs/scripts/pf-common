@@ -392,6 +392,125 @@ template_replace() {
   rm -f -- "$tmp"
 }
 
+PF_STRINGS_JSON_RUNTIME="/usr/share/planefence/html/locales/strings.json"
+PF_STRINGS_JSON_STAGE="/usr/share/planefence/stage/html/locales/strings.json"
+
+declare -g PF_NOTIFICATION_LANGUAGE_EFFECTIVE=""
+declare -g PF_NOTIFICATION_LANGUAGE_WARNING=""
+declare -gA PF_NOTIFICATION_I18N_CACHE=()
+
+pf_strings_json_path() {
+  if [[ -f "$PF_STRINGS_JSON_RUNTIME" ]]; then
+    printf '%s\n' "$PF_STRINGS_JSON_RUNTIME"
+  else
+    printf '%s\n' "$PF_STRINGS_JSON_STAGE"
+  fi
+}
+
+pf_notification_init_language() {
+  if [[ -n "$PF_NOTIFICATION_LANGUAGE_EFFECTIVE" ]]; then
+    printf '%s\n' "$PF_NOTIFICATION_LANGUAGE_EFFECTIVE"
+    return 0
+  fi
+
+  local lang file
+  lang="${NOTIFICATION_LANGUAGE:-}"
+  if [[ -z "$lang" ]]; then
+    lang="$(GET_PARAM base NOTIFICATION_LANGUAGE || true)"
+  fi
+
+  lang="${lang//[[:space:]]/}"
+  file="$(pf_strings_json_path)"
+
+  if [[ -z "$lang" ]]; then
+    PF_NOTIFICATION_LANGUAGE_EFFECTIVE="en-US"
+    PF_NOTIFICATION_LANGUAGE_WARNING=""
+    printf '%s\n' "$PF_NOTIFICATION_LANGUAGE_EFFECTIVE"
+    return 0
+  fi
+
+  if jq -e --arg lang "$lang" '.languages[$lang] != null' "$file" >/dev/null 2>&1; then
+    PF_NOTIFICATION_LANGUAGE_EFFECTIVE="$lang"
+    PF_NOTIFICATION_LANGUAGE_WARNING=""
+  else
+    PF_NOTIFICATION_LANGUAGE_EFFECTIVE="en-US"
+    PF_NOTIFICATION_LANGUAGE_WARNING="$lang"
+  fi
+
+  printf '%s\n' "$PF_NOTIFICATION_LANGUAGE_EFFECTIVE"
+}
+
+pf_notification_log_language_warning() {
+  local original
+  original="${PF_NOTIFICATION_LANGUAGE_WARNING:-}"
+  if [[ -n "$original" ]]; then
+    log_print WARNING "NOTIFICATION_LANGUAGE '$original' is not supported. Using en-US for this notification."
+    PF_NOTIFICATION_LANGUAGE_WARNING=""
+  fi
+}
+
+pf_notification_string() {
+  local key default_value lang file cache_key value
+  key="$1"
+  default_value="$2"
+
+  if [[ -z "$key" ]]; then
+    printf '%s' "$default_value"
+    return 0
+  fi
+
+  lang="${3:-$(pf_notification_init_language)}"
+  file="$(pf_strings_json_path)"
+  cache_key="${lang}|${key}"
+
+  if [[ -n "${PF_NOTIFICATION_I18N_CACHE[$cache_key]+x}" ]]; then
+    printf '%s' "${PF_NOTIFICATION_I18N_CACHE[$cache_key]}"
+    return 0
+  fi
+
+  value="$(jq -r \
+    --arg lang "$lang" \
+    --arg key "$key" \
+    --arg default_value "$default_value" \
+    '(.languages[$lang].strings[$key] // .languages["en-US"].strings[$key] // $default_value)' \
+    "$file" 2>/dev/null || true)"
+
+  if [[ -z "$value" || "$value" == "null" ]]; then
+    value="$default_value"
+  fi
+
+  PF_NOTIFICATION_I18N_CACHE[$cache_key]="$value"
+  printf '%s' "$value"
+}
+
+pf_notification_format_string() {
+  local key default_value result
+  key="$1"
+  default_value="$2"
+  shift 2
+
+  result="$(pf_notification_string "$key" "$default_value")"
+  while (( $# >= 2 )); do
+    result="${result//\{$1\}/$2}"
+    shift 2
+  done
+
+  printf '%s' "$result"
+}
+
+pf_notification_mastodon_lang() {
+  local lang
+  lang="${1:-$(pf_notification_init_language)}"
+  lang="${lang%%-*}"
+  lang="${lang,,}"
+
+  if [[ "$lang" =~ ^[a-z]{2,3}$ ]]; then
+    printf '%s\n' "$lang"
+  else
+    printf '%s\n' "en"
+  fi
+}
+
 CHK_SCREENSHOT_ENABLED() {
   # Check if screenshot additions are enabled
   local screenshothost

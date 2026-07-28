@@ -48,6 +48,9 @@ else
   exit 1
 fi
 
+notif_lang="$(pf_notification_init_language)"
+pf_notification_log_language_warning
+
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
 else
@@ -89,39 +92,53 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
+  template="$(template_replace "||TXT_PREFIX_PA||" "$(pf_notification_string "notify.text.prefix.pa" "#PlaneAlert " "$notif_lang")" "$template")"
+
   squawk="${pa_records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "Squawk: #$squawk " "$template")"
+    line_squawk="$(pf_notification_format_string "notify.text.line.squawk" "Squawk: #{squawk}" "squawk" "$squawk")"
+    template="$(template_replace "||LINE_SQUAWK||" "${line_squawk} " "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
-      template="$(template_replace "||EMERGENCY||" "#Emergency: #${pa_records["$idx":squawk:description]// /${SPACE}} " "$template")"
+      emergency_tag="$(pf_notification_format_string "notify.text.emergencyTag" "#Emergency: #{description} " "description" "${pa_records["$idx":squawk:description]// /${SPACE}}")"
+      template="$(template_replace "||EMERGENCY||" "$emergency_tag" "$template")"
     else
       template="$(template_replace "||EMERGENCY||" "" "$template")"
     fi
   else
-    template="$(template_replace "||SQUAWK||" "" "$template")"
+    template="$(template_replace "||LINE_SQUAWK||" "" "$template")"
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
+
+  line_icao="$(pf_notification_format_string "notify.text.line.icao" "ICAO: #{icao}" "icao" "${pa_records["$idx":icao]}")"
+  template="$(template_replace "||LINE_ICAO||" "$line_icao" "$template")"
+
   if [[ -n "${pa_records["$idx":owner]}" ]]; then
-    template="$(template_replace "||OWNER||" "Owner: #${pa_records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
+    line_owner="$(pf_notification_format_string "notify.text.line.owner" "Owner: #{owner}" "owner" "${pa_records["$idx":owner]// /${SPACE}}")"
+    template="$(template_replace "||LINE_OWNER||" "$line_owner" "$template")"
   else
-    template="$(template_replace "||OWNER||" "" "$template")"
+    template="$(template_replace "||LINE_OWNER||" "" "$template")"
   fi
-  template="$(template_replace "||ICAO||" "${pa_records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${pa_records["$idx":callsign]}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]//-/}" || true)" "$template")"
-  template="$(template_replace "||TYPE||" "${pa_records["$idx":type]}" "$template")"
+  callsign_tag="#${pa_records["$idx":callsign]}"
+  tail_tag="$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]//-/}" || true)"
+  route_tag=""
   if [[ -n "${pa_records["$idx":route]}" && "${pa_records["$idx":route]}" != "n/a" ]]; then
-    template="$(template_replace "||ROUTE||" "#${pa_records["$idx":route]//-/-#}" "$template")"
-  else
-    template="$(template_replace "||ROUTE||" "" "$template")"
+    route_tag="#${pa_records["$idx":route]//-/-#}"
   fi
-  template="$(template_replace "||TIME||" "$(date -d "@${pa_records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${pa_records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${pa_records["$idx":distance:value]} $DISTUNIT (${pa_records["$idx":angle:value]}deg ${pa_records["$idx":angle:name]})" "$template")"
+  line_flight="$(pf_notification_format_string "notify.text.line.flight" "Flt: {callsign} {tail} #{type} {route}" "callsign" "$callsign_tag" "tail" "$tail_tag" "type" "${pa_records["$idx":type]}" "route" "$route_tag")"
+  line_flight="$(sed -E 's/[[:space:]]+/ /g; s/[[:space:]]+$//' <<< "$line_flight")"
+  template="$(template_replace "||LINE_FLIGHT||" "$line_flight" "$template")"
+
+  line_time="$(pf_notification_format_string "notify.text.line.time" "Time: {time}" "time" "$(date -d "@${pa_records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")")"
+  template="$(template_replace "||LINE_TIME||" "$line_time" "$template")"
+
+  line_min_alt="$(pf_notification_format_string "notify.text.line.minAlt" "Min Alt: {alt}" "alt" "${pa_records["$idx":altitude:value]} $ALTUNIT")"
+  template="$(template_replace "||LINE_MIN_ALT||" "$line_min_alt" "$template")"
+
   if [[ -n ${pa_records["$idx":sound:loudness]} ]]; then
-    template="$(template_replace "||LOUDNESS||" "Loudness: ${pa_records["$idx":sound:loudness]} dB" "$template")"
+    line_loudness="$(pf_notification_format_string "notify.text.line.loudness" "Loudness: {loudness} dB" "loudness" "${pa_records["$idx":sound:loudness]}")"
+    template="$(template_replace "||LINE_LOUDNESS||" "$line_loudness" "$template")"
   else
-    template="$(template_replace "||LOUDNESS||" "" "$template")"
+    template="$(template_replace "||LINE_LOUDNESS||" "" "$template")"
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 

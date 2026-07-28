@@ -11,7 +11,6 @@
 
 source /scripts/pf-common
 
-# shellcheck disable=SC2034
 DEBUG="${DEBUG:-false}"
 
 exec 2>/dev/stderr  # we need to do this because stderr is redirected to &1 in /scripts/pfcommon <-- /scripts/common
@@ -113,15 +112,7 @@ for image in "${IMAGES[@]}"; do
 done
 image_count="${#valid_images[@]}"
 image_counter=1
-# shellcheck disable=SC2001
-
-# shellcheck disable=SC2034
-IFS=" " read -r header CALL TAIL TYPE ROUTE <<< "$(grep -i "^flt:" <<< "$TEXT")"
-image_header=""
-if [[ -n "$CALL" ]]; then image_header+="Flt ${CALL//#/} - "; fi
-if [[ -n "$TAIL" ]]; then image_header+="Tail ${TAIL//#/} - "; fi
-if [[ -n "$ICAO" ]]; then image_header+="ICAO ${ICAO//#/} - "; fi
-if [[ -n "$ROUTE" && "$ROUTE" != "n/a" ]]; then image_header+="${ROUTE//#/} - "; fi
+title_line="${TEXT%%$'\n'*}"
 
 sent_any_image=false
 for image in "${valid_images[@]}"; do
@@ -147,9 +138,9 @@ for image in "${valid_images[@]}"; do
 
     if (( image_count > 1 )); then
       if ((image_counter == 1 )); then
-        image_text="Image $image_counter of $image_count"
+        image_text=""
       else
-        image_text="${image_header}Image $image_counter of $image_count"
+        image_text="$title_line"
       fi
     else
       image_text=""

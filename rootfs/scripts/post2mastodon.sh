@@ -106,7 +106,9 @@ for image in "${IMAGES[@]}"; do
 done
 
 # shellcheck disable=SC2086
-response="$(curl --max-time 30 -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "${MASTODON_SERVER}/api/v1/statuses" -X POST ${media_id} -F "status=${TEXT}" -F "language=en" -F "visibility=${MASTODON_POST_VISIBILITY}")"
+notif_lang="$(pf_notification_init_language)"
+mastodon_lang="$(pf_notification_mastodon_lang "$notif_lang")"
+response="$(curl --max-time 30 -H "Authorization: Bearer ${MASTODON_ACCESS_TOKEN}" -sS "${MASTODON_SERVER}/api/v1/statuses" -X POST ${media_id} -F "status=${TEXT}" -F "language=${mastodon_lang}" -F "visibility=${MASTODON_POST_VISIBILITY}")"
 # check if there was an error
 if [[ "$(jq '.error' <<< "${response}"|xargs)" == "null" ]]; then
     jq '.url' <<< "${response}"|xargs

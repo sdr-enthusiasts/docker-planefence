@@ -267,6 +267,12 @@ PA_COLLECT_CANDIDATES_LOG=plane-alert-candidates.log
 # Uses Linux `date` formatting (e.g., "%F %T %Z"). Discord/MQTT may use fixed formats.
 NOTIF_DATEFORMAT="%F %T %Z"
 # ---------------------------------------------------------------------
+# NOTIFICATION_LANGUAGE: locale for PF/PA notification text.
+# Empty means en-US (default).
+# You may set any supported locale abbreviation from locales/strings.json.
+# If an unsupported value is set, notifications log a warning and use en-US.
+NOTIFICATION_LANGUAGE=
+# ---------------------------------------------------------------------
 # PF_NOTIFEVERY: when true, send a notification for every qualifying occurrence.
 # Use cautiously, especially with PF_IGNOREDUPES unset (may produce many notifications).
 # Allowed values: ON or OFF. Default is OFF.

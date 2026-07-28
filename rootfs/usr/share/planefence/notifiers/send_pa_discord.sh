@@ -62,6 +62,22 @@ else
   exit 1
 fi
 
+notif_lang="$(pf_notification_init_language)"
+pf_notification_log_language_warning
+
+txt_field_icao="$(pf_notification_string "notify.text.field.icao" "ICAO" "$notif_lang")"
+txt_field_tail_number="$(pf_notification_string "notify.text.field.tailNumber" "Tail Number" "$notif_lang")"
+txt_field_callsign="$(pf_notification_string "notify.text.field.callsign" "Callsign" "$notif_lang")"
+txt_field_squawk="$(pf_notification_string "notify.text.field.squawk" "Squawk" "$notif_lang")"
+txt_field_type="$(pf_notification_string "notify.text.field.type" "Type" "$notif_lang")"
+txt_field_gnd_speed="$(pf_notification_string "notify.text.field.gndSpeed" "Gnd Speed" "$notif_lang")"
+txt_field_track="$(pf_notification_string "notify.text.field.track" "Track" "$notif_lang")"
+txt_field_route="$(pf_notification_string "notify.text.field.route" "Route" "$notif_lang")"
+txt_field_category="$(pf_notification_string "notify.text.field.category" "Category" "$notif_lang")"
+txt_field_tag="$(pf_notification_string "notify.text.field.tag" "Tag" "$notif_lang")"
+txt_field_link="$(pf_notification_string "notify.text.field.link" "Link" "$notif_lang")"
+txt_field_first_seen="$(pf_notification_string "notify.text.field.firstSeen" "First Seen" "$notif_lang")"
+
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
 else
@@ -116,10 +132,25 @@ for idx in "${INDEX[@]}"; do
   esac
 
   # Set strings:
-  template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) first seen at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
+  aircraft_text="${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]})"
+  title_text="$(pf_notification_format_string "notify.text.title.pa" "Plane-Alert: {aircraft} first seen at {altitude} above {location}" "aircraft" "$aircraft_text" "altitude" "${pa_records["$idx":altitude:value]} $ALTUNIT" "location" "${pa_records["$idx":nominatim]}")"
+  template="$(template_replace "||TITLE||" "$title_text" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
+  track_text="$(pf_notification_format_string "notify.text.trackOn" "Track on {site}" "site" "$(extract_base "${pa_records["$idx":link:map]}")")"
+  template="$(template_replace "||DESCRIPTION||" "[$track_text](${pa_records["$idx":link:map]})" "$template")"
   template="$(template_replace "||COLOR||" "$color" "$template")"
+  template="$(template_replace "||TXT_FIELD_ICAO||" "$txt_field_icao" "$template")"
+  template="$(template_replace "||TXT_FIELD_TAIL_NUMBER||" "$txt_field_tail_number" "$template")"
+  template="$(template_replace "||TXT_FIELD_CALLSIGN||" "$txt_field_callsign" "$template")"
+  template="$(template_replace "||TXT_FIELD_SQUAWK||" "$txt_field_squawk" "$template")"
+  template="$(template_replace "||TXT_FIELD_TYPE||" "$txt_field_type" "$template")"
+  template="$(template_replace "||TXT_FIELD_GND_SPEED||" "$txt_field_gnd_speed" "$template")"
+  template="$(template_replace "||TXT_FIELD_TRACK||" "$txt_field_track" "$template")"
+  template="$(template_replace "||TXT_FIELD_ROUTE||" "$txt_field_route" "$template")"
+  template="$(template_replace "||TXT_FIELD_CATEGORY||" "$txt_field_category" "$template")"
+  template="$(template_replace "||TXT_FIELD_TAG||" "$txt_field_tag" "$template")"
+  template="$(template_replace "||TXT_FIELD_LINK||" "$txt_field_link" "$template")"
+  template="$(template_replace "||TXT_FIELD_FIRST_SEEN||" "$txt_field_first_seen" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
@@ -148,7 +179,8 @@ for idx in "${INDEX[@]}"; do
   fi
 
   if chk_enabled "$emergency"; then
-    template="$(template_replace "||EMERGENCY||" "Emergency: Squawk ${pa_records["$idx":squawk:value]} - " "$template")"
+    emergency_text="$(pf_notification_format_string "notify.text.emergencyPrefix" "Emergency: Squawk {squawk} - " "squawk" "${pa_records["$idx":squawk:value]}")"
+    template="$(template_replace "||EMERGENCY||" "$emergency_text" "$template")"
   else
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi

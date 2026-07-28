@@ -233,6 +233,7 @@ if [[ -n "${PA_TWATTRIB:-${PA_ATTRIB:-$ATTRIB}}" ]]; then configure_planealert "
 # -----------------------------------------------------------------------------------
 # Set notifications date/time format:
 if [[ -n "$NOTIF_DATEFORMAT" ]]; then configure_both "NOTIF_DATEFORMAT" "$NOTIF_DATEFORMAT"; fi
+configure_both "NOTIFICATION_LANGUAGE" "$NOTIFICATION_LANGUAGE"
 # ---------------------------------------------------------------------
 
 # enable/disable planeheat;

@@ -13,60 +13,60 @@
         "fields":
         [
           {
-            "name": "ICAO",
+            "name": "||TXT_FIELD_ICAO||",
             "value": "||ICAO||",
             "inline": true
           },
           {
-            "name": "Tail Number",
+            "name": "||TXT_FIELD_TAIL_NUMBER||",
             "value": "||TAIL||",
             "inline": true
           },
           {
-            "name": "Callsign",
+            "name": "||TXT_FIELD_CALLSIGN||",
             "value": "||CALLSIGN|| ",
             "inline": true
           },
           ||SQUAWK--
           {
-            "name": "Squawk",
+            "name": "||TXT_FIELD_SQUAWK||",
             "value": "||SQUAWKSTRING|| ",
             "inline": true
           },--SQUAWK||
           {
-            "name": "Type",
+            "name": "||TXT_FIELD_TYPE||",
             "value": "||TYPE|| ",
             "inline": true
           },
           {
-            "name": "Min dist",
+            "name": "||TXT_FIELD_MIN_DIST||",
             "value": "||DISTANCE|| ",
             "inline": true
           },
           {
-            "name": "Gnd Speed",
+            "name": "||TXT_FIELD_GND_SPEED||",
             "value": "||GROUNDSPEED|| ",
             "inline": true
           },
           {
-            "name": "Track",
+            "name": "||TXT_FIELD_TRACK||",
             "value": "||TRACK||",
             "inline": true
           },
           {
-            "name": "Route",
+            "name": "||TXT_FIELD_ROUTE||",
             "value": "||ROUTE||",
             "inline": true
           }
           ||FIRSTSEEN--,
           {
-            "name": "First Seen",
+            "name": "||TXT_FIELD_FIRST_SEEN||",
             "value": "||FIRSTSEEN||",
             "inline": true
           }--FIRSTSEEN||
           ||NOISE--,
           {
-            "name": "Loudness",
+            "name": "||TXT_FIELD_LOUDNESS||",
             "value": "||LOUDNESS|| ",
             "inline": true
           }--NOISE||
