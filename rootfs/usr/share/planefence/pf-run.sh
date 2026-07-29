@@ -105,36 +105,18 @@ NOTIFIER_TIMEOUT="${NOTIFIER_TIMEOUT:-600}"  # default 10 minute timeout per not
 
 if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
   while read -r script; do
-      (
-        # Run notifier in subshell with timeout
-        timeout "$NOTIFIER_TIMEOUT" bash "$script" || {
-          exitcode=$?
-          if [[ $exitcode -eq 124 ]]; then
-            log_print WARN "Notifier ${script##*/} timed out after ${NOTIFIER_TIMEOUT}s and was terminated"
-          fi
-        }
-      ) &
-      notifier_pids+=($!)
-  done <<< "$script_array"
-fi
+    [[ -n "$script" ]] || continue
 
-# Wait for all notifier processes with additional timeout protection
-if [[ ${#notifier_pids[@]} -gt 0 ]]; then
-  wait_start=$(date +%s)
-  max_wait=$((NOTIFIER_TIMEOUT + 10))
+    # Use a TERM then KILL escalation to avoid stuck notifier processes.
+    timeout --kill-after=15s "$NOTIFIER_TIMEOUT" bash "$script"
+    exitcode=$?
 
-  for pid in "${notifier_pids[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      wait "$pid" 2>/dev/null || true
-    fi
-
-    # Safety check: if we've been waiting too long, kill remaining processes
-    if (( $(date +%s) - wait_start > max_wait )); then
-      log_print WARN "Notifier wait exceeded ${max_wait}s, terminating remaining processes"
-      for remaining_pid in "${notifier_pids[@]}"; do
-        kill "$remaining_pid" 2>/dev/null || true
-      done
-      break
+    if [[ $exitcode -eq 124 ]]; then
+      log_print WARN "Notifier ${script##*/} timed out after ${NOTIFIER_TIMEOUT}s and was terminated"
+    elif [[ $exitcode -eq 137 ]]; then
+      log_print WARN "Notifier ${script##*/} did not stop after TERM and was force-killed"
+    elif [[ $exitcode -ne 0 ]]; then
+      log_print WARN "Notifier ${script##*/} exited with status ${exitcode}"
     fi
   done <<< "$script_array"
 fi

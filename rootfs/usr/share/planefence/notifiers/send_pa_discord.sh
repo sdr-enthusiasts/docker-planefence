@@ -22,6 +22,9 @@ source /scripts/pf-common
 source /usr/share/planefence/plane-alert.conf
 # shellcheck disable=SC2034
 DEBUG="${DEBUG:-false}"
+DISCORD_CURL_CONNECT_TIMEOUT="${DISCORD_CURL_CONNECT_TIMEOUT:-10}"
+DISCORD_CURL_MAX_TIME="${DISCORD_CURL_MAX_TIME:-45}"
+DISCORD_CURL_RETRY="${DISCORD_CURL_RETRY:-1}"
 
 declare -a INDEX STALE link delivery_errors link
 
@@ -248,7 +251,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   #################################
-  image=""; thumb=""; curlfile=""
+  image=""; thumb=""; curlfile_args=()
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
     "photo")
@@ -258,20 +261,20 @@ for idx in "${INDEX[@]}"; do
       image="${pa_records["$idx":image:thumblink]}"
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
           thumb="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-          curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+          curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
     "screenshot+photo")
       thumb="${pa_records["$idx":image:thumblink]}"
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+        curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
     "screenshot")
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+        curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
   esac
@@ -308,10 +311,20 @@ for idx in "${INDEX[@]}"; do
   # Now send the notification to Discord
   readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
 
-  #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do
     url="${url//$'\n'/}"    # remove any stray newlines from the URL
-    response="$(curl -sSL ${curlfile} -F "payload_json=${template}" ${url}?wait=true)"
+    if ! response="$(curl -sS -L \
+      --connect-timeout "$DISCORD_CURL_CONNECT_TIMEOUT" \
+      --max-time "$DISCORD_CURL_MAX_TIME" \
+      --retry "$DISCORD_CURL_RETRY" \
+      --retry-delay 1 \
+      "${curlfile_args[@]}" \
+      -F "payload_json=${template}" \
+      "${url}?wait=true" 2>&1)"; then
+      log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). curl failed: ${response//$'\n'/ }"
+      delivery_errors[idx]=true
+      continue
+    fi
     # check if there was an error
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"

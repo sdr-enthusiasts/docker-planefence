@@ -24,7 +24,9 @@ where:
 '''
 
 import argparse
+import socket
 import ssl
+import sys
 import paho.mqtt.publish as publish
 
 def main():
@@ -41,8 +43,12 @@ def main():
     parser.add_argument("--tls", action="store_true", help="Enable TLS encryption.")
     parser.add_argument("--cafile", default=None, help="Path to CA certificate file for self-signed broker certificates.")
     parser.add_argument("--tls-insecure", action="store_true", help="Disable broker certificate verification (insecure, use only for testing).")
+    parser.add_argument("--socket-timeout", type=float, default=15.0, help="Socket timeout in seconds for network operations.")
 
     args = parser.parse_args()
+
+    # Keep network operations bounded so callers do not hang indefinitely.
+    socket.setdefaulttimeout(args.socket_timeout)
 
     # If port is 8883, assume TLS is wanted even if flag is missing
     enable_tls = args.tls or args.port == 8883 or args.cafile or args.tls_insecure
@@ -60,7 +66,8 @@ def main():
         publish.single(topic=args.topic, payload=args.message, qos=args.qos, retain=True, hostname=args.broker, port=args.port, client_id=args.client_id, **({"auth": {'username': args.username, 'password': args.password}} if args.username and args.password else {}), **({"tls": tls_context} if tls_context else {}))
         print(f"Message '{args.message}' published to topic '{args.topic}' with QoS {args.qos}.")
     except Exception as e:
-        print(f"Failure in publishing message!")
+        print(f"Failure in publishing message: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
