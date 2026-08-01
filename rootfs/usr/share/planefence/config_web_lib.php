@@ -678,7 +678,94 @@ function pf_cfg_apply_field_override(array $field, array $overrides): array {
   if (array_key_exists('multi', $o)) $field['multi'] = (bool)$o['multi'];
   if (array_key_exists('useDefaultWhenEmpty', $o)) $field['useDefaultWhenEmpty'] = (bool)$o['useDefaultWhenEmpty'];
   if (array_key_exists('options', $o) && is_array($o['options'])) $field['options'] = array_values($o['options']);
+  if (array_key_exists('optionLabels', $o) && is_array($o['optionLabels'])) $field['optionLabels'] = $o['optionLabels'];
   return $field;
+}
+
+function pf_cfg_notification_language_strings_file(): string {
+  $runtime = '/usr/share/planefence/html/locales/strings.json';
+  if (is_file($runtime)) return $runtime;
+  return '/usr/share/planefence/stage/html/locales/strings.json';
+}
+
+function pf_cfg_notification_language_options(): array {
+  $default = [
+    'options' => ['', 'en-US'],
+    'optionLabels' => [
+      '' => '(default) en-US (English (US))',
+      'en-US' => 'en-US (English (US))',
+    ],
+  ];
+
+  $file = pf_cfg_notification_language_strings_file();
+  if (!is_file($file)) return $default;
+
+  $raw = @file_get_contents($file);
+  if (!is_string($raw) || trim($raw) === '') return $default;
+
+  $decoded = json_decode($raw, true);
+  if (!is_array($decoded)) return $default;
+
+  $languages = is_array($decoded['languages'] ?? null) ? $decoded['languages'] : [];
+  if (count($languages) === 0) return $default;
+
+  $codes = array_keys($languages);
+  $codes = array_values(array_filter($codes, static fn($v) => is_string($v) && trim($v) !== ''));
+  sort($codes, SORT_NATURAL | SORT_FLAG_CASE);
+
+  $sorted = [];
+  if (in_array('en-US', $codes, true)) {
+    $sorted[] = 'en-US';
+    $codes = array_values(array_filter($codes, static fn($v) => $v !== 'en-US'));
+  }
+  foreach ($codes as $c) $sorted[] = $c;
+
+  $labels = [
+    '' => '(default) en-US (English (US))',
+  ];
+  foreach ($sorted as $code) {
+    $name = trim((string)($languages[$code]['name'] ?? ''));
+    $labels[$code] = $name !== '' ? ($code . ' (' . $name . ')') : $code;
+  }
+
+  return [
+    'options' => array_values(array_unique(array_merge([''], $sorted))),
+    'optionLabels' => $labels,
+  ];
+}
+
+function pf_cfg_apply_notification_language_options(array &$ui): void {
+  $opts = pf_cfg_notification_language_options();
+  if (!is_array($ui['tabs'] ?? null)) return;
+
+  foreach ($ui['tabs'] as &$tab) {
+    if (is_array($tab['fields'] ?? null)) {
+      foreach ($tab['fields'] as &$field) {
+        if ((string)($field['name'] ?? '') !== 'NOTIFICATION_LANGUAGE') continue;
+        $field['type'] = 'select';
+        $field['options'] = $opts['options'];
+        $field['optionLabels'] = $opts['optionLabels'];
+        $field['useDefaultWhenEmpty'] = true;
+      }
+      unset($field);
+    }
+
+    if (is_array($tab['subtabs'] ?? null)) {
+      foreach ($tab['subtabs'] as &$subtab) {
+        if (!is_array($subtab['fields'] ?? null)) continue;
+        foreach ($subtab['fields'] as &$field) {
+          if ((string)($field['name'] ?? '') !== 'NOTIFICATION_LANGUAGE') continue;
+          $field['type'] = 'select';
+          $field['options'] = $opts['options'];
+          $field['optionLabels'] = $opts['optionLabels'];
+          $field['useDefaultWhenEmpty'] = true;
+        }
+        unset($field);
+      }
+      unset($subtab);
+    }
+  }
+  unset($tab);
 }
 
 function pf_cfg_select_fields_from_names(array $names, array $fieldMap, array $values, array $fieldOverrides): array {
@@ -1067,6 +1154,7 @@ function pf_cfg_load_payload(): array {
 
   $schema = pf_cfg_load_ui_schema();
   $ui = pf_cfg_build_ui_from_schema($template['sections'], $vals, $schema);
+  pf_cfg_apply_notification_language_options($ui);
 
   $status = pf_cfg_status_payload();
 

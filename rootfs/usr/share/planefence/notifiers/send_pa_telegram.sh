@@ -53,6 +53,9 @@ else
   exit 1
 fi
 
+pf_notification_init_language >/dev/null
+pf_notification_log_language_warning
+
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
 else
@@ -97,45 +100,58 @@ for idx in "${INDEX[@]}"; do
   template="$template_clean"
 
   # Set strings:
+  aircraft_text="${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]})"
+  title_text="$(pf_notification_format_string "notify.text.title.pa" "Plane-Alert: {aircraft} first seen at {altitude} above {location}" "aircraft" "$aircraft_text" "altitude" "${pa_records["$idx":altitude:value]} $ALTUNIT" "location" "${pa_records["$idx":nominatim]}")"
+  template="$(template_replace "||TITLE||" "$title_text" "$template")"
   squawk="${pa_records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk${NEWLINE}" "$template")"
+    line_squawk="$(pf_notification_format_string "notify.text.line.squawk" "Squawk: #{squawk}" "squawk" "$squawk")"
+    template="$(template_replace "||LINE_SQUAWK||" "$line_squawk" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
-      template="$(template_replace "||EMERGENCY||" "#Emergency: #${pa_records["$idx":squawk:description]// /${SPACE}} " "$template")"
+      emergency_text="$(pf_notification_format_string "notify.text.emergencyPrefix" "Emergency: Squawk {squawk} - " "squawk" "$squawk")"
+      template="$(template_replace "||EMERGENCY||" "$emergency_text" "$template")"
     else
       template="$(template_replace "||EMERGENCY||" "" "$template")"
     fi
   else
-    template="$(template_replace "||SQUAWK||" "" "$template")"
+    template="$(template_replace "||LINE_SQUAWK||" "" "$template")"
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
   if [[ -n "${pa_records["$idx":owner]}" ]]; then
-    template="$(template_replace "||OWNER||" "Owner: #${pa_records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
+    line_owner="$(pf_notification_format_string "notify.text.line.owner" "Owner: #{owner}" "owner" "${pa_records["$idx":owner]// /${SPACE}}")"
+    template="$(template_replace "||LINE_OWNER||" "$line_owner" "$template")"
   else
-    template="$(template_replace "||OWNER||" "" "$template")"
+    template="$(template_replace "||LINE_OWNER||" "" "$template")"
   fi
-  template="$(template_replace "||ICAO||" "${pa_records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${pa_records["$idx":callsign]//-/}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]//-/}" || true)" "$template")"
+  line_icao="$(pf_notification_format_string "notify.text.line.icao" "ICAO: #{icao}" "icao" "${pa_records["$idx":icao]}")"
+  template="$(template_replace "||LINE_ICAO||" "$line_icao" "$template")"
+  callsign_tag="#${pa_records["$idx":callsign]//-/}"
+  tail_tag="$([[ "${pa_records["$idx":tail]}" != "${pa_records["$idx":callsign]}" ]] && echo "#${pa_records["$idx":tail]//-/}" || true)"
+  route_tag=""
   if [[ "${pa_records["$idx":route]}" != "n/a" ]]; then
-    template="$(template_replace "||ROUTE||" "#${pa_records["$idx":route]//-/-#}" "$template")"
+    route_tag="#${pa_records["$idx":route]//-/-#}"
   else
-    template="$(template_replace "||ROUTE||" "" "$template")"
+    route_tag=""
   fi
-  template="$(template_replace "||TIME||" "$(date -d "@${pa_records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${pa_records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${pa_records["$idx":distance:value]} $DISTUNIT (${pa_records["$idx":angle:value]}° ${pa_records["$idx":angle:name]})" "$template")"
+  line_flight="$(pf_notification_format_string "notify.text.line.flight" "Flt: {callsign} {tail} #{type} {route}" "callsign" "$callsign_tag" "tail" "$tail_tag" "type" "${pa_records["$idx":type]}" "route" "$route_tag")"
+  line_flight="$(sed -E 's/[[:space:]]+/ /g; s/[[:space:]]+$//' <<< "$line_flight")"
+  template="$(template_replace "||LINE_FLIGHT||" "$line_flight" "$template")"
+  line_time="$(pf_notification_format_string "notify.text.line.time" "Time: {time}" "time" "$(date -d "@${pa_records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")")"
+  template="$(template_replace "||LINE_TIME||" "$line_time" "$template")"
+  line_min_alt="$(pf_notification_format_string "notify.text.line.minAlt" "Min Alt: {alt}" "alt" "${pa_records["$idx":altitude:value]} $ALTUNIT")"
+  template="$(template_replace "||LINE_MIN_ALT||" "$line_min_alt" "$template")"
+  line_min_dist="$(pf_notification_format_string "notify.text.line.minDist" "Min Dist: {dist}" "dist" "${pa_records["$idx":distance:value]} $DISTUNIT (${pa_records["$idx":angle:value]}° ${pa_records["$idx":angle:name]})")"
+  template="$(template_replace "||LINE_MIN_DIST||" "$line_min_dist" "$template")"
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
-  template="$(template_replace "||TAG1||" "${pa_records["$idx":db:tag1]:+#}${pa_records["$idx":db:tag1]// /}" "$template")"
-  template="$(template_replace "||TAG2||" "${pa_records["$idx":db:tag2]:+#}${pa_records["$idx":db:tag2]// /}" "$template")"
-  template="$(template_replace "||TAG3||" "${pa_records["$idx":db:tag3]:+#}${pa_records["$idx":db:tag3]// /}" "$template")"
+  template="$(template_replace "||LINE_TAG1||" "${pa_records["$idx":db:tag1]:+#}${pa_records["$idx":db:tag1]// /}" "$template")"
+  template="$(template_replace "||LINE_TAG2||" "${pa_records["$idx":db:tag2]:+#}${pa_records["$idx":db:tag2]// /}" "$template")"
+  template="$(template_replace "||LINE_TAG3||" "${pa_records["$idx":db:tag3]:+#}${pa_records["$idx":db:tag3]// /}" "$template")"
 
   links=""
   if [[ -n "${pa_records["$idx":link:map]}" ]]; then links+="•<a href=\"${pa_records["$idx":link:map]}\">$(extract_base "${pa_records["$idx":link:map]}")</a>"; fi
   if [[ -n "${pa_records["$idx":link:fa]}" ]]; then links+="•<a href=\"${pa_records["$idx":link:fa]}\">$(extract_base "${pa_records["$idx":link:fa]}")</a>"; fi
   if [[ -n "${pa_records["$idx":link:faa]}" ]]; then links+="•<a href=\"${pa_records["$idx":link:faa]}\">$(extract_base "${pa_records["$idx":link:faa]}")</a>"; fi
   template="$(template_replace "||LINKS||" "$links" "$template")"
-  template="$(template_replace "||TYPE||" "${pa_records["$idx":type]:+#}${pa_records["$idx":type]}" "$template")"
 
   # Handle images
   img_array=()

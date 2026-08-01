@@ -22,6 +22,9 @@ source /scripts/pf-common
 source /usr/share/planefence/plane-alert.conf
 # shellcheck disable=SC2034
 DEBUG="${DEBUG:-false}"
+DISCORD_CURL_CONNECT_TIMEOUT="${DISCORD_CURL_CONNECT_TIMEOUT:-10}"
+DISCORD_CURL_MAX_TIME="${DISCORD_CURL_MAX_TIME:-45}"
+DISCORD_CURL_RETRY="${DISCORD_CURL_RETRY:-1}"
 
 declare -a INDEX STALE link delivery_errors link
 
@@ -61,6 +64,22 @@ else
   log_print ERR "No Discord template found at /usr/share/planefence/notifiers/discord.pa.template. Aborting."
   exit 1
 fi
+
+notif_lang="$(pf_notification_init_language)"
+pf_notification_log_language_warning
+
+txt_field_icao="$(pf_notification_string "notify.text.field.icao" "ICAO" "$notif_lang")"
+txt_field_tail_number="$(pf_notification_string "notify.text.field.tailNumber" "Tail Number" "$notif_lang")"
+txt_field_callsign="$(pf_notification_string "notify.text.field.callsign" "Callsign" "$notif_lang")"
+txt_field_squawk="$(pf_notification_string "notify.text.field.squawk" "Squawk" "$notif_lang")"
+txt_field_type="$(pf_notification_string "notify.text.field.type" "Type" "$notif_lang")"
+txt_field_gnd_speed="$(pf_notification_string "notify.text.field.gndSpeed" "Gnd Speed" "$notif_lang")"
+txt_field_track="$(pf_notification_string "notify.text.field.track" "Track" "$notif_lang")"
+txt_field_route="$(pf_notification_string "notify.text.field.route" "Route" "$notif_lang")"
+txt_field_category="$(pf_notification_string "notify.text.field.category" "Category" "$notif_lang")"
+txt_field_tag="$(pf_notification_string "notify.text.field.tag" "Tag" "$notif_lang")"
+txt_field_link="$(pf_notification_string "notify.text.field.link" "Link" "$notif_lang")"
+txt_field_first_seen="$(pf_notification_string "notify.text.field.firstSeen" "First Seen" "$notif_lang")"
 
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
@@ -116,10 +135,25 @@ for idx in "${INDEX[@]}"; do
   esac
 
   # Set strings:
-  template="$(template_replace "||TITLE||" "Plane-Alert: ${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]}) first seen at ${pa_records["$idx":altitude:value]} $ALTUNIT above ${pa_records["$idx":nominatim]}" "$template")"
+  aircraft_text="${pa_records["$idx":owner]:-${pa_records["$idx":callsign]}} (${pa_records["$idx":tail]})"
+  title_text="$(pf_notification_format_string "notify.text.title.pa" "Plane-Alert: {aircraft} first seen at {altitude} above {location}" "aircraft" "$aircraft_text" "altitude" "${pa_records["$idx":altitude:value]} $ALTUNIT" "location" "${pa_records["$idx":nominatim]}")"
+  template="$(template_replace "||TITLE||" "$title_text" "$template")"
   template="$(template_replace "||USER||" "$DISCORD_FEEDER_NAME" "$template")"
-  template="$(template_replace "||DESCRIPTION||" "[Track on $(extract_base "${pa_records["$idx":link:map]}")](${pa_records["$idx":link:map]})" "$template")"
+  track_text="$(pf_notification_format_string "notify.text.trackOn" "Track on {site}" "site" "$(extract_base "${pa_records["$idx":link:map]}")")"
+  template="$(template_replace "||DESCRIPTION||" "[$track_text](${pa_records["$idx":link:map]})" "$template")"
   template="$(template_replace "||COLOR||" "$color" "$template")"
+  template="$(template_replace "||TXT_FIELD_ICAO||" "$txt_field_icao" "$template")"
+  template="$(template_replace "||TXT_FIELD_TAIL_NUMBER||" "$txt_field_tail_number" "$template")"
+  template="$(template_replace "||TXT_FIELD_CALLSIGN||" "$txt_field_callsign" "$template")"
+  template="$(template_replace "||TXT_FIELD_SQUAWK||" "$txt_field_squawk" "$template")"
+  template="$(template_replace "||TXT_FIELD_TYPE||" "$txt_field_type" "$template")"
+  template="$(template_replace "||TXT_FIELD_GND_SPEED||" "$txt_field_gnd_speed" "$template")"
+  template="$(template_replace "||TXT_FIELD_TRACK||" "$txt_field_track" "$template")"
+  template="$(template_replace "||TXT_FIELD_ROUTE||" "$txt_field_route" "$template")"
+  template="$(template_replace "||TXT_FIELD_CATEGORY||" "$txt_field_category" "$template")"
+  template="$(template_replace "||TXT_FIELD_TAG||" "$txt_field_tag" "$template")"
+  template="$(template_replace "||TXT_FIELD_LINK||" "$txt_field_link" "$template")"
+  template="$(template_replace "||TXT_FIELD_FIRST_SEEN||" "$txt_field_first_seen" "$template")"
   template="$(template_replace "||CALLSIGN||" "${pa_records["$idx:callsign"]}" "$template")"
   template="$(template_replace "||ICAO||" "${pa_records["$idx:icao"]}" "$template")"
   template="$(template_replace "||TYPE||" "${pa_records["$idx:type"]}" "$template")"
@@ -148,7 +182,8 @@ for idx in "${INDEX[@]}"; do
   fi
 
   if chk_enabled "$emergency"; then
-    template="$(template_replace "||EMERGENCY||" "Emergency: Squawk ${pa_records["$idx":squawk:value]} - " "$template")"
+    emergency_text="$(pf_notification_format_string "notify.text.emergencyPrefix" "Emergency: Squawk {squawk} - " "squawk" "${pa_records["$idx":squawk:value]}")"
+    template="$(template_replace "||EMERGENCY||" "$emergency_text" "$template")"
   else
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
@@ -216,7 +251,7 @@ for idx in "${INDEX[@]}"; do
   fi
 
   #################################
-  image=""; thumb=""; curlfile=""
+  image=""; thumb=""; curlfile_args=()
   log_print DEBUG "DISCORD_MEDIA is set to '$DISCORD_MEDIA'"
   case "$DISCORD_MEDIA" in
     "photo")
@@ -226,20 +261,20 @@ for idx in "${INDEX[@]}"; do
       image="${pa_records["$idx":image:thumblink]}"
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
           thumb="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-          curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+          curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
     "screenshot+photo")
       thumb="${pa_records["$idx":image:thumblink]}"
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+        curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
     "screenshot")
       if chk_enabled $screenshots && [[ -f "${pa_records["$idx":screenshot:file]}" ]]; then
         image="attachment://$(basename "${pa_records["$idx":screenshot:file]}")"
-        curlfile="-F file1=@${pa_records["$idx":screenshot:file]}"
+        curlfile_args=(-F "file1=@${pa_records["$idx":screenshot:file]}")
       fi
       ;;
   esac
@@ -276,10 +311,20 @@ for idx in "${INDEX[@]}"; do
   # Now send the notification to Discord
   readarray -td, webhooks <<<"${DISCORD_WEBHOOKS}"
 
-  #shellcheck disable=SC2086
   for url in "${webhooks[@]}"; do
     url="${url//$'\n'/}"    # remove any stray newlines from the URL
-    response="$(curl -sSL ${curlfile} -F "payload_json=${template}" ${url}?wait=true)"
+    if ! response="$(curl -sS -L \
+      --connect-timeout "$DISCORD_CURL_CONNECT_TIMEOUT" \
+      --max-time "$DISCORD_CURL_MAX_TIME" \
+      --retry "$DISCORD_CURL_RETRY" \
+      --retry-delay 1 \
+      "${curlfile_args[@]}" \
+      -F "payload_json=${template}" \
+      "${url}?wait=true" 2>&1)"; then
+      log_print WARNING "Discord notification failed at Webhook ending in ${url: -8} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). curl failed: ${response//$'\n'/ }"
+      delivery_errors[idx]=true
+      continue
+    fi
     # check if there was an error
     if channel_id=$(jq -r '.channel_id' <<<"$response") && message_id=$(jq -r '.id' <<<"$response"); then
       discord_link="https://discord.com/channels/@me/${channel_id}/${message_id}"

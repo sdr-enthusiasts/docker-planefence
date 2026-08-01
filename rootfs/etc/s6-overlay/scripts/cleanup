@@ -141,7 +141,7 @@ GET_ICAO_DB ()
     then
         [[ "${LOGLEVEL,,}" != "error" ]] && log_print INFO "Retrieving ICAO to TAIL database from https://www.mictronics.de ... " || true
         # note - the curl won't fail, even if the file is not found because the PHP page doesn't return a 400 code but a regular result webpage
-    if ! curl -s -L -f -o "$zip_file" https://www.mictronics.de/aircraft-database/aircraft_db.php; then
+    if ! curl -s -L -f -o "$zip_file" https://github.com/Mictronics/aircraft-database/raw/refs/heads/main/aircraft_db.zip; then
             log_print INFO "Retrieving ICAO to TAIL database from https://www.mictronics.de FAILED!"
       rm -f "$zip_file" "$out_file"
       rm -rf "$json_dir"

@@ -183,6 +183,13 @@
     "PF_NOTIF_MINTIME": {
       "type": "text"
     },
+    "NOTIFICATION_LANGUAGE": {
+      "type": "select",
+      "options": [""],
+      "useDefaultWhenEmpty": true,
+      "defaultValue": "",
+      "description": "Language/locale used for PF/PA notification text. Empty uses en-US. Unsupported values fall back to en-US and log a warning."
+    },
     "PF_NOTIF_BEHAVIOR": {
       "type": "select",
       "options": ["pre", "post"],

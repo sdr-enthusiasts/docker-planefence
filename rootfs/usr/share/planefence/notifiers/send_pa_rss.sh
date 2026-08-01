@@ -64,7 +64,8 @@ xml_escape() {
 
 # Function to generate RSS feed for a specific CSV file (optimized)
 generate_rss() {
-  READ_RECORDS
+  # RSS generation is read-only; ignore advisory lock to avoid notifier stalls.
+  READ_RECORDS ignore-lock
 
   # Precompute some values to avoid repeated expansions
   local site_link="${SITE_LINK}"

@@ -1056,11 +1056,16 @@
             sel.id = getFieldInputId(f.name);
             const opts = new Set(f.options.map((o) => String(o)));
             const cur = String(draftValues[f.name] ?? f.value ?? "");
+            const optionLabels =
+              f.optionLabels && typeof f.optionLabels === "object"
+                ? f.optionLabels
+                : {};
             if (!opts.has(cur)) opts.add(cur);
             [...opts].forEach((v) => {
               const o = document.createElement("option");
               o.value = v;
-              o.textContent = v === "" ? "(empty)" : v;
+              o.textContent =
+                optionLabels[v] || (v === "" ? "(empty)" : v);
               if (v === cur) o.selected = true;
               sel.appendChild(o);
             });

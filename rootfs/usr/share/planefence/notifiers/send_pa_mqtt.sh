@@ -26,6 +26,8 @@ declare -a INDEX=() STALE=() link=()
 #      TEMP DEBUG STUFF
 # -----------------------------------------------------------------------------------
 DEBUG="${DEBUG:-false}"
+MQTT_CMD_TIMEOUT="${MQTT_CMD_TIMEOUT:-30}"
+MQTT_SOCKET_TIMEOUT="${MQTT_SOCKET_TIMEOUT:-15}"
 
 # Get today's date in yymmdd format
 TODAY=$(date --date="today" '+%y%m%d')
@@ -95,14 +97,22 @@ generate_mqtt() {
 		if [[ -n "$MQTT_USERNAME" ]]; then mqtt_string+=(--username "$MQTT_USERNAME"); fi
 		if [[ -n "$MQTT_PASSWORD" ]]; then mqtt_string+=(--password "$MQTT_PASSWORD"); fi
 		mqtt_string+=(--message "${MQTT_JSON}")
+		mqtt_string+=(--socket-timeout "$MQTT_SOCKET_TIMEOUT")
 
-		outputmsg="$(printf '%s\0' "${mqtt_string[@]}" | xargs -0 mqtt)"
+		outputmsg="$(timeout --kill-after=5s "$MQTT_CMD_TIMEOUT" mqtt "${mqtt_string[@]}" 2>&1)"
 		exitstatus=$?
-		if [[ ! $exitstatus ]]; then
-			log_print DEBUG "MQTT Delivery Error: ${mqtt_string[*]}"
+		if [[ $exitstatus -eq 124 ]]; then
+			log_print DEBUG "MQTT Delivery Error: publish command timed out after ${MQTT_CMD_TIMEOUT}s"
+			return 1
+		elif [[ $exitstatus -eq 137 ]]; then
+			log_print DEBUG "MQTT Delivery Error: publish command required force-kill"
+			return 1
+		elif [[ $exitstatus -ne 0 ]]; then
+			log_print DEBUG "MQTT Delivery Error: ${outputmsg//$'\n'/ }"
+			return 1
 		fi
 
-		if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]]; then
+		if [[ "${outputmsg:0:6}" == "Failed" ]] || [[ "${outputmsg:0:5}" == "usage" ]] || [[ "$outputmsg" == *"Failure in publishing message"* ]]; then
 			log_print DEBUG "MQTT Delivery Error: ${outputmsg//$'\n'/ }"
 			return 1
 		else

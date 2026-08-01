@@ -13,80 +13,80 @@
         "fields":
         [
           {
-            "name": "ICAO",
+            "name": "||TXT_FIELD_ICAO||",
             "value": "||ICAO||",
             "inline": true
           },
           {
-            "name": "Tail Number",
+            "name": "||TXT_FIELD_TAIL_NUMBER||",
             "value": "||TAIL||",
             "inline": true
           },
           {
-            "name": "Callsign",
+            "name": "||TXT_FIELD_CALLSIGN||",
             "value": "||CALLSIGN|| ",
             "inline": true
           },
           ||SQUAWK--
           {
-            "name": "Squawk",
+            "name": "||TXT_FIELD_SQUAWK||",
             "value": "||SQUAWKSTRING|| ",
             "inline": true
           },--SQUAWK||
           {
-            "name": "Type",
+            "name": "||TXT_FIELD_TYPE||",
             "value": "||TYPE|| ",
             "inline": true
           },
           {
-            "name": "Gnd Speed",
+            "name": "||TXT_FIELD_GND_SPEED||",
             "value": "||GROUNDSPEED|| ",
             "inline": true
           },
           {
-            "name": "Track",
+            "name": "||TXT_FIELD_TRACK||",
             "value": "||TRACK||",
             "inline": true
           },
           ||ROUTE--
           {
-            "name": "Route",
+            "name": "||TXT_FIELD_ROUTE||",
             "value": "||ROUTE||",
             "inline": true
           },--ROUTE||
           ||CATEGORY--
           {
-            "name": "Category",
+            "name": "||TXT_FIELD_CATEGORY||",
             "value": "||CATEGORY||",
             "inline": true
           },--CATEGORY||
           ||TAG1--
           {
-            "name": "Tag",
+            "name": "||TXT_FIELD_TAG||",
             "value": "||TAG1||",
             "inline": true
           },--TAG1||
           ||TAG2--
           {
-            "name": "Tag",
+            "name": "||TXT_FIELD_TAG||",
             "value": "||TAG2||",
             "inline": true
           },--TAG2||
           ||TAG3--
           {
-            "name": "Tag",
+            "name": "||TXT_FIELD_TAG||",
             "value": "||TAG3||",
             "inline": true
           },--TAG3||
           ||LINK--
           {
-            "name": "Link",
+            "name": "||TXT_FIELD_LINK||",
             "value": "[||LINKTITLE||](||LINKURL||)",
             "inline": true
           },--LINK||
           ||FIRSTSEEN--
           {
-            "name": "First Seen",
+            "name": "||TXT_FIELD_FIRST_SEEN||",
             "value": "||FIRSTSEEN||",
             "inline": true
           }--FIRSTSEEN||

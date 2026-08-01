@@ -115,6 +115,48 @@ fi
 BLUESKY_API="${BLUESKY_API:-https://bsky.social/xrpc}"
 BLUESKY_MAXLENGTH="${BLUESKY_MAXLENGTH:-300}"
 
+transliterate_ascii_preserve_punct() {
+  local input="$1"
+  local output
+
+  # Deterministic Unicode folding with punctuation preservation.
+  if command -v python3 >/dev/null 2>&1; then
+    if output="$(python3 - "$input" <<'PY'
+import sys
+import unicodedata
+
+s = sys.argv[1]
+custom = {
+    'Ł': 'L', 'ł': 'l', 'Ø': 'O', 'ø': 'o', 'Đ': 'D', 'đ': 'd',
+    'Þ': 'Th', 'þ': 'th', 'Æ': 'AE', 'æ': 'ae', 'Œ': 'OE', 'œ': 'oe',
+    'ß': 'ss', 'Ð': 'D', 'ð': 'd'
+}
+for src, dst in custom.items():
+    s = s.replace(src, dst)
+
+s = unicodedata.normalize('NFKD', s)
+s = s.encode('ascii', 'ignore').decode('ascii')
+sys.stdout.write(s)
+PY
+)"; then
+      printf '%s' "$output"
+      return 0
+    fi
+  fi
+
+  # Prefer iconv transliteration because it preserves punctuation used for tags/URLs.
+  if output="$(printf '%s' "$input" | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null)"; then
+    # Some iconv builds emit '?' for unsupported chars; convert those to spaces.
+    output="${output//\?/ }"
+    printf '%s' "$output"
+    return 0
+  fi
+
+  # Fallback path for environments without iconv transliteration support.
+  output="$(printf '%s' "$input" | /scripts/to_ascii)"
+  printf '%s' "$output"
+}
+
 # Check if the required variables are set
 if [[ -z "$BLUESKY_HANDLE" ]]; then
     log_print ERR "The BLUESKY_HANDLE environment variable must be set to something like \"xxxxx.bsky.social\""
@@ -125,11 +167,13 @@ if [[ -z "$BLUESKY_APP_PASSWORD" ]]; then
     exit 1
 fi
 
-# Preprocess text:
-# - Replace UTF-8 2-byte characters with a space
-# - Replace actual newlines with literal \n and trim any spaces after \n
-# Replace UTF-8 2-byte sequences ([\xC2-\xDF][\x80-\xBF]) with a space
-TEXT="$(sed -r 's/[\xC2-\xDF][\x80-\xBF]/ /g' <<< "$TEXT")"
+# Preprocess text while preserving stable single-byte offsets for facets:
+# - transliterate accented/non-ASCII letters to ASCII roots
+# - force any remaining non-ASCII bytes to spaces
+# - normalize whitespace before downstream processing
+TEXT="$(transliterate_ascii_preserve_punct "$TEXT")"
+TEXT="$(LC_ALL=C sed -E 's/[\x80-\xFF]/ /g' <<< "$TEXT")"
+TEXT="$(sed -E 's/[[:space:]]+/ /g; s/^ +| +$//g' <<< "$TEXT")"
 
 # Replace actual newlines with literal \n
 TEXT="${TEXT//$'\n'/\\n}"

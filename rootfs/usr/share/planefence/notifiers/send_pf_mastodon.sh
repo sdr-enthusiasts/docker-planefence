@@ -49,6 +49,9 @@ else
   exit 1
 fi
 
+pf_notification_init_language >/dev/null
+pf_notification_log_language_warning
+
 if CHK_SCREENSHOT_ENABLED; then
   screenshots=1
 else
@@ -92,37 +95,52 @@ for idx in "${INDEX[@]}"; do
   # Set strings:
   squawk="${records["$idx":squawk:value]}"
   if [[ -n "$squawk" ]]; then
-    template="$(template_replace "||SQUAWK||" "#Squawk: $squawk\n" "$template")"
+    line_squawk="$(pf_notification_format_string "notify.text.line.squawk" "Squawk: #{squawk}" "squawk" "$squawk")"
+    template="$(template_replace "||LINE_SQUAWK||" "${line_squawk}\\n" "$template")"
     if [[ "$squawk" =~ ^(7500|7600|7700)$ ]]; then
-      template="$(template_replace "||EMERGENCY||" "#Emergency: #${records["$idx":squawk:description]// /${SPACE}} " "$template")"
+      emergency_tag="$(pf_notification_format_string "notify.text.emergencyTag" "#Emergency: #{description} " "description" "${records["$idx":squawk:description]// /${SPACE}}")"
+      template="$(template_replace "||EMERGENCY||" "$emergency_tag" "$template")"
     else
       template="$(template_replace "||EMERGENCY||" "" "$template")"
     fi
   else
-    template="$(template_replace "||SQUAWK||" "" "$template")"
+    template="$(template_replace "||LINE_SQUAWK||" "" "$template")"
     template="$(template_replace "||EMERGENCY||" "" "$template")"
   fi
+
+  line_icao="$(pf_notification_format_string "notify.text.line.icao" "ICAO: #{icao}" "icao" "${records["$idx":icao]}")"
+  template="$(template_replace "||LINE_ICAO||" "$line_icao" "$template")"
+
   if [[ -n "${records["$idx":owner]}" ]]; then
-    template="$(template_replace "||OWNER||" "Owner: #${records["$idx":owner]// /${SPACE}}" "$template")" # replace spaces in the owner name by the special ${SPACE} to keep them together in a hashtag
+    line_owner="$(pf_notification_format_string "notify.text.line.owner" "Owner: #{owner}" "owner" "${records["$idx":owner]// /${SPACE}}")"
+    template="$(template_replace "||LINE_OWNER||" "$line_owner" "$template")"
   else
-    template="$(template_replace "||OWNER||" "" "$template")"
+    template="$(template_replace "||LINE_OWNER||" "" "$template")"
   fi
-  template="$(template_replace "||ICAO||" "${records["$idx":icao]}" "$template")"
-  template="$(template_replace "||CALLSIGN||" "${records["$idx":callsign]//-/}" "$template")"
-  template="$(template_replace "||TAIL||" "$([[ "${records["$idx":tail]//-/}" != "${records["$idx":callsign]//-/}" ]] && echo "#${records["$idx":tail]//-/}" || true)" "$template")"
-  template="$(template_replace "||TYPE||" "${records["$idx":type]}" "$template")"
+  callsign_tag="#${records["$idx":callsign]//-/}"
+  tail_tag="$([[ "${records["$idx":tail]//-/}" != "${records["$idx":callsign]//-/}" ]] && echo "#${records["$idx":tail]//-/}" || true)"
+  route_tag=""
   if [[ "${records["$idx":route]}" != "n/a" ]]; then
-    template="$(template_replace "||ROUTE||" "#${records["$idx":route]}" "$template")"
-  else
-    template="$(template_replace "||ROUTE||" "" "$template")"
+    route_tag="#${records["$idx":route]}"
   fi
-  template="$(template_replace "||TIME||" "$(date -d "@${records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")" "$template")"
-  template="$(template_replace "||ALT||" "${records["$idx":altitude:value]} $ALTUNIT" "$template")"
-  template="$(template_replace "||DIST||" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})" "$template")"
+  line_flight="$(pf_notification_format_string "notify.text.line.flight" "Flt: {callsign} {tail} #{type} {route}" "callsign" "$callsign_tag" "tail" "$tail_tag" "type" "${records["$idx":type]}" "route" "$route_tag")"
+  line_flight="$(sed -E 's/[[:space:]]+/ /g; s/[[:space:]]+$//' <<< "$line_flight")"
+  template="$(template_replace "||LINE_FLIGHT||" "$line_flight" "$template")"
+
+  line_time="$(pf_notification_format_string "notify.text.line.time" "Time: {time}" "time" "$(date -d "@${records["$idx":time:time_at_mindist]}" "+${NOTIF_DATEFORMAT:-%H:%M:%S %Z}")")"
+  template="$(template_replace "||LINE_TIME||" "$line_time" "$template")"
+
+  line_min_alt="$(pf_notification_format_string "notify.text.line.minAlt" "Min Alt: {alt}" "alt" "${records["$idx":altitude:value]} $ALTUNIT")"
+  template="$(template_replace "||LINE_MIN_ALT||" "$line_min_alt" "$template")"
+
+  line_min_dist="$(pf_notification_format_string "notify.text.line.minDist" "Min Dist: {dist}" "dist" "${records["$idx":distance:value]} $DISTUNIT (${records["$idx":angle:value]}° ${records["$idx":angle:name]})")"
+  template="$(template_replace "||LINE_MIN_DIST||" "$line_min_dist" "$template")"
+
   if [[ -n ${records["$idx":sound:loudness]} ]]; then
-    template="$(template_replace "||LOUDNESS||" "Loudness: ${records["$idx":sound:loudness]} dB" "$template")"
+    line_loudness="$(pf_notification_format_string "notify.text.line.loudness" "Loudness: {loudness} dB" "loudness" "${records["$idx":sound:loudness]}")"
+    template="$(template_replace "||LINE_LOUDNESS||" "$line_loudness" "$template")"
   else
-    template="$(template_replace "||LOUDNESS||" "" "$template")"
+    template="$(template_replace "||LINE_LOUDNESS||" "" "$template")"
   fi
   template="$(template_replace "||ATTRIB||" "$ATTRIB " "$template")"
 
