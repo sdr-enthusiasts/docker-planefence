@@ -27,7 +27,7 @@ RUN \
     mv -f /scripts/mqtt.py /usr/local/bin/mqtt && \
     #
     # version
-    branch="pf-restruct" && \
+    branch="##main##" && \
     echo "${branch//#/}_($(curl -ssL "https://api.github.com/repos/sdr-enthusiasts/docker-planefence/commits/main" |  awk '{if ($1=="\"sha\":") {print substr($2,2,7); exit}}'))_$(date +%y-%m-%d-%T%Z)" | tee /root/.buildtime && \
     cp -f /root/.buildtime /.VERSION && \
     # Do some other stuff
