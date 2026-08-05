@@ -37,4 +37,4 @@ RUN \
 EXPOSE 80
 
 # Add healthcheck
-HEALTHCHECK --start-period=60s --start-interval=10s --interval=600s CMD /scripts/healthcheck.sh
+HEALTHCHECK --start-period=60s --start-interval=10s --interval=600s CMD ["/scripts/healthcheck.sh"]
