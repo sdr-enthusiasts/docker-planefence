@@ -1064,8 +1064,7 @@
             [...opts].forEach((v) => {
               const o = document.createElement("option");
               o.value = v;
-              o.textContent =
-                optionLabels[v] || (v === "" ? "(empty)" : v);
+              o.textContent = optionLabels[v] || (v === "" ? "(empty)" : v);
               if (v === cur) o.selected = true;
               sel.appendChild(o);
             });
