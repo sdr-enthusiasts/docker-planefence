@@ -91,6 +91,11 @@
           "id": "notif-telegram",
           "title": "Telegram",
           "match": "telegram"
+        },
+        {
+          "id": "notif-webhook",
+          "title": "Webhook",
+          "match": "webhook"
         }
       ]
     }
@@ -365,6 +370,40 @@
     "PA_MQTT_PASSWORD": {
       "type": "text",
       "description": "Optional Plane-Alert MQTT password."
+    },
+    "PA_WEBHOOK": {
+      "type": "select",
+      "options": ["ON", "OFF"],
+      "description": "Enable HTTP webhook POSTs for Plane-Alert. Templates: webhook.pa.text.template / webhook.pa.json.template; headers: webhook.pa.headers (persist volume)."
+    },
+    "PF_WEBHOOK": {
+      "type": "select",
+      "options": ["ON", "OFF"],
+      "description": "Enable HTTP webhook POSTs for Planefence. Templates: webhook.pf.text.template / webhook.pf.json.template; headers: webhook.pf.headers (persist volume)."
+    },
+    "PA_WEBHOOK_URLS": {
+      "type": "text",
+      "multi": true,
+      "description": "Comma-separated HTTP(S) URLs to POST Plane-Alert webhooks to. Every URL receives the same body and headers."
+    },
+    "PF_WEBHOOK_URLS": {
+      "type": "text",
+      "multi": true,
+      "description": "Comma-separated HTTP(S) URLs to POST Planefence webhooks to. Every URL receives the same body and headers."
+    },
+    "PA_WEBHOOK_FORMAT": {
+      "type": "select",
+      "options": ["text", "json"],
+      "defaultValue": "text",
+      "useDefaultWhenEmpty": true,
+      "description": "Plane-Alert webhook body format. text uses webhook.pa.text.template; json uses webhook.pa.json.template."
+    },
+    "PF_WEBHOOK_FORMAT": {
+      "type": "select",
+      "options": ["text", "json"],
+      "defaultValue": "text",
+      "useDefaultWhenEmpty": true,
+      "description": "Planefence webhook body format. text uses webhook.pf.text.template; json uses webhook.pf.json.template."
     }
   }
 }
