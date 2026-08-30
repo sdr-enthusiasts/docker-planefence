@@ -1,0 +1,21 @@
+{
+  "topic": "planealert",
+  "source": "plane-alert",
+  "title": "||title||",
+  "message": "||message||",
+  "icao": "||icao||",
+  "tail": "||tail||",
+  "callsign": "||callsign||",
+  "type": "||type||",
+  "owner": "||owner||",
+  "altitude": "||altitude:value||",
+  "altitude_unit": "||alt_unit||",
+  "distance": "||distance:value||",
+  "distance_unit": "||dist_unit||",
+  "squawk": "||squawk:value||",
+  "tag1": "||db:tag1||",
+  "tag2": "||db:tag2||",
+  "tag3": "||db:tag3||",
+  "map_link": "||link:map||",
+  "image": "||image:thumblink||"
+}
