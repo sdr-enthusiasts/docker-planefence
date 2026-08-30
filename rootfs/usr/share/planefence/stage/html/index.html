@@ -6837,13 +6837,11 @@ ${messagesDesc}
           insightsCache.key === baseReqKey && insightsCache.data
             ? insightsCache.data
             : getCachedInsights(baseReqKey);
-        if (
-          !(
-            baseData &&
-            Array.isArray(baseData.series) &&
-            baseData.series.length
-          )
-        )
+        if (!(
+          baseData &&
+          Array.isArray(baseData.series) &&
+          baseData.series.length
+        ))
           return;
         if (insightsCache.key !== baseReqKey) {
           insightsCache.key = baseReqKey;
