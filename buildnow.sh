@@ -26,10 +26,10 @@ git pull -a
 a="$(mktemp)"
 cp -f Dockerfile "$a"
 if grep -qi "darwin" <<< "$(uname -a)"; then
-  sed -i '' "s/##main##/$BRANCH/g" Dockerfile
+  sed -i '' "s/##main##/$TAG/g" Dockerfile
   #sed -i '' "s/baseimage:planefence_base/baseimage:trixie-planefence_base/g" Dockerfile
 else
-  sed -i "s/##main##/$BRANCH/g" Dockerfile
+  sed -i "s/##main##/$TAG/g" Dockerfile
   #sed -i "s/baseimage:planefence_base/baseimage:trixie-planefence_base/g" Dockerfile
 
 fi
