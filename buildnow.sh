@@ -2,7 +2,7 @@
 # shellcheck disable=SC2086
 
 [[ "$1" != "" ]] && BRANCH="$1" || BRANCH="$(git branch --show-current)"
-[[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
+[[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="${BRANCH##*/}"
 # [[ "$ARCHS" == "" ]] && ARCHS="linux/armhf,linux/arm64,linux/amd64"
 [[ "$ARCHS" == "" ]] && ARCHS="linux/arm64,linux/amd64"
 
