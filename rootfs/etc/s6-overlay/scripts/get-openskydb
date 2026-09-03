@@ -41,18 +41,23 @@ else
   savedfile_date="1970-01"
 fi
 
-if ! latestfile="$(curl -sfL https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
-  log_print ERR "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Aborting update attempt."
+if ! latestfile="$(curl -sfL -m 30 https://s3.opensky-network.org/data-samples/#metadata/ | grep -oP '(?<=\<Key\>metadata/)aircraft-database-complete.*?(?=\</Key\>)' | sort -ur | head -1)"; then
+  log_print ERR "Cannot reach the OpenSky web server to check if a newer OpenSky DB is available. Next attempt in 6 hours."
   if [[ ! -f /run/OpenSkyDB.csv ]] && [[ -f "/usr/share/planefence/persist/.internal/$savedfile" ]]; then
     ln -sf "/usr/share/planefence/persist/.internal/$savedfile" "/run/OpenSkyDB.csv"
   fi
+  # s6 restarts this longrun as soon as it exits. Without a curl timeout each attempt
+  # hangs in TCP retries for about two minutes while the host is unreachable, so the
+  # service logged this error every couple of minutes. Wait six hours before the next
+  # attempt instead. The background sleep keeps bash responsive to SIGTERM on shutdown.
+  sleep 21600 & wait $!
   exit
 fi
 latestfile_date="$(sed 's|aircraft-database-complete-\([0-9-]\+\).*$|\1|g' <<< "$latestfile")"
 
 if (( ${savedfile_date//-/} < ${latestfile_date//-/} )); then
   log_print INFO "Newer OpenSky database ($latestfile_date) available. Downloading it now"
-  if curl -sfL --compressed "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
+  if curl -sfL -m 900 --compressed "https://s3.opensky-network.org/data-samples/metadata/$latestfile" > "/tmp/$latestfile"; then
     find /usr/share/planefence/stage/ -type f -name "aircraft-database-complete-*.csv" -delete
     find /usr/share/planefence/persist/.internal/ -type f -name "aircraft-database-complete-*.csv" -delete
     find /usr/share/planefence/html/ -type f -name "aircraft-database-complete-*.csv" -delete
