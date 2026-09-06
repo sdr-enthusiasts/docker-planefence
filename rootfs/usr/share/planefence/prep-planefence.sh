@@ -81,7 +81,27 @@ rm -f /usr/share/planefence/html/index.html 2>/dev/null || true
 cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
 	cp -R --remove-destination /usr/share/planefence/stage/html-config/. /usr/share/planefence/html-config/
 	# always update to latest version
+# Webhook templates/headers are user-owned (ADR 0001): snapshot before --update so
+# newer stage seeds cannot clobber customized files or Authorization secrets.
+_webhook_seed_names=(
+  webhook.pa.headers webhook.pf.headers
+  webhook.pa.text.template webhook.pa.json.template
+  webhook.pf.text.template webhook.pf.json.template
+)
+_webhook_bak="$(mktemp -d)"
+for _webhook_seed in "${_webhook_seed_names[@]}"; do
+  if [[ -e "/usr/share/planefence/persist/${_webhook_seed}" ]]; then
+    cp -a "/usr/share/planefence/persist/${_webhook_seed}" "${_webhook_bak}/"
+  fi
+done
 cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
+for _webhook_seed in "${_webhook_seed_names[@]}"; do
+  if [[ -e "${_webhook_bak}/${_webhook_seed}" ]]; then
+    cp -a "${_webhook_bak}/${_webhook_seed}" "/usr/share/planefence/persist/${_webhook_seed}"
+  fi
+done
+rm -rf "${_webhook_bak}"
+unset _webhook_seed _webhook_seed_names _webhook_bak
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
 # PF_WEBLOGS controls where the logs page is exposed:
@@ -270,6 +290,12 @@ configure_planefence "PF_DISCORD_COLOR" "$PF_DISCORD_COLOR"
 configure_both "DISCORD_FEEDER_NAME" "${DISCORD_FEEDER_NAME}"
 configure_both "DISCORD_MEDIA" "${DISCORD_MEDIA}"
 configure_both "DISCORD_AVATAR_URL" "${DISCORD_AVATAR_URL}"
+configure_planealert "PA_WEBHOOK" "$PA_WEBHOOK"
+configure_planefence "PF_WEBHOOK" "$PF_WEBHOOK"
+configure_planealert "PA_WEBHOOK_URLS" "${PA_WEBHOOK_URLS}"
+configure_planefence "PF_WEBHOOK_URLS" "${PF_WEBHOOK_URLS}"
+configure_planealert "PA_WEBHOOK_FORMAT" "${PA_WEBHOOK_FORMAT:-text}"
+configure_planefence "PF_WEBHOOK_FORMAT" "${PF_WEBHOOK_FORMAT:-text}"
 #configure_both "NOTIFICATION_SERVER" "$NOTIFICATION_SERVER"
 configure_both "GENERATE_CSV" "${GENERATE_CSV:-OFF}"
 

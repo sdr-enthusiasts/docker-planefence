@@ -326,6 +326,24 @@ DISCORD_MEDIA=screenshot+photo
 PA_DISCORD_COLOR=0xf2e718
 PF_DISCORD_COLOR=0xf2e718
 
+# Webhook Notifications
+# ---------------------------------------------------------------------
+# PA_WEBHOOK / PF_WEBHOOK: set ON to enable HTTP webhook POSTs for Plane-Alert / Planefence.
+PA_WEBHOOK=OFF
+PF_WEBHOOK=OFF
+# ---------------------------------------------------------------------
+# PA_WEBHOOK_URLS: comma-separated HTTP(S) URLs to POST Plane-Alert webhooks to.
+PA_WEBHOOK_URLS=
+# PF_WEBHOOK_URLS: comma-separated HTTP(S) URLs to POST Planefence webhooks to.
+PF_WEBHOOK_URLS=
+# ---------------------------------------------------------------------
+# PA_WEBHOOK_FORMAT / PF_WEBHOOK_FORMAT: text | json (default text).
+# Bodies: persist files webhook.pa|pf.text|json.template
+# Headers: persist files webhook.pa|pf.headers
+# See README-webhook.md
+PA_WEBHOOK_FORMAT=text
+PF_WEBHOOK_FORMAT=text
+
 # Mastodon Notifications
 # ---------------------------------------------------------------------
 # PF_MASTODON / PA_MASTODON: enable Mastodon notifications for PF / PA.

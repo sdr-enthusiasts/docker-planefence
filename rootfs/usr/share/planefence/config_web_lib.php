@@ -211,6 +211,8 @@ function pf_cfg_multi_fields(): array {
     'PF_DISCORD_WEBHOOKS' => ',',
     'PF_MQTT_FIELDS' => ',',
     'PA_MQTT_FIELDS' => ',',
+    'PA_WEBHOOK_URLS' => ',',
+    'PF_WEBHOOK_URLS' => ',',
   ];
 }
 
@@ -624,6 +626,7 @@ function pf_cfg_encode_value(string $value): string {
 function pf_cfg_notification_mechanism(string $fieldName): string {
   $n = strtoupper($fieldName);
   if (strpos($n, 'DISCORD') !== false) return 'discord';
+  if (strpos($n, 'WEBHOOK') !== false) return 'webhook';
   if (strpos($n, 'MASTODON') !== false) return 'mastodon';
   if (strpos($n, 'MQTT') !== false) return 'mqtt';
   if (strpos($n, 'RSS') !== false) return 'rss';

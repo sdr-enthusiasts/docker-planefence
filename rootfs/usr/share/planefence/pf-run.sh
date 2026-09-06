@@ -125,7 +125,7 @@ fi
 sync_notifier_links_into_json() {
   local mode="$1" json_file="$2"
   local max idx tmp_map tmp_json tmp_map_new
-  local discord_link discord_notified bsky_link bsky_notified telegram_link telegram_notified mastodon_link mastodon_notified mqtt_notified
+  local discord_link discord_notified bsky_link bsky_notified telegram_link telegram_notified mastodon_link mastodon_notified mqtt_notified webhook_notified
 
   [[ -f "$json_file" ]] || return 0
 
@@ -150,6 +150,7 @@ sync_notifier_links_into_json() {
         mastodon_link="${pa_records["$idx:mastodon:link"]}"
         mastodon_notified="${pa_records["$idx:mastodon:notified"]}"
         mqtt_notified="${pa_records["$idx:mqtt:notified"]}"
+        webhook_notified="${pa_records["$idx:webhook:notified"]}"
       else
         discord_link="${records["$idx:discord:link"]}"
         discord_notified="${records["$idx:discord:notified"]}"
@@ -160,9 +161,10 @@ sync_notifier_links_into_json() {
         mastodon_link="${records["$idx:mastodon:link"]}"
         mastodon_notified="${records["$idx:mastodon:notified"]}"
         mqtt_notified="${records["$idx:mqtt:notified"]}"
+        webhook_notified="${records["$idx:webhook:notified"]}"
       fi
 
-      if [[ -n "$discord_link$discord_notified$bsky_link$bsky_notified$telegram_link$telegram_notified$mastodon_link$mastodon_notified$mqtt_notified" ]]; then
+      if [[ -n "$discord_link$discord_notified$bsky_link$bsky_notified$telegram_link$telegram_notified$mastodon_link$mastodon_notified$mqtt_notified$webhook_notified" ]]; then
         tmp_map_new="$(mktemp)"
         jq \
           --arg idx "$idx" \
@@ -175,6 +177,7 @@ sync_notifier_links_into_json() {
           --arg mlink "$mastodon_link" \
           --arg mnot "$mastodon_notified" \
           --arg qnot "$mqtt_notified" \
+          --arg wnot "$webhook_notified" \
           '. + {($idx): {
             "discord:link": $dlink,
             "discord:notified": $dnot,
@@ -184,7 +187,8 @@ sync_notifier_links_into_json() {
             "telegram:notified": $tnot,
             "mastodon:link": $mlink,
             "mastodon:notified": $mnot,
-            "mqtt:notified": $qnot
+            "mqtt:notified": $qnot,
+            "webhook:notified": $wnot
           }}' \
           "$tmp_map" > "$tmp_map_new" && mv -f "$tmp_map_new" "$tmp_map"
       fi
