@@ -21,10 +21,49 @@ source /scripts/pf-common
 DOCROOT="/usr/share/planefence/html"
 RUNROOT="/run/planefence"
 
-# UTC dates to avoid TZ drift
-utc_today="$(date -u +%y%m%d)"
+# Some CGI runtimes sanitize/override TZ (often to UTC), which would make
+# stream day selection disagree with the locally dated files written by PF.
+if [[ -z "${TZ:-}" || "${TZ:-}" == "UTC" ]]; then
+  for tz_file in /run/s6/container_environment/TZ /var/run/s6/container_environment/TZ; do
+    if [[ -r "$tz_file" ]]; then
+      tz_candidate="$(tr -d '\r\n' < "$tz_file" 2>/dev/null)"
+      if [[ -n "$tz_candidate" ]]; then
+        export TZ="$tz_candidate"
+        break
+      fi
+    fi
+  done
+
+  tz_from_pid() {
+    local pid="$1"
+    [[ -n "$pid" && -r "/proc/${pid}/environ" ]] || return 1
+    tr '\0' '\n' < "/proc/${pid}/environ" 2>/dev/null | awk -F= '$1=="TZ" { print substr($0, 4); exit }'
+  }
+
+  lighttpd_pid=""
+  for comm_file in /proc/[0-9]*/comm; do
+    [[ -r "$comm_file" ]] || continue
+    if [[ "$(<"$comm_file")" == "lighttpd" ]]; then
+      lighttpd_pid="${comm_file#/proc/}"
+      lighttpd_pid="${lighttpd_pid%/comm}"
+      break
+    fi
+  done
+
+  if [[ -z "${TZ:-}" || "${TZ:-}" == "UTC" ]]; then
+    tz_candidate=""
+    for pid in "${PPID:-}" "$lighttpd_pid" 1; do
+      tz_candidate="$(tz_from_pid "$pid")"
+      [[ -n "$tz_candidate" ]] && break
+    done
+
+    [[ -n "$tz_candidate" ]] && export TZ="$tz_candidate"
+  fi
+fi
+
+local_today="$(date +%y%m%d)"
 # GNU date or BSD date (macOS) compatible yesterday
-utc_yday="$(date -u -d 'yesterday' +%y%m%d 2>/dev/null || date -u -v-1d +%y%m%d)"
+local_yday="$(date -d 'yesterday' +%y%m%d 2>/dev/null || date -v-1d +%y%m%d)"
 
 PLANEALERT_CFG_VALUE="$(GET_PARAM pf PLANEALERT || true)"
 if ! chk_disabled "${PLANEALERT_CFG_VALUE:-}"; then
@@ -251,10 +290,10 @@ build_plane_alert_all_json() {
   local mode="${1:-plane-alert}" hist_days files=() tmp MAX_ROWS=500
   hist_days="$(plane_alert_hist_days)"
 
-  # Walk days from today backwards (UTC), collect newest files first until we satisfy MAX_ROWS or HISTTIME
+  # Walk days from today backwards using the container's local day basis.
   local total_rows=0 rows_in_file=0 day=0 req_date file
   for (( day=0; day<hist_days; day++ )); do
-    req_date="$(date -u -d "-${day} days" +%y%m%d 2>/dev/null || true)"
+    req_date="$(date -d "-${day} days" +%y%m%d 2>/dev/null || date -v-"${day}"d +%y%m%d 2>/dev/null || true)"
     [[ -z "$req_date" ]] && continue
     file="$(choose_json_for_date "$mode" "$req_date" || true)"
     [[ -z "$file" ]] && continue
@@ -368,14 +407,14 @@ choose_json() {
     return
   fi
 
-  cand="${RUNROOT}/${mode}-${utc_today}.json"
+  cand="${RUNROOT}/${mode}-${local_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
-  cand="${DOCROOT}/${mode}-${utc_today}.json"
+  cand="${DOCROOT}/${mode}-${local_today}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
-  cand="${RUNROOT}/${mode}-${utc_yday}.json"
+  cand="${RUNROOT}/${mode}-${local_yday}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
-  cand="${DOCROOT}/${mode}-${utc_yday}.json"
+  cand="${DOCROOT}/${mode}-${local_yday}.json"
   [[ -r "$cand" && -s "$cand" ]] && { printf '%s' "$cand"; return; }
 
   # latest rolling backup for the selected mode
@@ -439,7 +478,7 @@ fi
 
 TODAYS_VERSION_SOURCE=""
 TODAYS_VERSION=""
-TODAYS_VERSION_SOURCE="$(choose_json_for_date "$FILTER_MODE" "$utc_today" || true)"
+TODAYS_VERSION_SOURCE="$(choose_json_for_date "$FILTER_MODE" "$local_today" || true)"
 if [[ -n "$TODAYS_VERSION_SOURCE" ]]; then
   TODAYS_VERSION="$(extract_station_version "$TODAYS_VERSION_SOURCE" || true)"
 fi
@@ -459,8 +498,8 @@ if [[ -z "${JSONFILE:-}" ]]; then
       "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${REQUESTED_DATE}.json" | sed 's/"/\\"/g')"
   else
     printf '{"error":"missing or unreadable: %s and %s"}\n' \
-      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_today}.json" | sed 's/"/\\"/g')" \
-      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${utc_yday}.json" | sed 's/"/\\"/g')"
+      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${local_today}.json" | sed 's/"/\\"/g')" \
+      "$(printf '%s' "${DOCROOT}/${FILTER_MODE}-${local_yday}.json" | sed 's/"/\\"/g')"
   fi
   exit 0
 fi
