@@ -540,7 +540,8 @@ CHK_NOTIFICATIONS_ENABLED () {
      { [[ -n "${BLUESKY_APP_PASSWORD}" ]] && [[ -n "$BLUESKY_HANDLE" ]]; } || \
      [[ -n "${MASTODON_ACCESS_TOKEN}" ]] || \
      [[ -n "$MQTT_URL" ]] || \
-     chk_enabled "${TELEGRAM_ENABLED}"; then
+     chk_enabled "${TELEGRAM_ENABLED}" || \
+     chk_enabled "${WEBHOOK_ENABLED}"; then
     return 0
   else
     return 1
