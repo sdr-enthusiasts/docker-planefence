@@ -1279,8 +1279,19 @@ fi
 
 # Create pa_socketrecords array
 if chk_enabled "$PLANEALERT" && (( $(wc -l < /tmp/pa_keys_$$) > 0 )); then
-  # Patterns in /tmp/pa_keys_$$ are regular expressions anchored with ^, so use regex grep
-  readarray -t pa_socketrecords < <(grep -E -f /tmp/pa_keys_$$ /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$PA_RANGE" '$8 <= dist && NF==12 { print }' || true)
+  # Match records against the Plane-Alert list with an awk hash join instead of
+  # "grep -E -f": with tens of thousands of anchored "^ICAO," patterns, grep spends
+  # seconds per run compiling the alternation before it reads a single record, and
+  # that cost grows with the size of the list, not the number of records. The join
+  # keys on field 1 (ICAO) and, for the squawk patterns, on field 9 (squawk); the
+  # output lines are the same as the grep version, in the same order.
+  pa_join_db="$PA_FILE"; [[ -f "$pa_join_db" ]] || pa_join_db=/dev/null
+  readarray -t pa_socketrecords < <(awk -F',' -v sqlist="${SQUAWKS[*]:-}" '
+      BEGIN { n = split(sqlist, sq, " ") }
+      FILENAME == ARGV[1] { if (FNR > 1) key[$1] = 1; next }
+      ($1 in key) { print; next }
+      { for (i = 1; i <= n; i++) if ($9 == sq[i]) { print; next } }' \
+      "$pa_join_db" /tmp/filtered_records_$$ 2>/dev/null | awk -F, -v dist="$PA_RANGE" '$8 <= dist && NF==12 { print }' || true)
   rm -f /tmp/pa_keys_$$
   log_print DEBUG "Created pa_socketrecords array with ${#pa_socketrecords[@]} entries"
 else
