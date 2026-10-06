@@ -1694,6 +1694,14 @@ for idx in "${!processed_indices[@]}"; do
   # ------------------------------------------------------------------------------------
   # The first portion of this loop can be done regardless of completeness of the record
   # ------------------------------------------------------------------------------------
+  # Add a callsign if there isn't any
+  if [[ -z "$callsign" ]]; then
+    log_print DEBUG "Getting callsign data for record $idx"
+    callsign="$(GET_CALLSIGN "$icao")"
+    records["$idx":callsign]="${callsign//[[:space:]]/}"
+    records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+  fi
+
   if [[ "${records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then
     log_print DEBUG "Getting owner data for record $idx"
     records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null)"
@@ -1711,14 +1719,6 @@ for idx in "${!processed_indices[@]}"; do
         records["$idx":image:file]="$(GET_PS_PHOTO "$icao" "image")"
         records["$idx":checked:image]=true
         records[HASIMAGES]=true
-  fi
-
-  # Add a callsign if there isn't any
-  if [[ -z "$callsign" ]]; then
-    log_print DEBUG "Getting callsign data for record $idx"
-    callsign="$(GET_CALLSIGN "$icao")"
-    records["$idx":callsign]="${callsign//[[:space:]]/}"
-    records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
   # If TWEET_MINTIME is set, hold readiness at FALSE until the configured
@@ -1813,6 +1813,14 @@ done
   pa_records["$idx":complete]=true  # mark as complete since plane-alert mode has no collapse window
 
   # ------------------------------------------------------------------------------------
+  # Add a callsign if there isn't any
+  if [[ -z "$callsign" ]]; then
+    log_print DEBUG "Getting callsign data for record $idx"
+    callsign="$(GET_CALLSIGN "$icao")"
+    pa_records["$idx":callsign]="${callsign//[[:space:]]/}"
+    pa_records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+  fi
+
   if [[ "${pa_records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then
     log_print DEBUG "Getting owner data for record $idx"
     pa_records["$idx":owner]="$(/usr/share/planefence/airlinename.sh "$callsign" "$icao" 2>/dev/null)"
@@ -1830,14 +1838,6 @@ done
         pa_records["$idx":image:file]="$(GET_PS_PHOTO "$icao" "image")"
         pa_records["$idx":checked:image]=true
         pa_records[HASIMAGES]=true
-  fi
-
-  # Add a callsign if there isn't any
-  if [[ -z "$callsign" ]]; then
-    log_print DEBUG "Getting callsign data for record $idx"
-    callsign="$(GET_CALLSIGN "$icao")"
-    pa_records["$idx":callsign]="${callsign//[[:space:]]/}"
-    pa_records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
   # get Nominating location. Note - this is slow because we need to do an API call for each lookup
