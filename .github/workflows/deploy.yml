@@ -17,6 +17,11 @@ on:
         type: boolean
         description: "Build latest as test"
         default: false
+      invalidate_cache:
+        required: false
+        type: boolean
+        description: "Delete all GitHub Actions caches before building"
+        default: false
 
   pull_request:
     types: [closed]
@@ -46,11 +51,29 @@ jobs:
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
 
+  invalidate-cache:
+    name: Invalidate caches
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.invalidate_cache == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Delete all GitHub Actions caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh cache delete --all || true
+
   deploy:
     name: Deploy
+    needs: [invalidate-cache]
     if: |
-      github.event.inputs.build_latest_as_test == 'false' ||
-      github.event.inputs.build_latest_as_test == ''
+      !cancelled() && !failure() &&
+      (github.event.inputs.build_latest_as_test == 'false' ||
+      github.event.inputs.build_latest_as_test == '')
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@4cf063e5906338b3b92f0fe71d8dbae52c180d99 # main
     with:
       push_enabled: true
