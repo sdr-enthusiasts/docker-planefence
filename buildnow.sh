@@ -2,7 +2,7 @@
 # shellcheck disable=SC2086
 
 [[ "$1" != "" ]] && BRANCH="$1" || BRANCH="$(git branch --show-current)"
-[[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
+[[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="${BRANCH##*/}"
 # [[ "$ARCHS" == "" ]] && ARCHS="linux/armhf,linux/arm64,linux/amd64"
 [[ "$ARCHS" == "" ]] && ARCHS="linux/arm64,linux/amd64"
 
@@ -26,10 +26,10 @@ git pull -a
 a="$(mktemp)"
 cp -f Dockerfile "$a"
 if grep -qi "darwin" <<< "$(uname -a)"; then
-  sed -i '' "s/##main##/$BRANCH/g" Dockerfile
+  sed -i '' "s/##main##/$TAG/g" Dockerfile
   #sed -i '' "s/baseimage:planefence_base/baseimage:trixie-planefence_base/g" Dockerfile
 else
-  sed -i "s/##main##/$BRANCH/g" Dockerfile
+  sed -i "s/##main##/$TAG/g" Dockerfile
   #sed -i "s/baseimage:planefence_base/baseimage:trixie-planefence_base/g" Dockerfile
 
 fi
