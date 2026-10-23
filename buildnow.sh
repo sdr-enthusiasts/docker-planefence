@@ -29,7 +29,7 @@ if grep -qi "darwin" <<< "$(uname -a)"; then
 else
   sed -i "s/##main##/$BRANCH/g" Dockerfile
 fi
-docker buildx build -f Dockerfile --compress --push $2 --platform $ARCHS --tag "$IMAGE1" .
+docker buildx build -f Dockerfile --compress --push $2 --platform $ARCHS --tag "$IMAGE1" --progress=plain .
 # [[ $? ]] && docker buildx build --compress --push $2 --platform $ARCHS --tag $IMAGE2 .
 mv -f "$a" Dockerfile
 echo "Total build time: $(( $(date +%s) - starttime )) seconds"
