@@ -36,6 +36,20 @@ RUN \
     cp -f /root/.buildtime /.VERSION && \
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
-    echo "alias nano=\"nano -l\"" >> /root/.bashrc
+    echo "alias nano=\"nano -l\"" >> /root/.bashrc && \
+    # Disable session upload progress in PHP as it creates security holes
+    # since we don't exactly know if and where the conf.d directory is,
+    # a small loop framework is created to find out
+    for php_ver in /etc/php/*/; do \
+      [ -d "$php_ver" ] || continue; \
+      for sapi_dir in "$php_ver"*/; do \
+        [ -d "$sapi_dir" ] || continue; \
+        if [ -d "${sapi_dir}conf.d" ]; then \
+          echo "session.upload_progress.enabled = Off" > "${sapi_dir}conf.d/99-security.ini"; \
+        elif [ -f "${sapi_dir}php.ini" ]; then \
+          printf "\n\n[Session]\nsession.upload_progress.enabled = Off\n" >> "${sapi_dir}php.ini"; \
+        fi; \
+      done; \
+    done
 
 EXPOSE 80
