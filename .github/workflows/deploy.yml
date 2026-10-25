@@ -17,6 +17,11 @@ on:
         type: boolean
         description: "Build latest as test"
         default: false
+      base_variant:
+        required: false
+        type: string
+        description: "Debian codename to build on the next-release base images (e.g. forky). Blank builds on stable."
+        default: ""
 
   pull_request:
     types: [closed]
@@ -41,17 +46,19 @@ jobs:
           INPUTS_REASON: ${{ github.event.inputs.reason }}
           INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
           INPUTS_BUILD_LATEST_AS_TEST: ${{ github.event.inputs.build_latest_as_test }}
+          INPUTS_BASE_VARIANT: ${{ github.event.inputs.base_variant }}
         run: |
           echo "Workflow dispatch reason: $INPUTS_REASON"
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
+          echo "Base variant: ${INPUTS_BASE_VARIANT:-none (stable)}"
 
   deploy:
     name: Deploy
     if: |
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@4cf063e5906338b3b92f0fe71d8dbae52c180d99 # main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@6fe78a4f1b7ab06ae480c7d2bb304f3a6c39055b # main
     with:
       push_enabled: true
       push_destinations: ghcr.io
@@ -62,5 +69,6 @@ jobs:
       docker_latest_tag: latest
       build_baseimage_test: true
       build_baseimage_url: docker-baseimage:planefence_base/docker-baseimage:planefence_base
+      base_variant: ${{ github.event.inputs.base_variant }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
