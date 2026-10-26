@@ -1699,7 +1699,7 @@ for idx in "${!processed_indices[@]}"; do
     log_print DEBUG "Getting callsign data for record $idx"
     callsign="$(GET_CALLSIGN "$icao")"
     records["$idx":callsign]="${callsign//[[:space:]]/}"
-    records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+    records["$idx":link:fa]="https://flightaware.com/live/modes/$icao:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
   if [[ "${records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then
@@ -1818,7 +1818,7 @@ done
     log_print DEBUG "Getting callsign data for record $idx"
     callsign="$(GET_CALLSIGN "$icao")"
     pa_records["$idx":callsign]="${callsign//[[:space:]]/}"
-    pa_records["$idx":link:fa]="https://flightaware.com/live/modes/$hex:ident/ident/${callsign//[[:space:]]/}/redirect/"
+    pa_records["$idx":link:fa]="https://flightaware.com/live/modes/$icao:ident/ident/${callsign//[[:space:]]/}/redirect/"
   fi
 
   if [[ "${pa_records["$idx":checked:owner]}" != "true" && -n "$callsign" ]]; then

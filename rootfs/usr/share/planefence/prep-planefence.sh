@@ -17,7 +17,11 @@ function configure_planefence() {
 	if [[ -n "$SETTING_VALUE" ]]; then
 		if [[ "${SETTING_VALUE:0:1}" != "\"" ]] && [[ "${SETTING_VALUE:0:1}" != "'" ]]; then SETTING_VALUE="\"$SETTING_VALUE"; fi
 		if [[ "${SETTING_VALUE: -1}" != "\"" ]] && [[ "${SETTING_VALUE: -1}" != "'" ]]; then SETTING_VALUE="$SETTING_VALUE\""; fi
-		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/planefence/planefence.conf
+		# escape \ & and the ~ delimiter: sed would otherwise read them in the replacement
+		local SED_VALUE="${SETTING_VALUE//\\/\\\\}"
+		SED_VALUE="${SED_VALUE//&/\\&}"
+		SED_VALUE="${SED_VALUE//"~"/\\~}"
+		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SED_VALUE}~" /usr/share/planefence/planefence.conf
 	else
 		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/planefence/planefence.conf
 	fi
@@ -28,7 +32,11 @@ function configure_planealert() {
 	if [[ -n "$SETTING_VALUE" ]]; then
 		if [[ "${SETTING_VALUE:0:1}" != "\"" ]] && [[ "${SETTING_VALUE:0:1}" != "'" ]]; then SETTING_VALUE="\"$SETTING_VALUE"; fi
 		if [[ "${SETTING_VALUE: -1}" != "\"" ]] && [[ "${SETTING_VALUE: -1}" != "'" ]]; then SETTING_VALUE="$SETTING_VALUE\""; fi
-		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SETTING_VALUE}~" /usr/share/planefence/plane-alert.conf
+		# escape \ & and the ~ delimiter: sed would otherwise read them in the replacement
+		local SED_VALUE="${SETTING_VALUE//\\/\\\\}"
+		SED_VALUE="${SED_VALUE//&/\\&}"
+		SED_VALUE="${SED_VALUE//"~"/\\~}"
+		sed -i "s~\(^\s*${SETTING_NAME}=\).*~\1${SED_VALUE}~" /usr/share/planefence/plane-alert.conf
 	else
 		sed -i "s|\(^\s*${SETTING_NAME}=\).*|\1|" /usr/share/planefence/plane-alert.conf
 	fi
@@ -81,27 +89,24 @@ rm -f /usr/share/planefence/html/index.html 2>/dev/null || true
 cp -R --remove-destination /usr/share/planefence/stage/html/. /usr/share/planefence/html/
 	cp -R --remove-destination /usr/share/planefence/stage/html-config/. /usr/share/planefence/html-config/
 	# always update to latest version
-# Webhook templates/headers are user-owned (ADR 0001): snapshot before --update so
-# newer stage seeds cannot clobber customized files or Authorization secrets.
+# Webhook templates/headers are user-owned: seed them only when missing. A plain
+# copy would follow symlinks and overwrite a secret stored behind one.
 _webhook_seed_names=(
   webhook.pa.headers webhook.pf.headers
   webhook.pa.text.template webhook.pa.json.template
   webhook.pf.text.template webhook.pf.json.template
 )
-_webhook_bak="$(mktemp -d)"
-for _webhook_seed in "${_webhook_seed_names[@]}"; do
-  if [[ -e "/usr/share/planefence/persist/${_webhook_seed}" ]]; then
-    cp -a "/usr/share/planefence/persist/${_webhook_seed}" "${_webhook_bak}/"
+for _webhook_src in /usr/share/planefence/stage/persist/*; do
+  _webhook_name="$(basename "$_webhook_src")"
+  if [[ " ${_webhook_seed_names[*]} " == *" ${_webhook_name} "* ]]; then
+    # -L catches dangling symlinks as well as existing files
+    [[ -e "/usr/share/planefence/persist/${_webhook_name}" || -L "/usr/share/planefence/persist/${_webhook_name}" ]] || \
+      cp -a "$_webhook_src" "/usr/share/planefence/persist/${_webhook_name}"
+  else
+    cp -R --update "$_webhook_src" /usr/share/planefence/persist/	# only if it doesn't exist yet
   fi
 done
-cp -R --update /usr/share/planefence/stage/persist/* /usr/share/planefence/persist	# only if it doesn't exist yet
-for _webhook_seed in "${_webhook_seed_names[@]}"; do
-  if [[ -e "${_webhook_bak}/${_webhook_seed}" ]]; then
-    cp -a "${_webhook_bak}/${_webhook_seed}" "/usr/share/planefence/persist/${_webhook_seed}"
-  fi
-done
-rm -rf "${_webhook_bak}"
-unset _webhook_seed _webhook_seed_names _webhook_bak
+unset _webhook_src _webhook_name _webhook_seed_names
 if [[ -f /usr/share/planefence/stage/Silhouettes.zip ]]; then cp -f /usr/share/planefence/stage/Silhouettes.zip /tmp/silhouettes-org.zip; fi
 
 # PF_WEBLOGS controls where the logs page is exposed:

@@ -187,9 +187,8 @@ sync_notifier_links_into_json() {
             "telegram:notified": $tnot,
             "mastodon:link": $mlink,
             "mastodon:notified": $mnot,
-            "mqtt:notified": $qnot,
-            "webhook:notified": $wnot
-          }}' \
+            "mqtt:notified": $qnot
+          } + (if $wnot == "" then {} else {"webhook:notified": $wnot} end))}' \
           "$tmp_map" > "$tmp_map_new" && mv -f "$tmp_map_new" "$tmp_map"
       fi
     done

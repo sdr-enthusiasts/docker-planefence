@@ -30,6 +30,8 @@ PA_WEBHOOK_URLS=            # comma-separated HTTP(S) URLs for Plane-Alert
 PF_WEBHOOK_URLS=            # comma-separated HTTP(S) URLs for Planefence
 ```
 
+If you edit `planefence.config` by hand, put each URL list in single quotes, for example `PA_WEBHOOK_URLS='https://ntfy.example/topic?key=abc&topic=planealert'`. The file is read as a shell script, so an unquoted `&` splits the line and cuts the URL short. The configuration UI writes single quotes for you and rejects URLs with spaces, quotes, backslashes, `$` or backticks.
+
 Planefence and Plane-Alert each have their own enable flag and URL list. There is no shared "one webhook for both" setting. Every URL on a list gets the same rendered body and headers for that side (Planefence or Plane-Alert).
 
 As elsewhere in Planefence, enable values are things like `ON` / `OFF` (and the usual truthy forms such as `yes` / `true` / `1`).
@@ -141,7 +143,7 @@ Put auth in `webhook.pa.headers` as above (you can omit `Title:` / `Attach:` if 
 }
 ```
 
-`"topic"` is the ntfy topic name (here both Planefence and Plane-Alert can share `planefence`). Change it if you want a separate topic. The seeded JSON templates already include a `topic` field you can rename. For Planefence, use `PF_WEBHOOK*` and `webhook.pf.json.template` the same way.
+`"topic"` is the ntfy topic name. The seeded templates use separate topics: `planealert` for Plane-Alert and `planefence` for Planefence. Rename either one, or set both to the same topic to share it. For Planefence, use `PF_WEBHOOK*` and `webhook.pf.json.template` the same way.
 
 ### Check it
 

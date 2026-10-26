@@ -33,7 +33,7 @@ fi
 DEBUG="${DEBUG:-false}"
 WEBHOOK_CURL_CONNECT_TIMEOUT="${WEBHOOK_CURL_CONNECT_TIMEOUT:-10}"
 WEBHOOK_CURL_MAX_TIME="${WEBHOOK_CURL_MAX_TIME:-45}"
-WEBHOOK_CURL_RETRY="${WEBHOOK_CURL_RETRY:-1}"
+WEBHOOK_CURL_RETRY="${WEBHOOK_CURL_RETRY:-0}"
 
 declare -a INDEX STALE link delivery_errors
 
@@ -175,8 +175,8 @@ for idx in "${INDEX[@]}"; do
   composed_pairs_hdr+="speed_unit"$'\x1f'"$(webhook_flatten_header_value "${SPEEDUNIT}")"$'\x1e'
 
   # --- record pairs from records keys matching "$idx:"* ---
-  # Body record pair values must be single-line (pair format is newline-separated).
-  # Header pairs flatten CR/LF instead of skipping.
+  # Pairs are separated by $'\x1e', so body values may span lines.
+  # Header pairs flatten CR/LF instead.
   record_pairs=""
   record_pairs_hdr=""
   for k in "${!records[@]}"; do
@@ -187,10 +187,6 @@ for idx in "${INDEX[@]}"; do
     [[ "$suffix" == *:notified ]] && continue
     val="${records[$k]}"
     record_pairs_hdr+="$suffix"$'\x1f'"$(webhook_flatten_header_value "$val")"$'\x1e'
-    if [[ "$val" == *$'\n'* || "$val" == *$'\r'* ]]; then
-      log_print DEBUG "Skipping multiline record field '$suffix' for webhook body pairs"
-      continue
-    fi
     record_pairs+="$suffix"$'\x1f'"$(webhook_pair_value "$val" "$format")"$'\x1e'
   done
 
@@ -230,7 +226,8 @@ for idx in "${INDEX[@]}"; do
     url_suffix="${url: -8}"
     tmpbody="$(mktemp)"
     tmperr="$(mktemp)"
-    http_code="$(curl -sS -L \
+    # no -L: a redirect is reported as an error rather than replayed as a body-less GET
+    http_code="$(curl -sS \
       --connect-timeout "$WEBHOOK_CURL_CONNECT_TIMEOUT" \
       --max-time "$WEBHOOK_CURL_MAX_TIME" \
       --retry "$WEBHOOK_CURL_RETRY" \
@@ -238,7 +235,7 @@ for idx in "${INDEX[@]}"; do
       -o "$tmpbody" \
       -w '%{http_code}' \
       "${curl_header_args[@]}" \
-      --data-binary "$body" \
+      --data-raw "$body" \
       "$url" 2>"$tmperr")"
     curl_rc=$?
     body_snip="$(tr '\n\r' '  ' <"$tmpbody" | head -c 200)"

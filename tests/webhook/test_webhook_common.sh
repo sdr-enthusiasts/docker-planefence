@@ -97,4 +97,16 @@ assert_eq "sanitize hdr count" "${#shdr[@]}" "2"
 assert_eq "sanitize hdr0" "${shdr[0]}" "Title: ok"
 assert_eq "sanitize hdr1" "${shdr[1]}" "X-Y: z"
 
+# Regression: an unmatched ||token|| with glob characters used to hang the cleanup loop.
+# Run under timeout so a regression fails the test instead of stalling it.
+if out="$(timeout 5 bash -c 'source "$1"; webhook_expand_placeholders "$2" ""' _ "$ROOT/rootfs/usr/share/planefence/notifiers/webhook-common.sh" 'a ||x[b]|| c')"; then
+  assert_eq "glob token terminates" "$out" "a ||x[b]|| c"
+else
+  printf 'FAIL glob token terminates (timed out or errored)\n' >&2
+  fail=1
+fi
+# Regression: literal "||" text must not be deleted; only real key-shaped tokens are cleared.
+out="$(webhook_expand_placeholders 'x || y || z ||nokey|| w' '')"
+assert_eq "literal pipes kept" "$out" "x || y || z  w"
+
 exit "$fail"

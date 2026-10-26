@@ -21,7 +21,7 @@ _webhook_apply_one_pair() {
   value="${line#*$'\x1f'}"
   [[ -z "$key" || "$key" == "$line" ]] && { printf '%s' "$text"; return; }
   repl="$(_webhook_escape_repl "$value")"
-  text="${text//||${key}||/${repl}}"
+  text="${text//"||${key}||"/${repl}}"
   printf '%s' "$text"
 }
 
@@ -56,9 +56,9 @@ webhook_expand_placeholders() {
   local out
   out="$(_webhook_apply_pairs "$template" "$composed_pairs")"
   out="$(_webhook_apply_pairs "$out" "$record_pairs")"
-  # Clear any remaining ||token|| placeholders
-  while [[ "$out" =~ \|\|[^|]+\|\| ]]; do
-    out="${out//${BASH_REMATCH[0]}/}"
+  # Clear any remaining ||token|| placeholders (tokens are keys: letters, digits, _ and :)
+  while [[ "$out" =~ \|\|[A-Za-z0-9_:]+\|\| ]]; do
+    out="${out//"${BASH_REMATCH[0]}"/}"
   done
   printf '%s' "$out"
 }
