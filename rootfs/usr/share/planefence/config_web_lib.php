@@ -202,6 +202,24 @@ function pf_cfg_encode_single_quoted(string $value): string {
   return "'" . $escaped . "'";
 }
 
+// Webhook URLs are sourced by bash (planefence.config) and copied into double-quoted
+// lines in plane-alert.conf by prep-planefence.sh. They are written single-quoted, so
+// "&" is literal, and they are rejected if they contain characters that break either form.
+function pf_cfg_is_webhook_url_key(string $key): bool {
+  return (bool)preg_match('/_WEBHOOK_URLS$/', $key);
+}
+
+function pf_cfg_webhook_url_error(string $value): ?string {
+  foreach (explode(',', $value) as $url) {
+    $url = trim($url);
+    if ($url === '') continue;
+    if (!preg_match('~^https?://[^\s\'"`$\\\\]+$~', $url)) {
+      return 'Invalid webhook URL "' . $url . '": use http:// or https:// with no spaces, quotes, backslashes, $ or backticks.';
+    }
+  }
+  return null;
+}
+
 function pf_cfg_multi_fields(): array {
   return [
     'PF_PA_SQUAWKS' => ',',
@@ -211,6 +229,8 @@ function pf_cfg_multi_fields(): array {
     'PF_DISCORD_WEBHOOKS' => ',',
     'PF_MQTT_FIELDS' => ',',
     'PA_MQTT_FIELDS' => ',',
+    'PA_WEBHOOK_URLS' => ',',
+    'PF_WEBHOOK_URLS' => ',',
   ];
 }
 
@@ -624,6 +644,7 @@ function pf_cfg_encode_value(string $value): string {
 function pf_cfg_notification_mechanism(string $fieldName): string {
   $n = strtoupper($fieldName);
   if (strpos($n, 'DISCORD') !== false) return 'discord';
+  if (strpos($n, 'WEBHOOK') !== false) return 'webhook';
   if (strpos($n, 'MASTODON') !== false) return 'mastodon';
   if (strpos($n, 'MQTT') !== false) return 'mqtt';
   if (strpos($n, 'RSS') !== false) return 'rss';
@@ -847,7 +868,7 @@ function pf_cfg_build_default_ui(array $sections, array $values, array $schema):
     ];
     $fields = $section['fields'] ?? [];
     if (stripos($title, 'notification') !== false) {
-      $mechanisms = ['general', 'discord', 'mastodon', 'mqtt', 'rss', 'bluesky', 'telegram'];
+      $mechanisms = ['general', 'discord', 'mastodon', 'mqtt', 'rss', 'bluesky', 'telegram', 'webhook'];
       foreach ($mechanisms as $m) {
         $names = pf_cfg_names_for_match($m, $fields);
         if (count($names) === 0) continue;
@@ -1022,6 +1043,12 @@ function pf_cfg_save(array $payload): array {
     unset($normalized['FEEDER_LONG']);
   }
 
+  foreach ($normalized as $k => $v) {
+    if (!pf_cfg_is_webhook_url_key($k)) continue;
+    $urlError = pf_cfg_webhook_url_error($v);
+    if ($urlError !== null) return ['ok' => false, 'error' => $urlError];
+  }
+
   $changedKeys = pf_cfg_changed_keys($currentValues, $normalized, $orderedKeys);
 
   $backupPath = $paths['backupDir'] . '/planefence.config.' . date('Ymd-His') . '.bak';
@@ -1050,7 +1077,7 @@ function pf_cfg_save(array $payload): array {
     if (preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/', $line, $m)) {
       $k = $m[1];
       if (array_key_exists($k, $normalized)) {
-        if ($k === 'PF_ALERTHEADER') {
+        if ($k === 'PF_ALERTHEADER' || pf_cfg_is_webhook_url_key($k)) {
           $out[] = $k . '=' . pf_cfg_encode_single_quoted((string)$normalized[$k]);
         } else {
           $out[] = $k . '=' . pf_cfg_encode_value((string)$normalized[$k]);
@@ -1095,7 +1122,7 @@ function pf_cfg_save(array $payload): array {
           $out[] = $cLine;
         }
       }
-      if ($k === 'PF_ALERTHEADER') {
+      if ($k === 'PF_ALERTHEADER' || pf_cfg_is_webhook_url_key($k)) {
         $out[] = $k . '=' . pf_cfg_encode_single_quoted((string)($normalized[$k] ?? ''));
       } else {
         $out[] = $k . '=' . pf_cfg_encode_value((string)($normalized[$k] ?? ''));
