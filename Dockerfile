@@ -5,6 +5,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rootfs/ /
 
+ARG VERSION_SHA
 RUN \
     --mount=type=bind,source=./,target=/app/ \
     set -xe && \
@@ -28,7 +29,7 @@ RUN \
     #
     # version
     branch="##main##" && \
-    SHA="$(curl --fail --silent --show-error --location --retry 3 "https://api.github.com/repos/sdr-enthusiasts/docker-planefence/commits/main" | awk '$1=="\"sha\":" && !f {print substr($2,2,7); f=1}')" && \
+    SHA="${VERSION_SHA:-local}" && SHA="${SHA:0:7}" && \
     [[ -n "$SHA" ]] && \
     echo "${branch//#/}_(${SHA})_$(date +%y-%m-%d-%T%Z)" | tee /root/.buildtime && \
     cp -f /root/.buildtime /.VERSION && \
