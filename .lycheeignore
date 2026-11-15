@@ -1,0 +1,4 @@
+# airwaves.social is the default Mastodon server, but its TLS certificate
+# does not match the hostname (as of 2026-11-15). Re-check and remove this
+# entry once the instance's certificate is fixed.
+^https://airwaves\.social
