@@ -70,9 +70,6 @@ socket30003.cfg
 The output heatmapdata.csv and rangeview.kml can be displayed in a my modified variant
 of dump1090-mutability: <https://github.com/tedsluis/dump1090>
 
-Read more about this at:
-<http://discussions.flightaware.com/topic35844.html>
-
 ## Help page socket30003.pl
 
 ```text
