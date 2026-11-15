@@ -54,7 +54,7 @@ jobs:
 
   build_and_push:
     name: Image Build & Push
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@2c6ff7fabb49cc277aa6dbe4cca0fe3be63a21b0 # main
     #needs: [hadolint]
     with:
       push_enabled: true
