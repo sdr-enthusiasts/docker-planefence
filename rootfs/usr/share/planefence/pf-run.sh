@@ -108,8 +108,11 @@ if script_array="$(compgen -G "$NOTIFY_PATH/send*.sh" 2>/dev/null)"; then
     [[ -n "$script" ]] || continue
 
     # Use a TERM then KILL escalation to avoid stuck notifier processes.
-    timeout --kill-after=15s "$NOTIFIER_TIMEOUT" bash "$script"
-    exitcode=$?
+    if timeout --kill-after=15s "$NOTIFIER_TIMEOUT" bash "$script"; then
+      exitcode=0
+    else
+      exitcode=$?
+    fi
 
     if [[ $exitcode -eq 124 ]]; then
       log_print WARN "Notifier ${script##*/} timed out after ${NOTIFIER_TIMEOUT}s and was terminated"

@@ -205,6 +205,7 @@ for idx in "${INDEX[@]}"; do
   # --- POST to each URL ---
   readarray -td, webhooks <<<"${WEBHOOK_URLS}"
   any_success=false
+  url_index=0
 
   for url in "${webhooks[@]}"; do
     url="${url//$'\n'/}"
@@ -212,7 +213,7 @@ for idx in "${INDEX[@]}"; do
     url="${url%"${url##*[![:space:]]}"}"
     [[ -z "$url" ]] && continue
 
-    url_suffix="${url: -8}"
+    url_index=$((url_index + 1))
     tmpbody="$(mktemp)"
     tmperr="$(mktemp)"
     # no -L: a redirect is reported as an error rather than replayed as a body-less GET
@@ -233,16 +234,16 @@ for idx in "${INDEX[@]}"; do
     rm -f "$tmpbody" "$tmperr"
 
     if (( curl_rc != 0 )); then
-      log_print WARNING "Webhook notification failed at URL ending in ${url_suffix} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). curl rc=${curl_rc}: ${err_snip}"
+      log_print WARNING "Webhook notification failed at destination ${url_index} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). curl rc=${curl_rc}: ${err_snip}"
       delivery_errors[idx]=true
       continue
     fi
     if [[ ! "$http_code" =~ ^2[0-9][0-9]$ ]]; then
-      log_print WARNING "Webhook notification failed at URL ending in ${url_suffix} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). HTTP ${http_code}: ${body_snip}"
+      log_print WARNING "Webhook notification failed at destination ${url_index} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}). HTTP ${http_code}: ${body_snip}"
       delivery_errors[idx]=true
       continue
     fi
-    log_print INFO "Webhook notification successful at URL ending in ${url_suffix} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}) (HTTP ${http_code})"
+    log_print INFO "Webhook notification successful at destination ${url_index} for #$idx ${pa_records["$idx":tail]} (${pa_records["$idx":icao]}) (HTTP ${http_code})"
     any_success=true
   done
 
