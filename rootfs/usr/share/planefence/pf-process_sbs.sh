@@ -33,6 +33,10 @@ DEBUG="${DEBUG:-false}"
 ## initialization:
 source /scripts/pf-common
 source /usr/share/planefence/planefence.conf
+ALTREF="MSL"
+if [[ "${ALTCORR:-0}" =~ ^[0-9]+([.][0-9]+)?$ ]] && awk -v correction="$ALTCORR" 'BEGIN { exit !(correction > 0) }'; then
+  ALTREF="AGL"
+fi
 echo "$$" > /run/planefence.pid
 
 # ==========================
@@ -1318,6 +1322,10 @@ for line in "${socketrecords[@]}"; do
   [[ -z $line ]] && continue
   IFS=',' read -r icao altitude lat lon date time angle distance squawk gs track callsign <<< "$line"
   [[ $icao == "hex_ident" || -z "$time" ]] && continue # skip header or incomplete lines
+  reported_altitude="$altitude"
+  if [[ "$ALTREF" == "AGL" && "$altitude" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+    reported_altitude="$(awk -v altitude="$altitude" -v correction="$ALTCORR" 'BEGIN { printf "%.10g", altitude - correction }')"
+  fi
 
   # Parse timestamp fast (assumes most lines are for today)
   t=${time%%.*}
@@ -1492,7 +1500,7 @@ for line in "${socketrecords[@]}"; do
       records["$idx":distance:value]="$distance" && records["$idx":distance:unit]="$DISTUNIT"
       [[ -n $lat ]] && records["$idx":lat]="$lat"
       [[ -n $lon ]] && records["$idx":lon]="$lon"
-      [[ -n $altitude ]] && records["$idx":altitude:value]="$altitude" && records["$idx":altitude:unit]="$ALTUNIT" && records["$idx":altitude:reference]="$ALTREF"
+      [[ -n $altitude ]] && records["$idx":altitude:value]="$reported_altitude" && records["$idx":altitude:unit]="$ALTUNIT" && records["$idx":altitude:reference]="$ALTREF"
       [[ -n $angle ]] && records["$idx":angle:value]="${angle%.*}" && records["$idx":angle:name]="$(deg_to_compass "$angle")"
       [[ -n $gs ]] && records["$idx":groundspeed:value]="$gs" && records["$idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && records["$idx":track:value]="$track" && records["$idx":track:name]="$(deg_to_compass "$track")"
@@ -1633,7 +1641,7 @@ for line in "${socketrecords[@]}"; do
       pa_records["$pa_idx":distance:value]="$distance" && pa_records["$pa_idx":distance:unit]="$DISTUNIT"
       [[ -n $lat ]] && pa_records["$pa_idx":lat]="$lat"
       [[ -n $lon ]] && pa_records["$pa_idx":lon]="$lon"
-      [[ -n $altitude ]] && pa_records["$pa_idx":altitude:value]="$altitude" && pa_records["$pa_idx":altitude:unit]="$ALTUNIT" && pa_records["$pa_idx":altitude:reference]="$ALTREF"
+      [[ -n $altitude ]] && pa_records["$pa_idx":altitude:value]="$reported_altitude" && pa_records["$pa_idx":altitude:unit]="$ALTUNIT" && pa_records["$pa_idx":altitude:reference]="$ALTREF"
       [[ -n $angle ]] && pa_records["$pa_idx":angle:value]="${angle%.*}" && pa_records["$pa_idx":angle:name]="$(deg_to_compass "$angle")"
       [[ -n $gs ]] && pa_records["$pa_idx":groundspeed:value]="$gs" && pa_records["$pa_idx":groundspeed:unit]="$SPEEDUNIT"
       [[ -n $track ]] && pa_records["$pa_idx":track:value]="$track" && pa_records["$pa_idx":track:name]="$(deg_to_compass "$track")"

@@ -923,4 +923,3 @@ if [[ -f "${SOCKETCONFIG:-/usr/share/socket30003/socket30003.cfg}" ]]; then
 		;;
 	esac
 fi
-(( ${ALTCORR:-0} > 0 )) && ALTREF="AGL" || ALTREF="MSL"
