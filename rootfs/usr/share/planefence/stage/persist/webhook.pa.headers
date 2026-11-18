@@ -1,0 +1,8 @@
+# Optional HTTP headers for Plane-Alert webhooks (one "Name: value" per line).
+# Examples for ntfy:
+#   Authorization: Bearer YOUR_TOKEN
+#   Title: ||title||
+#   Priority: 3
+#   Tags: airplane
+#   Attach: ||image:thumblink||
+# Placeholders use the same ||name|| syntax as webhook templates.
