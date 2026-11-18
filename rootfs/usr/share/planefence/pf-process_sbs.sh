@@ -248,7 +248,7 @@ GET_TYPE () {
   fi
 
   if [[ -z "$type" ]]; then
-    type="$(curl -m 30 -sSL "$apiUrl/$icao" | jq -r 'try .ac[] .t | select(. != null)')"
+    type="$(curl -m 30 -sSL -A "Mozilla/5.0 (X11; Linux) Planefence/${VERSION:-0.0}" "$apiUrl/$icao" | jq -r 'try .ac[] .t | select(. != null)')"
       if [[ -n "$type" ]]; then provenance="$apiUrl"; fi
   fi
   log_print DEBUG "GET_TYPE for $icao: $type (provenance: $provenance)"
@@ -330,7 +330,7 @@ GET_ROUTE_BULK () {
           pa_records["$idx":checked:route]=true
         fi
       done
-    done <<< "$(curl -m 30 -sSL -X 'POST' "$apiUrl" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | if type=="object" then [((.callsign // "")|tostring), ((._airport_codes_iata // "")|tostring), ((.plausible // "")|tostring)] elif type=="array" then [((.[0] // "")|tostring), ((.[1] // "")|tostring), ((.[2] // "")|tostring)] else empty end | @csv | gsub("\"";"")')"
+    done <<< "$(curl -m 30 -sSL -X 'POST' "$apiUrl" -A "Mozilla/5.0 (X11; Linux) Planefence/${VERSION:-0.0}" -H 'accept: application/json' -H 'Content-Type: application/json' -d "$json" | jq -r '.[] | if type=="object" then [((.callsign // "")|tostring), ((._airport_codes_iata // "")|tostring), ((.plausible // "")|tostring)] elif type=="array" then [((.[0] // "")|tostring), ((.[1] // "")|tostring), ((.[2] // "")|tostring)] else empty end | @csv | gsub("\"";"")')"
   fi
 }
 
@@ -351,6 +351,7 @@ GET_ROUTE_INDIVIDUAL () {
 		fi
 
     if route="$(curl -m 30 -fsSL -X 'POST' 'https://api.adsb.lol/api/0/routeset' \
+		                      -A "Mozilla/5.0 (X11; Linux) Planefence/${VERSION:-0.0}" \
 		                      -H 'accept: application/json' \
 													-H 'Content-Type: application/json' \
 													-d '{"planes": [{"callsign": "'"${1^^}"'","lat": '"$LAT"',"lng": '"$LON"'}] }' \
