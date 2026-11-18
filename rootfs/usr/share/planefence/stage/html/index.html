@@ -10454,7 +10454,7 @@ ${messagesDesc}
           const href = linkVal.replace(/"/g, "&quot;");
           const favicon = planeAlertFaviconUrl(linkVal);
           const faviconImg = favicon
-            ? `<img class="plane-alert-favicon" src="${favicon}" alt="">`
+            ? `<img class="plane-alert-favicon" src="${favicon}" alt="" onerror="this.style.display='none'">`
             : "";
           pieces.push(
             `<a href="${href}" target="_blank" rel="noopener">${faviconImg}<span>${t("planeAlert.link", {}, "Link")}</span></a>`,
