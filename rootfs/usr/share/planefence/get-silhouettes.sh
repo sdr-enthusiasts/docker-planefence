@@ -30,7 +30,7 @@ if chk_disabled "${SILLINK}"; then inhibit_update=true; else inhibit_update=fals
 # Get the latest silhouettes. If the CURL action fails for any reason, fall back to the file that was included with the build
 if [[ "$inhibit_update" == false ]]
 then
-	if ! curl --compressed -sSL "$SILLINK" > /tmp/silhouettes.zip
+	if ! curl --connect-timeout 10 --max-time 120 -A "Mozilla/5.0 (X11; Linux) Planefence/${VERSION:-0.0}" --compressed -sSL "$SILLINK" > /tmp/silhouettes.zip
 	then
 		log_print ERR "Retrieval of silhouettes from $SILLINK failed, using the existing list."
 		log_print ERR "To fix, in planefence.config, please set PF_SILHOUETTES_LINK to OFF or to the correct retrieval URL."
@@ -51,7 +51,7 @@ if chk_disabled "${OPFLINK}"; then inhibit_update=true; else inhibit_update=fals
 # Get the latest silhouettes. If the CURL action fails for any reason, fall back to the file that was included with the build
 if [[ "$inhibit_update" == false ]]
 then
-	if ! curl --compressed -sSL "$OPFLINK" > /tmp/operatorflags.zip
+	if ! curl --connect-timeout 10 --max-time 120 -A "Mozilla/5.0 (X11; Linux) Planefence/${VERSION:-0.0}" --compressed -sSL "$OPFLINK" > /tmp/operatorflags.zip
 	then
 		log_print ERR "Retrieval of Operator Flags from $OPFLINK failed, using the existing list."
 		log_print ERR "To fix, in planefence.config, please set PF_OPERATORFLAGS_LINK to OFF or to the correct retrieval URL."
