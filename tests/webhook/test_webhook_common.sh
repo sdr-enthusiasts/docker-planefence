@@ -99,6 +99,7 @@ assert_eq "sanitize hdr1" "${shdr[1]}" "X-Y: z"
 
 # Regression: an unmatched ||token|| with glob characters used to hang the cleanup loop.
 # Run under timeout so a regression fails the test instead of stalling it.
+# shellcheck disable=SC2016 # $1/$2 are intentionally expanded by the inner bash -c, not here
 if out="$(timeout 5 bash -c 'source "$1"; webhook_expand_placeholders "$2" ""' _ "$ROOT/rootfs/usr/share/planefence/notifiers/webhook-common.sh" 'a ||x[b]|| c')"; then
   assert_eq "glob token terminates" "$out" "a ||x[b]|| c"
 else
