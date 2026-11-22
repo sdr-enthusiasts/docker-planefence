@@ -69,15 +69,15 @@ Templates and header values may contain `||...||` placeholders.
 
 **Composed placeholders** are filled in by the notifier:
 
-| Placeholder      | Meaning                                 |
-| ---------------- | --------------------------------------- |
-| `||title||`      | Short notification title                |
-| `||message||`    | Multi-line summary body                 |
-| `||links||`      | Map / tracker links                     |
-| `||emergency||`  | Emergency squawk prefix when applicable |
-| `||alt_unit||`   | Altitude unit string                    |
-| `||dist_unit||`  | Distance unit string                    |
-| `||speed_unit||` | Speed unit string                       |
+| Placeholder          | Meaning                                 |
+| -------------------- | --------------------------------------- |
+| `\|\|title\|\|`      | Short notification title                |
+| `\|\|message\|\|`    | Multi-line summary body                 |
+| `\|\|links\|\|`      | Map / tracker links                     |
+| `\|\|emergency\|\|`  | Emergency squawk prefix when applicable |
+| `\|\|alt_unit\|\|`   | Altitude unit string                    |
+| `\|\|dist_unit\|\|`  | Distance unit string                    |
+| `\|\|speed_unit\|\|` | Speed unit string                       |
 
 For `text` format, blank lines are collapsed after substitution. Discord-only tokens such as `||COLOR||` are not supported here.
 
