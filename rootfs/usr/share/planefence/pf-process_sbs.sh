@@ -264,7 +264,7 @@ GET_ROUTE_BULK () {
   # Usage: GET_ROUTE <callsign>
   # Uses the adsb.im API to retrieve the route
 
-  local apiUrl="https://adsb.im/api/0/routeset"
+  local apiUrl="http://adsb.im/api/0/routeset"
   declare -A routesarray=()
   declare -A pf_indexarray=() pa_indexarray=()
   local idx line call route plausible
